@@ -1,0 +1,86 @@
+# nixpacks.toml — build/run plan for EasyPanel's Nixpacks builder.
+#
+# Why this file is needed at all: the auto-detected Nixpacks plan fails on this
+# repo in three independent ways (checked against the nixpacks v1.41.0 node
+# provider source, and by running the package managers against this repo's real
+# package.json / pnpm-lock.yaml / pnpm-workspace.yaml):
+#
+#   1. Node. DEFAULT_NODE_VERSION is 18, and this repo has no "engines", no
+#      .nvmrc and no .node-version — but next@16.3.7 declares
+#      engines.node ">=20.9.0". The build dies on an unsupported Node.
+#   2. pnpm. The provider only recognises packageManager majors 6–10, so
+#      "pnpm@12.4.2" falls through to lockfile sniffing, which tests
+#      startsWith("lockfileVersion:"). This lockfile starts with "---" because
+#      pnpm 12 writes TWO YAML documents, so the sniff misses and nixpacks
+#      installs pnpm 9 instead. pnpm 9 cannot read this repo at all: with
+#      pnpm-workspace.yaml present it exits "packages field missing or empty"
+#      (that file holds only allowBuilds:), and without it
+#      "ERR_PNPM_BROKEN_LOCKFILE … expected a single document in the stream".
+#   3. corepack. The provider prepends "npm install -g corepack@0.24.1 &&
+#      corepack enable". corepack 0.24.1 predates npm's 2025-01-29 signing-key
+#      rotation and fails with "Cannot find matching keyid" on pnpm 12.4.2.
+#
+# IMPORTANT on the EasyPanel side: leave the service's Install / Build / Start
+# Command fields EMPTY, and clear any Deploy command override. Those are applied
+# as the "environment" config layer, which outranks this file
+# (provider < file < environment < CLI), so anything typed there silently wins.
+
+[variables]
+# The provider already sets NODE_ENV=production; restated so this block cannot
+# drop it. Verified safe for the install step: pnpm 12 still installs
+# devDependencies (typescript, tailwindcss, @tailwindcss/postcss) under
+# NODE_ENV=production, and `next build` needs them.
+NODE_ENV = 'production'
+NEXT_TELEMETRY_DISABLED = '1'
+# `next start` already defaults to port 3000 and hostname 0.0.0.0; this only
+# makes the port explicit in the image. A PORT injected by EasyPanel at the
+# container level still overrides it. Point the Domain/proxy at this same port.
+PORT = '3000'
+
+[phases.setup]
+# Replaces the provider's ['nodejs_18', 'pnpm-9_x'] — both are wrong, see (1)
+# and (2) above. Do NOT add '...' to splice onto the default list: that keeps
+# nodejs_18 alongside nodejs_22 and nix buildEnv then fails on the /bin/node
+# collision.
+# pnpm-10_x resolves through the provider's railwayapp/nix-npm-overlay, which is
+# exactly why nixOverlays is deliberately NOT set here — overriding it would make
+# pnpm-10_x unresolvable. pnpm 10 defaults manage-package-manager-versions=true,
+# so it bootstraps itself up to the packageManager pin (12.4.2) on its own, with
+# no corepack involved.
+nixPkgs = ['nodejs_22', 'pnpm-10_x']
+# Pinned together with nixPkgs: the archive is otherwise resolved from the
+# (default, wrong) Node version and can disagree with the package name above.
+# This is the commit nixpacks itself maps to Node 22; it provides nodejs_22.
+nixpkgsArchive = 'e6f23dc08d3624daab7094b701aa3954923c6bbb'
+
+[phases.install]
+# Replacing cmds is what removes the corepack line, see (3) above.
+# dependsOn is intentionally omitted so the provider's install -> setup edge
+# survives the merge.
+cmds = ['pnpm install --frozen-lockfile']
+# Parent of both the content-addressable store (v11) and .tools/pnpm/12.4.2, so
+# a warm cache also skips the self-bootstrap. Replaces the provider's stale
+# .../store/v3 entry.
+cacheDirectories = ['/root/.local/share/pnpm', '/root/.cache/pnpm']
+
+[phases.build]
+# ./node_modules/.bin/next is a POSIX "#!/bin/sh" shim, so neither the build nor
+# the start command needs pnpm on PATH. That matters: the self-managed pnpm 12
+# binary lives in a BuildKit cache mount and is therefore absent from the final
+# image, so the provider's default `pnpm run build` / `pnpm run start` would send
+# every build and every container boot back through pnpm's self-management.
+cmds = ['./node_modules/.bin/next build']
+cacheDirectories = ['.next/cache', 'node_modules/.cache']
+
+# If the build gets Killed (exit 137): `next build` peaks around 1.1 GB RSS in
+# this repo, so give the builder at least 2 GB. If you cannot, the documented
+# fallback is to opt out of Turbopack:
+#   cmds = ['./node_modules/.bin/next build --webpack']
+
+[start]
+# A nixpacks node build is single-stage, so /app/node_modules and /app/.next are
+# both already present and plain `next start` is enough — no output: 'standalone'
+# in next.config.ts is needed (and standalone would additionally require copying
+# public/ and .next/static into .next/standalone by hand, or the page loads with
+# every asset 404).
+cmd = './node_modules/.bin/next start'
