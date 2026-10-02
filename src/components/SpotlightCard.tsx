@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef, useState } from "react";
+import React, { useCallback, useRef, useState } from "react";
 
 interface SpotlightCardProps extends React.HTMLAttributes<HTMLDivElement> {
   children: React.ReactNode;
@@ -8,42 +8,76 @@ interface SpotlightCardProps extends React.HTMLAttributes<HTMLDivElement> {
   spotlightColor?: string;
 }
 
+/**
+ * Cartão com dois efeitos ligados ao ponteiro:
+ *  1. um halo radial difuso sobre a superfície;
+ *  2. uma borda de 1px que acende só no trecho mais próximo do cursor
+ *     (`.border-glow` recorta o degradê em uma moldura via mask-composite).
+ *
+ * As coordenadas vão para variáveis CSS e são atualizadas uma vez por frame,
+ * então mover o mouse sobre uma grade inteira de cartões não dispara re-render.
+ */
 export function SpotlightCard({
   children,
   className = "",
-  spotlightColor = "rgba(255, 119, 0, 0.2)",
+  spotlightColor = "rgba(255, 119, 0, 0.16)",
   ...props
 }: SpotlightCardProps) {
-  const divRef = useRef<HTMLDivElement>(null);
-  const [position, setPosition] = useState({ x: 0, y: 0 });
-  const [opacity, setOpacity] = useState(0);
+  const ref = useRef<HTMLDivElement>(null);
+  const frame = useRef(0);
+  const [active, setActive] = useState(false);
 
-  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!divRef.current) return;
-    const rect = divRef.current.getBoundingClientRect();
-    setPosition({ x: e.clientX - rect.left, y: e.clientY - rect.top });
-  };
+  const handleMouseMove = useCallback((event: React.MouseEvent<HTMLDivElement>) => {
+    const el = ref.current;
+    if (!el || frame.current) return;
 
-  const handleMouseEnter = () => setOpacity(1);
-  const handleMouseLeave = () => setOpacity(0);
+    const { clientX, clientY } = event;
+    frame.current = requestAnimationFrame(() => {
+      frame.current = 0;
+      const rect = el.getBoundingClientRect();
+      el.style.setProperty("--spot-x", `${clientX - rect.left}px`);
+      el.style.setProperty("--spot-y", `${clientY - rect.top}px`);
+    });
+  }, []);
+
+  const handleMouseLeave = useCallback(() => {
+    if (frame.current) {
+      cancelAnimationFrame(frame.current);
+      frame.current = 0;
+    }
+    setActive(false);
+  }, []);
 
   return (
     <div
-      ref={divRef}
+      ref={ref}
       onMouseMove={handleMouseMove}
-      onMouseEnter={handleMouseEnter}
+      onMouseEnter={() => setActive(true)}
       onMouseLeave={handleMouseLeave}
-      className={`relative overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-950 p-6 transition-colors hover:border-[#FF7700]/50 ${className}`}
+      className={`surface group/card relative isolate overflow-hidden rounded-2xl p-6 transition-transform duration-500 ease-out ${className}`}
       {...props}
     >
+      {/* Halo difuso sobre a superfície */}
       <div
-        className="pointer-events-none absolute -inset-px transition-opacity duration-300"
+        aria-hidden
+        className="pointer-events-none absolute -inset-px transition-opacity duration-500"
         style={{
-          opacity,
-          background: `radial-gradient(400px circle at ${position.x}px ${position.y}px, ${spotlightColor}, transparent 70%)`,
+          opacity: active ? 1 : 0,
+          background: `radial-gradient(22rem circle at var(--spot-x, 50%) var(--spot-y, 50%), ${spotlightColor}, transparent 65%)`,
         }}
       />
-      <div className="relative z-10">{children}</div>
+
+      {/* Moldura de 1px que acende perto do cursor */}
+      <div
+        aria-hidden
+        className="border-glow transition-opacity duration-500"
+        style={{
+          opacity: active ? 1 : 0,
+          background: `radial-gradient(14rem circle at var(--spot-x, 50%) var(--spot-y, 50%), rgba(255, 157, 69, 0.85), transparent 60%)`,
+        }}
+      />
+
+      <div className="relative z-10 h-full">{children}</div>
     </div>
   );
 }

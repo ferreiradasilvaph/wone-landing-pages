@@ -1,34 +1,411 @@
 @import "tailwindcss";
 
+/* ==========================================================================
+   Wone — sistema visual
+   Preto quase absoluto, Vivid Orange (#FF7700) e Soft Cream (#FFFFE3).
+   Os neutros são creme dessaturado, não cinza puro: é o que dá o tom quente
+   da marca em vez do cinza padrão de framework.
+   ========================================================================== */
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #050506;
+  --foreground: #fffde9;
+
+  /* Marca */
+  --brand: #ff7700;
+  --brand-soft: #ff9d45;
+  --brand-deep: #c25400;
+  --cream: #ffffe3;
+
+  /* Superfícies */
+  --ink-950: #050506;
+  --ink-900: #0a0a0d;
+  --ink-850: #0f0f14;
+  --ink-800: #15151c;
+  --ink-750: #1b1b24;
+
+  /* Traços e textos derivados do creme */
+  --line: color-mix(in oklab, var(--cream) 9%, transparent);
+  --line-strong: color-mix(in oklab, var(--cream) 16%, transparent);
+  --muted: color-mix(in oklab, var(--cream) 58%, transparent);
+  --faint: color-mix(in oklab, var(--cream) 38%, transparent);
+
+  /* Curvas reutilizadas em todo o site */
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+
+  --color-brand: var(--brand);
+  --color-brand-soft: var(--brand-soft);
+  --color-brand-deep: var(--brand-deep);
+  --color-cream: var(--cream);
+
+  --color-ink-950: var(--ink-950);
+  --color-ink-900: var(--ink-900);
+  --color-ink-850: var(--ink-850);
+  --color-ink-800: var(--ink-800);
+  --color-ink-750: var(--ink-750);
+
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-muted: var(--muted);
+  --color-faint: var(--faint);
+
+  --font-display: var(--font-outfit);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+
+  --animate-marquee: marquee 42s linear infinite;
+  --animate-drift: drift 22s ease-in-out infinite;
+  --animate-drift-slow: drift 34s ease-in-out infinite reverse;
+  --animate-pulse-ring: pulse-ring 3.2s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+  --animate-float: float 7s ease-in-out infinite;
+  --animate-sweep: sweep 5s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+  --animate-breathe: breathe 6s ease-in-out infinite;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* --------------------------------------------------------------------------
+   Base
+   -------------------------------------------------------------------------- */
+
+html {
+  scroll-behavior: smooth;
+  -webkit-tap-highlight-color: transparent;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  font-synthesis-weight: none;
+  text-rendering: optimizeLegibility;
+  overflow-x: clip;
 }
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+::selection {
+  background: color-mix(in oklab, var(--brand) 40%, transparent);
+  color: var(--cream);
+}
 
-html {
-  scroll-behavior: smooth;
+/* Compensa o header fixo ao navegar pelas âncoras */
+section[id] {
+  scroll-margin-top: 6rem;
+}
+
+/* Foco visível no tom da marca, em vez do anel azul do navegador */
+:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 3px;
+  border-radius: 6px;
+}
+
+/* Barra de rolagem alinhada ao fundo preto */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--ink-750) transparent;
+}
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: var(--ink-950);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--ink-750);
+  border: 2px solid var(--ink-950);
+  border-radius: 999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in oklab, var(--brand) 55%, var(--ink-750));
+}
+
+/* --------------------------------------------------------------------------
+   Tipografia fluida — escala sozinha entre 360px e 1440px, sem breakpoints
+   -------------------------------------------------------------------------- */
+
+.t-display {
+  font-family: var(--font-outfit), var(--font-geist-sans), sans-serif;
+  font-size: clamp(2.5rem, 1.2rem + 5.6vw, 5.25rem);
+  line-height: 0.98;
+  letter-spacing: -0.035em;
+  font-weight: 600;
+}
+
+.t-h2 {
+  font-family: var(--font-outfit), var(--font-geist-sans), sans-serif;
+  font-size: clamp(1.95rem, 1.1rem + 3.2vw, 3.25rem);
+  line-height: 1.04;
+  letter-spacing: -0.03em;
+  font-weight: 600;
+}
+
+.t-h3 {
+  font-family: var(--font-outfit), var(--font-geist-sans), sans-serif;
+  font-size: clamp(1.3rem, 1rem + 1.1vw, 1.75rem);
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  font-weight: 600;
+}
+
+.t-lead {
+  font-size: clamp(1rem, 0.93rem + 0.38vw, 1.2rem);
+  line-height: 1.65;
+  color: var(--muted);
+}
+
+.t-eyebrow {
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 0.6875rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  font-weight: 500;
+}
+
+/* Números tabulares: painéis e contadores não "pulam" ao animar */
+.tnum {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+}
+
+/* --------------------------------------------------------------------------
+   Texturas de fundo
+   -------------------------------------------------------------------------- */
+
+/* Grão fino sobre tudo. É o detalhe que tira o ar de preto chapado. */
+.grain::after {
+  content: "";
+  position: fixed;
+  inset: -50%;
+  z-index: 60;
+  pointer-events: none;
+  opacity: 0.035;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.82' numOctaves='3' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+}
+
+/* Malha técnica atrás do hero e das seções de destaque */
+.grid-mesh {
+  background-image:
+    linear-gradient(to right, color-mix(in oklab, var(--cream) 5%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in oklab, var(--cream) 5%, transparent) 1px, transparent 1px);
+  background-size: 64px 64px;
+}
+
+/* Aurora: manchas laranja que derivam devagar e nunca repetem o mesmo ponto */
+.aurora {
+  background:
+    radial-gradient(42rem 26rem at 18% 12%, color-mix(in oklab, var(--brand) 22%, transparent), transparent 70%),
+    radial-gradient(34rem 22rem at 82% 28%, color-mix(in oklab, var(--brand-deep) 26%, transparent), transparent 72%);
+  filter: blur(18px);
+}
+
+/* Fio de luz: separador de seção que acende no centro */
+.hairline {
+  height: 1px;
+  background: linear-gradient(
+    to right,
+    transparent,
+    color-mix(in oklab, var(--cream) 14%, transparent) 20%,
+    color-mix(in oklab, var(--brand) 42%, transparent) 50%,
+    color-mix(in oklab, var(--cream) 14%, transparent) 80%,
+    transparent
+  );
+}
+
+/* --------------------------------------------------------------------------
+   Componentes utilitários
+   -------------------------------------------------------------------------- */
+
+/* Texto em degradê creme → laranja, para a palavra-chave de cada título.
+   `box-decoration-break: clone` repete o degradê inteiro em cada linha — sem
+   isso, um trecho que quebra em duas linhas sai creme na primeira e laranja só
+   no fim da segunda, o que parece acidente em vez de intenção. */
+.text-gradient {
+  background: linear-gradient(100deg, var(--cream) 0%, var(--cream) 30%, var(--brand-soft) 70%, var(--brand) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+
+/* Botão principal: brilho que varre a superfície ao passar o mouse */
+.btn-brand {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  background: linear-gradient(180deg, var(--brand-soft), var(--brand));
+  color: #130800;
+  box-shadow:
+    0 1px 0 0 color-mix(in oklab, #fff 45%, transparent) inset,
+    0 10px 30px -10px color-mix(in oklab, var(--brand) 70%, transparent);
+  transition:
+    transform 0.25s var(--ease-out-expo),
+    box-shadow 0.25s var(--ease-out-expo);
+}
+.btn-brand::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  transform: translateX(-120%) skewX(-18deg);
+  background: linear-gradient(90deg, transparent, color-mix(in oklab, #fff 55%, transparent), transparent);
+  transition: transform 0.75s var(--ease-out-expo);
+}
+.btn-brand:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    0 1px 0 0 color-mix(in oklab, #fff 55%, transparent) inset,
+    0 18px 40px -12px color-mix(in oklab, var(--brand) 85%, transparent);
+}
+.btn-brand:hover::after {
+  transform: translateX(120%) skewX(-18deg);
+}
+.btn-brand:active {
+  transform: translateY(0) scale(0.985);
+}
+
+/* Botão secundário em vidro */
+.btn-ghost {
+  border: 1px solid var(--line-strong);
+  background: color-mix(in oklab, var(--cream) 3%, transparent);
+  color: var(--cream);
+  backdrop-filter: blur(8px);
+  transition:
+    border-color 0.25s,
+    background-color 0.25s,
+    transform 0.25s var(--ease-out-expo);
+}
+.btn-ghost:hover {
+  border-color: color-mix(in oklab, var(--brand) 55%, transparent);
+  background: color-mix(in oklab, var(--brand) 9%, transparent);
+  transform: translateY(-2px);
+}
+
+/* Superfície de cartão padrão do site */
+.surface {
+  background:
+    linear-gradient(180deg, color-mix(in oklab, var(--cream) 4%, transparent), transparent 42%),
+    var(--ink-850);
+  border: 1px solid var(--line);
+}
+
+/* Borda de 1px que acende seguindo o ponteiro (ver SpotlightCard) */
+.border-glow {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  pointer-events: none;
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  mask-composite: exclude;
+}
+
+/* Máscara para marquees: as pontas somem em vez de cortar */
+.mask-edges {
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 18%, #000 82%, transparent);
+  mask-image: linear-gradient(to right, transparent, #000 18%, #000 82%, transparent);
+}
+
+/* --------------------------------------------------------------------------
+   Keyframes
+   -------------------------------------------------------------------------- */
+
+@keyframes marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@keyframes drift {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  33% {
+    transform: translate3d(4%, -6%, 0) scale(1.12);
+  }
+  66% {
+    transform: translate3d(-5%, 4%, 0) scale(0.95);
+  }
+}
+
+@keyframes pulse-ring {
+  0% {
+    transform: scale(0.85);
+    opacity: 0.7;
+  }
+  70%,
+  100% {
+    transform: scale(1.9);
+    opacity: 0;
+  }
+}
+
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+/* Luz ambiente. Mais lento que o `animate-pulse` do Tailwind (2s), que para um
+   glow de fundo pisca em vez de respirar. */
+@keyframes breathe {
+  0%,
+  100% {
+    opacity: 0.6;
+    transform: scale(0.97);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.03);
+  }
+}
+
+@keyframes sweep {
+  0% {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+  40% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Movimento reduzido: tudo congela, nada quebra o layout
+   -------------------------------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
 }
