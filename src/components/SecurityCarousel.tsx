@@ -14,45 +14,54 @@ import { useContent } from "@/i18n";
 
 const ICONS: Record<string, LucideIcon> = { KeyRound, CopySlash, Network, Vault };
 const EASE = [0.16, 1, 0.3, 1] as const;
-const AUTOPLAY_MS = 5200;
+const AUTOPLAY_MS = 4200;
+/** Largura de um card mais o espaçamento, em rem. */
+const STEP_REM = 21;
 
 /**
- * Carrossel dos itens de segurança: os cards derivam para a esquerda e, à
- * direita, um painel ilustra o item ativo.
+ * Carrossel infinito dos itens de segurança.
  *
- * O painel não é decorativo — ele mostra o detalhe que não cabe no card, então
- * trocar de item realmente entrega informação nova.
+ * A lista é renderizada duas vezes e o deslocamento volta a zero ao completar
+ * a primeira cópia, sem transição — a emenda cai num ponto em que as duas
+ * sequências são idênticas, então o laço é imperceptível. À direita, um painel
+ * detalha o card ativo.
  */
 export function SecurityCarousel() {
   const { security } = useContent();
   const reduced = useReducedMotion();
-  const [active, setActive] = useState(0);
+  const count = security.items.length;
+
+  const [position, setPosition] = useState(0);
   const [paused, setPaused] = useState(false);
+  const [hovered, setHovered] = useState<number | null>(null);
 
   useEffect(() => {
     if (reduced || paused) return;
-    const id = window.setInterval(
-      () => setActive((i) => (i + 1) % security.items.length),
-      AUTOPLAY_MS,
-    );
+    const id = window.setInterval(() => setPosition((p) => p + 1), AUTOPLAY_MS);
     return () => window.clearInterval(id);
-  }, [reduced, paused, security.items.length]);
+  }, [reduced, paused]);
 
+  const active = position % count;
   const item = security.items[active];
   const ActiveIcon = ICONS[item.icon] ?? ShieldCheck;
+
+  // Duas cópias da lista: a segunda cobre o vão enquanto a primeira sai.
+  const loop = [...security.items, ...security.items];
 
   return (
     <div
       className="grid grid-cols-1 items-center gap-8 lg:grid-cols-[1.25fr_1fr] lg:gap-12"
       onMouseEnter={() => setPaused(true)}
-      onMouseLeave={() => setPaused(false)}
+      onMouseLeave={() => {
+        setPaused(false);
+        setHovered(null);
+      }}
     >
-      {/* Trilho dos cards */}
       <div className="min-w-0">
         {/* Máscara só à direita: o card ativo fica na borda esquerda, e um
             desvanecer dos dois lados apagaria justamente ele. */}
         <div
-          className="-mx-1 overflow-hidden px-1 py-1"
+          className="-mx-1 overflow-hidden px-1 py-6 [perspective:1200px]"
           style={{
             maskImage:
               "linear-gradient(to right, #000 0%, #000 78%, transparent 100%)",
@@ -62,28 +71,47 @@ export function SecurityCarousel() {
         >
           <motion.ul
             className="flex gap-4"
-            animate={{ x: `calc(${-active} * (min(20rem, 72vw) + 1rem))` }}
-            transition={{ duration: reduced ? 0 : 0.7, ease: EASE }}
+            animate={{ x: `-${(position % count) * STEP_REM}rem` }}
+            transition={
+              // Ao voltar para o início do laço, salta sem animar.
+              position % count === 0
+                ? { duration: 0 }
+                : { duration: reduced ? 0 : 0.8, ease: EASE }
+            }
           >
-            {security.items.map((entry, index) => {
+            {loop.map((entry, index) => {
               const Icon = ICONS[entry.icon] ?? ShieldCheck;
-              const isActive = index === active;
+              const slot = index % count;
+              const isActive = slot === active;
+              const isHovered = hovered === index;
 
               return (
-                <li key={entry.title} className="w-[min(20rem,72vw)] shrink-0">
-                  <button
+                <li
+                  key={`${entry.title}-${index}`}
+                  className="w-[min(20rem,72vw)] shrink-0 [transform-style:preserve-3d]"
+                >
+                  <motion.button
                     type="button"
-                    onClick={() => setActive(index)}
+                    onClick={() => setPosition(slot)}
+                    onMouseEnter={() => setHovered(index)}
+                    onMouseLeave={() => setHovered(null)}
                     aria-current={isActive}
-                    className={`surface h-full w-full cursor-pointer rounded-2xl p-6 text-left transition-all duration-500 ${
-                      isActive
-                        ? "border-brand/40 opacity-100"
-                        : "opacity-45 hover:opacity-75"
+                    animate={{
+                      scale: isHovered ? 1.06 : 1,
+                      rotateY: isHovered ? -8 : 0,
+                      rotateX: isHovered ? 4 : 0,
+                      z: isHovered ? 60 : 0,
+                    }}
+                    transition={{ duration: reduced ? 0 : 0.45, ease: EASE }}
+                    className={`surface h-full w-full cursor-pointer rounded-2xl p-6 text-left transition-[opacity,border-color,box-shadow] duration-500 ${
+                      isActive || isHovered
+                        ? "border-brand/40 opacity-100 shadow-[0_24px_60px_-20px_rgba(255,119,0,0.45)]"
+                        : "opacity-50 hover:opacity-85"
                     }`}
                   >
                     <span
                       className={`flex h-12 w-12 items-center justify-center rounded-xl border transition-colors duration-500 ${
-                        isActive
+                        isActive || isHovered
                           ? "border-brand/40 bg-brand/15 text-brand"
                           : "border-line bg-ink-900 text-muted"
                       }`}
@@ -96,26 +124,24 @@ export function SecurityCarousel() {
                     <p className="mt-2 text-sm leading-relaxed text-muted">
                       {entry.description}
                     </p>
-                  </button>
+                  </motion.button>
                 </li>
               );
             })}
           </motion.ul>
         </div>
 
-        {/* Indicadores */}
-        <div className="mt-6 flex gap-1.5">
+        <div className="mt-4 flex gap-1.5">
           {security.items.map((entry, index) => (
             <button
               key={entry.title}
               type="button"
-              onClick={() => setActive(index)}
+              onClick={() => setPosition(index)}
               aria-label={entry.title}
               className="h-1.5 cursor-pointer rounded-full transition-all duration-300"
               style={{
                 width: index === active ? "2rem" : "0.75rem",
-                background:
-                  index === active ? "#FF7700" : "rgba(255,255,227,0.18)",
+                background: index === active ? "#FF7700" : "rgba(255,255,227,0.18)",
               }}
             />
           ))}
@@ -138,7 +164,6 @@ export function SecurityCarousel() {
             transition={{ duration: reduced ? 0 : 0.4, ease: EASE }}
             className="relative"
           >
-            {/* Emblema grande do item */}
             <div className="relative mb-6 flex h-28 items-center justify-center">
               {[112, 84, 60].map((size, index) => (
                 <span

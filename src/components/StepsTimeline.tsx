@@ -1,13 +1,17 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useState } from "react";
+import dynamic from "next/dynamic";
 import { motion, useInView, useScroll, useSpring, useReducedMotion } from "motion/react";
 import { useContent } from "@/i18n";
 import { StepIcon } from "./StepIcons";
 
+/** O three fica fora do bundle inicial e nunca roda no servidor. */
+const StepIcon3D = dynamic(() => import("./StepIcon3D"), { ssr: false });
+
 const EASE = [0.16, 1, 0.3, 1] as const;
 
-/** Uma etapa: nó numerado, texto e o ícone que entra junto com a linha. */
+/** Uma etapa: nó numerado, texto e o ícone 3D que entra junto com a linha. */
 function Step({
   step,
   title,
@@ -21,7 +25,12 @@ function Step({
 }) {
   const ref = useRef<HTMLLIElement>(null);
   const inView = useInView(ref, { once: true, amount: 0.6 });
+  // Margem generosa: o canvas monta um pouco antes de aparecer, para o ícone
+  // nunca surgir vazio. Sem isso seriam quatro contextos WebGL abertos já no
+  // carregamento da página, mesmo com a seção fora da tela.
+  const near = useInView(ref, { once: true, margin: "300px" });
   const reduced = useReducedMotion();
+  const [hovered, setHovered] = useState(false);
 
   return (
     <motion.li
@@ -51,20 +60,31 @@ function Step({
 
         {/* O ícone entra quando a linha do tempo alcança esta etapa */}
         <motion.div
-          initial={{ opacity: 0, scale: 0.6, rotate: -12 }}
-          animate={
-            inView
-              ? { opacity: 1, scale: 1, rotate: 0 }
-              : { opacity: 0, scale: reduced ? 1 : 0.6, rotate: reduced ? 0 : -12 }
-          }
-          transition={{ duration: reduced ? 0 : 0.7, ease: EASE, delay: reduced ? 0 : 0.15 }}
-          className="relative hidden h-20 w-20 shrink-0 items-center justify-center rounded-2xl border border-line bg-ink-900/60 p-4 sm:flex"
+          onMouseEnter={() => setHovered(true)}
+          onMouseLeave={() => setHovered(false)}
+          initial={{ opacity: 0, scale: 0.6 }}
+          animate={inView ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.6 }}
+          transition={{
+            duration: reduced ? 0 : 0.7,
+            ease: EASE,
+            delay: reduced ? 0 : 0.15,
+          }}
+          className="relative hidden h-24 w-24 shrink-0 rounded-2xl border border-line bg-ink-900/60 transition-colors duration-500 group-hover:border-brand/40 sm:block"
         >
+          {/* Brilho que acende por trás do sólido no hover */}
           <span
             aria-hidden
-            className="absolute inset-0 -z-10 rounded-2xl bg-brand/10 opacity-0 blur-xl transition-opacity duration-500 group-hover:opacity-100"
+            className="absolute inset-0 -z-10 rounded-2xl bg-brand/25 opacity-0 blur-2xl transition-opacity duration-500 group-hover:opacity-100"
           />
-          <StepIcon name={icon} />
+
+          {near ? (
+            <StepIcon3D name={icon} hovered={hovered} />
+          ) : (
+            // Enquanto o canvas não monta, o traço 2D segura o lugar.
+            <span className="flex h-full w-full items-center justify-center p-5">
+              <StepIcon name={icon} />
+            </span>
+          )}
         </motion.div>
       </div>
     </motion.li>

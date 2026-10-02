@@ -90,6 +90,137 @@ export const pt = {
           "Brasil, Argentina, México e Colômbia. O cliente vê o preço na moeda dele e paga pelo método que já usa.",
       },
     ],
+
+    /**
+     * Textos das demonstrações que acompanham cada card.
+     *
+     * Os nomes dos 28 blocos são PROVISÓRIOS — o projeto só registrava "28
+     * tipos de bloco, incluindo 4 de IA". Ficam aqui, num só lugar, para
+     * revisão sem tocar em componente.
+     */
+    demos: {
+      tabHint: "Clique em um número para ver a demonstração",
+
+      delivery: {
+        title: "Do PIX ao acesso, em 1,2 segundo",
+        subtitle: "Simulação do que acontece quando um cliente paga de madrugada",
+        clock: "03:14",
+        clockNote: "Ninguém da sua equipe está acordado",
+        replay: "Simular de novo",
+        done: "Acesso liberado",
+        steps: [
+          { label: "PIX confirmado", detail: "A processadora avisa a Wone" },
+          { label: "Webhook recebido", detail: "Pagamento conferido e validado" },
+          { label: "Link único gerado", detail: "Convite de uso único para o canal" },
+          { label: "Convite enviado", detail: "O cliente recebe no chat" },
+        ],
+      },
+
+      blocks: {
+        title: "28 blocos para desenhar qualquer funil",
+        subtitle: "Um trecho de fluxo montado com eles",
+        aiTag: "IA",
+        hint: "Passe o cursor em um bloco para ver o que ele faz",
+        flow: ["Início", "Condição", "Espera", "Etiqueta", "Integração", "Qualificar lead"],
+        categories: [
+          {
+            name: "Fluxo",
+            items: [
+              { name: "Início", detail: "Dispara quando o lead dá start no bot" },
+              { name: "Mensagem", detail: "Envia um texto ou mídia no chat" },
+              { name: "Condição", detail: "Separa o caminho conforme uma regra" },
+              { name: "Espera", detail: "Segura o lead por um tempo definido" },
+              { name: "Divisão A/B", detail: "Reparte o tráfego entre dois caminhos" },
+              { name: "Fim", detail: "Encerra o fluxo para aquele lead" },
+            ],
+          },
+          {
+            name: "Conteúdo",
+            items: [
+              { name: "Texto", detail: "Mensagem com variáveis do lead" },
+              { name: "Mídia", detail: "Foto, vídeo, áudio ou documento" },
+              { name: "Botões", detail: "Opções clicáveis dentro do chat" },
+            ],
+          },
+          {
+            name: "Venda",
+            items: [
+              { name: "Oferta", detail: "Apresenta um plano com preço" },
+              { name: "Order bump", detail: "Adicional cobrado no mesmo PIX" },
+              { name: "Upsell", detail: "Oferta maior depois da compra" },
+              { name: "Downsell", detail: "Oferta menor para quem recusou" },
+              { name: "Checkout PIX", detail: "Gera a chave e aguarda o pagamento" },
+              { name: "Checkout cartão", detail: "Cobra no cartão pelo gateway" },
+            ],
+          },
+          {
+            name: "Acesso",
+            items: [
+              { name: "Gerar convite", detail: "Link único para canal ou grupo" },
+              { name: "Remover acesso", detail: "Tira o membro ao expirar" },
+              { name: "Verificar assinatura", detail: "Confere se o plano está ativo" },
+              { name: "Renovação", detail: "Lembra e recobra antes de vencer" },
+            ],
+          },
+          {
+            name: "Dados",
+            items: [
+              { name: "Etiqueta", detail: "Marca o lead para segmentar depois" },
+              { name: "Variável", detail: "Guarda um valor no contato" },
+              { name: "Salvar resposta", detail: "Registra o que o lead respondeu" },
+            ],
+          },
+          {
+            name: "Integração",
+            items: [
+              { name: "Enviar evento", detail: "Dispara conversão para a Meta ou TikTok" },
+              { name: "Chamar API", detail: "Consulta ou envia dados ao seu sistema" },
+            ],
+          },
+          {
+            name: "Inteligência artificial",
+            items: [
+              { name: "Conversar", detail: "Responde em linguagem natural" },
+              { name: "Classificar", detail: "Define a intenção da mensagem" },
+              { name: "Extrair dados", detail: "Tira nome, e-mail ou cidade do texto" },
+              { name: "Qualificar lead", detail: "Pontua quem tem mais chance de comprar" },
+            ],
+          },
+        ],
+      },
+
+      confirmation: {
+        title: "Três vias independentes até a entrega",
+        subtitle: "Desligue uma via e veja o acesso sair pelas outras",
+        payment: "Pagamento feito",
+        delivered: "Entregue",
+        failLabel: "Simular falha",
+        offline: "Via fora do ar",
+        allDownTitle: "As três ao mesmo tempo não acontece",
+        allDown:
+          "As vias são independentes: webhook e reconciliação rodam em servidores separados, e o botão no chat é acionado pelo próprio cliente. Este cenário existe aqui só para mostrar o limite.",
+        paths: [
+          { name: "Webhook", detail: "A processadora avisa na hora do pagamento" },
+          { name: "Reconciliação", detail: "A Wone confere os pagamentos em ciclo" },
+          { name: "Verificar pagamento", detail: "O cliente confirma pelo botão no chat" },
+        ],
+      },
+
+      checkout: {
+        title: "O mesmo plano, na moeda de cada país",
+        subtitle: "Escolha um país e veja o checkout que o cliente enxerga",
+        product: "Plano Anual VIP",
+        productNote: "Acesso ao canal por 12 meses",
+        payWith: "Pagar com",
+        disclaimer: "Valores ilustrativos, sem cotação em tempo real.",
+        prices: [
+          { code: "BRL", display: "197,00" },
+          { code: "ARS", display: "38.000" },
+          { code: "MXN", display: "650" },
+          { code: "COP", display: "155.000" },
+        ],
+      },
+    },
   },
 
   howItWorks: {
@@ -235,10 +366,10 @@ export const pt = {
       headline: "Checkout internacional",
       lead: "Cobre em moeda local e deixe o cliente pagar do jeito que ele já paga no país dele. Sem conversão manual, sem checkout em inglês.",
       countries: [
-        { flag: "🇧🇷", name: "Brasil", method: "PIX e cartão" },
-        { flag: "🇦🇷", name: "Argentina", method: "Peso argentino" },
-        { flag: "🇲🇽", name: "México", method: "Peso mexicano" },
-        { flag: "🇨🇴", name: "Colômbia", method: "Peso colombiano" },
+        { flag: "🇧🇷", name: "Brasil", method: "PIX e cartão", code: "BRL", symbol: "R$" },
+        { flag: "🇦🇷", name: "Argentina", method: "Cartão local", code: "ARS", symbol: "$" },
+        { flag: "🇲🇽", name: "México", method: "Cartão e SPEI", code: "MXN", symbol: "$" },
+        { flag: "🇨🇴", name: "Colômbia", method: "Cartão e PSE", code: "COP", symbol: "$" },
       ],
       moreLabel: "Mais garantias",
       more: [
@@ -440,6 +571,7 @@ export const pt = {
     items: [
       {
         tier: "10K",
+        image: "/placas/placa-10k.png",
         title: "Troféu Bronze • R$ 10.000",
         subtitle: "A validação da primeira escala",
         description:
@@ -449,6 +581,7 @@ export const pt = {
       },
       {
         tier: "100K",
+        image: "/placas/placa-100k.png",
         title: "Placa Acrílico 100K • R$ 100.000",
         subtitle: "Clube dos 6 Dígitos",
         description:
@@ -458,6 +591,7 @@ export const pt = {
       },
       {
         tier: "500K",
+        image: "/placas/placa-500k.png",
         title: "Placa Cerimonial 500K • R$ 500.000",
         subtitle: "Meio Milhão Faturado",
         description:
@@ -467,6 +601,7 @@ export const pt = {
       },
       {
         tier: "1M",
+        image: "/placas/placa-wone-1m.png",
         title: "Placa Black Diamond 1M • R$ 1.000.000",
         subtitle: "O Olimpo dos 7 Dígitos",
         description:
@@ -536,14 +671,15 @@ export const pt = {
     online: "online",
     approved: "PIX aprovado",
     received: "Recebido no mês",
-    total: "R$ 142.580,00",
+    /** Teto do contador: ao ultrapassar, o ciclo reinicia. */
+    cap: 142580,
     success: "Sucesso",
     transactions: [
-      { label: "Plano Anual VIP", amount: "R$ 197,00" },
-      { label: "Order bump · Pack", amount: "R$ 47,00" },
-      { label: "Plano Mensal", amount: "R$ 97,00" },
-      { label: "Pack avulso", amount: "R$ 67,00" },
-      { label: "Plano Trimestral", amount: "R$ 247,00" },
+      { label: "Plano Anual VIP", amount: "R$ 197,00", value: 197 },
+      { label: "Order bump · Pack", amount: "R$ 47,00", value: 47 },
+      { label: "Plano Mensal", amount: "R$ 97,00", value: 97 },
+      { label: "Pack avulso", amount: "R$ 67,00", value: 67 },
+      { label: "Plano Trimestral", amount: "R$ 247,00", value: 247 },
     ],
     ariaLabel:
       "Tela do Wone Bot: um PIX aprovado, R$ 142.580,00 recebidos no mês e entregas com status de sucesso.",

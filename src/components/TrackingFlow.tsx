@@ -73,7 +73,7 @@ export function TrackingFlow() {
               }`}
             >
               <Icon className="h-4 w-4" />
-              {active && !reduced && (
+              {active && (
                 <span className="animate-pulse-ring absolute inset-0 rounded-full border border-brand" />
               )}
             </span>

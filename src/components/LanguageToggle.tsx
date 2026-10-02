@@ -1,5 +1,6 @@
 "use client";
 
+import { useId } from "react";
 import { motion } from "motion/react";
 import { useLanguage, type Locale } from "@/i18n";
 
@@ -14,6 +15,10 @@ const OPTIONS: { code: Locale; label: string }[] = [
  */
 export function LanguageToggle({ className = "" }: { className?: string }) {
   const { locale, setLocale } = useLanguage();
+  // O toggle aparece no header e no rodapé. Com o mesmo `layoutId` nos dois, o
+  // motion trata as pílulas como o mesmo elemento e uma "voa" para a outra —
+  // deixando o rótulo ativo preto sobre preto. O id precisa ser por instância.
+  const pillId = useId();
 
   return (
     <div
@@ -35,7 +40,7 @@ export function LanguageToggle({ className = "" }: { className?: string }) {
           >
             {isActive && (
               <motion.span
-                layoutId="lang-pill"
+                layoutId={`lang-pill-${pillId}`}
                 className="absolute inset-0 -z-10 rounded-full bg-brand"
                 transition={{ type: "spring", stiffness: 380, damping: 32 }}
               />

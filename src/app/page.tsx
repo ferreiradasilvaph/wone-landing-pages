@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Image from "next/image";
 import {
   ShoppingBag,
   TrendingUp,
@@ -30,6 +29,7 @@ import { StepsTimeline } from "@/components/StepsTimeline";
 import { Highlights } from "@/components/Highlights";
 import { FeatureCard } from "@/components/FeatureCard";
 import { TrackingFlow } from "@/components/TrackingFlow";
+import { CountryStrip } from "@/components/CountryStrip";
 import { AnalyticsSection } from "@/components/AnalyticsSection";
 import { SecurityCarousel } from "@/components/SecurityCarousel";
 import { AwardsShowcase } from "@/components/AwardsShowcase";
@@ -193,24 +193,15 @@ export default function Home() {
               stagger={0.05}
               className="mt-14 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3"
             >
-              {t.features.items.map((item, index) => {
-                // São 10 recursos em 3 colunas: o último sobraria sozinho numa
-                // linha, então ocupa a largura toda e fecha a grade.
-                const isWide = index === t.features.items.length - 1;
-                return (
-                  <RevealItem
-                    key={item.title}
-                    className={`h-full ${isWide ? "sm:col-span-2 lg:col-span-3" : ""}`}
-                  >
-                    <FeatureCard
-                      title={item.title}
-                      description={item.description}
-                      Icon={FEATURE_ICONS[item.icon] ?? Zap}
-                      wide={isWide}
-                    />
-                  </RevealItem>
-                );
-              })}
+              {t.features.items.map((item) => (
+                <RevealItem key={item.title} className="h-full">
+                  <FeatureCard
+                    title={item.title}
+                    description={item.description}
+                    Icon={FEATURE_ICONS[item.icon] ?? Zap}
+                  />
+                </RevealItem>
+              ))}
             </RevealGroup>
           </div>
         </section>
@@ -227,31 +218,12 @@ export default function Home() {
               description={t.payments.description}
             />
 
-            <Reveal className="mt-14">
-              <div className="relative aspect-16/9 w-full overflow-hidden rounded-3xl border border-line shadow-2xl sm:aspect-2/1">
-                <Image
-                  src="/images/mockup-feed-smartphone.jpg"
-                  alt=""
-                  fill
-                  sizes="(max-width: 1280px) 100vw, 1280px"
-                  className="object-cover"
-                />
-                <div className="absolute inset-0 bg-gradient-to-r from-ink-950 via-ink-950/75 to-transparent" />
-                <div className="absolute inset-y-0 left-0 flex max-w-md flex-col justify-center p-6 sm:p-12">
-                  <span className="t-eyebrow text-brand">
-                    {t.payments.bannerEyebrow}
-                  </span>
-                  <p className="font-display mt-3 text-xl leading-tight font-semibold text-balance text-cream sm:text-3xl">
-                    {t.payments.bannerTitle}
-                  </p>
-                </div>
-              </div>
-            </Reveal>
-
-            <RevealGroup className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
+            {/* Checkout internacional ocupa mais largura: é a frente
+                comercial que a empresa quer destacar. */}
+            <RevealGroup className="mt-14 grid grid-cols-1 gap-6 lg:grid-cols-[1.35fr_1fr]">
               {/* Pagamentos: checkout internacional em primeiro plano */}
               <RevealItem className="h-full">
-                <SpotlightCard className="h-full p-8">
+                <SpotlightCard className="h-full border-brand/30 p-8 shadow-[0_24px_70px_-30px_rgba(255,119,0,0.4)] sm:p-10">
                   {/* Coluna flex: o acordeão desce para a base e o card
                       acompanha a altura do vizinho sem deixar buraco. */}
                   <div className="flex h-full flex-col">
@@ -264,26 +236,7 @@ export default function Home() {
                     {t.payments.card.lead}
                   </p>
 
-                  <ul className="mt-6 grid grid-cols-2 gap-2.5">
-                    {t.payments.card.countries.map((country) => (
-                      <li
-                        key={country.name}
-                        className="flex items-center gap-2.5 rounded-xl border border-line bg-ink-950/50 px-3 py-2.5"
-                      >
-                        <span aria-hidden className="text-lg leading-none">
-                          {country.flag}
-                        </span>
-                        <span className="min-w-0 leading-tight">
-                          <span className="block truncate text-xs font-semibold text-cream">
-                            {country.name}
-                          </span>
-                          <span className="block truncate text-[11px] text-faint">
-                            {country.method}
-                          </span>
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
+                  <CountryStrip />
 
                   {/* Demais garantias recolhidas, para não competir com a manchete */}
                   <button

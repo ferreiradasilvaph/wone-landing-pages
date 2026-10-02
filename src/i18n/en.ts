@@ -86,6 +86,130 @@ export const en: Content = {
           "Brazil, Argentina, Mexico and Colombia. Customers see the price in their own currency and pay the way they already do.",
       },
     ],
+
+    demos: {
+      tabHint: "Click a number to see it in action",
+
+      delivery: {
+        title: "From PIX to access, in 1.2 seconds",
+        subtitle: "A simulation of what happens when a customer pays at 3am",
+        clock: "03:14",
+        clockNote: "Nobody on your team is awake",
+        replay: "Run it again",
+        done: "Access granted",
+        steps: [
+          { label: "PIX confirmed", detail: "The processor notifies Wone" },
+          { label: "Webhook received", detail: "Payment checked and validated" },
+          { label: "Single-use link created", detail: "A one-time invite to the channel" },
+          { label: "Invite sent", detail: "The customer gets it in chat" },
+        ],
+      },
+
+      blocks: {
+        title: "28 blocks to design any funnel",
+        subtitle: "A stretch of flow built with them",
+        aiTag: "AI",
+        hint: "Hover a block to see what it does",
+        flow: ["Start", "Condition", "Wait", "Tag", "Integration", "Qualify lead"],
+        categories: [
+          {
+            name: "Flow",
+            items: [
+              { name: "Start", detail: "Fires when the lead starts the bot" },
+              { name: "Message", detail: "Sends text or media in the chat" },
+              { name: "Condition", detail: "Splits the path based on a rule" },
+              { name: "Wait", detail: "Holds the lead for a set time" },
+              { name: "A/B split", detail: "Divides traffic between two paths" },
+              { name: "End", detail: "Closes the flow for that lead" },
+            ],
+          },
+          {
+            name: "Content",
+            items: [
+              { name: "Text", detail: "Message with the lead's variables" },
+              { name: "Media", detail: "Photo, video, audio or document" },
+              { name: "Buttons", detail: "Clickable options inside the chat" },
+            ],
+          },
+          {
+            name: "Selling",
+            items: [
+              { name: "Offer", detail: "Presents a plan with its price" },
+              { name: "Order bump", detail: "Add-on charged on the same PIX" },
+              { name: "Upsell", detail: "A bigger offer after the purchase" },
+              { name: "Downsell", detail: "A smaller offer for those who declined" },
+              { name: "PIX checkout", detail: "Creates the key and waits for payment" },
+              { name: "Card checkout", detail: "Charges the card through the gateway" },
+            ],
+          },
+          {
+            name: "Access",
+            items: [
+              { name: "Create invite", detail: "Single-use link to channel or group" },
+              { name: "Revoke access", detail: "Removes the member on expiry" },
+              { name: "Check subscription", detail: "Verifies the plan is still active" },
+              { name: "Renewal", detail: "Reminds and recharges before expiry" },
+            ],
+          },
+          {
+            name: "Data",
+            items: [
+              { name: "Tag", detail: "Marks the lead for later segmentation" },
+              { name: "Variable", detail: "Stores a value on the contact" },
+              { name: "Save answer", detail: "Records what the lead replied" },
+            ],
+          },
+          {
+            name: "Integration",
+            items: [
+              { name: "Send event", detail: "Fires a conversion to Meta or TikTok" },
+              { name: "Call API", detail: "Reads from or writes to your system" },
+            ],
+          },
+          {
+            name: "Artificial intelligence",
+            items: [
+              { name: "Converse", detail: "Replies in natural language" },
+              { name: "Classify", detail: "Determines the message's intent" },
+              { name: "Extract data", detail: "Pulls name, email or city from the text" },
+              { name: "Qualify lead", detail: "Scores who is most likely to buy" },
+            ],
+          },
+        ],
+      },
+
+      confirmation: {
+        title: "Three independent paths to delivery",
+        subtitle: "Switch one off and watch access go out through the others",
+        payment: "Payment made",
+        delivered: "Delivered",
+        failLabel: "Simulate failure",
+        offline: "Path offline",
+        allDownTitle: "All three at once doesn't happen",
+        allDown:
+          "The paths are independent: webhook and reconciliation run on separate servers, and the chat button is triggered by the customer. This scenario exists here only to show the limit.",
+        paths: [
+          { name: "Webhook", detail: "The processor notifies on payment" },
+          { name: "Reconciliation", detail: "Wone sweeps payments on a cycle" },
+          { name: "Check payment", detail: "The customer confirms via the chat button" },
+        ],
+      },
+
+      checkout: {
+        title: "The same plan, in each country's currency",
+        subtitle: "Pick a country and see the checkout your customer gets",
+        product: "Annual VIP Plan",
+        productNote: "Channel access for 12 months",
+        payWith: "Pay with",
+        disclaimer: "Illustrative amounts, not live exchange rates.",
+        prices: [
+          { code: "BRL", display: "197.00" },
+          { code: "ARS", display: "38,000" },
+          { code: "MXN", display: "650" },
+          { code: "COP", display: "155,000" },
+        ],
+      },
+    },
   },
 
   howItWorks: {
@@ -231,10 +355,10 @@ export const en: Content = {
       headline: "International checkout",
       lead: "Charge in local currency and let customers pay the way they already pay at home. No manual conversion, no English-only checkout.",
       countries: [
-        { flag: "🇧🇷", name: "Brazil", method: "PIX and card" },
-        { flag: "🇦🇷", name: "Argentina", method: "Argentine peso" },
-        { flag: "🇲🇽", name: "Mexico", method: "Mexican peso" },
-        { flag: "🇨🇴", name: "Colombia", method: "Colombian peso" },
+        { flag: "🇧🇷", name: "Brazil", method: "PIX and card", code: "BRL", symbol: "R$" },
+        { flag: "🇦🇷", name: "Argentina", method: "Local card", code: "ARS", symbol: "$" },
+        { flag: "🇲🇽", name: "Mexico", method: "Card and SPEI", code: "MXN", symbol: "$" },
+        { flag: "🇨🇴", name: "Colombia", method: "Card and PSE", code: "COP", symbol: "$" },
       ],
       moreLabel: "More guarantees",
       more: [
@@ -431,6 +555,7 @@ export const en: Content = {
     items: [
       {
         tier: "10K",
+        image: "/placas/placa-10k.png",
         title: "Bronze Trophy • R$ 10,000",
         subtitle: "Proof of the first scale",
         description:
@@ -440,6 +565,7 @@ export const en: Content = {
       },
       {
         tier: "100K",
+        image: "/placas/placa-100k.png",
         title: "100K Acrylic Plaque • R$ 100,000",
         subtitle: "The 6-Figure Club",
         description:
@@ -449,6 +575,7 @@ export const en: Content = {
       },
       {
         tier: "500K",
+        image: "/placas/placa-500k.png",
         title: "500K Ceremonial Plaque • R$ 500,000",
         subtitle: "Half a Million in Revenue",
         description:
@@ -458,6 +585,7 @@ export const en: Content = {
       },
       {
         tier: "1M",
+        image: "/placas/placa-wone-1m.png",
         title: "1M Black Diamond Plaque • R$ 1,000,000",
         subtitle: "The Olympus of 7 Figures",
         description:
@@ -526,14 +654,15 @@ export const en: Content = {
     online: "online",
     approved: "PIX approved",
     received: "Received this month",
-    total: "R$ 142,580.00",
+    /** Teto do contador: ao ultrapassar, o ciclo reinicia. */
+    cap: 142580,
     success: "Success",
     transactions: [
-      { label: "Annual VIP Plan", amount: "R$ 197.00" },
-      { label: "Order bump · Pack", amount: "R$ 47.00" },
-      { label: "Monthly Plan", amount: "R$ 97.00" },
-      { label: "Single pack", amount: "R$ 67.00" },
-      { label: "Quarterly Plan", amount: "R$ 247.00" },
+      { label: "Annual VIP Plan", amount: "R$ 197.00", value: 197 },
+      { label: "Order bump · Pack", amount: "R$ 47.00", value: 47 },
+      { label: "Monthly Plan", amount: "R$ 97.00", value: 97 },
+      { label: "Single pack", amount: "R$ 67.00", value: 67 },
+      { label: "Quarterly Plan", amount: "R$ 247.00", value: 247 },
     ],
     ariaLabel:
       "Wone Bot screen: an approved PIX, R$ 142,580.00 received this month and deliveries marked as successful.",

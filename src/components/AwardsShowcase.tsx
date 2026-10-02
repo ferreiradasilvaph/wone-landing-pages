@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { AnimatePresence, motion, useInView, useReducedMotion } from "motion/react";
 import { Award, Sparkles } from "lucide-react";
@@ -13,7 +13,9 @@ const AwardPlaque3D = dynamic(() => import("./AwardPlaque3D"), {
 });
 
 const EASE = [0.16, 1, 0.3, 1] as const;
-const AUTOPLAY_MS = 90;
+/** Quanto tempo a barra leva para percorrer um marco. */
+const TIER_MS = 4200;
+const FRAME_MS = 40;
 
 function PlaqueSkeleton() {
   return (
@@ -24,16 +26,16 @@ function PlaqueSkeleton() {
 }
 
 /**
- * Carrossel dos marcos, controlado por uma barra de progresso contínua.
+ * Carrossel dos marcos com barra de progresso contínua.
  *
- * A barra vai de 0 a 100% e cada quarto corresponde a um marco: 0–25% é o 10K,
- * 25–50% o 100K, e assim por diante. É arrastável e avança sozinha, então o
- * lead percebe os marcos como uma escada de faturamento, não como abas soltas.
+ * A barra anda sozinha de 0 a 100% e o marco exibido é o quarto em que ela
+ * está — 0–25% é o 10K, 25–50% o 100K, e assim por diante. Passar o cursor
+ * sobre um dos rótulos trava a barra naquele marco; ao sair, ela retoma de
+ * onde parou.
  */
 export function AwardsShowcase() {
   const { awards } = useContent();
   const reduced = useReducedMotion();
-  const trackRef = useRef<HTMLDivElement>(null);
 
   // `next/dynamic` só adia o download até o componente RENDERIZAR — e ele
   // renderizaria de imediato, mesmo com a seção fora da tela, trazendo os
@@ -42,79 +44,54 @@ export function AwardsShowcase() {
   const stageRef = useRef<HTMLDivElement>(null);
   const near = useInView(stageRef, { once: true, margin: "600px" });
 
-  const [progress, setProgress] = useState(0);
-  const [dragging, setDragging] = useState(false);
-  const [paused, setPaused] = useState(false);
-
   const count = awards.items.length;
-  // 99.999 evita que progress === 100 estoure o índice para fora do array.
-  const index = Math.min(count - 1, Math.floor((progress / 100) * count));
-  const active = awards.items[index];
+  const [progress, setProgress] = useState(0);
+  /** Marco sob o cursor; enquanto existe, a barra fica parada nele. */
+  const [pinned, setPinned] = useState<number | null>(null);
 
   useEffect(() => {
-    if (reduced || dragging || paused) return;
+    if (reduced || pinned !== null) return;
 
+    const stepPerFrame = 100 / ((TIER_MS * count) / FRAME_MS);
     const id = window.setInterval(() => {
-      setProgress((value) => (value >= 100 ? 0 : value + 0.25));
-    }, AUTOPLAY_MS);
+      setProgress((value) => (value + stepPerFrame) % 100);
+    }, FRAME_MS);
 
     return () => window.clearInterval(id);
-  }, [reduced, dragging, paused]);
+  }, [reduced, pinned, count]);
 
-  const setFromPointer = useCallback((clientX: number) => {
-    const track = trackRef.current;
-    if (!track) return;
-    const rect = track.getBoundingClientRect();
-    const ratio = (clientX - rect.left) / rect.width;
-    setProgress(Math.min(100, Math.max(0, ratio * 100)));
-  }, []);
-
-  useEffect(() => {
-    if (!dragging) return;
-
-    const move = (event: PointerEvent) => setFromPointer(event.clientX);
-    const up = () => setDragging(false);
-
-    window.addEventListener("pointermove", move);
-    window.addEventListener("pointerup", up);
-    return () => {
-      window.removeEventListener("pointermove", move);
-      window.removeEventListener("pointerup", up);
-    };
-  }, [dragging, setFromPointer]);
+  // Com um marco preso, ele manda; senão, vale o quarto em que a barra está.
+  const index =
+    pinned ?? Math.min(count - 1, Math.floor((progress / 100) * count));
+  const active = awards.items[index];
+  // A barra mostra o meio do marco preso, para o preenchimento bater com o rótulo.
+  const shown = pinned !== null ? ((pinned + 0.5) / count) * 100 : progress;
 
   return (
-    <div onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)}>
+    <div>
       {/* Barra de progresso com os marcos */}
       <div className="mb-10">
         <div
-          ref={trackRef}
-          role="slider"
-          tabIndex={0}
-          aria-label={awards.progressLabel}
+          className="relative h-2 rounded-full bg-cream/8"
+          role="progressbar"
           aria-valuemin={0}
           aria-valuemax={100}
-          aria-valuenow={Math.round(progress)}
+          aria-valuenow={Math.round(shown)}
           aria-valuetext={active.tier}
-          onPointerDown={(event) => {
-            setDragging(true);
-            setFromPointer(event.clientX);
-          }}
-          onKeyDown={(event) => {
-            if (event.key === "ArrowRight") setProgress((v) => Math.min(100, v + 5));
-            if (event.key === "ArrowLeft") setProgress((v) => Math.max(0, v - 5));
-          }}
-          className="relative h-2 cursor-pointer rounded-full bg-cream/8 select-none"
         >
-          <div
-            className="absolute inset-y-0 left-0 rounded-full transition-colors duration-500"
-            style={{ width: `${progress}%`, background: active.accent }}
+          <motion.div
+            className="absolute inset-y-0 left-0 rounded-full"
+            style={{ background: active.accent }}
+            animate={{ width: `${shown}%` }}
+            transition={{
+              duration: pinned !== null && !reduced ? 0.45 : 0,
+              ease: EASE,
+            }}
           />
 
-          {/* Marcadores de cada marco */}
           {awards.items.map((item, idx) => {
             const position = ((idx + 1) / count) * 100;
-            const reached = progress >= position - 100 / count;
+            const reached = shown >= position - 100 / count;
             return (
               <span
                 key={item.tier}
@@ -133,13 +110,19 @@ export function AwardsShowcase() {
           })}
         </div>
 
+        {/* Rótulos: o cursor sobre um deles trava a barra naquele marco */}
         <div className="mt-3 flex justify-between">
           {awards.items.map((item, idx) => (
             <button
               key={item.tier}
               type="button"
+              onMouseEnter={() => setPinned(idx)}
+              onMouseLeave={() => setPinned(null)}
+              onFocus={() => setPinned(idx)}
+              onBlur={() => setPinned(null)}
               onClick={() => setProgress(((idx + 0.5) / count) * 100)}
-              className={`cursor-pointer font-mono text-xs font-bold transition-colors ${
+              aria-pressed={idx === index}
+              className={`cursor-pointer rounded px-2 py-1 font-mono text-xs font-bold transition-colors ${
                 idx === index ? "text-cream" : "text-faint hover:text-muted"
               }`}
             >
@@ -149,7 +132,7 @@ export function AwardsShowcase() {
         </div>
 
         <p className="t-eyebrow mt-4 text-center text-faint">
-          {awards.progressLabel} · {Math.round(progress)}%
+          {awards.progressLabel}
         </p>
       </div>
 
@@ -217,7 +200,11 @@ export function AwardsShowcase() {
 
           {/* Placa 3D, sem imagem de fundo: o canvas é transparente */}
           <div ref={stageRef} className="relative aspect-square w-full">
-            {near ? <AwardPlaque3D accent={active.accent} /> : <PlaqueSkeleton />}
+            {near ? (
+              <AwardPlaque3D accent={active.accent} image={active.image} />
+            ) : (
+              <PlaqueSkeleton />
+            )}
 
             <div
               className="absolute bottom-2 left-2 z-10 flex items-center gap-2 rounded-xl border bg-ink-950/75 px-3 py-2 backdrop-blur-sm"

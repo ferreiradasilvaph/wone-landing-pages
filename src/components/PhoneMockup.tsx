@@ -19,8 +19,12 @@ const PIX_AMOUNTS = [197, 67, 247, 97, 147, 57, 227, 117, 187, 77];
 
 const NOTIFICATION_MS = 2600;
 const PIX_CYCLE_MS = 4200;
-/** Quantas entregas ficam visíveis na janela do carrossel. */
+/** Quantas entregas cabem na janela do carrossel. */
 const VISIBLE = 3;
+/** Altura de cada linha, em px — usada no deslocamento vertical. */
+const ROW_H = 48;
+/** Quanto o contador fica abaixo do teto ao reiniciar o ciclo. */
+const HEADROOM = 1400;
 
 const BRL = new Intl.NumberFormat("pt-BR", {
   style: "currency",
@@ -33,6 +37,10 @@ const BRL = new Intl.NumberFormat("pt-BR", {
  * qualquer densidade, cores vindas dos tokens da marca e nada de PNG pesado na
  * primeira dobra.
  *
+ * As entregas descem — a mais recente nasce no topo e empurra as anteriores
+ * para baixo, como numa central de notificações de verdade — e cada uma soma o
+ * próprio valor ao "recebido no mês", ligando a venda ao caixa.
+ *
  * Para leitores de tela é uma ilustração única (`role="img"` com um resumo), e
  * o interior fica escondido — solto, viraria uma enxurrada de números.
  */
@@ -40,19 +48,34 @@ export function PhoneMockup() {
   const reduced = useReducedMotion();
   const { phone } = useContent();
 
-  // Índice da primeira entrega visível; avança sozinho e faz a lista girar.
-  const [offset, setOffset] = useState(0);
+  // Quantas notificações já chegaram. Serve de relógio do carrossel e de
+  // índice da transação mais recente.
+  const [tick, setTick] = useState(0);
   // `null` = o cartão do PIX está fora da tela, no intervalo entre aparições.
   const [pixIndex, setPixIndex] = useState<number | null>(0);
+  const [total, setTotal] = useState(phone.cap - HEADROOM);
+
+  const transactions = phone.transactions;
 
   useEffect(() => {
     if (reduced) return;
-    const id = window.setInterval(
-      () => setOffset((value) => value + 1),
-      NOTIFICATION_MS,
-    );
+
+    const id = window.setInterval(() => {
+      setTick((value) => {
+        const next = value + 1;
+        // A entrega que acabou de entrar soma ao acumulado do mês; ao passar
+        // do teto, o ciclo recomeça no piso.
+        const incoming = transactions[next % transactions.length];
+        setTotal((current) => {
+          const sum = current + incoming.value;
+          return sum > phone.cap ? phone.cap - HEADROOM : sum;
+        });
+        return next;
+      });
+    }, NOTIFICATION_MS);
+
     return () => window.clearInterval(id);
-  }, [reduced]);
+  }, [reduced, transactions, phone.cap]);
 
   useEffect(() => {
     if (reduced) return;
@@ -67,10 +90,14 @@ export function PhoneMockup() {
     return () => window.clearInterval(id);
   }, [reduced]);
 
-  const transactions = phone.transactions;
+  // Índice 0 é a notificação mais nova. Subtrair o slot faz a lista descer:
+  // quando `tick` avança, cada item mantém a sua chave e escorrega um degrau
+  // para baixo, enquanto a nova entra por cima.
   const visible = Array.from({ length: VISIBLE }, (_, slot) => {
-    const index = (offset + slot) % transactions.length;
-    return { ...transactions[index], key: `${offset + slot}` };
+    const position = tick - slot;
+    const index = ((position % transactions.length) + transactions.length) %
+      transactions.length;
+    return { ...transactions[index], key: position };
   });
 
   return (
@@ -120,8 +147,8 @@ export function PhoneMockup() {
           </div>
 
           {/* Anéis + logo */}
-          <div className="relative flex h-[134px] items-center justify-center">
-            {[132, 102, 72].map((size, index) => (
+          <div className="relative flex h-[122px] items-center justify-center">
+            {[126, 98, 70].map((size, index) => (
               <span
                 key={size}
                 className="absolute rounded-full border border-brand"
@@ -132,7 +159,7 @@ export function PhoneMockup() {
             {[0, 1.6].map((delay) => (
               <span
                 key={delay}
-                className="animate-pulse-ring absolute h-[72px] w-[72px] rounded-full border border-brand/50"
+                className="animate-pulse-ring absolute h-[70px] w-[70px] rounded-full border border-brand/50"
                 style={{ animationDelay: `${delay}s` }}
               />
             ))}
@@ -171,21 +198,29 @@ export function PhoneMockup() {
             </AnimatePresence>
           </div>
 
-          {/* Saldo */}
+          {/* Acumulado do mês: sobe a cada entrega que desce na lista */}
           <div className="px-5 pt-3">
             <span className="t-eyebrow text-faint">{phone.received}</span>
-            <p className="tnum mt-0.5 text-xl font-bold text-cream">{phone.total}</p>
+            <motion.p
+              key={total}
+              initial={{ opacity: 0.55 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: reduced ? 0 : 0.5 }}
+              className="tnum mt-0.5 text-xl font-bold text-cream"
+            >
+              {BRL.format(total)}
+            </motion.p>
           </div>
 
-          {/* Entregas em carrossel vertical: entram por baixo e saem por cima */}
-          <div className="relative mt-3 h-[152px] overflow-hidden px-4 pb-6">
+          {/* Entregas descendo: a mais nova nasce em cima e empurra as outras */}
+          <div className="relative mt-3 h-[150px] overflow-hidden px-4 pb-6">
             <AnimatePresence initial={false}>
               {visible.map((item, slot) => (
                 <motion.div
                   key={item.key}
-                  initial={{ opacity: 0, y: 48 }}
-                  animate={{ opacity: 1, y: slot * 48 }}
-                  exit={{ opacity: 0, y: reduced ? 0 : -48 }}
+                  initial={{ opacity: 0, y: -ROW_H }}
+                  animate={{ opacity: 1, y: slot * ROW_H }}
+                  exit={{ opacity: 0, y: VISIBLE * ROW_H }}
                   transition={{ duration: reduced ? 0 : 0.55, ease: EASE }}
                   className="absolute inset-x-4 top-0 flex items-center justify-between gap-2 rounded-lg border border-line bg-ink-900/70 px-3 py-2"
                 >
