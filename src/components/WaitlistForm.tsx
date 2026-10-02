@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import { ArrowRight, CheckCircle2, Loader2, Send } from "lucide-react";
+import { useContent } from "@/i18n";
 
 type Status = "idle" | "loading" | "success" | "error";
 
@@ -18,14 +19,15 @@ const FIELD_BASE =
   "w-full rounded-xl border bg-ink-950/70 px-4 py-3 text-sm text-cream placeholder:text-faint outline-none transition-colors focus:border-brand focus:ring-2 focus:ring-brand/20";
 
 export function WaitlistForm() {
+  const { form } = useContent();
   const [status, setStatus] = useState<Status>("idle");
   const [message, setMessage] = useState("");
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const form = event.currentTarget;
-    const data = new FormData(form);
+    const element = event.currentTarget;
+    const data = new FormData(element);
 
     setStatus("loading");
     setMessage("");
@@ -38,7 +40,9 @@ export function WaitlistForm() {
         body: JSON.stringify({
           name: data.get("name"),
           email: data.get("email"),
+          nationality: data.get("nationality"),
           telegram: data.get("telegram"),
+          phone: data.get("phone"),
         }),
       });
 
@@ -54,7 +58,7 @@ export function WaitlistForm() {
         return;
       }
 
-      form.reset();
+      element.reset();
       setStatus("success");
 
       // Leva para o Telegram sem tirar a landing da frente. A chamada vem
@@ -76,11 +80,9 @@ export function WaitlistForm() {
       >
         <CheckCircle2 className="h-8 w-8 text-brand" />
         <p className="font-display text-lg font-semibold text-cream">
-          Tudo certo, você está na fila.
+          {form.successTitle}
         </p>
-        <p className="text-sm leading-relaxed text-muted">
-          Abrimos o Telegram em outra aba. Se ela não apareceu, use o botão abaixo.
-        </p>
+        <p className="text-sm leading-relaxed text-muted">{form.successBody}</p>
 
         <a
           href={TELEGRAM_URL}
@@ -89,19 +91,17 @@ export function WaitlistForm() {
           className="btn-brand mt-2 inline-flex items-center justify-center gap-2 rounded-xl px-6 py-3 text-sm font-bold"
         >
           <Send className="h-4 w-4" />
-          Abrir no Telegram
+          {form.openTelegram}
         </a>
 
-        <p className="text-xs leading-relaxed text-faint">
-          Assim que abrirmos uma nova leva de convites, você recebe o acesso por e-mail.
-        </p>
+        <p className="text-xs leading-relaxed text-faint">{form.successNote}</p>
 
         <button
           type="button"
           onClick={() => setStatus("idle")}
           className="cursor-pointer text-xs font-medium text-muted underline underline-offset-4 transition-colors hover:text-cream"
         >
-          Cadastrar outro contato
+          {form.again}
         </button>
       </div>
     );
@@ -117,7 +117,7 @@ export function WaitlistForm() {
     >
       <div className="flex flex-col gap-1.5">
         <label htmlFor="waitlist-name" className="text-xs font-medium text-muted">
-          Nome
+          {form.name}
         </label>
         <input
           id="waitlist-name"
@@ -129,7 +129,7 @@ export function WaitlistForm() {
           disabled={isLoading}
           aria-invalid={Boolean(fieldErrors.name)}
           aria-describedby={fieldErrors.name ? "waitlist-name-error" : undefined}
-          placeholder="Como podemos te chamar"
+          placeholder={form.namePlaceholder}
           className={`${FIELD_BASE} ${
             fieldErrors.name ? "border-red-500/70" : "border-line-strong"
           }`}
@@ -143,7 +143,7 @@ export function WaitlistForm() {
 
       <div className="flex flex-col gap-1.5">
         <label htmlFor="waitlist-email" className="text-xs font-medium text-muted">
-          E-mail
+          {form.email}
         </label>
         <input
           id="waitlist-email"
@@ -155,7 +155,7 @@ export function WaitlistForm() {
           disabled={isLoading}
           aria-invalid={Boolean(fieldErrors.email)}
           aria-describedby={fieldErrors.email ? "waitlist-email-error" : undefined}
-          placeholder="voce@exemplo.com"
+          placeholder={form.emailPlaceholder}
           className={`${FIELD_BASE} ${
             fieldErrors.email ? "border-red-500/70" : "border-line-strong"
           }`}
@@ -168,8 +168,27 @@ export function WaitlistForm() {
       </div>
 
       <div className="flex flex-col gap-1.5">
+        <label htmlFor="waitlist-nationality" className="text-xs font-medium text-muted">
+          {form.nationality}
+        </label>
+        <select
+          id="waitlist-nationality"
+          name="nationality"
+          defaultValue="BR"
+          disabled={isLoading}
+          className={`${FIELD_BASE} border-line-strong cursor-pointer`}
+        >
+          {form.countries.map((country) => (
+            <option key={country.code} value={country.code} className="bg-ink-900">
+              {country.label}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div className="flex flex-col gap-1.5">
         <label htmlFor="waitlist-telegram" className="text-xs font-medium text-muted">
-          Usuário no Telegram <span className="text-faint">(opcional)</span>
+          {form.telegram} <span className="text-faint">{form.optional}</span>
         </label>
         <input
           id="waitlist-telegram"
@@ -177,7 +196,23 @@ export function WaitlistForm() {
           type="text"
           maxLength={120}
           disabled={isLoading}
-          placeholder="@seuusuario"
+          placeholder={form.telegramPlaceholder}
+          className={`${FIELD_BASE} border-line-strong`}
+        />
+      </div>
+
+      <div className="flex flex-col gap-1.5">
+        <label htmlFor="waitlist-phone" className="text-xs font-medium text-muted">
+          {form.phone} <span className="text-faint">{form.optional}</span>
+        </label>
+        <input
+          id="waitlist-phone"
+          name="phone"
+          type="tel"
+          autoComplete="tel"
+          maxLength={120}
+          disabled={isLoading}
+          placeholder={form.phonePlaceholder}
           className={`${FIELD_BASE} border-line-strong`}
         />
       </div>
@@ -190,23 +225,24 @@ export function WaitlistForm() {
         {isLoading ? (
           <>
             <Loader2 className="h-4 w-4 animate-spin" />
-            Enviando...
+            {form.sending}
           </>
         ) : (
           <>
-            Lista de espera
+            {form.submit}
             <ArrowRight className="h-4 w-4 stroke-[2.5]" />
           </>
         )}
       </button>
 
-      <p aria-live="polite" className="min-h-4 text-center text-xs font-medium text-red-400">
+      <p
+        aria-live="polite"
+        className="min-h-4 text-center text-xs font-medium text-red-400"
+      >
         {status === "error" ? message : ""}
       </p>
 
-      <p className="text-center text-xs text-faint">
-        O acesso à plataforma é liberado por convite. Sem spam.
-      </p>
+      <p className="text-center text-xs text-faint">{form.disclaimer}</p>
     </form>
   );
 }

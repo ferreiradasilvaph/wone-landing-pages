@@ -2,23 +2,23 @@
 
 import { motion, useReducedMotion } from "motion/react";
 import { ArrowRight, Zap, ShieldCheck, Radar } from "lucide-react";
+import { useContent } from "@/i18n";
 import { Marquee } from "./Marquee";
 import { PhoneMockup } from "./PhoneMockup";
+import { RotatingHeadline } from "./RotatingHeadline";
 
 const EASE = [0.16, 1, 0.3, 1] as const;
 
-const BADGES = [
-  { icon: Zap, label: "Entrega em 1,2s" },
-  { icon: ShieldCheck, label: "Revogação imediata" },
-  { icon: Radar, label: "Rastreio servidor a servidor" },
-];
+const BADGE_ICONS = [Zap, ShieldCheck, Radar];
 
 /**
- * Abertura da página: aurora em movimento, malha técnica, título em degradê e,
- * abaixo, o aparelho do `PhoneMockup` ao lado da descrição do motor de vendas.
+ * Abertura da página: aurora em movimento, malha técnica, título com a segunda
+ * metade girando e, abaixo, o aparelho do `PhoneMockup` ao lado da descrição do
+ * motor de vendas.
  */
 export function Hero() {
   const reduced = useReducedMotion();
+  const { hero } = useContent();
 
   const rise = (delay: number) => ({
     initial: { opacity: 0, y: 22 },
@@ -43,21 +43,16 @@ export function Hero() {
               <span className="absolute inline-flex h-full w-full animate-pulse-ring rounded-full bg-brand" />
               <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-brand" />
             </span>
-            Infraestrutura de monetização para Telegram
+            {hero.badge}
           </span>
         </motion.div>
 
         <motion.h1 {...rise(0.08)} className="t-display mt-7 text-balance text-cream">
-          Automatize suas vendas no Telegram,{" "}
-          <span className="text-gradient">do primeiro contato à entrega</span>
+          {hero.titleStart} <RotatingHeadline variants={hero.titleVariants} />
         </motion.h1>
 
-        <motion.p
-          {...rise(0.16)}
-          className="t-lead mx-auto mt-6 max-w-2xl text-pretty"
-        >
-          Funil de vendas, PIX instantâneo, cartão, upsell, remarketing ativo e
-          liberação de link único com revogação automática.
+        <motion.p {...rise(0.16)} className="t-lead mx-auto mt-6 max-w-2xl text-pretty">
+          {hero.lead}
         </motion.p>
 
         <motion.div
@@ -68,20 +63,20 @@ export function Hero() {
             href="#fila-de-espera"
             className="btn-brand inline-flex w-full items-center justify-center gap-2 rounded-xl px-7 py-3.5 font-semibold sm:w-auto"
           >
-            Lista de espera
+            {hero.ctaPrimary}
             <ArrowRight className="h-4 w-4 stroke-[2.5]" />
           </a>
           <a
             href="#como-funciona"
             className="btn-ghost inline-flex w-full items-center justify-center rounded-xl px-7 py-3.5 font-medium sm:w-auto"
           >
-            Ver como funciona
+            {hero.ctaSecondary}
           </a>
         </motion.div>
       </div>
 
-      {/* Mockup: texto à esquerda e aparelho à direita a partir de lg; abaixo
-          disso, empilhado e centralizado. */}
+      {/* Texto à esquerda e aparelho à direita a partir de lg; abaixo disso,
+          empilhado e centralizado. */}
       <motion.div
         initial={{ opacity: 0, y: 40 }}
         animate={{ opacity: 1, y: 0 }}
@@ -89,23 +84,23 @@ export function Hero() {
         className="mx-auto mt-20 grid max-w-4xl grid-cols-1 items-center gap-12 px-5 sm:mt-28 sm:px-6 lg:grid-cols-[1fr_auto] lg:gap-14"
       >
         <div className="text-center lg:text-left">
-          <span className="font-display text-xl font-semibold text-cream sm:text-2xl">
-            Wone Bot Engine
-          </span>
-          <p className="mx-auto mt-3 max-w-md text-sm leading-relaxed text-muted lg:mx-0">
-            Disparos instantâneos, fallback de gateway, validação por webhook e link
-            único descartável gerado em segundos.
+          <h2 className="t-h3 text-cream">{hero.engine.title}</h2>
+          <p className="mx-auto mt-4 max-w-md text-base leading-relaxed text-muted lg:mx-0">
+            {hero.engine.description}
           </p>
-          <ul className="mt-6 flex flex-wrap justify-center gap-2 lg:justify-start">
-            {BADGES.map(({ icon: Icon, label }) => (
-              <li
-                key={label}
-                className="flex items-center gap-1.5 rounded-full border border-line bg-ink-900/70 px-3 py-1.5 text-[11px] font-medium text-cream/80"
-              >
-                <Icon className="h-3 w-3 text-brand" />
-                {label}
-              </li>
-            ))}
+          <ul className="mt-7 flex flex-wrap justify-center gap-2 lg:justify-start">
+            {hero.engine.badges.map((label, index) => {
+              const Icon = BADGE_ICONS[index] ?? Zap;
+              return (
+                <li
+                  key={label}
+                  className="flex items-center gap-1.5 rounded-full border border-line bg-ink-900/70 px-3 py-1.5 text-xs font-medium text-cream/80"
+                >
+                  <Icon className="h-3.5 w-3.5 text-brand" />
+                  {label}
+                </li>
+              );
+            })}
           </ul>
         </div>
 
@@ -119,9 +114,7 @@ export function Hero() {
         transition={{ duration: reduced ? 0 : 0.8, delay: reduced ? 0 : 0.6 }}
         className="mt-14"
       >
-        <p className="t-eyebrow mb-4 text-center text-faint">
-          Conectado de ponta a ponta
-        </p>
+        <p className="t-eyebrow mb-4 text-center text-faint">{hero.integrationsLabel}</p>
         <Marquee />
       </motion.div>
     </section>

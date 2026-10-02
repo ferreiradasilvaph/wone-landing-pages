@@ -1,7 +1,8 @@
 "use client";
 
 import { useId, useMemo, useState } from "react";
-import { motion, useReducedMotion } from "motion/react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { useContent } from "@/i18n";
 import { HOURLY_REVENUE, FUNNEL_STEPS } from "@/data/content";
 
 const BRL = new Intl.NumberFormat("pt-BR", {
@@ -9,6 +10,8 @@ const BRL = new Intl.NumberFormat("pt-BR", {
   currency: "BRL",
   maximumFractionDigits: 0,
 });
+
+const EASE = [0.16, 1, 0.3, 1] as const;
 
 // Geometria do gráfico de área, em unidades do viewBox. O eixo X é desenhado
 // em HTML logo abaixo, então o viewBox cobre só a área de plotagem.
@@ -31,17 +34,11 @@ function buildPath(values: number[]) {
   };
 }
 
-/**
- * Prévia do painel: faturamento por hora e o funil start → PIX gerado → pago.
- *
- * É uma amostra ilustrativa, não dados de um cliente real. Uma série só, então
- * não há legenda: o título nomeia a métrica. As linhas de grade são traços
- * sólidos de 1px, um tom acima da superfície, e só o pico recebe rótulo direto
- * — o resto fica no tooltip.
- */
-export function DashboardPreview() {
+/** Gráfico de faturamento por hora. Uma série só, então sem legenda. */
+function RevenueView() {
   const gradientId = useId();
   const reduced = useReducedMotion();
+  const { analytics } = useContent();
   const [hovered, setHovered] = useState<number | null>(null);
 
   const chart = useMemo(() => buildPath(HOURLY_REVENUE), []);
@@ -55,6 +52,294 @@ export function DashboardPreview() {
   const activePoint = chart.pointAt(activeIndex);
 
   return (
+    <>
+      <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-2">
+        <div className="flex flex-wrap items-baseline gap-x-3">
+          <span className="text-3xl font-semibold tracking-tight text-cream sm:text-4xl">
+            {BRL.format(total)}
+          </span>
+          <span className="text-sm text-muted">{analytics.panel.accumulated}</span>
+        </div>
+
+        <div className="rounded-lg border border-line bg-ink-950/70 px-3 py-1.5 text-right">
+          <span className="t-eyebrow block text-faint">
+            {String(activeIndex).padStart(2, "0")}h
+            {activeIndex === peakIndex && hovered === null
+              ? ` · ${analytics.panel.peak}`
+              : ""}
+          </span>
+          <span className="tnum text-sm font-semibold text-cream">
+            {BRL.format(HOURLY_REVENUE[activeIndex])}
+          </span>
+        </div>
+      </div>
+
+      <div className="relative mt-4">
+        <svg viewBox={`0 0 ${W} ${PLOT_H}`} className="h-auto w-full" aria-hidden>
+          <defs>
+            <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#FF7700" stopOpacity="0.38" />
+              <stop offset="100%" stopColor="#FF7700" stopOpacity="0" />
+            </linearGradient>
+          </defs>
+
+          {[0.25, 0.5, 0.75].map((fraction) => (
+            <line
+              key={fraction}
+              x1="0"
+              x2={W}
+              y1={PLOT_H * fraction}
+              y2={PLOT_H * fraction}
+              stroke="#FFFFE3"
+              strokeOpacity="0.07"
+              strokeWidth="1"
+            />
+          ))}
+          <line
+            x1="0"
+            x2={W}
+            y1={PLOT_H}
+            y2={PLOT_H}
+            stroke="#FFFFE3"
+            strokeOpacity="0.14"
+            strokeWidth="1"
+          />
+
+          <motion.path
+            d={chart.area}
+            fill={`url(#${gradientId})`}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: reduced ? 0 : 0.9, delay: reduced ? 0 : 0.3 }}
+          />
+          <motion.path
+            d={chart.line}
+            fill="none"
+            stroke="#FF7700"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            initial={{ pathLength: 0 }}
+            animate={{ pathLength: 1 }}
+            transition={{ duration: reduced ? 0 : 1.4, ease: EASE }}
+          />
+
+          <line
+            x1={activePoint.x}
+            x2={activePoint.x}
+            y1={activePoint.y}
+            y2={PLOT_H}
+            stroke="#FF7700"
+            strokeOpacity="0.35"
+            strokeWidth="1"
+          />
+          <circle
+            cx={activePoint.x}
+            cy={activePoint.y}
+            r="5.5"
+            fill="#FF7700"
+            stroke="#0f0f14"
+            strokeWidth="2"
+          />
+
+          {HOURLY_REVENUE.map((_, index) => (
+            <rect
+              key={index}
+              x={(index - 0.5) * (W / (HOURLY_REVENUE.length - 1))}
+              y="0"
+              width={W / (HOURLY_REVENUE.length - 1)}
+              height={PLOT_H}
+              fill="transparent"
+              onMouseEnter={() => setHovered(index)}
+              onMouseLeave={() => setHovered(null)}
+            />
+          ))}
+        </svg>
+
+        {/* Eixo X em HTML: dentro do SVG a fonte encolheria com o viewBox */}
+        <div className="relative mt-2 h-4">
+          {[0, 6, 12, 18, 23].map((hour) => {
+            const pct = (hour / 23) * 100;
+            return (
+              <span
+                key={hour}
+                className="t-eyebrow absolute top-0 text-faint"
+                style={{
+                  left: hour === 23 ? undefined : `${pct}%`,
+                  right: hour === 23 ? 0 : undefined,
+                  transform:
+                    hour === 0 || hour === 23 ? undefined : "translateX(-50%)",
+                }}
+              >
+                {String(hour).padStart(2, "0")}h
+              </span>
+            );
+          })}
+        </div>
+      </div>
+    </>
+  );
+}
+
+/** Funil de 100 leads. Categorias ordenadas, rampa de um só tom. */
+function FunnelView() {
+  const reduced = useReducedMotion();
+  const { analytics } = useContent();
+
+  return (
+    <div className="pt-2">
+      <ul className="space-y-3">
+        {FUNNEL_STEPS.map((step, index) => (
+          <li key={step.value} className="flex items-center gap-3">
+            <span className="w-32 shrink-0 text-xs text-muted sm:w-40">
+              {analytics.panel.funnelSteps[index]}
+            </span>
+            <span className="relative h-7 flex-1 overflow-hidden rounded-md bg-cream/5">
+              <motion.span
+                className="absolute inset-y-0 left-0 rounded-md"
+                style={{
+                  width: `${step.value}%`,
+                  background: step.color,
+                  transformOrigin: "left",
+                }}
+                initial={{ scaleX: 0 }}
+                animate={{ scaleX: 1 }}
+                transition={{
+                  duration: reduced ? 0 : 0.9,
+                  delay: reduced ? 0 : 0.12 * index,
+                  ease: EASE,
+                }}
+              />
+            </span>
+            <span className="tnum w-10 shrink-0 text-right text-sm font-semibold text-cream">
+              {step.value}
+            </span>
+          </li>
+        ))}
+      </ul>
+
+      <p className="mt-5 flex items-start gap-2 rounded-xl border border-brand/20 bg-brand/5 px-3 py-2.5 text-xs leading-relaxed text-cream/75">
+        <span aria-hidden className="mt-0.5 shrink-0 text-brand">
+          ↻
+        </span>
+        <span>
+          <strong className="font-semibold text-cream">24</strong>{" "}
+          {analytics.panel.funnelNote}
+        </span>
+      </p>
+    </div>
+  );
+}
+
+/** Valor por cliente: quatro linhas de leitura direta. */
+function LtvView() {
+  const { analytics } = useContent();
+
+  return (
+    <dl className="divide-y divide-line pt-2">
+      {analytics.panel.ltvRows.map((row) => (
+        <div key={row.label} className="flex items-baseline justify-between gap-4 py-4">
+          <dt className="text-sm text-muted">{row.label}</dt>
+          <dd className="tnum text-xl font-semibold text-cream">{row.value}</dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
+/** Taxas do funil, em barras horizontais sobre a mesma escala de 0 a 100. */
+function RatesView() {
+  const reduced = useReducedMotion();
+  const { analytics } = useContent();
+
+  return (
+    <ul className="space-y-4 pt-2">
+      {analytics.panel.rateRows.map((row, index) => (
+        <li key={row.label}>
+          <div className="mb-1.5 flex items-baseline justify-between">
+            <span className="text-sm text-muted">{row.label}</span>
+            <span className="tnum text-sm font-semibold text-cream">{row.value}%</span>
+          </div>
+          <span className="block h-2 overflow-hidden rounded-full bg-cream/5">
+            <motion.span
+              className="block h-full rounded-full bg-gradient-to-r from-brand-soft to-brand"
+              style={{ width: `${row.value}%`, transformOrigin: "left" }}
+              initial={{ scaleX: 0 }}
+              animate={{ scaleX: 1 }}
+              transition={{
+                duration: reduced ? 0 : 0.8,
+                delay: reduced ? 0 : index * 0.1,
+                ease: EASE,
+              }}
+            />
+          </span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/** Extrato: tabela com rolagem horizontal própria em telas estreitas. */
+function StatementView() {
+  const { analytics } = useContent();
+
+  return (
+    <div className="-mx-1 overflow-x-auto pt-2">
+      <table className="w-full min-w-[22rem] text-left">
+        <thead>
+          <tr className="border-b border-line">
+            {analytics.panel.statementHeaders.map((header, index) => (
+              <th
+                key={header}
+                className={`t-eyebrow pb-2 font-medium text-faint ${
+                  index === 3 ? "text-right" : ""
+                }`}
+              >
+                {header}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-line">
+          {analytics.panel.statementRows.map((row) => (
+            <tr key={`${row.time}-${row.flow}`}>
+              <td className="tnum py-3 text-xs text-faint">{row.time}</td>
+              <td className="py-3 text-xs font-medium text-cream">{row.flow}</td>
+              <td className="py-3 text-xs text-muted">{row.gateway}</td>
+              <td className="tnum py-3 text-right text-xs font-semibold text-emerald-400">
+                {row.value}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+const VIEWS: Record<string, () => React.ReactElement> = {
+  faturamento: RevenueView,
+  funil: FunnelView,
+  ltv: LtvView,
+  taxas: RatesView,
+  extrato: StatementView,
+};
+
+/**
+ * Painel que troca de conteúdo conforme a métrica escolhida ao lado.
+ *
+ * Todos os números são amostra ilustrativa, não dados de cliente. A altura
+ * mínima evita que a seção inteira pule ao trocar entre uma tabela e um
+ * gráfico.
+ */
+export function DashboardPreview({ viewId }: { viewId: string }) {
+  const { analytics } = useContent();
+  const reduced = useReducedMotion();
+
+  const view = analytics.views.find((v) => v.id === viewId) ?? analytics.views[0];
+  const View = VIEWS[view.id] ?? RevenueView;
+
+  return (
     <div className="surface relative overflow-hidden rounded-3xl p-5 shadow-2xl sm:p-7">
       <div
         aria-hidden
@@ -62,210 +347,34 @@ export function DashboardPreview() {
       />
 
       <div className="relative">
-        {/* Cabeçalho */}
         <div className="flex items-start justify-between gap-4 border-b border-line pb-4">
-          <div>
+          <div className="min-w-0">
             <h3 className="font-display text-lg font-semibold text-cream">
-              Faturamento por hora
+              {view.panelTitle}
             </h3>
-            <p className="mt-0.5 text-xs text-faint">
-              Amostra ilustrativa de um dia de operação
-            </p>
+            <p className="mt-0.5 text-xs text-faint">{view.panelSubtitle}</p>
           </div>
           <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-emerald-500/25 bg-emerald-500/10 px-2.5 py-1 text-[11px] font-medium text-emerald-400">
             <span className="relative flex h-1.5 w-1.5">
-              <span className="absolute inline-flex h-full w-full animate-pulse-ring rounded-full bg-emerald-400" />
+              <span className="animate-pulse-ring absolute inline-flex h-full w-full rounded-full bg-emerald-400" />
               <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-400" />
             </span>
-            Tempo real
+            {analytics.panel.live}
           </span>
         </div>
 
-        {/* Número principal: fonte de texto comum, dígitos proporcionais.
-            A leitura da hora em foco fica aqui, em posição fixa — um balão
-            flutuante sobre o gráfico cobriria justamente o pico. */}
-        <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-2 pt-5">
-          <div className="flex flex-wrap items-baseline gap-x-3">
-            <span className="text-3xl font-semibold tracking-tight text-cream sm:text-4xl">
-              {BRL.format(total)}
-            </span>
-            <span className="text-sm text-muted">acumulado hoje</span>
-          </div>
-
-          <div className="rounded-lg border border-line bg-ink-950/70 px-3 py-1.5 text-right">
-            <span className="t-eyebrow block text-faint">
-              {String(activeIndex).padStart(2, "0")}h
-              {activeIndex === peakIndex && hovered === null ? " · pico" : ""}
-            </span>
-            <span className="tnum text-sm font-semibold text-cream">
-              {BRL.format(HOURLY_REVENUE[activeIndex])}
-            </span>
-          </div>
-        </div>
-
-        {/* Gráfico de área + faixa do eixo X logo abaixo, no mesmo contêiner */}
-        <div className="relative mt-4">
-          <svg
-            viewBox={`0 0 ${W} ${PLOT_H}`}
-            className="h-auto w-full"
-            role="img"
-            aria-label={`Faturamento por hora ao longo de 24 horas. Pico às ${peakIndex}h, ${BRL.format(HOURLY_REVENUE[peakIndex])}.`}
-          >
-            <defs>
-              <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#FF7700" stopOpacity="0.38" />
-                <stop offset="100%" stopColor="#FF7700" stopOpacity="0" />
-              </linearGradient>
-            </defs>
-
-            {/* Grade recessiva: traços sólidos, um tom acima da superfície */}
-            {[0.25, 0.5, 0.75].map((fraction) => (
-              <line
-                key={fraction}
-                x1="0"
-                x2={W}
-                y1={PLOT_H * fraction}
-                y2={PLOT_H * fraction}
-                stroke="#FFFFE3"
-                strokeOpacity="0.07"
-                strokeWidth="1"
-              />
-            ))}
-            <line
-              x1="0"
-              x2={W}
-              y1={PLOT_H}
-              y2={PLOT_H}
-              stroke="#FFFFE3"
-              strokeOpacity="0.14"
-              strokeWidth="1"
-            />
-
-            <motion.path
-              d={chart.area}
-              fill={`url(#${gradientId})`}
-              initial={{ opacity: 0 }}
-              whileInView={{ opacity: 1 }}
-              viewport={{ once: true, amount: 0.4 }}
-              transition={{ duration: reduced ? 0 : 0.9, delay: reduced ? 0 : 0.35 }}
-            />
-
-            <motion.path
-              d={chart.line}
-              fill="none"
-              stroke="#FF7700"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              initial={{ pathLength: 0 }}
-              whileInView={{ pathLength: 1 }}
-              viewport={{ once: true, amount: 0.4 }}
-              transition={{ duration: reduced ? 0 : 1.4, ease: [0.16, 1, 0.3, 1] }}
-            />
-
-            {/* Marcador do ponto em foco, com anel na cor da superfície */}
-            <line
-              x1={activePoint.x}
-              x2={activePoint.x}
-              y1={activePoint.y}
-              y2={PLOT_H}
-              stroke="#FF7700"
-              strokeOpacity="0.35"
-              strokeWidth="1"
-            />
-            <circle
-              cx={activePoint.x}
-              cy={activePoint.y}
-              r="5.5"
-              fill="#FF7700"
-              stroke="#0f0f14"
-              strokeWidth="2"
-            />
-
-            {/* Alvos de hover generosos: uma faixa inteira por hora */}
-            {HOURLY_REVENUE.map((_, index) => (
-              <rect
-                key={index}
-                x={(index - 0.5) * (W / (HOURLY_REVENUE.length - 1))}
-                y="0"
-                width={W / (HOURLY_REVENUE.length - 1)}
-                height={PLOT_H}
-                fill="transparent"
-                onMouseEnter={() => setHovered(index)}
-                onMouseLeave={() => setHovered(null)}
-              />
-            ))}
-          </svg>
-
-          {/* Eixo X em HTML, e não dentro do SVG: o viewBox encolhe junto com o
-              cartão e levaria a fonte a uns 5px no celular. */}
-          <div className="relative mt-2 h-4">
-            {[0, 6, 12, 18, 23].map((hour) => {
-              const pct = (hour / 23) * 100;
-              return (
-                <span
-                  key={hour}
-                  className="t-eyebrow absolute top-0 text-faint"
-                  style={{
-                    left: hour === 23 ? undefined : `${pct}%`,
-                    right: hour === 23 ? 0 : undefined,
-                    transform: hour === 0 || hour === 23 ? undefined : "translateX(-50%)",
-                  }}
-                >
-                  {String(hour).padStart(2, "0")}h
-                </span>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Funil: categorias ordenadas, rampa de um só tom */}
-        <div className="mt-7 border-t border-line pt-5">
-          <h4 className="font-display text-sm font-semibold text-cream">
-            Funil de 100 leads
-          </h4>
-          <ul className="mt-4 space-y-2.5">
-            {FUNNEL_STEPS.map((step, index) => (
-              <li key={step.label} className="group/row flex items-center gap-3">
-                <span className="w-32 shrink-0 text-xs text-muted sm:w-40">
-                  {step.label}
-                </span>
-                <span className="relative h-6 flex-1 overflow-hidden rounded-md bg-cream/5">
-                  <motion.span
-                    className="absolute inset-y-0 left-0 rounded-md"
-                    style={{
-                      width: `${step.value}%`,
-                      background: step.color,
-                      transformOrigin: "left",
-                    }}
-                    initial={{ scaleX: 0 }}
-                    whileInView={{ scaleX: 1 }}
-                    viewport={{ once: true, amount: 0.6 }}
-                    transition={{
-                      duration: reduced ? 0 : 0.9,
-                      delay: reduced ? 0 : 0.15 * index,
-                      ease: [0.16, 1, 0.3, 1],
-                    }}
-                  />
-                </span>
-                <span className="tnum w-10 shrink-0 text-right text-sm font-semibold text-cream">
-                  {step.value}
-                </span>
-              </li>
-            ))}
-          </ul>
-
-          <p className="mt-4 flex items-start gap-2 rounded-xl border border-brand/20 bg-brand/5 px-3 py-2.5 text-xs leading-relaxed text-cream/75">
-            <span aria-hidden className="mt-0.5 shrink-0 text-brand">
-              ↻
-            </span>
-            {/* Um único filho de texto: solto, cada trecho viraria um item do
-                flex e ganharia o gap entre as palavras. */}
-            <span>
-              Os <strong className="font-semibold text-cream">24</strong> que geraram o
-              PIX e não pagaram entram na recuperação automática.
-            </span>
-          </p>
+        <div className="min-h-[19rem] pt-5">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={view.id}
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: reduced ? 0 : -12 }}
+              transition={{ duration: reduced ? 0 : 0.35, ease: EASE }}
+            >
+              <View />
+            </motion.div>
+          </AnimatePresence>
         </div>
       </div>
     </div>

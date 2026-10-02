@@ -1,3 +1,6 @@
+"use client";
+
+import { useState } from "react";
 import Image from "next/image";
 import {
   ShoppingBag,
@@ -10,39 +13,33 @@ import {
   Megaphone,
   Zap,
   Bot,
-  ShieldCheck,
   Check,
   ArrowRight,
-  BarChart3,
-  Sparkles,
   CreditCard,
   Radar,
+  ChevronDown,
+  type LucideIcon,
 } from "lucide-react";
 
+import { useContent } from "@/i18n";
 import { Hero } from "@/components/Hero";
 import { SiteHeader } from "@/components/SiteHeader";
 import { InteractiveBackground } from "@/components/InteractiveBackground";
 import { SpotlightCard } from "@/components/SpotlightCard";
 import { StepsTimeline } from "@/components/StepsTimeline";
-import { DashboardPreview } from "@/components/DashboardPreview";
+import { Highlights } from "@/components/Highlights";
+import { FeatureCard } from "@/components/FeatureCard";
+import { TrackingFlow } from "@/components/TrackingFlow";
+import { AnalyticsSection } from "@/components/AnalyticsSection";
+import { SecurityCarousel } from "@/components/SecurityCarousel";
 import { AwardsShowcase } from "@/components/AwardsShowcase";
 import { FaqSection } from "@/components/FaqSection";
 import { WaitlistForm } from "@/components/WaitlistForm";
 import { WoneIcon } from "@/components/WoneMark";
-import { Counter } from "@/components/Counter";
+import { LanguageToggle } from "@/components/LanguageToggle";
 import { Reveal, RevealGroup, RevealItem } from "@/components/Reveal";
-import {
-  HIGHLIGHTS,
-  FEATURES,
-  PRODUCTS,
-  PAYMENT_BENEFITS,
-  TRACKING_BENEFITS,
-  ANALYTICS_METRICS,
-  SECURITY_ITEMS,
-  NAV_LINKS,
-} from "@/data/content";
 
-const ICON_MAP = {
+const FEATURE_ICONS: Record<string, LucideIcon> = {
   ShoppingBag,
   TrendingUp,
   Boxes,
@@ -53,37 +50,44 @@ const ICON_MAP = {
   Megaphone,
   Zap,
   Bot,
-} as const;
+};
 
-/** Cabeçalho de seção: sobrenome, título e linha de apoio, sempre no mesmo ritmo. */
+/** Cabeçalho de seção: sobrenome, título e linha de apoio, no mesmo ritmo. */
 function SectionHeading({
   eyebrow,
   title,
+  accent,
   description,
-  align = "center",
 }: {
   eyebrow: string;
-  title: React.ReactNode;
+  title: string;
+  accent?: string;
   description?: string;
-  align?: "center" | "left";
 }) {
-  const centered = align === "center";
   return (
-    <Reveal className={centered ? "mx-auto max-w-2xl text-center" : "max-w-xl"}>
+    <Reveal className="mx-auto max-w-2xl text-center">
       <span className="t-eyebrow text-brand">{eyebrow}</span>
-      <h2 className="t-h2 mt-3 text-balance text-cream">{title}</h2>
+      <h2 className="t-h2 mt-3 text-balance text-cream">
+        {title}
+        {accent && (
+          <>
+            {" "}
+            <span className="text-gradient">{accent}</span>
+          </>
+        )}
+      </h2>
       {description && <p className="t-lead mt-4 text-pretty">{description}</p>}
     </Reveal>
   );
 }
 
-function BenefitList({ items }: { items: string[] }) {
+function BenefitList({ items }: { items: readonly string[] }) {
   return (
     <ul className="space-y-3.5">
       {items.map((text) => (
         <li key={text} className="flex items-start gap-3">
           <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-brand/30 bg-brand/10">
-            <Check className="h-3 w-3 text-brand stroke-[3]" />
+            <Check className="h-3 w-3 stroke-[3] text-brand" />
           </span>
           <span className="text-sm leading-relaxed text-muted">{text}</span>
         </li>
@@ -93,6 +97,9 @@ function BenefitList({ items }: { items: string[] }) {
 }
 
 export default function Home() {
+  const t = useContent();
+  const [moreOpen, setMoreOpen] = useState(false);
+
   return (
     <div className="relative">
       <InteractiveBackground />
@@ -100,42 +107,16 @@ export default function Home() {
 
       <main>
         <Hero />
-
-        {/* Números do produto */}
-        <section className="relative px-5 py-16 sm:px-6">
-          <div className="mx-auto max-w-7xl">
-            <div className="hairline mb-16" />
-            <RevealGroup className="grid grid-cols-2 gap-x-6 gap-y-10 lg:grid-cols-4">
-              {HIGHLIGHTS.map((item) => (
-                <RevealItem key={item.label} className="text-center lg:text-left">
-                  <span className="block text-4xl font-semibold tracking-tight text-cream sm:text-5xl">
-                    <Counter
-                      to={item.value}
-                      decimals={item.decimals}
-                      suffix={item.suffix}
-                    />
-                  </span>
-                  <p className="mx-auto mt-3 max-w-[16rem] text-sm leading-relaxed text-muted lg:mx-0">
-                    {item.label}
-                  </p>
-                </RevealItem>
-              ))}
-            </RevealGroup>
-          </div>
-        </section>
+        <Highlights />
 
         {/* Como funciona */}
         <section id="como-funciona" className="relative px-5 py-24 sm:px-6">
           <div className="mx-auto max-w-7xl">
             <SectionHeading
-              eyebrow="Passo a passo"
-              title={
-                <>
-                  Do bot à primeira venda em{" "}
-                  <span className="text-gradient">4 passos</span>
-                </>
-              }
-              description="Sem planilha, sem conferência manual. Você configura uma vez e a operação roda sozinha."
+              eyebrow={t.howItWorks.eyebrow}
+              title={t.howItWorks.title}
+              accent={t.howItWorks.titleAccent}
+              description={t.howItWorks.description}
             />
             <div className="mt-20">
               <StepsTimeline />
@@ -147,13 +128,13 @@ export default function Home() {
         <section className="relative border-y border-line bg-ink-900/40 px-5 py-24 sm:px-6">
           <div className="mx-auto max-w-7xl">
             <SectionHeading
-              eyebrow="Dois caminhos"
-              title="Dois jeitos de montar seu funil"
-              description="Escolha o que combina com você. Dá para usar os dois na mesma conta."
+              eyebrow={t.products.eyebrow}
+              title={t.products.title}
+              description={t.products.description}
             />
 
             <RevealGroup className="mt-14 grid grid-cols-1 gap-6 md:grid-cols-2">
-              {PRODUCTS.map((product) => (
+              {t.products.items.map((product) => (
                 <RevealItem key={product.name}>
                   <SpotlightCard
                     className={`flex h-full flex-col justify-between p-8 ${
@@ -162,16 +143,15 @@ export default function Home() {
                   >
                     {product.featured && (
                       <span className="t-eyebrow absolute top-6 right-6 rounded-full border border-brand/30 bg-brand/10 px-2.5 py-1 text-brand">
-                        Completo
+                        {t.products.featuredLabel}
                       </span>
                     )}
 
                     <div>
-                      <span className="text-xs font-semibold tracking-wide text-brand uppercase">
-                        {product.tagline}
-                      </span>
-                      <h3 className="t-h3 mt-2 text-cream">{product.name}</h3>
-                      <p className="mt-3 text-sm leading-relaxed text-muted">
+                      {/* Hierarquia: o nome do produto manda, a tagline apoia */}
+                      <h3 className="t-h3 text-cream">{product.name}</h3>
+                      <p className="t-eyebrow mt-2 text-brand">{product.tagline}</p>
+                      <p className="mt-4 text-sm leading-relaxed text-muted">
                         {product.description}
                       </p>
                       <div className="mt-7">
@@ -185,7 +165,7 @@ export default function Home() {
                         product.featured ? "btn-brand" : "btn-ghost"
                       }`}
                     >
-                      Solicitar acesso
+                      {t.products.cta}
                       <ArrowRight className="h-4 w-4" />
                     </a>
                   </SpotlightCard>
@@ -203,62 +183,31 @@ export default function Home() {
           />
           <div className="mx-auto max-w-7xl">
             <SectionHeading
-              eyebrow="Recursos"
-              title={
-                <>
-                  Tudo o que seu funil precisa para{" "}
-                  <span className="text-gradient">vender mais</span>
-                </>
-              }
-              description="Os recursos que fazem a diferença entre uma venda e dezenas."
+              eyebrow={t.features.eyebrow}
+              title={t.features.title}
+              accent={t.features.titleAccent}
+              description={t.features.description}
             />
 
             <RevealGroup
               stagger={0.05}
               className="mt-14 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3"
             >
-              {FEATURES.map((item, index) => {
-                const Icon = ICON_MAP[item.icon as keyof typeof ICON_MAP];
+              {t.features.items.map((item, index) => {
                 // São 10 recursos em 3 colunas: o último sobraria sozinho numa
-                // linha, então ocupa a largura toda e vira o fecho da grade.
-                const isWide = index === FEATURES.length - 1;
-
+                // linha, então ocupa a largura toda e fecha a grade.
+                const isWide = index === t.features.items.length - 1;
                 return (
                   <RevealItem
                     key={item.title}
                     className={`h-full ${isWide ? "sm:col-span-2 lg:col-span-3" : ""}`}
                   >
-                    <SpotlightCard
-                      className={isWide ? "h-full border-brand/25 p-8" : "h-full"}
-                    >
-                      <div
-                        className={
-                          isWide
-                            ? "flex flex-col items-start gap-5 sm:flex-row sm:items-center sm:gap-7"
-                            : ""
-                        }
-                      >
-                        <span
-                          className={`flex shrink-0 items-center justify-center rounded-xl border border-brand/20 bg-brand/10 text-brand transition-transform duration-500 group-hover/card:scale-110 ${
-                            isWide ? "h-14 w-14" : "mb-5 h-11 w-11"
-                          }`}
-                        >
-                          <Icon className={isWide ? "h-6 w-6" : "h-5 w-5"} />
-                        </span>
-                        <div>
-                          <h3
-                            className={`font-display font-semibold text-cream ${
-                              isWide ? "text-xl" : "text-base"
-                            }`}
-                          >
-                            {item.title}
-                          </h3>
-                          <p className="mt-2 max-w-xl text-sm leading-relaxed text-muted">
-                            {item.description}
-                          </p>
-                        </div>
-                      </div>
-                    </SpotlightCard>
+                    <FeatureCard
+                      title={item.title}
+                      description={item.description}
+                      Icon={FEATURE_ICONS[item.icon] ?? Zap}
+                      wide={isWide}
+                    />
                   </RevealItem>
                 );
               })}
@@ -273,146 +222,135 @@ export default function Home() {
         >
           <div className="mx-auto max-w-7xl">
             <SectionHeading
-              eyebrow="Pagamentos e rastreio"
-              title="Receba com segurança e saiba de onde vem cada venda"
-              description="O dinheiro cai na sua conta e cada clique no anúncio volta como dado para a sua campanha."
+              eyebrow={t.payments.eyebrow}
+              title={t.payments.title}
+              description={t.payments.description}
             />
 
-            {/* Banner do criativo ao caixa */}
             <Reveal className="mt-14">
               <div className="relative aspect-16/9 w-full overflow-hidden rounded-3xl border border-line shadow-2xl sm:aspect-2/1">
                 <Image
                   src="/images/mockup-feed-smartphone.jpg"
-                  alt="Criativo da Wone exibido no feed do Instagram em um smartphone"
+                  alt=""
                   fill
                   sizes="(max-width: 1280px) 100vw, 1280px"
                   className="object-cover"
                 />
                 <div className="absolute inset-0 bg-gradient-to-r from-ink-950 via-ink-950/75 to-transparent" />
                 <div className="absolute inset-y-0 left-0 flex max-w-md flex-col justify-center p-6 sm:p-12">
-                  <span className="t-eyebrow text-brand">Do criativo ao caixa</span>
+                  <span className="t-eyebrow text-brand">
+                    {t.payments.bannerEyebrow}
+                  </span>
                   <p className="font-display mt-3 text-xl leading-tight font-semibold text-balance text-cream sm:text-3xl">
-                    Cada clique no anúncio volta como dado servidor a servidor.
+                    {t.payments.bannerTitle}
                   </p>
                 </div>
               </div>
             </Reveal>
 
             <RevealGroup className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
+              {/* Pagamentos: checkout internacional em primeiro plano */}
               <RevealItem className="h-full">
                 <SpotlightCard className="h-full p-8">
+                  {/* Coluna flex: o acordeão desce para a base e o card
+                      acompanha a altura do vizinho sem deixar buraco. */}
+                  <div className="flex h-full flex-col">
                   <span className="mb-5 flex h-11 w-11 items-center justify-center rounded-xl border border-brand/20 bg-brand/10 text-brand">
                     <CreditCard className="h-5 w-5" />
                   </span>
-                  <h3 className="t-h3 text-cream">Pagamentos</h3>
-                  <p className="mt-2 mb-7 text-sm font-medium text-brand">
-                    PIX Copia e Cola, fallback de gateways e checkout internacional.
+                  <span className="t-eyebrow text-brand">{t.payments.card.title}</span>
+                  <h3 className="t-h3 mt-2 text-cream">{t.payments.card.headline}</h3>
+                  <p className="mt-3 text-sm leading-relaxed text-muted">
+                    {t.payments.card.lead}
                   </p>
-                  <BenefitList items={PAYMENT_BENEFITS} />
+
+                  <ul className="mt-6 grid grid-cols-2 gap-2.5">
+                    {t.payments.card.countries.map((country) => (
+                      <li
+                        key={country.name}
+                        className="flex items-center gap-2.5 rounded-xl border border-line bg-ink-950/50 px-3 py-2.5"
+                      >
+                        <span aria-hidden className="text-lg leading-none">
+                          {country.flag}
+                        </span>
+                        <span className="min-w-0 leading-tight">
+                          <span className="block truncate text-xs font-semibold text-cream">
+                            {country.name}
+                          </span>
+                          <span className="block truncate text-[11px] text-faint">
+                            {country.method}
+                          </span>
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+
+                  {/* Demais garantias recolhidas, para não competir com a manchete */}
+                  <button
+                    type="button"
+                    onClick={() => setMoreOpen((open) => !open)}
+                    aria-expanded={moreOpen}
+                    className="mt-auto flex w-full cursor-pointer items-center justify-between gap-3 border-t border-line pt-5 text-sm font-medium text-muted transition-colors hover:text-cream"
+                  >
+                    {t.payments.card.moreLabel}
+                    <ChevronDown
+                      className={`h-4 w-4 transition-transform duration-300 ${
+                        moreOpen ? "rotate-180 text-brand" : ""
+                      }`}
+                    />
+                  </button>
+
+                  {moreOpen && (
+                    <div className="pt-5">
+                      <BenefitList items={t.payments.card.more} />
+                    </div>
+                  )}
+                  </div>
                 </SpotlightCard>
               </RevealItem>
 
+              {/* Rastreamento: o caminho do dado, animado */}
               <RevealItem className="h-full">
                 <SpotlightCard className="h-full p-8">
                   <span className="mb-5 flex h-11 w-11 items-center justify-center rounded-xl border border-brand/20 bg-brand/10 text-brand">
                     <Radar className="h-5 w-5" />
                   </span>
-                  <h3 className="t-h3 text-cream">Rastreamento</h3>
+                  <h3 className="t-h3 text-cream">{t.payments.tracking.title}</h3>
                   <p className="mt-2 mb-7 text-sm font-medium text-brand">
-                    Do clique no anúncio até a venda confirmada e o pós-checkout.
+                    {t.payments.tracking.lead}
                   </p>
-                  <BenefitList items={TRACKING_BENEFITS} />
+
+                  <TrackingFlow />
+
+                  <div className="mt-7 border-t border-line pt-6">
+                    <BenefitList items={t.payments.tracking.benefits} />
+                  </div>
                 </SpotlightCard>
               </RevealItem>
             </RevealGroup>
           </div>
         </section>
 
-        {/* Análises */}
-        <section className="relative px-5 py-24 sm:px-6">
-          <div className="mx-auto max-w-7xl">
-            <div className="grid grid-cols-1 items-center gap-12 lg:grid-cols-2 lg:gap-16">
-              <div>
-                <SectionHeading
-                  align="left"
-                  eyebrow="Análises"
-                  title={
-                    <>
-                      Decida com números, não com{" "}
-                      <span className="text-gradient">achismo</span>
-                    </>
-                  }
-                  description="Um painel que mostra a saúde da sua comunidade VIP em tempo real."
-                />
-                <Reveal delay={0.1} className="mt-8">
-                  <ul className="space-y-3.5">
-                    {ANALYTICS_METRICS.map((metric) => (
-                      <li key={metric} className="flex items-start gap-3">
-                        <BarChart3 className="mt-0.5 h-4 w-4 shrink-0 text-brand" />
-                        <span className="text-sm leading-relaxed text-muted">
-                          {metric}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                </Reveal>
-              </div>
-
-              <Reveal from="left">
-                <DashboardPreview />
-              </Reveal>
-            </div>
-
-            <Reveal className="mt-20">
-              <figure>
-                <div className="relative aspect-16/9 w-full overflow-hidden rounded-3xl border border-line bg-ink-950 shadow-2xl">
-                  <Image
-                    src="/images/mockup-flutuante.jpg"
-                    alt="Três cartões da Wone: a era dos robozinhos acabou, as 3 métricas de uma operação saudável e onde o tráfego está morrendo"
-                    fill
-                    sizes="(max-width: 1280px) 100vw, 1280px"
-                    className="object-cover"
-                  />
-                </div>
-                <figcaption className="mt-4 text-center text-xs text-faint">
-                  Start → PIX gerado → PIX pago. O resto é ruído.
-                </figcaption>
-              </figure>
-            </Reveal>
-          </div>
-        </section>
+        <AnalyticsSection />
 
         {/* Segurança */}
         <section className="relative border-y border-line bg-ink-900/40 px-5 py-24 sm:px-6">
           <div className="mx-auto max-w-7xl">
             <SectionHeading
-              eyebrow="Segurança"
-              title="Sua operação blindada"
-              description="Conteúdo protegido, acesso controlado e credenciais guardadas em cofre."
+              eyebrow={t.security.eyebrow}
+              title={t.security.title}
+              description={t.security.description}
             />
-
-            <RevealGroup className="mt-14 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-              {SECURITY_ITEMS.map((item) => (
-                <RevealItem key={item.title} className="h-full">
-                  <SpotlightCard className="h-full">
-                    <ShieldCheck className="mb-4 h-6 w-6 text-brand" />
-                    <h3 className="font-display text-sm font-semibold text-cream">
-                      {item.title}
-                    </h3>
-                    <p className="mt-2 text-xs leading-relaxed text-muted">
-                      {item.description}
-                    </p>
-                  </SpotlightCard>
-                </RevealItem>
-              ))}
-            </RevealGroup>
+            <Reveal className="mt-14">
+              <SecurityCarousel />
+            </Reveal>
           </div>
         </section>
 
         {/* FAQ */}
         <section id="faq" className="relative px-5 py-24 sm:px-6">
           <div className="mx-auto max-w-7xl">
-            <SectionHeading eyebrow="Dúvidas" title="Perguntas frequentes" />
+            <SectionHeading eyebrow={t.faq.eyebrow} title={t.faq.title} />
             <Reveal className="mt-14">
               <FaqSection />
             </Reveal>
@@ -428,39 +366,24 @@ export default function Home() {
             aria-hidden
             className="pointer-events-none absolute top-1/2 left-1/2 -z-10 h-96 w-[46rem] -translate-x-1/2 -translate-y-1/2 rounded-full bg-brand/8 blur-[150px]"
           />
-          <div
-            aria-hidden
-            className="pointer-events-none absolute top-1/2 -right-20 -z-10 hidden h-[34rem] w-96 -translate-y-1/2 opacity-[0.06] [mask-image:radial-gradient(ellipse_at_center,#000,transparent_70%)] lg:block"
-          >
-            <Image
-              src="/images/placa-wone-1m.png"
-              alt=""
-              fill
-              sizes="384px"
-              className="object-contain"
-            />
-          </div>
 
           <div className="mx-auto max-w-5xl">
             <Reveal className="mx-auto mb-12 max-w-2xl text-center">
               <span className="inline-flex items-center gap-2 rounded-full border border-brand/25 bg-brand/8 px-3.5 py-1.5 text-xs font-semibold text-brand">
-                <Sparkles className="h-3.5 w-3.5" />
-                Milestone Awards
+                {t.awards.badge}
               </span>
               <h2 className="t-h2 mt-5 text-balance text-cream">
-                Premiações &amp; <span className="text-gradient">reconhecimento</span>
+                {t.awards.title}{" "}
+                <span className="text-gradient">{t.awards.titleAccent}</span>
               </h2>
-              <p className="t-lead mt-4 text-pretty">
-                A cada novo patamar de faturamento no Telegram, o troféu oficial e os
-                itens comemorativos exclusivos chegam na sua casa.
-              </p>
+              <p className="t-lead mt-4 text-pretty">{t.awards.description}</p>
             </Reveal>
 
             <AwardsShowcase />
           </div>
         </section>
 
-        {/* CTA final com o formulário da fila de espera */}
+        {/* CTA final */}
         <section
           id="fila-de-espera"
           className="relative overflow-hidden border-t border-line px-5 py-24 sm:px-6"
@@ -477,25 +400,15 @@ export default function Home() {
                 className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-brand to-transparent"
               />
 
-              <div className="grid grid-cols-1 items-center gap-10 lg:grid-cols-[1.05fr_1fr] lg:gap-14">
-                <div>
+              <div className="grid grid-cols-1 items-start gap-10 lg:grid-cols-2 lg:gap-14">
+                <div className="lg:pt-4">
                   <h2 className="t-h2 text-balance text-cream">
-                    Pronto para colocar sua comunidade no{" "}
-                    <span className="text-gradient">piloto automático</span>?
+                    {t.cta.title}{" "}
+                    <span className="text-gradient">{t.cta.titleAccent}</span>?
                   </h2>
-                  <p className="t-lead mt-5 text-pretty">
-                    Conecte seu bot, monte seu funil e deixe a infraestrutura Wone
-                    cuidar da cobrança, do remarketing e da revogação de acessos.
-                  </p>
-
+                  <p className="t-lead mt-5 text-pretty">{t.cta.description}</p>
                   <div className="mt-8">
-                    <BenefitList
-                      items={[
-                        "Sem cartão para entrar na fila",
-                        "Convites liberados em levas, por ordem de inscrição",
-                        "Você recebe o acesso por e-mail",
-                      ]}
-                    />
+                    <BenefitList items={t.cta.bullets} />
                   </div>
                 </div>
 
@@ -511,17 +424,23 @@ export default function Home() {
       {/* Rodapé */}
       <footer className="relative overflow-hidden border-t border-line px-5 pt-16 sm:px-6">
         <div className="mx-auto max-w-7xl">
-          <div className="flex flex-col justify-between gap-10 sm:flex-row sm:items-start">
-            <div className="max-w-xs">
+          <div className="grid grid-cols-2 gap-10 sm:grid-cols-4">
+            <div className="col-span-2 sm:col-span-1">
               <WoneIcon className="h-8 w-auto" />
-              <p className="mt-4 text-sm leading-relaxed text-muted">
-                Infraestrutura autônoma de monetização para Telegram.
+              <p className="mt-4 max-w-xs text-sm leading-relaxed text-muted">
+                {t.footer.tagline}
               </p>
+              <div className="mt-5">
+                <span className="t-eyebrow mb-2 block text-faint">
+                  {t.footer.language}
+                </span>
+                <LanguageToggle />
+              </div>
             </div>
 
-            <nav aria-label="Rodapé" className="flex flex-col gap-3">
-              <span className="t-eyebrow text-faint">Navegar</span>
-              {NAV_LINKS.map((link) => (
+            <nav aria-label={t.footer.navigate} className="flex flex-col gap-3">
+              <span className="t-eyebrow text-faint">{t.footer.navigate}</span>
+              {t.nav.map((link) => (
                 <a
                   key={link.href}
                   href={link.href}
@@ -532,31 +451,44 @@ export default function Home() {
               ))}
             </nav>
 
-            <div className="max-w-xs">
-              <span className="t-eyebrow text-faint">Acesso</span>
+            <div className="flex flex-col gap-3">
+              <span className="t-eyebrow text-faint">{t.footer.integrations}</span>
+              {t.integrations.slice(0, 5).map((item) => (
+                <span
+                  key={item.name}
+                  className="flex items-center gap-2 text-sm text-muted"
+                >
+                  <span
+                    aria-hidden
+                    className="h-1.5 w-1.5 rounded-full"
+                    style={{ background: item.dot }}
+                  />
+                  {item.name}
+                </span>
+              ))}
+            </div>
+
+            <div>
+              <span className="t-eyebrow text-faint">{t.footer.access}</span>
               <p className="mt-3 text-sm leading-relaxed text-muted">
-                A plataforma é liberada progressivamente por convite.
+                {t.footer.accessBody}
               </p>
               <a
                 href="#fila-de-espera"
                 className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-brand transition-colors hover:text-brand-soft"
               >
-                Entrar na lista
+                {t.footer.accessCta}
                 <ArrowRight className="h-3.5 w-3.5" />
               </a>
             </div>
           </div>
 
           <div className="mt-14 flex flex-col gap-3 border-t border-line py-7 text-xs text-faint sm:flex-row sm:items-center sm:justify-between">
-            <p>© 2026 Wone Bot. Todos os direitos reservados.</p>
-            <p className="max-w-xl sm:text-right">
-              A Wone é uma plataforma SaaS independente e não possui vínculo corporativo
-              ou endosso do Telegram.
-            </p>
+            <p>{t.footer.rights}</p>
+            <p className="max-w-xl sm:text-right">{t.footer.legal}</p>
           </div>
         </div>
 
-        {/* Marca d'água: o logotipo cortado pela borda inferior */}
         <div
           aria-hidden
           className="pointer-events-none mx-auto -mb-6 max-w-7xl select-none sm:-mb-10"

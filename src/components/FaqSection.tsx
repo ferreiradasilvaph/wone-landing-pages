@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { Plus } from "lucide-react";
-import { FAQS } from "@/data/content";
+import { useContent } from "@/i18n";
 
 /**
  * Acordeão de perguntas. Abre uma por vez e anima a altura, para a lista não
@@ -11,15 +11,16 @@ import { FAQS } from "@/data/content";
  */
 export function FaqSection() {
   const [openIndex, setOpenIndex] = useState<number | null>(0);
+  const { faq } = useContent();
 
   return (
     <div className="mx-auto max-w-3xl divide-y divide-line border-y border-line">
-      {FAQS.map((faq, index) => {
+      {faq.items.map((item, index) => {
         const isOpen = openIndex === index;
         const panelId = `faq-panel-${index}`;
 
         return (
-          <div key={faq.question} className="group">
+          <div key={item.question} className="group">
             <h3>
               <button
                 type="button"
@@ -33,7 +34,7 @@ export function FaqSection() {
                     isOpen ? "text-brand" : "text-cream group-hover:text-cream"
                   }`}
                 >
-                  {faq.question}
+                  {item.question}
                 </span>
                 <span
                   aria-hidden
@@ -59,7 +60,7 @@ export function FaqSection() {
                   className="overflow-hidden"
                 >
                   <p className="max-w-2xl pr-12 pb-6 text-sm leading-relaxed text-muted">
-                    {faq.answer}
+                    {item.answer}
                   </p>
                 </motion.div>
               )}

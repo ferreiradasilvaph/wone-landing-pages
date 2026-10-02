@@ -2,6 +2,9 @@ export type WaitlistEntry = {
   name: string;
   email: string;
   telegram?: string;
+  /** Código do país escolhido no formulário (BR, AR, MX, CO, OT). */
+  nationality?: string;
+  phone?: string;
   createdAt: string;
 };
 

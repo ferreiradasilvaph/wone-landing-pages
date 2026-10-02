@@ -3,8 +3,9 @@
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion, useScroll, useSpring } from "motion/react";
 import { Menu, X } from "lucide-react";
-import { NAV_LINKS } from "@/data/content";
+import { useContent } from "@/i18n";
 import { WoneIcon } from "./WoneMark";
+import { LanguageToggle } from "./LanguageToggle";
 
 /**
  * Header fixo que muda de peso conforme a página rola: transparente no topo do
@@ -15,6 +16,7 @@ export function SiteHeader() {
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [activeId, setActiveId] = useState<string>("");
+  const { nav, hero } = useContent();
 
   const { scrollYProgress } = useScroll();
   const progress = useSpring(scrollYProgress, {
@@ -32,7 +34,7 @@ export function SiteHeader() {
 
   // Marca no menu a seção que está ocupando a faixa central da tela.
   useEffect(() => {
-    const sections = NAV_LINKS.map((link) =>
+    const sections = nav.map((link) =>
       document.querySelector<HTMLElement>(link.href),
     ).filter((el): el is HTMLElement => el !== null);
 
@@ -50,7 +52,7 @@ export function SiteHeader() {
 
     sections.forEach((section) => observer.observe(section));
     return () => observer.disconnect();
-  }, []);
+  }, [nav]);
 
   // Trava a rolagem do fundo enquanto o menu móvel está aberto.
   useEffect(() => {
@@ -79,7 +81,7 @@ export function SiteHeader() {
           </a>
 
           <nav className="hidden items-center gap-1 md:flex">
-            {NAV_LINKS.map((link) => {
+            {nav.map((link) => {
               const isActive = activeId === link.href;
               return (
                 <a
@@ -103,11 +105,13 @@ export function SiteHeader() {
           </nav>
 
           <div className="flex items-center gap-2">
+            <LanguageToggle />
+
             <a
               href="#fila-de-espera"
               className="btn-brand hidden rounded-full px-5 py-2 text-sm font-semibold sm:inline-flex"
             >
-              Lista de espera
+              {hero.ctaPrimary}
             </a>
 
             <button
@@ -140,7 +144,7 @@ export function SiteHeader() {
             className="border-b border-line bg-ink-950/95 backdrop-blur-xl md:hidden"
           >
             <nav className="mx-auto flex max-w-7xl flex-col gap-1 px-5 py-4">
-              {NAV_LINKS.map((link) => (
+              {nav.map((link) => (
                 <a
                   key={link.href}
                   href={link.href}
@@ -155,7 +159,7 @@ export function SiteHeader() {
                 onClick={() => setMenuOpen(false)}
                 className="btn-brand mt-2 rounded-xl px-5 py-3 text-center text-sm font-semibold"
               >
-                Lista de espera
+                {hero.ctaPrimary}
               </a>
             </nav>
           </motion.div>

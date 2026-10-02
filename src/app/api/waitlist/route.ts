@@ -22,11 +22,15 @@ export async function POST(request: Request) {
   const name = asTrimmedString(payload.name);
   const email = asTrimmedString(payload.email).toLowerCase();
   const telegram = asTrimmedString(payload.telegram).replace(/^@/, "");
+  const nationality = asTrimmedString(payload.nationality);
+  const phone = asTrimmedString(payload.phone);
 
   if (
     name.length > MAX_FIELD_LENGTH ||
     email.length > MAX_FIELD_LENGTH ||
-    telegram.length > MAX_FIELD_LENGTH
+    telegram.length > MAX_FIELD_LENGTH ||
+    nationality.length > MAX_FIELD_LENGTH ||
+    phone.length > MAX_FIELD_LENGTH
   ) {
     return Response.json(
       { error: `Cada campo aceita no máximo ${MAX_FIELD_LENGTH} caracteres.` },
@@ -54,6 +58,8 @@ export async function POST(request: Request) {
       name,
       email,
       telegram: telegram || undefined,
+      nationality: nationality || undefined,
+      phone: phone || undefined,
       createdAt: new Date().toISOString(),
     });
   } catch (error) {

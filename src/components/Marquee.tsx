@@ -1,6 +1,6 @@
 "use client";
 
-import { INTEGRATIONS } from "@/data/content";
+import { useContent } from "@/i18n";
 
 /**
  * Faixa infinita com as integrações. A lista é renderizada duas vezes e o
@@ -8,12 +8,14 @@ import { INTEGRATIONS } from "@/data/content";
  * o laço fica imperceptível.
  */
 export function Marquee() {
+  const { integrations } = useContent();
+
   return (
     <div className="mask-edges relative overflow-hidden py-2">
       <div className="flex w-max animate-marquee gap-3 hover:[animation-play-state:paused]">
         {[0, 1].map((copy) => (
           <div key={copy} aria-hidden={copy === 1} className="flex shrink-0 gap-3">
-            {INTEGRATIONS.map((item) => (
+            {integrations.map((item) => (
               <span
                 key={`${copy}-${item.name}`}
                 className="flex items-center gap-2 rounded-full border border-line bg-ink-900/60 px-4 py-2 whitespace-nowrap"
