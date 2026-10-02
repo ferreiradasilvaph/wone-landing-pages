@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import {
   KeyRound,
@@ -15,8 +15,6 @@ import { useContent } from "@/i18n";
 const ICONS: Record<string, LucideIcon> = { KeyRound, CopySlash, Network, Vault };
 const EASE = [0.16, 1, 0.3, 1] as const;
 const AUTOPLAY_MS = 4200;
-/** Largura de um card mais o espaçamento, em rem. */
-const STEP_REM = 21;
 
 /**
  * Carrossel infinito dos itens de segurança.
@@ -34,6 +32,28 @@ export function SecurityCarousel() {
   const [position, setPosition] = useState(0);
   const [paused, setPaused] = useState(false);
   const [hovered, setHovered] = useState<number | null>(null);
+
+  // O card é `min(20rem, 72vw)`: abaixo de ~444px de viewport ele encolhe. Um
+  // passo fixo em rem descolaria do card nesse ponto e o deslocamento erraria
+  // de alvo, acumulando a cada volta. Medir o card resolve em qualquer largura.
+  const listRef = useRef<HTMLUListElement>(null);
+  const [step, setStep] = useState(0);
+
+  useEffect(() => {
+    const list = listRef.current;
+    const card = list?.firstElementChild;
+    if (!list || !card) return;
+
+    const measure = () => {
+      const gap = Number.parseFloat(getComputedStyle(list).columnGap) || 0;
+      setStep(card.getBoundingClientRect().width + gap);
+    };
+
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(card);
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     if (reduced || paused) return;
@@ -70,8 +90,9 @@ export function SecurityCarousel() {
           }}
         >
           <motion.ul
+            ref={listRef}
             className="flex gap-4"
-            animate={{ x: `-${(position % count) * STEP_REM}rem` }}
+            animate={{ x: -(position % count) * step }}
             transition={
               // Ao voltar para o início do laço, salta sem animar.
               position % count === 0
@@ -103,27 +124,62 @@ export function SecurityCarousel() {
                       z: isHovered ? 60 : 0,
                     }}
                     transition={{ duration: reduced ? 0 : 0.45, ease: EASE }}
-                    className={`surface h-full w-full cursor-pointer rounded-2xl p-6 text-left transition-[opacity,border-color,box-shadow] duration-500 ${
+                    className={`surface relative h-full w-full cursor-pointer overflow-hidden rounded-2xl p-6 text-left transition-[opacity,border-color,box-shadow] duration-500 ${
                       isActive || isHovered
-                        ? "border-brand/40 opacity-100 shadow-[0_24px_60px_-20px_rgba(255,119,0,0.45)]"
-                        : "opacity-50 hover:opacity-85"
+                        ? "border-brand/50 opacity-100 shadow-[0_24px_60px_-20px_rgba(255,119,0,0.55)]"
+                        : "opacity-45 hover:opacity-80"
                     }`}
                   >
-                    <span
-                      className={`flex h-12 w-12 items-center justify-center rounded-xl border transition-colors duration-500 ${
-                        isActive || isHovered
-                          ? "border-brand/40 bg-brand/15 text-brand"
-                          : "border-line bg-ink-900 text-muted"
-                      }`}
-                    >
-                      <Icon className="h-5 w-5" />
+                    {/* Camadas que só existem no card em foco */}
+                    {(isActive || isHovered) && (
+                      <>
+                        <span
+                          aria-hidden
+                          className="pointer-events-none absolute -top-20 -right-12 h-44 w-44 rounded-full bg-brand/25 blur-3xl"
+                        />
+                        <span
+                          aria-hidden
+                          className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-brand to-transparent"
+                        />
+                        <motion.span
+                          aria-hidden
+                          initial={{ x: "-130%" }}
+                          animate={{ x: "130%" }}
+                          transition={{
+                            duration: reduced ? 0 : 1.5,
+                            ease: EASE,
+                            repeat: reduced ? 0 : Infinity,
+                            repeatDelay: 2.2,
+                          }}
+                          className="pointer-events-none absolute inset-y-0 w-1/3 -skew-x-12 bg-gradient-to-r from-transparent via-cream/8 to-transparent"
+                        />
+                      </>
+                    )}
+
+                    <span className="relative block">
+                      <span
+                        className={`relative flex h-12 w-12 items-center justify-center rounded-xl border transition-colors duration-500 ${
+                          isActive || isHovered
+                            ? "border-brand/50 bg-brand/15 text-brand shadow-[0_0_28px_-4px_rgba(255,119,0,0.8)]"
+                            : "border-line bg-ink-900 text-muted"
+                        }`}
+                      >
+                        <Icon className="h-5 w-5" />
+                        {(isActive || isHovered) && (
+                          <span
+                            aria-hidden
+                            className="animate-pulse-ring absolute inset-0 rounded-xl border border-brand"
+                          />
+                        )}
+                      </span>
+
+                      <h3 className="font-display mt-5 text-lg font-semibold text-cream">
+                        {entry.title}
+                      </h3>
+                      <p className="mt-2 text-sm leading-relaxed text-muted">
+                        {entry.description}
+                      </p>
                     </span>
-                    <h3 className="font-display mt-5 text-lg font-semibold text-cream">
-                      {entry.title}
-                    </h3>
-                    <p className="mt-2 text-sm leading-relaxed text-muted">
-                      {entry.description}
-                    </p>
                   </motion.button>
                 </li>
               );

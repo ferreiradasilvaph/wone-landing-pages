@@ -78,10 +78,16 @@ export function Highlights() {
 
   return (
     <section
-      className="relative px-5 py-20 sm:px-6"
+      className="relative overflow-hidden px-5 py-20 sm:px-6"
       onMouseEnter={() => setHovering(true)}
       onMouseLeave={() => setHovering(false)}
     >
+      {/* Luz de fundo: tira o peso do preto chapado sob os cards */}
+      <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
+        <div className="absolute top-1/4 left-1/2 h-[26rem] w-[56rem] -translate-x-1/2 rounded-full bg-brand/8 blur-[150px]" />
+        <div className="grid-mesh absolute inset-0 opacity-40 [mask-image:radial-gradient(ellipse_75%_60%_at_50%_35%,#000,transparent_75%)]" />
+      </div>
+
       <div className="mx-auto max-w-7xl">
         <div className="hairline mb-12" />
 
@@ -113,7 +119,7 @@ export function Highlights() {
                   tabIndex={isActive ? 0 : -1}
                   onClick={() => select(index)}
                   onKeyDown={(event) => onKeyDown(event, index)}
-                  className={`surface group relative w-[17rem] shrink-0 snap-start cursor-pointer overflow-hidden rounded-2xl p-6 text-left transition-all duration-500 sm:w-auto ${
+                  className={`surface-lit group relative w-[17rem] shrink-0 snap-start cursor-pointer overflow-hidden rounded-2xl p-6 text-left transition-all duration-500 sm:w-auto ${
                     isActive
                       ? "border-brand/50 opacity-100 shadow-[0_18px_50px_-24px_rgba(255,119,0,0.75)]"
                       : "opacity-55 hover:opacity-85"
@@ -158,6 +164,17 @@ export function Highlights() {
                       {item.description}
                     </span>
                   </span>
+
+                  {/* Seta que liga a aba ativa ao painel logo abaixo. Só a
+                      partir de sm, onde as abas ficam em grade sobre ele. */}
+                  {isActive && (
+                    <motion.span
+                      layoutId="highlight-arrow"
+                      aria-hidden
+                      className="absolute -bottom-px left-1/2 hidden h-3 w-3 -translate-x-1/2 translate-y-1/2 rotate-45 border-r border-b border-brand/50 bg-ink-800 sm:block"
+                      transition={{ type: "spring", stiffness: 380, damping: 32 }}
+                    />
+                  )}
                 </button>
               );
             })}
@@ -171,7 +188,7 @@ export function Highlights() {
             id="highlight-panel"
             aria-labelledby={`highlight-tab-${active}`}
             tabIndex={0}
-            className="surface mt-6 min-h-[28rem] rounded-3xl p-6 sm:p-8 lg:p-10"
+            className="surface-lit relative mt-6 min-h-[28rem] overflow-hidden rounded-3xl p-6 sm:p-8 lg:p-10"
           >
             <AnimatePresence mode="wait">
               <motion.div

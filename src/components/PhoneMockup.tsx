@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { Check, Wifi, BatteryMedium, SignalHigh } from "lucide-react";
 import { useContent } from "@/i18n";
@@ -9,16 +9,13 @@ import { WoneIcon } from "./WoneMark";
 const EASE = [0.16, 1, 0.3, 1] as const;
 
 /**
- * Valores do PIX que aparece e some, entre R$ 50 e R$ 250.
- *
- * Lista fixa percorrida em ordem, nunca `Math.random()`: um valor sorteado no
- * render sairia diferente no servidor e no cliente e quebraria a hidratação —
- * erro que já apareceu duas vezes nesta base.
+ * Ritmo do ciclo. Cada volta é uma venda: o PIX aparece com o valor, some, e a
+ * mesma venda desce para a lista. Os valores vêm das próprias transações do
+ * dicionário (todas entre R$ 50 e R$ 250) — nunca de `Math.random()`, que no
+ * render sairia diferente no servidor e no cliente e quebraria a hidratação.
  */
-const PIX_AMOUNTS = [197, 67, 247, 97, 147, 57, 227, 117, 187, 77];
-
-const NOTIFICATION_MS = 2600;
-const PIX_CYCLE_MS = 4200;
+const PIX_VISIBLE_MS = 2600;
+const PIX_GAP_MS = 1100;
 /** Quantas entregas cabem na janela do carrossel. */
 const VISIBLE = 3;
 /** Altura de cada linha, em px — usada no deslocamento vertical. */
@@ -48,53 +45,67 @@ export function PhoneMockup() {
   const reduced = useReducedMotion();
   const { phone } = useContent();
 
-  // Quantas notificações já chegaram. Serve de relógio do carrossel e de
-  // índice da transação mais recente.
+  // Quantas vendas já entraram na lista. `tick` também é o índice da próxima a
+  // ser anunciada pelo cartão do PIX.
   const [tick, setTick] = useState(0);
-  // `null` = o cartão do PIX está fora da tela, no intervalo entre aparições.
-  const [pixIndex, setPixIndex] = useState<number | null>(0);
+  const tickRef = useRef(0);
+  // `true` enquanto o cartão do PIX está na tela, anunciando a venda seguinte.
+  const [pixVisible, setPixVisible] = useState(true);
   const [total, setTotal] = useState(phone.cap - HEADROOM);
 
   const transactions = phone.transactions;
 
+  /**
+   * Um ciclo só, para o valor anunciado e o que desce na lista baterem.
+   *
+   * O PIX mostra a venda de índice `tick`; quando ele sai, essa mesma venda
+   * entra no topo da lista e soma ao acumulado. Dois temporizadores
+   * independentes faziam o cartão anunciar um valor e a lista receber outro.
+   */
   useEffect(() => {
     if (reduced) return;
 
-    const id = window.setInterval(() => {
-      setTick((value) => {
-        const next = value + 1;
-        // A entrega que acabou de entrar soma ao acumulado do mês; ao passar
-        // do teto, o ciclo recomeça no piso.
-        const incoming = transactions[next % transactions.length];
+    let cancelled = false;
+    let timer: number;
+
+    const hide = () => {
+      if (cancelled) return;
+      setPixVisible(false);
+
+      timer = window.setTimeout(() => {
+        if (cancelled) return;
+        // A venda anunciada desce para a lista e entra no acumulado do mês.
+        // O contador vive num ref, não no updater do `setTick`: enfileirar o
+        // `setTotal` lá dentro é efeito em função que o StrictMode invoca duas
+        // vezes, e o acumulado subia em dobro.
+        const landing = transactions[tickRef.current % transactions.length];
+        tickRef.current += 1;
+        setTick(tickRef.current);
         setTotal((current) => {
-          const sum = current + incoming.value;
+          const sum = current + landing.value;
           return sum > phone.cap ? phone.cap - HEADROOM : sum;
         });
-        return next;
-      });
-    }, NOTIFICATION_MS);
+        setPixVisible(true);
+        timer = window.setTimeout(hide, PIX_VISIBLE_MS);
+      }, PIX_GAP_MS);
+    };
 
-    return () => window.clearInterval(id);
+    timer = window.setTimeout(hide, PIX_VISIBLE_MS);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
   }, [reduced, transactions, phone.cap]);
 
-  useEffect(() => {
-    if (reduced) return;
-
-    let step = 0;
-    const id = window.setInterval(() => {
-      step += 1;
-      // Alterna entre mostrar o próximo valor e sumir por um instante.
-      setPixIndex(step % 2 === 1 ? null : Math.floor(step / 2) % PIX_AMOUNTS.length);
-    }, PIX_CYCLE_MS / 2);
-
-    return () => window.clearInterval(id);
-  }, [reduced]);
+  /** Venda que o cartão do PIX está anunciando agora. */
+  const announced = transactions[tick % transactions.length];
 
   // Índice 0 é a notificação mais nova. Subtrair o slot faz a lista descer:
   // quando `tick` avança, cada item mantém a sua chave e escorrega um degrau
-  // para baixo, enquanto a nova entra por cima.
+  // para baixo, enquanto a nova entra por cima. `tick - 1` porque a venda de
+  // índice `tick` ainda está sendo anunciada pelo cartão do PIX.
   const visible = Array.from({ length: VISIBLE }, (_, slot) => {
-    const position = tick - slot;
+    const position = tick - 1 - slot;
     const index = ((position % transactions.length) + transactions.length) %
       transactions.length;
     return { ...transactions[index], key: position };
@@ -173,9 +184,9 @@ export function PhoneMockup() {
               é reservada para a lista abaixo não subir quando ele sai. */}
           <div className="mx-4 h-[58px]">
             <AnimatePresence mode="wait">
-              {pixIndex !== null && (
+              {pixVisible && (
                 <motion.div
-                  key={pixIndex}
+                  key={tick}
                   initial={{ opacity: 0, scale: 0.94, y: -6 }}
                   animate={{ opacity: 1, scale: 1, y: 0 }}
                   exit={{ opacity: 0, scale: reduced ? 1 : 0.97, y: reduced ? 0 : 6 }}
@@ -185,12 +196,14 @@ export function PhoneMockup() {
                   <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-500/20">
                     <Check className="h-3.5 w-3.5 stroke-[3] text-emerald-400" />
                   </span>
-                  <span className="leading-tight">
+                  <span className="min-w-0 leading-tight">
                     <span className="tnum block text-base font-bold text-emerald-400">
-                      +{BRL.format(PIX_AMOUNTS[pixIndex])}
+                      +{BRL.format(announced.value)}
                     </span>
-                    <span className="block text-[10px] text-cream/60">
-                      {phone.approved}
+                    {/* O nome da venda aqui é o que amarra o cartão à linha que
+                        desce em seguida: o lead vê o mesmo item nos dois. */}
+                    <span className="block truncate text-[10px] text-cream/60">
+                      {phone.approved} · {announced.label}
                     </span>
                   </span>
                 </motion.div>

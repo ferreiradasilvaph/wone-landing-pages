@@ -355,10 +355,10 @@ export const en: Content = {
       headline: "International checkout",
       lead: "Charge in local currency and let customers pay the way they already pay at home. No manual conversion, no English-only checkout.",
       countries: [
-        { flag: "🇧🇷", name: "Brazil", method: "PIX and card", code: "BRL", symbol: "R$" },
-        { flag: "🇦🇷", name: "Argentina", method: "Local card", code: "ARS", symbol: "$" },
-        { flag: "🇲🇽", name: "Mexico", method: "Card and SPEI", code: "MXN", symbol: "$" },
-        { flag: "🇨🇴", name: "Colombia", method: "Card and PSE", code: "COP", symbol: "$" },
+        { name: "Brazil", method: "PIX and card", code: "BRL", symbol: "R$" },
+        { name: "Argentina", method: "Local card", code: "ARS", symbol: "$" },
+        { name: "Mexico", method: "Card and SPEI", code: "MXN", symbol: "$" },
+        { name: "Colombia", method: "Card and PSE", code: "COP", symbol: "$" },
       ],
       moreLabel: "More guarantees",
       more: [
@@ -585,7 +585,7 @@ export const en: Content = {
       },
       {
         tier: "1M",
-        image: "/placas/placa-wone-1m.png",
+        image: "/placas/placa-1m.png",
         title: "1M Black Diamond Plaque • R$ 1,000,000",
         subtitle: "The Olympus of 7 Figures",
         description:
@@ -659,10 +659,12 @@ export const en: Content = {
     success: "Success",
     transactions: [
       { label: "Annual VIP Plan", amount: "R$ 197.00", value: 197 },
-      { label: "Order bump · Pack", amount: "R$ 47.00", value: 47 },
+      { label: "Quarterly Plan", amount: "R$ 147.00", value: 147 },
       { label: "Monthly Plan", amount: "R$ 97.00", value: 97 },
       { label: "Single pack", amount: "R$ 67.00", value: 67 },
-      { label: "Quarterly Plan", amount: "R$ 247.00", value: 247 },
+      { label: "Order bump · Pack", amount: "R$ 57.00", value: 57 },
+      { label: "Biannual Plan", amount: "R$ 227.00", value: 227 },
+      { label: "Lifetime access", amount: "R$ 247.00", value: 247 },
     ],
     ariaLabel:
       "Wone Bot screen: an approved PIX, R$ 142,580.00 received this month and deliveries marked as successful.",

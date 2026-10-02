@@ -66,6 +66,7 @@
   --animate-float: float 7s ease-in-out infinite;
   --animate-sweep: sweep 5s cubic-bezier(0.16, 1, 0.3, 1) infinite;
   --animate-breathe: breathe 6s ease-in-out infinite;
+  --animate-flag-shine: flag-shine 2.6s cubic-bezier(0.16, 1, 0.3, 1) infinite;
 }
 
 /* --------------------------------------------------------------------------
@@ -294,6 +295,16 @@ section[id] {
   border: 1px solid var(--line);
 }
 
+/* Variante clara, para blocos que ficam muito pesados com o degradê de cima
+   para baixo da `.surface` — a luz vem do topo em arco, em vez de escurecer
+   descendo, e a base é um tom acima. */
+.surface-lit {
+  background:
+    radial-gradient(130% 85% at 50% -10%, color-mix(in oklab, var(--cream) 9%, transparent), transparent 62%),
+    var(--ink-800);
+  border: 1px solid var(--line-strong);
+}
+
 /* Borda de 1px que acende seguindo o ponteiro (ver SpotlightCard) */
 .border-glow {
   position: absolute;
@@ -362,6 +373,17 @@ section[id] {
   }
   50% {
     transform: translateY(-10px);
+  }
+}
+
+/* Brilho que atravessa a bandeira do país em destaque. */
+@keyframes flag-shine {
+  0% {
+    transform: translateX(0) skewX(-12deg);
+  }
+  55%,
+  100% {
+    transform: translateX(300%) skewX(-12deg);
   }
 }
 

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { Check, Info } from "lucide-react";
+import { FlagMark } from "../FlagMark";
 import { useContent } from "@/i18n";
 
 const EASE = [0.16, 1, 0.3, 1] as const;
@@ -32,7 +33,7 @@ export function CheckoutDemo() {
         <p className="mt-1.5 text-sm text-muted">{demo.subtitle}</p>
 
         {/* Seletor de país */}
-        <ul className="mt-7 grid grid-cols-2 gap-2.5">
+        <ul className="mt-7 grid grid-cols-1 gap-2.5 min-[26rem]:grid-cols-2">
           {countries.map((entry, entryIndex) => {
             const isActive = entryIndex === index;
 
@@ -48,9 +49,7 @@ export function CheckoutDemo() {
                       : "border-line bg-ink-950/50 hover:border-line-strong"
                   }`}
                 >
-                  <span aria-hidden className="text-lg leading-none">
-                    {entry.flag}
-                  </span>
+                  <FlagMark code={entry.code} active={isActive} className="h-5 w-7" />
                   <span className="min-w-0 leading-tight">
                     <span
                       className={`block truncate text-xs font-semibold transition-colors ${
@@ -86,6 +85,7 @@ export function CheckoutDemo() {
 
           {/* Preço: troca com animação ao mudar de país */}
           <div className="mt-5 flex items-end gap-2">
+            <FlagMark code={country.code} active className="mb-1.5 h-6 w-9" />
             <span className="pb-1 font-mono text-lg font-semibold text-brand">
               {country.symbol}
             </span>

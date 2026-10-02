@@ -76,7 +76,7 @@ export function WaitlistForm() {
     return (
       <div
         role="status"
-        className="mx-auto flex max-w-md flex-col items-center gap-3 rounded-2xl border border-brand/30 bg-brand/5 p-8 text-center"
+        className="mx-auto flex max-w-md flex-col items-center gap-3 rounded-2xl border border-brand/30 bg-brand/5 p-6 text-center sm:p-8"
       >
         <CheckCircle2 className="h-8 w-8 text-brand" />
         <p className="font-display text-lg font-semibold text-cream">

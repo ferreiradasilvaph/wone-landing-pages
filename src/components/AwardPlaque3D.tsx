@@ -116,6 +116,9 @@ function Plaque({
   );
 }
 
+/** Proporção do plano onde a arte é aplicada. */
+const PLANE_RATIO = PLAQUE.w / PLAQUE.h;
+
 function TexturedPlaque({
   accent,
   src,
@@ -128,7 +131,32 @@ function TexturedPlaque({
   // `useTexture` do drei já aplica o color space correto, sem mutar o retorno
   // do hook — que é o que o lint, com razão, não permite.
   const texture = useTexture(src);
-  return <Plaque accent={accent} texture={texture} spin={spin} />;
+
+  // Enquadra como `object-fit: cover`: a arte preenche a placa e o excedente é
+  // cortado, em vez de esticar. Sem isso, uma foto em paisagem (1200×896) num
+  // plano em retrato sai achatada. O clone existe porque mexer em `repeat` e
+  // `offset` é mutação — no original, viria do hook.
+  const fitted = useMemo(() => {
+    const copy = texture.clone();
+    const image = texture.image as { width: number; height: number } | undefined;
+    if (!image?.width || !image?.height) return copy;
+
+    const imageRatio = image.width / image.height;
+    if (imageRatio > PLANE_RATIO) {
+      const scale = PLANE_RATIO / imageRatio;
+      copy.repeat.set(scale, 1);
+      copy.offset.set((1 - scale) / 2, 0);
+    } else {
+      const scale = imageRatio / PLANE_RATIO;
+      copy.repeat.set(1, scale);
+      copy.offset.set(0, (1 - scale) / 2);
+    }
+
+    copy.needsUpdate = true;
+    return copy;
+  }, [texture]);
+
+  return <Plaque accent={accent} texture={fitted} spin={spin} />;
 }
 
 /**

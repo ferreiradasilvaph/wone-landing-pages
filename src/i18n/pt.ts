@@ -366,10 +366,10 @@ export const pt = {
       headline: "Checkout internacional",
       lead: "Cobre em moeda local e deixe o cliente pagar do jeito que ele já paga no país dele. Sem conversão manual, sem checkout em inglês.",
       countries: [
-        { flag: "🇧🇷", name: "Brasil", method: "PIX e cartão", code: "BRL", symbol: "R$" },
-        { flag: "🇦🇷", name: "Argentina", method: "Cartão local", code: "ARS", symbol: "$" },
-        { flag: "🇲🇽", name: "México", method: "Cartão e SPEI", code: "MXN", symbol: "$" },
-        { flag: "🇨🇴", name: "Colômbia", method: "Cartão e PSE", code: "COP", symbol: "$" },
+        { name: "Brasil", method: "PIX e cartão", code: "BRL", symbol: "R$" },
+        { name: "Argentina", method: "Cartão local", code: "ARS", symbol: "$" },
+        { name: "México", method: "Cartão e SPEI", code: "MXN", symbol: "$" },
+        { name: "Colômbia", method: "Cartão e PSE", code: "COP", symbol: "$" },
       ],
       moreLabel: "Mais garantias",
       more: [
@@ -601,7 +601,7 @@ export const pt = {
       },
       {
         tier: "1M",
-        image: "/placas/placa-wone-1m.png",
+        image: "/placas/placa-1m.png",
         title: "Placa Black Diamond 1M • R$ 1.000.000",
         subtitle: "O Olimpo dos 7 Dígitos",
         description:
@@ -676,10 +676,12 @@ export const pt = {
     success: "Sucesso",
     transactions: [
       { label: "Plano Anual VIP", amount: "R$ 197,00", value: 197 },
-      { label: "Order bump · Pack", amount: "R$ 47,00", value: 47 },
+      { label: "Plano Trimestral", amount: "R$ 147,00", value: 147 },
       { label: "Plano Mensal", amount: "R$ 97,00", value: 97 },
       { label: "Pack avulso", amount: "R$ 67,00", value: 67 },
-      { label: "Plano Trimestral", amount: "R$ 247,00", value: 247 },
+      { label: "Order bump · Pack", amount: "R$ 57,00", value: 57 },
+      { label: "Plano Semestral", amount: "R$ 227,00", value: 227 },
+      { label: "Acesso vitalício", amount: "R$ 247,00", value: 247 },
     ],
     ariaLabel:
       "Tela do Wone Bot: um PIX aprovado, R$ 142.580,00 recebidos no mês e entregas com status de sucesso.",
