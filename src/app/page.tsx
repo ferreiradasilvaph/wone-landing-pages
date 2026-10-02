@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Image from "next/image";
 import {
   ShoppingBag,
   TrendingUp,
@@ -188,24 +187,26 @@ export default function Home() {
               description={t.features.description}
             />
 
+            {/* `auto-rows-fr` iguala a altura de todas as linhas, então os dez
+                cards saem do mesmo tamanho mesmo com descrições de uma linha. */}
             <RevealGroup
               stagger={0.05}
-              className="mt-14 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3"
+              className="mt-14 grid auto-rows-fr grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3"
             >
               {t.features.items.map((item, index) => {
-                // São 10 recursos em 3 colunas: o último sobraria sozinho numa
-                // linha, então ocupa a largura toda e fecha a grade.
-                const isWide = index === t.features.items.length - 1;
+                // São 10 recursos: em 3 colunas o último sobraria sozinho na
+                // ponta da última linha, então começa na coluna do meio e fica
+                // centrado. Em 2 colunas as cinco linhas já fecham cheias.
+                const isLast = index === t.features.items.length - 1;
                 return (
                   <RevealItem
                     key={item.title}
-                    className={`h-full ${isWide ? "sm:col-span-2 lg:col-span-3" : ""}`}
+                    className={`h-full ${isLast ? "lg:col-start-2" : ""}`}
                   >
                     <FeatureCard
                       title={item.title}
                       description={item.description}
                       Icon={FEATURE_ICONS[item.icon] ?? Zap}
-                      wide={isWide}
                     />
                   </RevealItem>
                 );
@@ -226,28 +227,7 @@ export default function Home() {
               description={t.payments.description}
             />
 
-            <Reveal className="mt-14">
-              <div className="relative aspect-16/9 w-full overflow-hidden rounded-3xl border border-line shadow-2xl sm:aspect-2/1">
-                <Image
-                  src="/images/mockup-feed-smartphone.jpg"
-                  alt=""
-                  fill
-                  sizes="(max-width: 1280px) 100vw, 1280px"
-                  className="object-cover"
-                />
-                <div className="absolute inset-0 bg-gradient-to-r from-ink-950 via-ink-950/75 to-transparent" />
-                <div className="absolute inset-y-0 left-0 flex max-w-md flex-col justify-center p-6 sm:p-12">
-                  <span className="t-eyebrow text-brand">
-                    {t.payments.bannerEyebrow}
-                  </span>
-                  <p className="font-display mt-3 text-xl leading-tight font-semibold text-balance text-cream sm:text-3xl">
-                    {t.payments.bannerTitle}
-                  </p>
-                </div>
-              </div>
-            </Reveal>
-
-            <RevealGroup className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
+            <RevealGroup className="mt-14 grid grid-cols-1 gap-6 lg:grid-cols-2">
               {/* Pagamentos: checkout internacional em primeiro plano */}
               <RevealItem className="h-full">
                 <SpotlightCard className="h-full p-6 sm:p-8">

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { Check, Wifi, BatteryMedium, SignalHigh } from "lucide-react";
 import { useContent } from "@/i18n";
@@ -20,8 +20,6 @@ const PIX_GAP_MS = 1100;
 const VISIBLE = 3;
 /** Altura de cada linha, em px — usada no deslocamento vertical. */
 const ROW_H = 48;
-/** Quanto o contador fica abaixo do teto ao reiniciar o ciclo. */
-const HEADROOM = 1400;
 
 const BRL = new Intl.NumberFormat("pt-BR", {
   style: "currency",
@@ -48,19 +46,46 @@ export function PhoneMockup() {
   // Quantas vendas já entraram na lista. `tick` também é o índice da próxima a
   // ser anunciada pelo cartão do PIX.
   const [tick, setTick] = useState(0);
-  const tickRef = useRef(0);
   // `true` enquanto o cartão do PIX está na tela, anunciando a venda seguinte.
   const [pixVisible, setPixVisible] = useState(true);
-  const [total, setTotal] = useState(phone.cap - HEADROOM);
 
   const transactions = phone.transactions;
+
+  /** Soma de uma volta completa pela lista de vendas. */
+  const cycleSum = useMemo(
+    () => transactions.reduce((sum, item) => sum + item.value, 0),
+    [transactions],
+  );
+
+  /**
+   * Acumulado do mês: o valor de partida mais cada venda que já desceu na lista.
+   *
+   * É derivado de `tick`, e não guardado num estado próprio: assim o número
+   * grande não tem como divergir das notificações — ele é, por construção, a
+   * soma delas — e nunca anda para trás. Antes havia um teto que, ao ser
+   * ultrapassado, devolvia o contador ao início: o cartão anunciava uma entrada
+   * e o total caía mais de mil reais na mesma batida.
+   */
+  const total = useMemo(() => {
+    const laps = Math.floor(tick / transactions.length);
+    const rest = tick % transactions.length;
+    let sum = phone.monthStart + laps * cycleSum;
+    for (let index = 0; index < rest; index += 1) {
+      sum += transactions[index].value;
+    }
+    return sum;
+  }, [tick, transactions, cycleSum, phone.monthStart]);
 
   /**
    * Um ciclo só, para o valor anunciado e o que desce na lista baterem.
    *
    * O PIX mostra a venda de índice `tick`; quando ele sai, essa mesma venda
-   * entra no topo da lista e soma ao acumulado. Dois temporizadores
-   * independentes faziam o cartão anunciar um valor e a lista receber outro.
+   * entra no topo da lista e, porque o acumulado é derivado de `tick`, soma ao
+   * total na mesma batida. Dois temporizadores independentes faziam o cartão
+   * anunciar um valor e a lista receber outro.
+   *
+   * `tick` avança por updater puro, que o StrictMode pode invocar duas vezes
+   * sem efeito colateral — nada de somar o acumulado aqui dentro.
    */
   useEffect(() => {
     if (reduced) return;
@@ -74,17 +99,7 @@ export function PhoneMockup() {
 
       timer = window.setTimeout(() => {
         if (cancelled) return;
-        // A venda anunciada desce para a lista e entra no acumulado do mês.
-        // O contador vive num ref, não no updater do `setTick`: enfileirar o
-        // `setTotal` lá dentro é efeito em função que o StrictMode invoca duas
-        // vezes, e o acumulado subia em dobro.
-        const landing = transactions[tickRef.current % transactions.length];
-        tickRef.current += 1;
-        setTick(tickRef.current);
-        setTotal((current) => {
-          const sum = current + landing.value;
-          return sum > phone.cap ? phone.cap - HEADROOM : sum;
-        });
+        setTick((value) => value + 1);
         setPixVisible(true);
         timer = window.setTimeout(hide, PIX_VISIBLE_MS);
       }, PIX_GAP_MS);
@@ -95,7 +110,7 @@ export function PhoneMockup() {
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [reduced, transactions, phone.cap]);
+  }, [reduced]);
 
   /** Venda que o cartão do PIX está anunciando agora. */
   const announced = transactions[tick % transactions.length];

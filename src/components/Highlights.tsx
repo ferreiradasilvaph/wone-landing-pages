@@ -100,7 +100,7 @@ export function Highlights() {
           <div
             role="tablist"
             aria-label={highlights.title}
-            className="mask-edges -mx-5 flex snap-x snap-mandatory gap-4 overflow-x-auto px-5 pb-2 sm:mx-0 sm:mask-none sm:grid sm:grid-cols-2 sm:overflow-visible sm:px-0 lg:grid-cols-4"
+            className="-mx-5 flex snap-x snap-mandatory gap-4 overflow-x-auto px-5 pb-2 sm:mx-0 sm:grid sm:grid-cols-2 sm:overflow-visible sm:px-0 lg:grid-cols-4"
           >
             {items.map((item, index) => {
               const Icon = ICONS[item.icon] ?? Zap;

@@ -118,10 +118,20 @@ export const pt = {
 
       blocks: {
         title: "28 blocos para desenhar qualquer funil",
-        subtitle: "Um trecho de fluxo montado com eles",
+        subtitle: "Monte um aqui: clique nos blocos, encadeie e rode",
         aiTag: "IA",
-        hint: "Passe o cursor em um bloco para ver o que ele faz",
-        flow: ["Início", "Condição", "Espera", "Etiqueta", "Integração", "Qualificar lead"],
+        hint: "Clique num bloco para somá-lo ao funil",
+        /** Funil de exemplo. Cada nome precisa existir em `categories`. */
+        flow: ["Início", "Conversar", "Oferta", "Checkout PIX", "Gerar convite"],
+        builder: {
+          canvas: "Seu funil",
+          empty: "Escolha um bloco abaixo e veja o funil tomar forma.",
+          run: "Rodar",
+          example: "Exemplo",
+          clear: "Limpar o funil",
+          remove: "Remover",
+          full: "limite da demo",
+        },
         categories: [
           {
             name: "Fluxo",
@@ -671,8 +681,8 @@ export const pt = {
     online: "online",
     approved: "PIX aprovado",
     received: "Recebido no mês",
-    /** Teto do contador: ao ultrapassar, o ciclo reinicia. */
-    cap: 142580,
+    /** Valor de partida do acumulado do mês; cada venda que desce soma a ele. */
+    monthStart: 142580,
     success: "Sucesso",
     transactions: [
       { label: "Plano Anual VIP", amount: "R$ 197,00", value: 197 },

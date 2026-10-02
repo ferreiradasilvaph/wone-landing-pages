@@ -107,10 +107,20 @@ export const en: Content = {
 
       blocks: {
         title: "28 blocks to design any funnel",
-        subtitle: "A stretch of flow built with them",
+        subtitle: "Build one here: click the blocks, chain them and run it",
         aiTag: "AI",
-        hint: "Hover a block to see what it does",
-        flow: ["Start", "Condition", "Wait", "Tag", "Integration", "Qualify lead"],
+        hint: "Click a block to add it to the funnel",
+        /** Funil de exemplo. Cada nome precisa existir em `categories`. */
+        flow: ["Start", "Converse", "Offer", "PIX checkout", "Create invite"],
+        builder: {
+          canvas: "Your funnel",
+          empty: "Pick a block below and watch the funnel take shape.",
+          run: "Run",
+          example: "Example",
+          clear: "Clear the funnel",
+          remove: "Remove",
+          full: "demo limit",
+        },
         categories: [
           {
             name: "Flow",
@@ -654,8 +664,8 @@ export const en: Content = {
     online: "online",
     approved: "PIX approved",
     received: "Received this month",
-    /** Teto do contador: ao ultrapassar, o ciclo reinicia. */
-    cap: 142580,
+    /** Valor de partida do acumulado do mês; cada venda que desce soma a ele. */
+    monthStart: 142580,
     success: "Success",
     transactions: [
       { label: "Annual VIP Plan", amount: "R$ 197.00", value: 197 },
