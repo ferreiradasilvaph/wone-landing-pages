@@ -113,7 +113,7 @@ export function BlocksDemo() {
       <p className="mt-1.5 text-sm text-muted">{demo.subtitle}</p>
 
       {/* Trilho do funil montado */}
-      <div className="mt-7 rounded-2xl border border-line bg-ink-950/60 p-4">
+      <div className="mt-7 rounded-2xl bg-ink-900/60 p-4">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
           <span className="flex items-center gap-2">
             <span className="t-eyebrow text-faint">{demo.builder.canvas}</span>
@@ -132,7 +132,7 @@ export function BlocksDemo() {
               type="button"
               onClick={() => setPulse(0)}
               disabled={slots.length === 0 || running}
-              className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-brand/40 bg-brand/12 px-2.5 py-1.5 text-[11px] font-semibold text-brand transition-colors hover:bg-brand/20 disabled:cursor-default disabled:opacity-40"
+              className="flex cursor-pointer items-center gap-1.5 rounded-lg bg-brand/15 px-2.5 py-1.5 text-[11px] font-semibold text-brand transition-colors hover:bg-brand/25 disabled:cursor-default disabled:opacity-40"
             >
               <Play className="h-3 w-3" />
               {demo.builder.run}
@@ -140,7 +140,7 @@ export function BlocksDemo() {
             <button
               type="button"
               onClick={loadExample}
-              className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-line bg-ink-900 px-2.5 py-1.5 text-[11px] font-semibold text-muted transition-colors hover:border-line-strong hover:text-cream"
+              className="flex cursor-pointer items-center gap-1.5 rounded-lg bg-ink-800 px-2.5 py-1.5 text-[11px] font-semibold text-muted transition-colors hover:bg-ink-750 hover:text-cream"
             >
               <RotateCcw className="h-3 w-3" />
               {demo.builder.example}
@@ -153,7 +153,7 @@ export function BlocksDemo() {
               }}
               disabled={slots.length === 0}
               aria-label={demo.builder.clear}
-              className="flex cursor-pointer items-center justify-center rounded-lg border border-line bg-ink-900 p-1.5 text-muted transition-colors hover:border-line-strong hover:text-cream disabled:cursor-default disabled:opacity-40"
+              className="flex cursor-pointer items-center justify-center rounded-lg bg-ink-800 p-1.5 text-muted transition-colors hover:bg-ink-750 hover:text-cream disabled:cursor-default disabled:opacity-40"
             >
               <Trash2 className="h-3 w-3" />
             </button>
@@ -188,14 +188,14 @@ export function BlocksDemo() {
                         type="button"
                         onClick={() => remove(slot.uid)}
                         aria-label={`${demo.builder.remove}: ${entry.name}`}
-                        className={`group/node flex cursor-pointer items-center gap-1.5 rounded-xl border px-3 py-2.5 text-xs font-semibold whitespace-nowrap transition-colors duration-200 ${
+                        className={`group/node flex cursor-pointer items-center gap-1.5 rounded-xl px-3 py-2.5 text-xs font-semibold whitespace-nowrap transition-colors duration-200 ${
                           isLit
-                            ? "border-brand bg-brand/20 text-cream shadow-[0_0_28px_-4px_rgba(255,119,0,0.8)]"
+                            ? "bg-brand text-ink-950"
                             : isDone
-                              ? "border-brand/45 bg-brand/8 text-cream/90"
+                              ? "bg-brand/15 text-cream"
                               : isAi
-                                ? "border-brand/50 bg-brand/12 text-brand"
-                                : "border-line bg-ink-900 text-cream/85 hover:border-line-strong"
+                                ? "bg-brand/12 text-brand"
+                                : "bg-ink-800 text-cream/85 hover:bg-ink-750"
                         }`}
                       >
                         <span className="font-mono text-[9px] text-faint">{index + 1}</span>
@@ -261,12 +261,12 @@ export function BlocksDemo() {
                         onFocus={() => setActive(key)}
                         onBlur={() => setActive(null)}
                         aria-describedby={isActive ? "block-detail" : undefined}
-                        className={`cursor-pointer rounded-lg border px-2.5 py-1.5 text-xs transition-all duration-200 disabled:cursor-default disabled:opacity-40 ${
+                        className={`cursor-pointer rounded-lg px-2.5 py-1.5 text-xs transition-all duration-200 disabled:cursor-default disabled:opacity-40 ${
                           isActive
-                            ? "border-brand/50 bg-brand/12 text-cream"
+                            ? "bg-ink-750 text-cream"
                             : isAi
-                              ? "border-brand/25 bg-brand/6 text-brand/90"
-                              : "border-line bg-ink-900/60 text-muted hover:border-line-strong hover:text-cream"
+                              ? "bg-brand/10 text-brand/90"
+                              : "bg-ink-800 text-muted hover:bg-ink-750 hover:text-cream"
                         }`}
                       >
                         {item.name}
@@ -284,7 +284,7 @@ export function BlocksDemo() {
       <p
         id="block-detail"
         aria-live="polite"
-        className="mt-6 min-h-10 rounded-xl border border-line bg-ink-950/60 px-4 py-3 text-xs leading-relaxed text-muted"
+        className="mt-6 min-h-10 rounded-xl bg-ink-900/60 px-4 py-3 text-xs leading-relaxed text-muted"
       >
         {detail ?? demo.hint}
       </p>

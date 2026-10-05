@@ -119,10 +119,11 @@ export function Highlights() {
                   tabIndex={isActive ? 0 : -1}
                   onClick={() => select(index)}
                   onKeyDown={(event) => onKeyDown(event, index)}
+                  // Ativo: opacidade cheia e o fio laranja no topo (abaixo). O
+                  // contorno border-brand/50 e a sombra laranja saíram — era
+                  // contorno sobre contorno, já que o card já tem superfície.
                   className={`surface-lit group relative w-[17rem] shrink-0 snap-start cursor-pointer overflow-hidden rounded-2xl p-6 text-left transition-all duration-500 sm:w-auto ${
-                    isActive
-                      ? "border-brand/50 opacity-100 shadow-[0_18px_50px_-24px_rgba(255,119,0,0.75)]"
-                      : "opacity-55 hover:opacity-85"
+                    isActive ? "opacity-100" : "opacity-55 hover:opacity-85"
                   }`}
                 >
                   <span
@@ -139,14 +140,13 @@ export function Highlights() {
                   />
 
                   <span className="relative block">
+                    {/* Ícone solto, sem o quadrado com borda em volta */}
                     <span
-                      className={`flex h-11 w-11 items-center justify-center rounded-xl border transition-colors duration-500 ${
-                        isActive
-                          ? "border-brand/40 bg-brand/15 text-brand"
-                          : "border-line bg-ink-900 text-muted"
+                      className={`flex h-11 w-11 items-center justify-center transition-colors duration-500 ${
+                        isActive ? "text-brand" : "text-faint"
                       }`}
                     >
-                      <Icon className="h-5 w-5" />
+                      <Icon className="h-6 w-6" />
                     </span>
 
                     <span className="mt-5 block text-4xl font-semibold tracking-tight text-cream">
@@ -171,7 +171,7 @@ export function Highlights() {
                     <motion.span
                       layoutId="highlight-arrow"
                       aria-hidden
-                      className="absolute -bottom-px left-1/2 hidden h-3 w-3 -translate-x-1/2 translate-y-1/2 rotate-45 border-r border-b border-brand/50 bg-ink-800 sm:block"
+                      className="absolute -bottom-px left-1/2 hidden h-3 w-3 -translate-x-1/2 translate-y-1/2 rotate-45 bg-ink-800 sm:block"
                       transition={{ type: "spring", stiffness: 380, damping: 32 }}
                     />
                   )}

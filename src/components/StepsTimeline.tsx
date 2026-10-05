@@ -41,7 +41,7 @@ function Step({
       transition={{ duration: reduced ? 0 : 0.6, ease: EASE }}
       className="group relative pb-12 last:pb-0"
     >
-      <span className="absolute top-0 -left-12 flex h-10 w-10 items-center justify-center rounded-full border border-line bg-ink-900 font-mono text-sm font-bold text-cream transition-colors duration-300 group-hover:border-brand group-hover:bg-brand group-hover:text-ink-950 sm:-left-16">
+      <span className="absolute top-0 -left-12 flex h-10 w-10 items-center justify-center rounded-full bg-ink-800 font-mono text-sm font-bold text-cream transition-colors duration-300 group-hover:bg-brand group-hover:text-ink-950 sm:-left-16">
         {step}
       </span>
 
@@ -69,7 +69,7 @@ function Step({
             ease: EASE,
             delay: reduced ? 0 : 0.15,
           }}
-          className="relative hidden h-24 w-24 shrink-0 rounded-2xl border border-line bg-ink-900/60 transition-colors duration-500 group-hover:border-brand/40 sm:block"
+          className="relative hidden h-24 w-24 shrink-0 rounded-2xl bg-ink-850 transition-colors duration-500 group-hover:bg-ink-800 sm:block"
         >
           {/* Brilho que acende por trás do sólido no hover */}
           <span

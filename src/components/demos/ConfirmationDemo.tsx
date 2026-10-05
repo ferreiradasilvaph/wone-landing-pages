@@ -34,9 +34,9 @@ export function ConfirmationDemo() {
 
       <div className="mt-7 grid grid-cols-1 items-center gap-5 lg:grid-cols-[auto_1fr_auto] lg:gap-6">
         {/* Origem */}
-        <div className="flex items-center gap-3 rounded-2xl border border-line bg-ink-950/60 p-4 lg:w-44 lg:flex-col lg:text-center">
-          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-brand/30 bg-brand/10 text-brand">
-            <CreditCard className="h-5 w-5" />
+        <div className="flex items-center gap-3 rounded-2xl bg-ink-800 p-4 lg:w-44 lg:flex-col lg:text-center">
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center text-brand">
+            <CreditCard className="h-6 w-6" />
           </span>
           <span className="text-sm font-semibold text-cream">{demo.payment}</span>
         </div>
@@ -50,17 +50,13 @@ export function ConfirmationDemo() {
             return (
               <li
                 key={path.name}
-                className={`flex items-center gap-3 rounded-xl border px-4 py-3 transition-colors duration-300 ${
-                  isDown
-                    ? "border-dashed border-red-500/50 bg-red-500/5"
-                    : "border-brand/30 bg-brand/5"
+                className={`flex items-center gap-3 rounded-xl px-4 py-3 transition-colors duration-300 ${
+                  isDown ? "bg-red-500/10" : "bg-brand/8"
                 }`}
               >
                 <span
-                  className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border transition-colors duration-300 ${
-                    isDown
-                      ? "border-red-500/40 bg-red-500/10 text-red-400"
-                      : "border-brand/40 bg-brand/15 text-brand"
+                  className={`flex h-9 w-9 shrink-0 items-center justify-center transition-colors duration-300 ${
+                    isDown ? "text-red-400" : "text-brand"
                   }`}
                 >
                   <Icon className="h-4 w-4" />
@@ -86,10 +82,8 @@ export function ConfirmationDemo() {
                   aria-checked={isDown}
                   aria-label={`${demo.failLabel}: ${path.name}`}
                   onClick={() => toggle(index)}
-                  className={`relative h-6 w-11 shrink-0 cursor-pointer rounded-full border transition-colors duration-300 ${
-                    isDown
-                      ? "border-red-500/50 bg-red-500/25"
-                      : "border-line-strong bg-ink-900"
+                  className={`relative h-6 w-11 shrink-0 cursor-pointer rounded-full transition-colors duration-300 ${
+                    isDown ? "bg-red-500/30" : "bg-ink-750"
                   }`}
                 >
                   <motion.span
@@ -107,17 +101,13 @@ export function ConfirmationDemo() {
 
         {/* Destino */}
         <div
-          className={`flex items-center gap-3 rounded-2xl border p-4 transition-colors duration-500 lg:w-44 lg:flex-col lg:text-center ${
-            delivered
-              ? "border-emerald-500/40 bg-emerald-500/8"
-              : "border-red-500/40 bg-red-500/8"
+          className={`flex items-center gap-3 rounded-2xl p-4 transition-colors duration-500 lg:w-44 lg:flex-col lg:text-center ${
+            delivered ? "bg-emerald-500/12" : "bg-red-500/12"
           }`}
         >
           <span
-            className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border transition-colors duration-500 ${
-              delivered
-                ? "border-emerald-500/40 bg-emerald-500/15 text-emerald-400"
-                : "border-red-500/40 bg-red-500/15 text-red-400"
+            className={`flex h-11 w-11 shrink-0 items-center justify-center transition-colors duration-500 ${
+              delivered ? "text-emerald-400" : "text-red-400"
             }`}
           >
             {delivered ? (
@@ -146,7 +136,7 @@ export function ConfirmationDemo() {
             transition={{ duration: reduced ? 0 : 0.3, ease: EASE }}
             className="overflow-hidden"
           >
-            <div className="mt-5 flex items-start gap-3 rounded-xl border border-amber-500/30 bg-amber-500/8 px-4 py-3">
+            <div className="mt-5 flex items-start gap-3 rounded-xl bg-amber-500/12 px-4 py-3">
               <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-400" />
               <span className="leading-relaxed">
                 <span className="block text-sm font-semibold text-amber-300">

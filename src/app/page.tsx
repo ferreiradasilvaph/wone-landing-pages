@@ -84,8 +84,9 @@ function BenefitList({ items }: { items: readonly string[] }) {
     <ul className="space-y-3.5">
       {items.map((text) => (
         <li key={text} className="flex items-start gap-3">
-          <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-brand/30 bg-brand/10">
-            <Check className="h-3 w-3 stroke-[3] text-brand" />
+          {/* Check solto: o círculo com borda em volta saiu */}
+          <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center">
+            <Check className="h-4 w-4 stroke-[3] text-brand" />
           </span>
           <span className="text-sm leading-relaxed text-muted">{text}</span>
         </li>
@@ -121,7 +122,7 @@ export default function Home() {
         </section>
 
         {/* Os dois produtos */}
-        <section className="relative border-y border-line bg-ink-900/40 px-5 py-24 sm:px-6">
+        <section className="relative bg-ink-900/40 px-5 py-24 sm:px-6">
           <div className="mx-auto max-w-7xl">
             <SectionHeading
               eyebrow={t.products.eyebrow}
@@ -132,10 +133,11 @@ export default function Home() {
             <RevealGroup className="mt-14 grid grid-cols-1 gap-6 md:grid-cols-2">
               {t.products.items.map((product) => (
                 <RevealItem key={product.name}>
+                  {/* Em destaque = superfície um tom acima (`lit`), não
+                      contorno laranja em volta do card. */}
                   <SpotlightCard
-                    className={`flex h-full flex-col justify-between p-6 sm:p-8 ${
-                      product.featured ? "border-brand/35" : ""
-                    }`}
+                    lit={product.featured}
+                    className="flex h-full flex-col justify-between p-6 sm:p-8"
                   >
                     {product.featured && (
                       <span className="t-eyebrow absolute top-6 right-6 rounded-full bg-brand/10 px-2.5 py-1 text-brand">
@@ -216,7 +218,7 @@ export default function Home() {
         {/* Pagamentos e rastreamento */}
         <section
           id="pagamentos"
-          className="relative border-y border-line bg-ink-900/40 px-5 py-24 sm:px-6"
+          className="relative bg-ink-900/40 px-5 py-24 sm:px-6"
         >
           <div className="mx-auto max-w-7xl">
             <SectionHeading
@@ -232,7 +234,7 @@ export default function Home() {
                   {/* Coluna flex: o acordeão desce para a base e o card
                       acompanha a altura do vizinho sem deixar buraco. */}
                   <div className="flex h-full flex-col">
-                  <span className="mb-5 flex h-11 w-11 items-center justify-center rounded-xl border border-brand/20 bg-brand/10 text-brand">
+                  <span className="mb-5 flex h-11 w-11 items-center justify-center text-brand">
                     <CreditCard className="h-5 w-5" />
                   </span>
                   <span className="t-eyebrow text-brand">{t.payments.card.title}</span>
@@ -245,7 +247,7 @@ export default function Home() {
                     {t.payments.card.countries.map((country) => (
                       <li
                         key={country.name}
-                        className="flex items-center gap-2.5 rounded-xl border border-line bg-ink-950/50 px-3 py-2.5"
+                        className="flex items-center gap-2.5 rounded-xl bg-ink-900/70 px-3 py-2.5"
                       >
                         <FlagMark code={country.code} className="h-5 w-7" />
                         <span className="min-w-0 leading-tight">
@@ -287,7 +289,7 @@ export default function Home() {
               {/* Rastreamento: o caminho do dado, animado */}
               <RevealItem className="h-full">
                 <SpotlightCard className="h-full p-6 sm:p-8">
-                  <span className="mb-5 flex h-11 w-11 items-center justify-center rounded-xl border border-brand/20 bg-brand/10 text-brand">
+                  <span className="mb-5 flex h-11 w-11 items-center justify-center text-brand">
                     <Radar className="h-5 w-5" />
                   </span>
                   <h3 className="t-h3 text-cream">{t.payments.tracking.title}</h3>
@@ -309,7 +311,7 @@ export default function Home() {
         <AnalyticsSection />
 
         {/* Segurança */}
-        <section className="relative border-y border-line bg-ink-900/40 px-5 py-24 sm:px-6">
+        <section className="relative bg-ink-900/40 px-5 py-24 sm:px-6">
           <div className="mx-auto max-w-7xl">
             <SectionHeading
               eyebrow={t.security.eyebrow}
@@ -388,7 +390,7 @@ export default function Home() {
                   </div>
                 </div>
 
-                <div className="rounded-2xl border border-line bg-ink-950/50 p-6 sm:p-7">
+                <div className="rounded-2xl bg-ink-900/70 p-6 sm:p-7">
                   <WaitlistForm />
                 </div>
               </div>

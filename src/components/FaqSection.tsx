@@ -38,10 +38,10 @@ export function FaqSection() {
                 </span>
                 <span
                   aria-hidden
-                  className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border transition-all duration-300 ${
+                  className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-all duration-300 ${
                     isOpen
-                      ? "rotate-45 border-brand bg-brand text-ink-950"
-                      : "border-line text-muted group-hover:border-brand/50 group-hover:text-brand"
+                      ? "rotate-45 bg-brand text-ink-950"
+                      : "text-faint group-hover:text-brand"
                   }`}
                 >
                   <Plus className="h-4 w-4" />

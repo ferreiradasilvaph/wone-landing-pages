@@ -79,10 +79,8 @@ export function DeliveryDemo() {
                 )}
 
                 <span
-                  className={`relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border text-[11px] font-bold transition-colors duration-300 ${
-                    active
-                      ? "border-brand bg-brand text-ink-950"
-                      : "border-line bg-ink-900 text-faint"
+                  className={`relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[11px] font-bold transition-colors duration-300 ${
+                    active ? "bg-brand text-ink-950" : "bg-ink-800 text-faint"
                   }`}
                 >
                   {active ? <Check className="h-4 w-4 stroke-[3]" /> : index + 1}
@@ -141,7 +139,7 @@ export function DeliveryDemo() {
           </span>
         </div>
 
-        <div className="flex items-center gap-2 rounded-xl border border-line bg-ink-950/60 px-3 py-2 text-center">
+        <div className="flex items-center gap-2 rounded-xl bg-ink-800 px-3 py-2 text-center">
           <Clock className="h-4 w-4 shrink-0 text-brand" />
           <span className="leading-tight">
             <span className="tnum block font-mono text-sm font-bold text-cream">

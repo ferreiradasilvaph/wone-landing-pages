@@ -161,7 +161,7 @@ export function PhoneMockup() {
 
           {/* Cabeçalho do chat */}
           <div className="mt-2 flex items-center gap-2.5 border-b border-line px-5 pb-3">
-            <span className="flex h-8 w-8 items-center justify-center rounded-full border border-brand/30 bg-brand/10">
+            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-brand/15">
               <WoneIcon className="h-3.5 w-auto" />
             </span>
             <span className="leading-tight">
@@ -209,7 +209,7 @@ export function PhoneMockup() {
                   animate={{ opacity: 1, scale: 1, y: 0 }}
                   exit={{ opacity: 0, scale: reduced ? 1 : 0.97, y: reduced ? 0 : 6 }}
                   transition={{ duration: reduced ? 0 : 0.42, ease: EASE }}
-                  className="flex items-center gap-2.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3 py-2.5 shadow-[0_0_24px_rgba(16,185,129,0.18)]"
+                  className="flex items-center gap-2.5 rounded-xl bg-emerald-500/12 px-3 py-2.5 shadow-[0_0_24px_rgba(16,185,129,0.18)]"
                 >
                   <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-500/20">
                     <Check className="h-3.5 w-3.5 stroke-[3] text-emerald-400" />
@@ -253,7 +253,7 @@ export function PhoneMockup() {
                   animate={{ opacity: 1, y: slot * ROW_H }}
                   exit={{ opacity: 0, y: VISIBLE * ROW_H }}
                   transition={{ duration: reduced ? 0 : 0.55, ease: EASE }}
-                  className="absolute inset-x-4 top-0 flex items-center justify-between gap-2 rounded-lg border border-line bg-ink-900/70 px-3 py-2"
+                  className="absolute inset-x-4 top-0 flex items-center justify-between gap-2 rounded-lg bg-ink-850 px-3 py-2"
                 >
                   <span className="min-w-0 leading-tight">
                     <span className="block truncate text-[11px] font-medium text-cream">

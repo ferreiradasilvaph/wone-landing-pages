@@ -124,10 +124,8 @@ export function SecurityCarousel() {
                       z: isHovered ? 60 : 0,
                     }}
                     transition={{ duration: reduced ? 0 : 0.45, ease: EASE }}
-                    className={`surface relative h-full w-full cursor-pointer overflow-hidden rounded-2xl p-6 text-left transition-[opacity,border-color,box-shadow] duration-500 ${
-                      isActive || isHovered
-                        ? "border-brand/50 opacity-100 shadow-[0_24px_60px_-20px_rgba(255,119,0,0.55)]"
-                        : "opacity-45 hover:opacity-80"
+                    className={`surface relative h-full w-full cursor-pointer overflow-hidden rounded-2xl p-6 text-left transition-opacity duration-500 ${
+                      isActive || isHovered ? "opacity-100" : "opacity-45 hover:opacity-80"
                     }`}
                   >
                     {/* Camadas que só existem no card em foco */}
@@ -157,20 +155,15 @@ export function SecurityCarousel() {
                     )}
 
                     <span className="relative block">
+                      {/* Ícone solto. Saíram o quadrado com borda, o glow e o
+                          anel pulsante que o circundava — a cor já diz qual
+                          card está em foco. */}
                       <span
-                        className={`relative flex h-12 w-12 items-center justify-center rounded-xl border transition-colors duration-500 ${
-                          isActive || isHovered
-                            ? "border-brand/50 bg-brand/15 text-brand shadow-[0_0_28px_-4px_rgba(255,119,0,0.8)]"
-                            : "border-line bg-ink-900 text-muted"
+                        className={`flex h-12 w-12 items-center justify-center transition-colors duration-500 ${
+                          isActive || isHovered ? "text-brand" : "text-faint"
                         }`}
                       >
-                        <Icon className="h-5 w-5" />
-                        {(isActive || isHovered) && (
-                          <span
-                            aria-hidden
-                            className="animate-pulse-ring absolute inset-0 rounded-xl border border-brand"
-                          />
-                        )}
+                        <Icon className="h-6 w-6" />
                       </span>
 
                       <h3 className="font-display mt-5 text-lg font-semibold text-cream">
@@ -228,8 +221,8 @@ export function SecurityCarousel() {
                   style={{ height: size, width: size, opacity: 0.2 - index * 0.04 }}
                 />
               ))}
-              <span className="relative flex h-16 w-16 items-center justify-center rounded-2xl border border-brand/40 bg-brand/15 text-brand shadow-[0_0_32px_rgba(255,119,0,0.35)]">
-                <ActiveIcon className="h-7 w-7" />
+              <span className="relative flex h-16 w-16 items-center justify-center text-brand">
+                <ActiveIcon className="h-8 w-8" />
               </span>
             </div>
 

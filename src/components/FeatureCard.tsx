@@ -44,8 +44,8 @@ export function FeatureCard({
       >
         {/* Frente */}
         <div className="surface absolute inset-0 flex flex-col rounded-2xl p-6 [backface-visibility:hidden]">
-          <span className="mb-5 flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-brand/20 bg-brand/10 text-brand">
-            <Icon className="h-5 w-5" />
+          <span className="mb-5 flex h-11 w-11 shrink-0 items-center justify-center text-brand">
+            <Icon className="h-6 w-6" />
           </span>
           <div>
             <h3 className="font-display text-base font-semibold text-cream">
@@ -58,13 +58,13 @@ export function FeatureCard({
         </div>
 
         {/* Verso: título maior, ícone à direita */}
-        <div className="absolute inset-0 flex flex-col rounded-2xl border border-brand/40 bg-gradient-to-br from-brand/15 via-ink-850 to-ink-900 p-6 [backface-visibility:hidden] [transform:rotateY(180deg)]">
+        <div className="absolute inset-0 flex flex-col rounded-2xl bg-gradient-to-br from-brand/20 via-ink-800 to-ink-850 p-6 [backface-visibility:hidden] [transform:rotateY(180deg)]">
           <div className="flex items-start justify-between gap-4">
             <h3 className="font-display text-xl leading-tight font-semibold text-cream">
               {title}
             </h3>
-            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-brand/40 bg-brand/20 text-brand">
-              <Icon className="h-5 w-5" />
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center text-brand">
+              <Icon className="h-6 w-6" />
             </span>
           </div>
           <p className="mt-3 max-w-2xl text-sm leading-relaxed text-cream/80">

@@ -24,9 +24,14 @@
   --ink-800: #15151c;
   --ink-750: #1b1b24;
 
-  /* Traços e textos derivados do creme */
-  --line: color-mix(in oklab, var(--cream) 9%, transparent);
-  --line-strong: color-mix(in oklab, var(--cream) 16%, transparent);
+  /* Traços e textos derivados do creme.
+
+     As duas linhas ficaram deliberadamente fracas: a borda que sobrou no site
+     serve para dar limite onde a leitura precisa (campo de formulário, divisor
+     de seção, cabeçalho de tabela), não para contornar cada elemento. Card e
+     item selecionado se separam por tom de fundo e espaçamento. */
+  --line: color-mix(in oklab, var(--cream) 6%, transparent);
+  --line-strong: color-mix(in oklab, var(--cream) 10%, transparent);
   --muted: color-mix(in oklab, var(--cream) 58%, transparent);
   --faint: color-mix(in oklab, var(--cream) 38%, transparent);
 
@@ -274,29 +279,30 @@ section[id] {
   transform: scale(0.985);
 }
 
-/* Botão secundário em vidro */
+/* Botão secundário: fundo em vidro, sem contorno. O peso vem do preenchimento
+   — um tom acima do fundo em repouso, laranja translúcido no hover. */
 .btn-ghost {
-  border: 1px solid var(--line-strong);
-  background: color-mix(in oklab, var(--cream) 3%, transparent);
+  background: color-mix(in oklab, var(--cream) 7%, transparent);
   color: var(--cream);
   backdrop-filter: blur(8px);
   transition:
-    border-color 0.25s,
     background-color 0.25s,
     transform 0.25s var(--ease-out-expo);
 }
 .btn-ghost:hover {
-  border-color: color-mix(in oklab, var(--brand) 55%, transparent);
-  background: color-mix(in oklab, var(--brand) 9%, transparent);
+  background: color-mix(in oklab, var(--brand) 16%, transparent);
   transform: translateY(-2px);
 }
 
-/* Superfície de cartão padrão do site */
+/* Superfície de cartão padrão do site.
+
+   Sem borda: o que separa o cartão do fundo é o tom (ink-850 sobre o quase
+   preto da página) mais a luz no topo. Contorno em volta de cada cartão, numa
+   página com dezenas deles, era a maior fonte de outline do site. */
 .surface {
   background:
     linear-gradient(180deg, color-mix(in oklab, var(--cream) 4%, transparent), transparent 42%),
     var(--ink-850);
-  border: 1px solid var(--line);
 }
 
 /* Variante clara, para blocos que ficam muito pesados com o degradê de cima
@@ -306,7 +312,6 @@ section[id] {
   background:
     radial-gradient(130% 85% at 50% -10%, color-mix(in oklab, var(--cream) 9%, transparent), transparent 62%),
     var(--ink-800);
-  border: 1px solid var(--line-strong);
 }
 
 /* Borda de 1px que acende seguindo o ponteiro (ver SpotlightCard) */

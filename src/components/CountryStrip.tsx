@@ -59,8 +59,8 @@ export function CountryStrip() {
             onMouseLeave={() => setHovered(null)}
             animate={{ scale: isActive ? 1.04 : 1, y: isActive ? -3 : 0 }}
             transition={{ duration: reduced ? 0 : 0.45, ease: EASE }}
-            className={`relative overflow-hidden rounded-xl border px-3.5 py-3 transition-colors duration-500 ${
-              isActive ? "border-brand/50 bg-brand/8" : "border-line bg-ink-950/50"
+            className={`relative overflow-hidden rounded-xl px-3.5 py-3 transition-colors duration-500 ${
+              isActive ? "bg-ink-800" : "bg-ink-900/60"
             }`}
           >
             {/* Aura na cor da bandeira do país em destaque */}
@@ -92,10 +92,8 @@ export function CountryStrip() {
 
               {/* Moeda local: o argumento da seção em duas letras */}
               <span
-                className={`shrink-0 rounded-md border px-1.5 py-0.5 font-mono text-[10px] font-bold transition-colors duration-500 ${
-                  isActive
-                    ? "border-brand/40 bg-brand/15 text-brand"
-                    : "border-line text-faint"
+                className={`shrink-0 rounded-md px-1.5 py-0.5 font-mono text-[10px] font-bold transition-colors duration-500 ${
+                  isActive ? "bg-brand/15 text-brand" : "text-faint"
                 }`}
               >
                 {country.symbol} {country.code}

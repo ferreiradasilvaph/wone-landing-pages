@@ -94,7 +94,7 @@ export function SiteHeader() {
                   {isActive && (
                     <motion.span
                       layoutId="nav-pill"
-                      className="absolute inset-0 -z-10 rounded-full border border-brand/25 bg-brand/10"
+                      className="absolute inset-0 -z-10 rounded-full bg-brand/14"
                       transition={{ type: "spring", stiffness: 380, damping: 32 }}
                     />
                   )}
@@ -119,7 +119,7 @@ export function SiteHeader() {
               onClick={() => setMenuOpen((open) => !open)}
               aria-expanded={menuOpen}
               aria-label={menuOpen ? "Fechar menu" : "Abrir menu"}
-              className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-line text-cream transition-colors hover:border-brand/50 md:hidden"
+              className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-ink-800 text-cream transition-colors hover:bg-ink-750 md:hidden"
             >
               {menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </button>

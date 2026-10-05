@@ -43,10 +43,8 @@ export function CheckoutDemo() {
                   type="button"
                   onClick={() => setIndex(entryIndex)}
                   aria-pressed={isActive}
-                  className={`flex w-full cursor-pointer items-center gap-2.5 rounded-xl border px-3 py-2.5 text-left transition-colors duration-300 ${
-                    isActive
-                      ? "border-brand/45 bg-brand/10"
-                      : "border-line bg-ink-950/50 hover:border-line-strong"
+                  className={`flex w-full cursor-pointer items-center gap-2.5 rounded-xl px-3 py-2.5 text-left transition-colors duration-300 ${
+                    isActive ? "bg-ink-750" : "bg-ink-900/60 hover:bg-ink-800"
                   }`}
                 >
                   <FlagMark code={entry.code} active={isActive} className="h-5 w-7" />

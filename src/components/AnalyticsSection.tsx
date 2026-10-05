@@ -56,22 +56,29 @@ export function AnalyticsSection() {
 
                   return (
                     <li key={view.id}>
+                      {/* Selecionado = fundo um tom acima, texto creme e uma
+                          barra de 2px à esquerda. O contorno laranja inteiro
+                          saiu, e com ele o `border-transparent` que só existia
+                          para o item não pular 1px ao ser escolhido. */}
                       <button
                         type="button"
                         role="tab"
                         aria-selected={isActive}
                         onClick={() => setActiveId(view.id)}
-                        className={`group flex w-full cursor-pointer items-start gap-3 rounded-xl border p-3.5 text-left transition-all duration-300 ${
-                          isActive
-                            ? "border-brand/40 bg-brand/8"
-                            : "border-transparent hover:border-line hover:bg-ink-900/50"
+                        className={`group relative flex w-full cursor-pointer items-start gap-3 overflow-hidden rounded-xl p-3.5 text-left transition-colors duration-300 ${
+                          isActive ? "bg-ink-800" : "hover:bg-ink-900/60"
                         }`}
                       >
+                        {isActive && (
+                          <span
+                            aria-hidden
+                            className="absolute inset-y-1.5 left-0 w-0.5 rounded-full bg-brand"
+                          />
+                        )}
+                        {/* Ícone solto: discreto em repouso, laranja no ativo */}
                         <span
-                          className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border transition-colors duration-300 ${
-                            isActive
-                              ? "border-brand/40 bg-brand/15 text-brand"
-                              : "border-line bg-ink-900 text-muted group-hover:text-brand"
+                          className={`flex h-9 w-9 shrink-0 items-center justify-center transition-colors duration-300 ${
+                            isActive ? "text-brand" : "text-faint group-hover:text-brand"
                           }`}
                         >
                           <Icon className="h-4 w-4" />

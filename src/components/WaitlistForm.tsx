@@ -15,8 +15,16 @@ type Status = "idle" | "loading" | "success" | "error";
  */
 const TELEGRAM_URL = process.env.NEXT_PUBLIC_TELEGRAM_URL ?? "https://t.me/";
 
+/**
+ * Campo de formulário é o caso em que a borda fica: ela é o que diz onde se
+ * pode escrever. Fica fraca (`--line-strong`, 10% de creme) e laranja no foco.
+ *
+ * O `outline-none` aqui não cega quem navega por teclado: o `:focus-visible`
+ * global do `globals.css` continua desenhando o anel da marca. O que saiu foi o
+ * `focus:ring-2` — era um segundo contorno em cima do primeiro.
+ */
 const FIELD_BASE =
-  "w-full rounded-xl border bg-ink-950/70 px-4 py-3 text-sm text-cream placeholder:text-faint outline-none transition-colors focus:border-brand focus:ring-2 focus:ring-brand/20";
+  "w-full rounded-xl border bg-ink-950/70 px-4 py-3 text-sm text-cream placeholder:text-faint outline-none transition-colors focus:border-brand";
 
 export function WaitlistForm() {
   const { form } = useContent();
@@ -76,7 +84,7 @@ export function WaitlistForm() {
     return (
       <div
         role="status"
-        className="mx-auto flex max-w-md flex-col items-center gap-3 rounded-2xl border border-brand/30 bg-brand/5 p-6 text-center sm:p-8"
+        className="mx-auto flex max-w-md flex-col items-center gap-3 rounded-2xl bg-brand/10 p-6 text-center sm:p-8"
       >
         <CheckCircle2 className="h-8 w-8 text-brand" />
         <p className="font-display text-lg font-semibold text-cream">

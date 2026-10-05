@@ -20,7 +20,7 @@ const FRAME_MS = 40;
 function PlaqueSkeleton() {
   return (
     <div className="flex h-full w-full items-center justify-center">
-      <div className="h-48 w-36 animate-pulse rounded-2xl border border-line bg-ink-900/80" />
+      <div className="h-48 w-36 animate-pulse rounded-2xl bg-ink-850" />
     </div>
   );
 }
@@ -99,11 +99,8 @@ export function AwardsShowcase() {
                 style={{ left: `${position}%` }}
               >
                 <span
-                  className="block h-3.5 w-3.5 rounded-full border-2 transition-colors duration-300"
-                  style={{
-                    borderColor: reached ? item.accent : "rgba(255,255,227,0.2)",
-                    background: reached ? item.accent : "#0f0f14",
-                  }}
+                  className="block h-3 w-3 rounded-full transition-colors duration-300"
+                  style={{ background: reached ? item.accent : "rgba(255,255,227,0.22)" }}
                 />
               </span>
             );
@@ -174,14 +171,10 @@ export function AwardsShowcase() {
                   {active.description}
                 </p>
 
-                <div className="mt-6 flex items-center gap-3 rounded-2xl border border-line bg-ink-950/60 p-4">
+                <div className="mt-6 flex items-center gap-3 rounded-2xl bg-ink-800 p-4">
                   <span
-                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border"
-                    style={{
-                      borderColor: `${active.accent}55`,
-                      backgroundColor: `${active.accent}1a`,
-                      color: active.accent,
-                    }}
+                    className="flex h-10 w-10 shrink-0 items-center justify-center"
+                    style={{ color: active.accent }}
                   >
                     <Award className="h-5 w-5" />
                   </span>
@@ -207,8 +200,7 @@ export function AwardsShowcase() {
             )}
 
             <div
-              className="absolute bottom-2 left-2 z-10 flex items-center gap-2 rounded-xl border bg-ink-950/75 px-3 py-2 backdrop-blur-sm"
-              style={{ borderColor: `${active.accent}66` }}
+              className="absolute bottom-2 left-2 z-10 flex items-center gap-2 rounded-xl bg-ink-900/80 px-3 py-2 backdrop-blur-sm"
             >
               <Sparkles className="h-3.5 w-3.5" style={{ color: active.accent }} />
               <span className="leading-tight">

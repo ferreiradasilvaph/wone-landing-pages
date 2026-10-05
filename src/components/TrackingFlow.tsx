@@ -66,16 +66,11 @@ export function TrackingFlow() {
             )}
 
             <span
-              className={`relative z-10 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border transition-colors duration-500 ${
-                active
-                  ? "border-brand bg-brand text-ink-950"
-                  : "border-line bg-ink-900 text-faint"
+              className={`relative z-10 flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-colors duration-500 ${
+                active ? "bg-brand text-ink-950" : "bg-ink-800 text-faint"
               }`}
             >
               <Icon className="h-4 w-4" />
-              {active && (
-                <span className="animate-pulse-ring absolute inset-0 rounded-full border border-brand" />
-              )}
             </span>
 
             <div className="min-w-0 pt-1.5">

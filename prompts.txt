@@ -105,3 +105,27 @@ Ajuste:
 - Aplique a mesma regra em todos os badges da pagina, para manter consistencia.
 
 Liste o que foi removido e o que foi mantido, com o motivo.
+
+===============================================================================
+[08] 2026-10-05
+===============================================================================
+A revisao interna apontou que a pagina usa "outlines a todo momento" (bordas em
+cards, itens selecionados, botoes, badges, icones), e que isso da cara de template. Exemplo: o item ativo da lista de metricas na secao Analises tem borda
+laranja + fundo; os icones da lista tambem estao dentro de quadrados com borda.
+
+Faca um levantamento de onde a pagina usa bordas (border, ring, outline,
+box-shadow simulando borda) e me mostre a lista agrupada por componente.
+
+Depois aplique:
+- Estado ativo/selecionado: indique so com mudanca de fundo (tom levemente mais
+  claro) e cor do texto, ou com uma barra lateral fina a esquerda. Sem contorno
+  completo.
+- Icones: remova os quadrados com borda em volta dos icones. Icone solto, em cor
+  discreta, cor de destaque so quando ativo.
+- Cards: separe por diferenca de tom de fundo e espacamento, nao por borda. Onde
+  a borda for realmente necessaria para leitura, use uma bem sutil (baixa
+  opacidade).
+- Mantenha o outline de foco (:focus-visible) para acessibilidade por teclado.
+  Isso NAO deve ser removido.
+
+Mantenha o visual consistente na pagina inteira e responsivo.

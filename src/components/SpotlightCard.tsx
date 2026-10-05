@@ -6,6 +6,14 @@ interface SpotlightCardProps extends React.HTMLAttributes<HTMLDivElement> {
   children: React.ReactNode;
   className?: string;
   spotlightColor?: string;
+  /**
+   * Usa a superfície clara (`.surface-lit`) em vez da padrão. É assim que um
+   * cartão em destaque se diferencia agora: um tom de fundo acima dos vizinhos,
+   * em vez do contorno laranja que tinha antes. Prop explícita porque as duas
+   * classes têm a mesma especificidade — passar pelo `className` dependeria da
+   * ordem em que aparecem no `globals.css`.
+   */
+  lit?: boolean;
 }
 
 /**
@@ -21,6 +29,7 @@ export function SpotlightCard({
   children,
   className = "",
   spotlightColor = "rgba(255, 119, 0, 0.16)",
+  lit = false,
   ...props
 }: SpotlightCardProps) {
   const ref = useRef<HTMLDivElement>(null);
@@ -54,7 +63,7 @@ export function SpotlightCard({
       onMouseMove={handleMouseMove}
       onMouseEnter={() => setActive(true)}
       onMouseLeave={handleMouseLeave}
-      className={`surface group/card relative isolate overflow-hidden rounded-2xl p-6 transition-transform duration-500 ease-out ${className}`}
+      className={`${lit ? "surface-lit" : "surface"} group/card relative isolate overflow-hidden rounded-2xl p-6 transition-transform duration-500 ease-out ${className}`}
       {...props}
     >
       {/* Halo difuso sobre a superfície */}

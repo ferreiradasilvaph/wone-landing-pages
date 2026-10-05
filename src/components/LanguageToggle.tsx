@@ -24,7 +24,7 @@ export function LanguageToggle({ className = "" }: { className?: string }) {
     <div
       role="group"
       aria-label="Idioma / Language"
-      className={`inline-flex items-center rounded-full border border-line bg-ink-900/60 p-0.5 ${className}`}
+      className={`inline-flex items-center rounded-full bg-ink-800 p-0.5 ${className}`}
     >
       {OPTIONS.map((option) => {
         const isActive = locale === option.code;

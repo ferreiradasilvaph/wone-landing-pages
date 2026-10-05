@@ -61,7 +61,7 @@ function RevenueView() {
           <span className="text-sm text-muted">{analytics.panel.accumulated}</span>
         </div>
 
-        <div className="rounded-lg border border-line bg-ink-950/70 px-3 py-1.5 text-right">
+        <div className="rounded-lg bg-ink-800 px-3 py-1.5 text-right">
           <span className="t-eyebrow block text-faint">
             {String(activeIndex).padStart(2, "0")}h
             {activeIndex === peakIndex && hovered === null
@@ -218,7 +218,7 @@ function FunnelView() {
         ))}
       </ul>
 
-      <p className="mt-5 flex items-start gap-2 rounded-xl border border-brand/20 bg-brand/5 px-3 py-2.5 text-xs leading-relaxed text-cream/75">
+      <p className="mt-5 flex items-start gap-2 rounded-xl bg-brand/8 px-3 py-2.5 text-xs leading-relaxed text-cream/75">
         <span aria-hidden className="mt-0.5 shrink-0 text-brand">
           ↻
         </span>
