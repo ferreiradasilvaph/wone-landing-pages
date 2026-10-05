@@ -40,15 +40,15 @@ export const en: Content = {
   },
 
   integrations: [
-    { name: "PIX", kind: "Payment", dot: "#32D583" },
-    { name: "Card", kind: "Payment", dot: "#FF9D45" },
-    { name: "Telegram", kind: "Delivery", dot: "#2AABEE" },
-    { name: "Meta Ads", kind: "Tracking", dot: "#0A7CFF" },
-    { name: "TikTok Ads", kind: "Tracking", dot: "#EE1D52" },
-    { name: "Kwai", kind: "Tracking", dot: "#FF7700" },
-    { name: "X Ads", kind: "Tracking", dot: "#FFFFE3" },
-    { name: "UTMify", kind: "Attribution", dot: "#A78BFA" },
-    { name: "Otimizey", kind: "Attribution", dot: "#22D3EE" },
+    { name: "PIX", icon: "pix", kind: "Payment", dot: "#32D583" },
+    { name: "Card", icon: "card", kind: "Payment", dot: "#FF9D45" },
+    { name: "Telegram", icon: "telegram", kind: "Delivery", dot: "#2AABEE" },
+    { name: "Meta Ads", icon: "meta", kind: "Tracking", dot: "#0A7CFF" },
+    { name: "TikTok Ads", icon: "tiktok", kind: "Tracking", dot: "#EE1D52" },
+    { name: "Kwai", icon: "kwai", kind: "Tracking", dot: "#FF7700" },
+    { name: "X Ads", icon: "x", kind: "Tracking", dot: "#FFFFE3" },
+    { name: "UTMify", icon: "utmify", kind: "Attribution", dot: "#A78BFA" },
+    { name: "Otimizey", icon: "otimizey", kind: "Attribution", dot: "#22D3EE" },
   ],
 
   highlights: {

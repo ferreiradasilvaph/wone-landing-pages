@@ -202,3 +202,10 @@ Ajuste:
    botoes/indicadores com aria-label.
 
 Sem bibliotecas novas de carrossel; use CSS (scroll-snap) + JS leve.
+
+===============================================================================
+[11] 2026-10-05
+===============================================================================
+o carrossel em "as melhores integracoes do mercado" quero que coloque icones ao
+inves do nome das integracoes (mas o servico/metodo voce mantem, so troca nome ex
+"X Ads" pelo icone

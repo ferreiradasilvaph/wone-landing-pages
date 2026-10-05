@@ -1,16 +1,20 @@
 "use client";
 
 import { useContent } from "@/i18n";
+import { IntegrationMark } from "./IntegrationMark";
 
 /**
  * Faixa infinita com as integrações. A lista é renderizada duas vezes e o
  * keyframe desloca exatamente -50%, então a emenda cai sempre no mesmo ponto e
  * o laço fica imperceptível.
  *
- * Cada item é só nome e tipo sobre um fundo sólido um tom acima do preto: sem
- * borda e sem o ponto na cor da integração. O fundo é `ink-850`, não o
- * `ink-900/60` de antes — sem a borda, um fundo quase igual ao fundo da página
- * deixaria a pílula invisível.
+ * Cada item mostra a marca da integração e o serviço que ela presta (Pagamento,
+ * Entrega, Rastreio, Atribuição) — o nome escrito saiu, mas continua no HTML em
+ * `sr-only`, que é o que um leitor de tela anuncia no lugar do símbolo.
+ *
+ * Fundo sólido um tom acima do preto, sem borda e sem ponto: o fundo é `ink-850`
+ * porque, sem a borda, um fundo quase igual ao da página deixaria a pílula
+ * invisível.
  */
 export function Marquee() {
   const { integrations } = useContent();
@@ -23,9 +27,15 @@ export function Marquee() {
             {integrations.map((item) => (
               <span
                 key={`${copy}-${item.name}`}
-                className="flex items-center gap-2 rounded-full bg-ink-850 px-4 py-2 whitespace-nowrap"
+                className="flex items-center gap-2.5 rounded-full bg-ink-850 px-4 py-2 whitespace-nowrap"
               >
-                <span className="text-sm font-medium text-cream/80">{item.name}</span>
+                <IntegrationMark
+                  icon={item.icon}
+                  name={item.name}
+                  color={item.dot}
+                  className="h-4 w-4"
+                />
+                <span className="sr-only">{item.name}</span>
                 <span className="t-eyebrow text-faint">{item.kind}</span>
               </span>
             ))}

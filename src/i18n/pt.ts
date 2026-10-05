@@ -46,15 +46,15 @@ export const pt = {
   },
 
   integrations: [
-    { name: "PIX", kind: "Pagamento", dot: "#32D583" },
-    { name: "Cartão", kind: "Pagamento", dot: "#FF9D45" },
-    { name: "Telegram", kind: "Entrega", dot: "#2AABEE" },
-    { name: "Meta Ads", kind: "Rastreio", dot: "#0A7CFF" },
-    { name: "TikTok Ads", kind: "Rastreio", dot: "#EE1D52" },
-    { name: "Kwai", kind: "Rastreio", dot: "#FF7700" },
-    { name: "X Ads", kind: "Rastreio", dot: "#FFFFE3" },
-    { name: "UTMify", kind: "Atribuição", dot: "#A78BFA" },
-    { name: "Otimizey", kind: "Atribuição", dot: "#22D3EE" },
+    { name: "PIX", icon: "pix", kind: "Pagamento", dot: "#32D583" },
+    { name: "Cartão", icon: "card", kind: "Pagamento", dot: "#FF9D45" },
+    { name: "Telegram", icon: "telegram", kind: "Entrega", dot: "#2AABEE" },
+    { name: "Meta Ads", icon: "meta", kind: "Rastreio", dot: "#0A7CFF" },
+    { name: "TikTok Ads", icon: "tiktok", kind: "Rastreio", dot: "#EE1D52" },
+    { name: "Kwai", icon: "kwai", kind: "Rastreio", dot: "#FF7700" },
+    { name: "X Ads", icon: "x", kind: "Rastreio", dot: "#FFFFE3" },
+    { name: "UTMify", icon: "utmify", kind: "Atribuição", dot: "#A78BFA" },
+    { name: "Otimizey", icon: "otimizey", kind: "Atribuição", dot: "#22D3EE" },
   ],
 
   /**
