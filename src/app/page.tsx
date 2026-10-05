@@ -67,14 +67,12 @@ function SectionHeading({
   return (
     <Reveal className="mx-auto max-w-2xl text-center">
       <span className="t-eyebrow text-brand">{eyebrow}</span>
+      {/* O `accent` continua separado no dicionário, mas sai no mesmo tom do
+          resto do título: degradê em palavra de título saiu da página toda, e
+          cor de destaque sobrou só no hero e em Premiações. */}
       <h2 className="t-h2 mt-3 text-balance text-cream">
         {title}
-        {accent && (
-          <>
-            {" "}
-            <span className="text-gradient">{accent}</span>
-          </>
-        )}
+        {accent && <> {accent}</>}
       </h2>
       {description && <p className="t-lead mt-4 text-pretty">{description}</p>}
     </Reveal>
@@ -349,9 +347,11 @@ export default function Home() {
               <span className="inline-flex items-center gap-2 rounded-full border border-brand/25 bg-brand/8 px-3.5 py-1.5 text-xs font-semibold text-brand">
                 {t.awards.badge}
               </span>
+              {/* Um dos dois únicos destaques da página, em laranja sólido e
+                  numa palavra só. */}
               <h2 className="t-h2 mt-5 text-balance text-cream">
                 {t.awards.title}{" "}
-                <span className="text-gradient">{t.awards.titleAccent}</span>
+                <span className="text-brand">{t.awards.titleAccent}</span>
               </h2>
               <p className="t-lead mt-4 text-pretty">{t.awards.description}</p>
             </Reveal>
@@ -380,8 +380,7 @@ export default function Home() {
               <div className="grid grid-cols-1 items-start gap-10 lg:grid-cols-2 lg:gap-14">
                 <div className="lg:pt-4">
                   <h2 className="t-h2 text-balance text-cream">
-                    {t.cta.title}{" "}
-                    <span className="text-gradient">{t.cta.titleAccent}</span>?
+                    {t.cta.title} {t.cta.titleAccent}?
                   </h2>
                   <p className="t-lead mt-5 text-pretty">{t.cta.description}</p>
                   <div className="mt-8">

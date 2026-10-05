@@ -221,19 +221,6 @@ section[id] {
    Componentes utilitários
    -------------------------------------------------------------------------- */
 
-/* Texto em degradê creme → laranja, para a palavra-chave de cada título.
-   `box-decoration-break: clone` repete o degradê inteiro em cada linha — sem
-   isso, um trecho que quebra em duas linhas sai creme na primeira e laranja só
-   no fim da segunda, o que parece acidente em vez de intenção. */
-.text-gradient {
-  background: linear-gradient(100deg, var(--cream) 0%, var(--cream) 30%, var(--brand-soft) 70%, var(--brand) 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-  -webkit-box-decoration-break: clone;
-  box-decoration-break: clone;
-}
-
 /* Botão principal: brilho que varre a superfície ao passar o mouse */
 .btn-brand {
   position: relative;

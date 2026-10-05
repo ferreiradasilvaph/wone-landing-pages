@@ -37,8 +37,7 @@ export function AnalyticsSection() {
             <Reveal className="max-w-xl">
               <span className="t-eyebrow text-brand">{analytics.eyebrow}</span>
               <h2 className="t-h2 mt-3 text-balance text-cream">
-                {analytics.title}{" "}
-                <span className="text-gradient">{analytics.titleAccent}</span>
+                {analytics.title} {analytics.titleAccent}
               </h2>
               <p className="t-lead mt-4 text-pretty">{analytics.description}</p>
             </Reveal>

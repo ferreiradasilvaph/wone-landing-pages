@@ -65,3 +65,24 @@ mudou. - trabalhe
 [05] 2026-10-05
 ===============================================================================
 commite. commite a cada prompt q eu mandar (os prompts em arquivo .txt)
+
+===============================================================================
+[06] 2026-10-05
+===============================================================================
+A revisao interna apontou que usar gradiente em palavras dos titulos (ex.: "nao
+com achismo" na secao Analises) da cara de template.
+
+Faca uma busca no projeto inteiro por texto com gradiente (background-clip:
+text, -webkit-background-clip, text-transparent, bg-gradient aplicado em texto,
+classes utilitarias equivalentes etc.) e liste todas as ocorrencias antes de
+alterar.
+
+Depois:
+- Remova o gradiente de todos os titulos e textos.
+- Onde houver destaque, use no maximo cor solida de destaque em uma palavra, e
+  so em poucos titulos da pagina (nao em todos). Na maioria dos titulos, deixe
+  tudo em uma cor so.
+- Se o gradiente vier de uma classe/utilitario reutilizavel, remova ou deixe sem
+  uso, sem deixar codigo morto.
+
+Nao altere textos, so o estilo. Mostre o antes/depois das classes alteradas.
