@@ -130,12 +130,15 @@ export function PhoneMockup() {
     <div role="img" aria-label={phone.ariaLabel} className="relative mx-auto w-fit">
       {/* Único fundo do bloco: um halo laranja que respira. A centralização fica
           no pai e a animação no filho — `breathe` anima `transform` e apagaria
-          o `-translate-*` se estivesse no mesmo elemento. */}
+          o `-translate-*` se estivesse no mesmo elemento.
+
+          Fica bem fraco de propósito: só separa o aparelho do preto do fundo. O
+          halo forte de antes era o maior glow da primeira dobra. */}
       <div
         aria-hidden
-        className="pointer-events-none absolute top-1/2 left-1/2 -z-10 h-[30rem] w-[30rem] -translate-x-1/2 -translate-y-1/2"
+        className="pointer-events-none absolute top-1/2 left-1/2 -z-10 h-[22rem] w-[22rem] -translate-x-1/2 -translate-y-1/2"
       >
-        <div className="animate-breathe h-full w-full rounded-full bg-brand/30 blur-[100px]" />
+        <div className="animate-breathe h-full w-full rounded-full bg-brand/10 blur-[90px]" />
       </div>
 
       {/* Moldura — a única borda visível do bloco */}

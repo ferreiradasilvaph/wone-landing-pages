@@ -14,23 +14,29 @@ export const en: Content = {
   ],
 
   hero: {
-    badge: "Monetization infrastructure for Telegram",
-    titleStart: "Automate your Telegram sales,",
-    titleVariants: [
-      "from first contact to delivery",
-      "with the best integrations on the market",
-      "with international reach and local currency",
-    ],
-    lead: "Sales funnel, instant PIX, card payments, upsell, active remarketing and single-use links that revoke themselves.",
+    context: "Billing, delivery and tracking infrastructure",
+
+    /**
+     * As duas outras opções de título, equivalentes às do `pt.ts`:
+     *   2. "They pay, they are in the channel"       — accent on "in"
+     *   3. "Telegram that charges and delivers itself" — accent on "itself"
+     */
+    titleStart: "Sell on Telegram on",
+    titleAccent: "autopilot",
+
+    /**
+     * Alternative lead:
+     *   "You publish the offer and Wone does the rest: it charges, confirms
+     *    the payment and grants channel access. You just watch the cash."
+     */
+    lead: "Your customer pays by card or PIX and joins the channel in seconds — at 3am, on a weekend, with nothing for you to approve.",
+
     ctaPrimary: "Join the waitlist",
     ctaSecondary: "See how it works",
+
+    facts: ["1.2s delivery", "Instant revocation", "Server-to-server tracking"],
+
     integrationsLabel: "The best integrations on the market",
-    engine: {
-      title: "Wone Bot Engine",
-      description:
-        "Instant delivery, gateway fallback, webhook validation and a disposable single-use link generated in seconds.",
-      badges: ["1.2s delivery", "Instant revocation", "Server-to-server tracking"],
-    },
   },
 
   integrations: [

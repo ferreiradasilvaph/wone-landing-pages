@@ -13,24 +13,36 @@ export const pt = {
   ],
 
   hero: {
-    badge: "Infraestrutura de monetização para Telegram",
-    titleStart: "Automatize suas vendas no Telegram,",
-    // A segunda metade da frase gira entre estas variações.
-    titleVariants: [
-      "do primeiro contato à entrega",
-      "com as melhores integrações do mercado",
-      "com cobertura internacional e moeda local",
-    ],
-    lead: "Funil de vendas, PIX instantâneo, cartão, upsell, remarketing ativo e liberação de link único com revogação automática.",
+    /**
+     * Posicionamento em texto corrido. Era um badge pill com borda, fundo
+     * laranja e ponto pulsante — o enfeite que mais entregava "template". Não
+     * repete "Telegram", que já está no título.
+     */
+    context: "Infraestrutura de cobrança, entrega e rastreio",
+
+    /**
+     * Título curto e em cor sólida: `titleAccent` é a única palavra em laranja,
+     * sem gradiente. As outras duas opções avaliadas, caso se queira testar:
+     *   2. "Pagou no PIX, entrou no canal"        — destaque em "PIX"
+     *   3. "Telegram que cobra e entrega sozinho" — destaque em "sozinho"
+     */
+    titleStart: "Venda no Telegram no",
+    titleAccent: "automático",
+
+    /**
+     * Resultado para o cliente, não lista de features. Opção alternativa:
+     *   "Você publica a oferta e a Wone faz o resto: cobra, confirma o
+     *    pagamento e libera o acesso ao canal. Você só olha o caixa."
+     */
+    lead: "Seu cliente paga no PIX ou no cartão e entra no canal em segundos — de madrugada, no fim de semana, sem você aprovar nada.",
+
     ctaPrimary: "Lista de espera",
     ctaSecondary: "Ver como funciona",
+
+    /** Três fatos verificáveis, em texto simples no lugar das pills. */
+    facts: ["Entrega em 1,2s", "Revogação imediata", "Rastreio servidor a servidor"],
+
     integrationsLabel: "As melhores integrações do mercado",
-    engine: {
-      title: "Wone Bot Engine",
-      description:
-        "Disparos instantâneos, fallback de gateway, validação por webhook e link único descartável gerado em segundos.",
-      badges: ["Entrega em 1,2s", "Revogação imediata", "Rastreio servidor a servidor"],
-    },
   },
 
   integrations: [

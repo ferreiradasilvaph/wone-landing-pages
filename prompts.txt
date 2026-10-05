@@ -1,0 +1,67 @@
+# Prompts — projeto Wone
+#
+# Registro dos pedidos feitos ao Claude Code, em ordem e na redacao original.
+# Regra combinada em 2026-10-05: um commit por prompt, e o prompt entra aqui
+# junto com o trabalho que ele gerou.
+
+===============================================================================
+[01] 2026-10-05
+===============================================================================
+chat, o mesmo erro, voltou para o projeto desatualizado
+
+===============================================================================
+[02] 2026-10-05
+===============================================================================
+quero que essa pasta C:\Users\User\Documents\wone seja a pasta do projeto
+
+===============================================================================
+[03] 2026-10-05
+===============================================================================
+ok, finalmente, podemos trabalhar
+
+===============================================================================
+[04] 2026-10-05
+===============================================================================
+Contexto: estou refinando a landing page do Wone. A revisao interna avaliou o hero
+(primeira dobra) e disse que ele tem "cara de template generico". Os
+motivos foram: badge pill acima do titulo ("Infraestrutura de monetizacao para
+Telegram"), titulo enorme com gradiente em parte do texto ("cobertura
+internacional e moeda local"), subtitulo generico listando features e dois
+botoes lado a lado, alem de excesso de gradientes, glow/sombras e outlines.
+
+Antes de alterar qualquer coisa, localize o componente do hero e me mostre quais
+arquivos e estilos estao envolvidos.
+
+Depois faca o seguinte:
+1. Remova o badge pill acima do titulo. Se quiser manter o contexto "para
+   Telegram", coloque como um texto pequeno simples, sem borda, sem fundo e sem
+   o ponto colorido, ou incorpore ao proprio titulo.
+2. Remova o gradiente do texto do titulo. O titulo fica em cor solida. Se
+   precisar destacar uma parte, use apenas a cor de destaque solida (laranja da
+   marca) em UMA palavra curta, ou nenhum destaque.
+3. Reduza o titulo: menos palavras, mais direto. Proponha 3 opcoes de headline
+   curtas (ate ~8 palavras) e aplique a primeira, deixando as outras em
+   comentario no codigo.
+4. Reescreva o subtitulo para ser concreto e especifico, em vez de uma lista de
+   features separada por virgulas. Fale do resultado para o cliente (ex.: vender
+   no Telegram com cobranca e liberacao de acesso automaticas). Proponha 2
+   opcoes e aplique uma.
+5. CTAs: mantenha o botao principal "Lista de espera" com cor solida, sem
+   glow/sombra colorida. Troque o segundo botao outline ("Ver como funciona")
+   por um link de texto simples com seta.
+6. Remova ou reduza bastante os glows radiais, sombras coloridas e gradientes de
+   fundo dessa secao. Fundo mais limpo.
+7. Considere quebrar a simetria do layout centralizado (por exemplo, texto
+   alinhado a esquerda com um elemento visual real do produto a direita, como um
+   print/mock da conversa no Telegram ou do painel). Se fizer isso, use apenas
+   HTML/CSS ou uma imagem otimizada, nada pesado.
+
+Restricoes: nao quebre a versao em ingles (EN). Atualize os textos nos dois
+idiomas, mantendo o padrao de i18n que o projeto ja usa. Mantenha responsivo no
+mobile. Nao adicione bibliotecas novas. Ao final, me mostre um resumo do que
+mudou. - trabalhe
+
+===============================================================================
+[05] 2026-10-05
+===============================================================================
+commite. commite a cada prompt q eu mandar (os prompts em arquivo .txt)

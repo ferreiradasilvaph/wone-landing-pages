@@ -270,6 +270,23 @@ section[id] {
   transform: translateY(0) scale(0.985);
 }
 
+/* Botão principal do hero: laranja chapado, sem sombra colorida e sem a
+   varredura de brilho do `.btn-brand`. Na primeira dobra o efeito competia com
+   o conteúdo e dava ar de template; nas outras seções o `.btn-brand` continua. */
+.btn-solid {
+  background: var(--brand);
+  color: #130800;
+  transition:
+    background-color 0.2s var(--ease-out-expo),
+    transform 0.2s var(--ease-out-expo);
+}
+.btn-solid:hover {
+  background: var(--brand-soft);
+}
+.btn-solid:active {
+  transform: scale(0.985);
+}
+
 /* Botão secundário em vidro */
 .btn-ghost {
   border: 1px solid var(--line-strong);
