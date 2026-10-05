@@ -262,3 +262,9 @@ para 57,6kB e piorou o FCP.
 ===============================================================================
 em "as melhores integracoes do mercado" aparecem um icone de nota musical e um
 "K" remova estes dois
+
+===============================================================================
+[15] 2026-10-05
+===============================================================================
+o cto mandou a url do webhook de deploy do Easypanel (host 144.126.151.115,
+token redigido: o repositorio e publico).
