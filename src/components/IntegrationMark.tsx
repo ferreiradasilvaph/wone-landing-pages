@@ -1,4 +1,17 @@
-import { CreditCard, Infinity as InfinityIcon, Music } from "lucide-react";
+import { CreditCard, Infinity as InfinityIcon } from "lucide-react";
+
+/**
+ * Integrações que aparecem pelo nome, sem símbolo.
+ *
+ * A nota musical que servia o TikTok e o monograma "K" do Kwai foram reprovados
+ * na revisão — eram sinais genéricos ocupando o lugar de um logo, e liam como
+ * enfeite aleatório. Enquanto não existir o SVG oficial dessas duas marcas, o
+ * nome escrito é mais honesto que um símbolo que não é delas.
+ */
+const WORDMARK_ONLY = new Set(["tiktok", "kwai"]);
+
+/** `true` quando a integração tem símbolo próprio para mostrar. */
+export const hasIntegrationMark = (icon: string) => !WORDMARK_ONLY.has(icon);
 
 /**
  * Marca de cada integração, para a faixa de integrações mostrar o símbolo em vez
@@ -14,13 +27,15 @@ import { CreditCard, Infinity as InfinityIcon, Music } from "lucide-react";
  *  1. Desenhado a partir da forma real — `telegram` (avião de papel), `x` (o X),
  *     `pix` (o losango de quatro setas). São silhuetas simplificadas, não os
  *     arquivos oficiais.
- *  2. Ícone genérico que o contexto resolve — `card` (cartão) e, para Meta e
- *     TikTok, o laço do infinito e a nota musical. Lê como a marca ao lado do
- *     rótulo do serviço, sem reproduzir o logo.
- *  3. Monograma — `kwai`, `utmify`, `otimizey`. Não tenho a forma dessas marcas
- *     e inventar um logo para empresa real seria pior do que não ter: ficaria um
+ *  2. Ícone genérico que o contexto resolve — `card` (cartão) e, para a Meta, o
+ *     laço do infinito. Lê como a marca ao lado do rótulo do serviço, sem
+ *     reproduzir o logo.
+ *  3. Monograma — `utmify`, `otimizey`. Não tenho a forma dessas marcas, e
+ *     inventar um logo para empresa real seria pior do que não ter: ficaria um
  *     símbolo falso colado num nome verdadeiro. A inicial na cor da marca é
  *     claramente um marcador, não um logo.
+ *  4. Sem símbolo — `tiktok` e `kwai`, em `WORDMARK_ONLY` no topo: aparecem pelo
+ *     nome escrito, porque a nota musical e o "K" foram reprovados na revisão.
  *
  * Quando os SVG oficiais estiverem disponíveis, é só substituir cada `case` —
  * a assinatura do componente não muda.
@@ -69,9 +84,6 @@ export function IntegrationMark({
 
     case "meta":
       return <InfinityIcon {...common} />;
-
-    case "tiktok":
-      return <Music {...common} />;
 
     case "x":
       /* O X. Geometria do próprio símbolo: duas barras cruzadas com o vão

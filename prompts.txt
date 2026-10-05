@@ -256,3 +256,9 @@ FCP 1,28s -> 1,22s, TBT 149ms -> 50ms, CLS 0.
 
 Revertido no caminho: experimental.inlineCss, que inflou o documento de 21,8kB
 para 57,6kB e piorou o FCP.
+
+===============================================================================
+[14] 2026-10-05
+===============================================================================
+em "as melhores integracoes do mercado" aparecem um icone de nota musical e um
+"K" remova estes dois
