@@ -410,6 +410,21 @@ section[id] {
   }
 }
 
+/* Barra de progresso do indicador ativo do carrossel: cresce da esquerda ao
+   longo do intervalo do autoplay.
+
+   É animação CSS, e não um contador em JS, justamente para poder congelar no
+   meio com `animation-play-state: paused` quando o carrossel pausa — e voltar
+   de onde parou, não do zero. */
+@keyframes carousel-progress {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
 @keyframes sweep {
   0% {
     transform: translateY(-100%);

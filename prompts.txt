@@ -172,3 +172,33 @@ componente atual (trilho horizontal unico, sem canvas nem ramificacao) e
 apresentei o plano. Resposta do usuario: "crie a pasta /referencia-fluxos e
 prossiga" — pasta criada vazia e Passo 2 executado com o vocabulario de blocos
 que ja estava nos dicionarios e a paleta da propria landing.
+
+===============================================================================
+[10] 2026-10-05
+===============================================================================
+Na secao "Sua operacao blindada" (Seguranca) existe um carrossel de cards (2FA,
+Anti-clone de conteudo etc.) com indicadores em pontos e um card de detalhe a
+direita. A revisao interna disse que deveria ter scroll automatico e que, como
+esta, "nao ficou muito legal".
+
+Localize o componente e me explique rapidamente como ele funciona hoje.
+
+Ajuste:
+1. Autoplay: avanca sozinho a cada ~4-5 segundos, em loop.
+2. Pausa no hover, no foco por teclado e quando a aba nao esta visivel. Retoma ao
+   sair.
+3. Clique num card ou num indicador vai para ele e reinicia o timer.
+4. Mostre o progresso no indicador ativo (barra que preenche durante o
+   intervalo).
+5. Card de detalhe a direita sincronizado com o card ativo, com transicao suave
+   (fade curto, sem efeitos exagerados).
+6. Corrija o visual: o card da esquerda aparece cortado/apagado e parece bug. Os
+   cards devem aparecer inteiros, e o card ativo deve ser destacado pelo fundo,
+   nao por glow laranja embaixo. Remova o glow/sombra colorida sob o card ativo.
+7. Mobile: swipe com o dedo, e o card de detalhe vai para baixo do carrossel.
+8. Respeite prefers-reduced-motion: se o usuario reduzir animacoes, desligue o
+   autoplay.
+9. Acessibilidade: aria-roledescription="carousel", aria-live adequado,
+   botoes/indicadores com aria-label.
+
+Sem bibliotecas novas de carrossel; use CSS (scroll-snap) + JS leve.
