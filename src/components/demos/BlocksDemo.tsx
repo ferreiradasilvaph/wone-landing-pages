@@ -121,7 +121,7 @@ export function BlocksDemo() {
               {slots.length}/{MAX_NODES}
             </span>
             {full && (
-              <span className="rounded-full border border-line bg-ink-900 px-1.5 py-0.5 font-mono text-[9px] text-faint">
+              <span className="rounded-full bg-ink-800 px-1.5 py-0.5 font-mono text-[9px] text-faint">
                 {demo.builder.full}
               </span>
             )}
@@ -235,7 +235,7 @@ export function BlocksDemo() {
                   {category.name}
                 </span>
                 {isAi && (
-                  <span className="rounded-full border border-brand/40 bg-brand/15 px-1.5 py-0.5 font-mono text-[9px] font-bold text-brand">
+                  <span className="rounded-full bg-brand/15 px-1.5 py-0.5 font-mono text-[9px] font-bold text-brand">
                     {demo.aiTag}
                   </span>
                 )}

@@ -138,7 +138,7 @@ export default function Home() {
                     }`}
                   >
                     {product.featured && (
-                      <span className="t-eyebrow absolute top-6 right-6 rounded-full border border-brand/30 bg-brand/10 px-2.5 py-1 text-brand">
+                      <span className="t-eyebrow absolute top-6 right-6 rounded-full bg-brand/10 px-2.5 py-1 text-brand">
                         {t.products.featuredLabel}
                       </span>
                     )}
@@ -344,12 +344,12 @@ export default function Home() {
 
           <div className="mx-auto max-w-5xl">
             <Reveal className="mx-auto mb-12 max-w-2xl text-center">
-              <span className="inline-flex items-center gap-2 rounded-full border border-brand/25 bg-brand/8 px-3.5 py-1.5 text-xs font-semibold text-brand">
-                {t.awards.badge}
-              </span>
+              {/* Era uma pílula com borda — o mesmo enfeite que saiu do hero.
+                  Virou o sobrenome de seção que as outras oito já usam. */}
+              <span className="t-eyebrow text-brand">{t.awards.badge}</span>
               {/* Um dos dois únicos destaques da página, em laranja sólido e
                   numa palavra só. */}
-              <h2 className="t-h2 mt-5 text-balance text-cream">
+              <h2 className="t-h2 mt-3 text-balance text-cream">
                 {t.awards.title}{" "}
                 <span className="text-brand">{t.awards.titleAccent}</span>
               </h2>

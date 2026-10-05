@@ -354,11 +354,9 @@ export function DashboardPreview({ viewId }: { viewId: string }) {
             </h3>
             <p className="mt-0.5 text-xs text-faint">{view.panelSubtitle}</p>
           </div>
-          <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-emerald-500/25 bg-emerald-500/10 px-2.5 py-1 text-[11px] font-medium text-emerald-400">
-            <span className="relative flex h-1.5 w-1.5">
-              <span className="animate-pulse-ring absolute inline-flex h-full w-full rounded-full bg-emerald-400" />
-              <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-400" />
-            </span>
+          {/* Diz que o painel atualiza sozinho, então fica. Sem borda e sem o
+              ponto pulsante na frente: só o texto sobre um fundo sutil. */}
+          <span className="inline-flex shrink-0 items-center rounded-full bg-emerald-500/10 px-2.5 py-1 text-[11px] font-medium text-emerald-400">
             {analytics.panel.live}
           </span>
         </div>

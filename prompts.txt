@@ -86,3 +86,22 @@ Depois:
   uso, sem deixar codigo morto.
 
 Nao altere textos, so o estilo. Mostre o antes/depois das classes alteradas.
+
+===============================================================================
+[07] 2026-10-05
+===============================================================================
+A revisao interna disse que badges com outline e ponto circular antes do texto
+(ex.: badge "Tempo real" no card "Faturamento por hora") tem cara de template.
+
+Encontre o componente de badge/pill usado no projeto e todas as variacoes com
+ponto (dot) e borda.
+
+Ajuste:
+- Remova o ponto circular antes do texto.
+- Remova a borda/outline.
+- Se o badge ainda fizer sentido, deixe-o como texto pequeno com fundo sutil
+  solido (sem borda) ou apenas como texto em cor discreta. Avalie caso a caso:
+  se o badge for so decorativo, remova.
+- Aplique a mesma regra em todos os badges da pagina, para manter consistencia.
+
+Liste o que foi removido e o que foi mantido, com o motivo.

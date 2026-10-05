@@ -113,12 +113,8 @@ export function CheckoutDemo() {
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: reduced ? 0 : 0.3 }}
-                className="mt-2 flex items-center gap-2 text-sm font-medium text-cream"
+                className="mt-2 text-sm font-medium text-cream"
               >
-                <span
-                  aria-hidden
-                  className="h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-400"
-                />
                 {country.method}
               </motion.p>
             </AnimatePresence>
