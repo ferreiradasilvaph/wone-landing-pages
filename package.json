@@ -29,5 +29,11 @@
     "tailwindcss": "^4",
     "typescript": "^5"
   },
-  "packageManager": "pnpm@12.4.2"
+  "packageManager": "pnpm@12.4.2",
+  "browserslist": [
+    ">0.3%",
+    "last 2 versions",
+    "not dead",
+    "not op_mini all"
+  ]
 }

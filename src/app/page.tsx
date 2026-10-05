@@ -177,7 +177,7 @@ export default function Home() {
         <section id="recursos" className="relative overflow-hidden px-5 py-24 sm:px-6">
           <div
             aria-hidden
-            className="pointer-events-none absolute top-1/3 left-1/2 -z-10 h-80 w-[48rem] -translate-x-1/2 rounded-full bg-brand/6 blur-[140px]"
+            className="pointer-events-none absolute top-1/3 left-1/2 -z-10 hidden h-80 w-[48rem] -translate-x-1/2 rounded-full bg-brand/6 blur-[140px] sm:block"
           />
           <div className="mx-auto max-w-7xl">
             <SectionHeading
@@ -341,7 +341,7 @@ export default function Home() {
         >
           <div
             aria-hidden
-            className="pointer-events-none absolute top-1/2 left-1/2 -z-10 h-96 w-[46rem] -translate-x-1/2 -translate-y-1/2 rounded-full bg-brand/8 blur-[150px]"
+            className="pointer-events-none absolute top-1/2 left-1/2 -z-10 hidden h-96 w-[46rem] -translate-x-1/2 -translate-y-1/2 rounded-full bg-brand/8 blur-[150px] sm:block"
           />
 
           <div className="mx-auto max-w-5xl">
@@ -369,7 +369,7 @@ export default function Home() {
         >
           <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
             <div className="grid-mesh absolute inset-0 opacity-50 [mask-image:radial-gradient(ellipse_60%_60%_at_50%_50%,#000,transparent_75%)]" />
-            <div className="absolute top-1/2 left-1/2 h-80 w-[40rem] -translate-x-1/2 -translate-y-1/2 rounded-full bg-brand/15 blur-[130px]" />
+            <div className="absolute top-1/2 left-1/2 hidden h-80 w-[40rem] -translate-x-1/2 -translate-y-1/2 rounded-full bg-brand/15 blur-[130px] sm:block" />
           </div>
 
           <Reveal className="mx-auto max-w-5xl">

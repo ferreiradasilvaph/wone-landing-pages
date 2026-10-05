@@ -245,3 +245,14 @@ Lighthouse local (producao, mobile, throttling simulado): Desempenho 88,
 Acessibilidade 77. LCP 3,5s com Render Delay de 3068ms (87% do LCP). Elemento
 LCP: o <h1> do hero, servido com style="opacity:0;transform:translateY(18px)"
 pelo motion — nao e pintado antes da hidratacao.
+
+--- Passo 2 e 3 executados -------------------------------------------------
+Aprovacoes do usuario: desligar blurs grandes, hero sem animacao de entrada,
+contraste AA e derrubar familias de fonte ("preciso bater os 95").
+
+Resultado (Lighthouse mobile, producao local, media de 3 rodadas):
+Desempenho 88 -> 96 (96/96/96), Acessibilidade 77 -> 97, LCP 3,52s -> 2,70s,
+FCP 1,28s -> 1,22s, TBT 149ms -> 50ms, CLS 0.
+
+Revertido no caminho: experimental.inlineCss, que inflou o documento de 21,8kB
+para 57,6kB e piorou o FCP.

@@ -154,12 +154,17 @@ export function Highlights() {
     >
       {/* Luz de fundo: tira o peso do preto chapado sob os cards */}
       <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
-        <div className="absolute top-1/4 left-1/2 h-[26rem] w-[56rem] -translate-x-1/2 rounded-full bg-brand/8 blur-[150px]" />
+        <div className="absolute top-1/4 left-1/2 hidden h-[26rem] w-[56rem] -translate-x-1/2 rounded-full bg-brand/8 blur-[150px] sm:block" />
         <div className="grid-mesh absolute inset-0 opacity-40 [mask-image:radial-gradient(ellipse_75%_60%_at_50%_35%,#000,transparent_75%)]" />
       </div>
 
       <div className="mx-auto max-w-7xl">
         <div className="hairline mb-12" />
+
+        {/* A secao nao renderizava titulo nenhum: o <h1> do hero era
+            seguido direto pelo <h3> das demos, pulando um nivel. Este h2 so
+            para leitor de tela recoloca o degrau sem mexer no desenho. */}
+        <h2 className="sr-only">{highlights.title}</h2>
 
         <Reveal>
           <p className="t-eyebrow mb-5 text-center text-faint">

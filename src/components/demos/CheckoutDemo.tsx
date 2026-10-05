@@ -74,7 +74,7 @@ export function CheckoutDemo() {
       <div className="surface relative overflow-hidden rounded-2xl p-6">
         <div
           aria-hidden
-          className="pointer-events-none absolute -top-16 -right-12 h-40 w-40 rounded-full bg-brand/15 blur-[70px]"
+          className="pointer-events-none absolute -top-16 -right-12 hidden h-40 w-40 rounded-full bg-brand/15 blur-[70px] sm:block"
         />
 
         <div className="relative">

@@ -218,11 +218,19 @@ export function SecurityCarousel() {
                 <li
                   key={entry.title}
                   data-slide
-                  role="group"
-                  aria-roledescription="slide"
-                  aria-label={entry.title}
                   className="w-[min(20rem,78vw)] shrink-0 snap-start"
                 >
+                  {/* O papel de slide fica neste wrapper, não no <li>. Um
+                      role="group" direto no item reprovava três auditorias de
+                      ARIA — list, listitem e aria-allowed-role — porque um <ul>
+                      só admite <li>, e um <li> com role deixa de contar como
+                      item de lista. */}
+                  <div
+                    role="group"
+                    aria-roledescription="slide"
+                    aria-label={entry.title}
+                    className="h-full"
+                  >
                   <button
                     type="button"
                     onClick={() => goTo(index)}
@@ -250,6 +258,7 @@ export function SecurityCarousel() {
                       {entry.description}
                     </span>
                   </button>
+                  </div>
                 </li>
               );
             })}
@@ -332,9 +341,11 @@ export function SecurityCarousel() {
               </span>
             </div>
 
-            <h4 className="font-display text-center text-base font-semibold text-cream">
+            {/* h3 e nao h4: o titulo da secao e um h2, e pular nivel reprova
+                a auditoria de hierarquia de cabecalhos. */}
+            <h3 className="font-display text-center text-base font-semibold text-cream">
               {item.title}
-            </h4>
+            </h3>
             <p className="mt-3 text-center text-sm leading-relaxed text-muted">
               {item.detail}
             </p>

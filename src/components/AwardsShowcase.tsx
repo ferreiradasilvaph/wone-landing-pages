@@ -74,6 +74,7 @@ export function AwardsShowcase() {
         <div
           className="relative h-2 rounded-full bg-cream/8"
           role="progressbar"
+          aria-label={awards.title}
           aria-valuemin={0}
           aria-valuemax={100}
           aria-valuenow={Math.round(shown)}
@@ -142,7 +143,7 @@ export function AwardsShowcase() {
             animate={{ opacity: 0.22 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.6 }}
-            className="pointer-events-none absolute -top-32 -right-24 h-80 w-80 rounded-full blur-[110px]"
+            className="pointer-events-none absolute -top-32 -right-24 hidden h-80 w-80 rounded-full blur-[110px] sm:block"
             style={{ background: active.accent }}
           />
         </AnimatePresence>

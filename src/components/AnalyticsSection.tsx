@@ -45,56 +45,60 @@ export function AnalyticsSection() {
             <Reveal delay={0.1} className="mt-8">
               <p className="t-eyebrow mb-4 text-faint">{analytics.hint}</p>
 
-              <ul
+              {/* Precisa ser div, não ul: um role="tablist" só admite filhos
+                  com role="tab", e o <li> no meio reprovava duas auditorias de
+                  ARIA de peso 10 cada (aria-required-children no tablist e
+                  aria-required-parent nos botões). O visual não muda: space-y-2
+                  virou flex-col com gap-2. */}
+              <div
                 role="tablist"
                 aria-label={analytics.eyebrow}
-                className="space-y-2"
+                className="flex flex-col gap-2"
               >
                 {analytics.views.map((view) => {
                   const Icon = ICONS[view.icon] ?? BarChart3;
                   const isActive = view.id === activeId;
 
+                  // Selecionado = fundo um tom acima, texto creme e uma
+                  // barra de 2px à esquerda. O contorno laranja inteiro saiu,
+                  // e com ele o border-transparent que só existia para o item
+                  // não pular 1px ao ser escolhido.
                   return (
-                    <li key={view.id}>
-                      {/* Selecionado = fundo um tom acima, texto creme e uma
-                          barra de 2px à esquerda. O contorno laranja inteiro
-                          saiu, e com ele o `border-transparent` que só existia
-                          para o item não pular 1px ao ser escolhido. */}
-                      <button
-                        type="button"
-                        role="tab"
-                        aria-selected={isActive}
-                        onClick={() => setActiveId(view.id)}
-                        className={`group relative flex w-full cursor-pointer items-start gap-3 overflow-hidden rounded-xl p-3.5 text-left transition-colors duration-300 ${
-                          isActive ? "bg-ink-800" : "hover:bg-ink-900/60"
+                    <button
+                      key={view.id}
+                      type="button"
+                      role="tab"
+                      aria-selected={isActive}
+                      onClick={() => setActiveId(view.id)}
+                      className={`group relative flex w-full cursor-pointer items-start gap-3 overflow-hidden rounded-xl p-3.5 text-left transition-colors duration-300 ${
+                        isActive ? "bg-ink-800" : "hover:bg-ink-900/60"
+                      }`}
+                    >
+                      {isActive && (
+                        <span
+                          aria-hidden
+                          className="absolute inset-y-1.5 left-0 w-0.5 rounded-full bg-brand"
+                        />
+                      )}
+                      {/* Ícone solto: discreto em repouso, laranja no ativo */}
+                      <span
+                        className={`flex h-9 w-9 shrink-0 items-center justify-center transition-colors duration-300 ${
+                          isActive ? "text-brand" : "text-faint group-hover:text-brand"
                         }`}
                       >
-                        {isActive && (
-                          <span
-                            aria-hidden
-                            className="absolute inset-y-1.5 left-0 w-0.5 rounded-full bg-brand"
-                          />
-                        )}
-                        {/* Ícone solto: discreto em repouso, laranja no ativo */}
-                        <span
-                          className={`flex h-9 w-9 shrink-0 items-center justify-center transition-colors duration-300 ${
-                            isActive ? "text-brand" : "text-faint group-hover:text-brand"
-                          }`}
-                        >
-                          <Icon className="h-4 w-4" />
-                        </span>
-                        <span
-                          className={`pt-1.5 text-sm leading-snug transition-colors duration-300 ${
-                            isActive ? "text-cream" : "text-muted"
-                          }`}
-                        >
-                          {view.label}
-                        </span>
-                      </button>
-                    </li>
+                        <Icon className="h-4 w-4" />
+                      </span>
+                      <span
+                        className={`pt-1.5 text-sm leading-snug transition-colors duration-300 ${
+                          isActive ? "text-cream" : "text-muted"
+                        }`}
+                      >
+                        {view.label}
+                      </span>
+                    </button>
                   );
                 })}
-              </ul>
+              </div>
             </Reveal>
           </div>
 

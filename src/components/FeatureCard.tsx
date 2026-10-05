@@ -25,14 +25,26 @@ export function FeatureCard({
 }) {
   const [flipped, setFlipped] = useState(false);
 
+  /* O verso so entra no DOM no primeiro giro. Sao 10 cards nesta grade: as duas
+     faces sempre montadas davam 20 blocos de conteudo e 20 icones no HTML
+     inicial, e o verso nao e visto por quem nao interage. O Lighthouse media
+     1142 ms de styleLayout no mobile, o maior custo de main thread da pagina.
+     Uma vez montado, fica — senao a volta do giro mostraria um card vazio. */
+  const [backMounted, setBackMounted] = useState(false);
+
+  const flip = (next: boolean) => {
+    setFlipped(next);
+    if (next) setBackMounted(true);
+  };
+
   return (
     <div
       className="group/flip h-full [perspective:1400px]"
-      onMouseEnter={() => setFlipped(true)}
-      onMouseLeave={() => setFlipped(false)}
-      onFocus={() => setFlipped(true)}
-      onBlur={() => setFlipped(false)}
-      onClick={() => setFlipped((value) => !value)}
+      onMouseEnter={() => flip(true)}
+      onMouseLeave={() => flip(false)}
+      onFocus={() => flip(true)}
+      onBlur={() => flip(false)}
+      onClick={() => flip(!flipped)}
       tabIndex={0}
       role="button"
       aria-pressed={flipped}
@@ -58,6 +70,7 @@ export function FeatureCard({
         </div>
 
         {/* Verso: título maior, ícone à direita */}
+        {backMounted && (
         <div className="absolute inset-0 flex flex-col rounded-2xl bg-gradient-to-br from-brand/20 via-ink-800 to-ink-850 p-6 [backface-visibility:hidden] [transform:rotateY(180deg)]">
           <div className="flex items-start justify-between gap-4">
             <h3 className="font-display text-xl leading-tight font-semibold text-cream">
@@ -71,6 +84,7 @@ export function FeatureCard({
             {description}
           </p>
         </div>
+        )}
       </div>
     </div>
   );

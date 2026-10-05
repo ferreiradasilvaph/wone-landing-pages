@@ -32,8 +32,14 @@
      item selecionado se separam por tom de fundo e espaçamento. */
   --line: color-mix(in oklab, var(--cream) 6%, transparent);
   --line-strong: color-mix(in oklab, var(--cream) 10%, transparent);
-  --muted: color-mix(in oklab, var(--cream) 58%, transparent);
-  --faint: color-mix(in oklab, var(--cream) 38%, transparent);
+
+  /* Os dois tons de texto secundario passam em WCAG AA sobre as superficies do
+     site. O `faint` estava em 38% de creme, o que dava 2,85:1 a 3,5:1 contra o
+     fundo — o Lighthouse reprovava 17 nos. 52% da 5,3:1 sobre o preto da pagina
+     e 4,96:1 sobre a superficie mais clara (ink-800). O `muted` subiu junto,
+     para a hierarquia entre os dois continuar legivel. */
+  --muted: color-mix(in oklab, var(--cream) 70%, transparent);
+  --faint: color-mix(in oklab, var(--cream) 52%, transparent);
 
   /* Curvas reutilizadas em todo o site */
   --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
@@ -60,9 +66,17 @@
   --color-muted: var(--muted);
   --color-faint: var(--faint);
 
-  --font-display: var(--font-outfit);
+  /* Os titulos usavam a Outfit, uma grotesca geometrica que ecoava o logotipo.
+     Ela custava 28,9 kB de woff2 e um preload disputando banda com o JS no
+     caminho critico; com a meta de 95 no PageSpeed mobile, saiu. Os titulos
+     ficam na Geist, com letter-spacing negativo e peso 600 fazendo o trabalho
+     de diferenciar do corpo. */
+  --font-display: var(--font-geist-sans);
   --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  /* Mono do sistema: a Geist Mono custava 22,9 kB de woff2 e um preload no
+     caminho critico para servir eyebrow e numeros tabulares. A pilha abaixo
+     resolve os dois em qualquer SO, e `tabular-nums` nao depende da familia. */
+  --font-mono: ui-monospace, "SF Mono", "Cascadia Mono", "Segoe UI Mono", "Roboto Mono", Menlo, Consolas, monospace;
 
   --animate-marquee: marquee 42s linear infinite;
   --animate-drift: drift 22s ease-in-out infinite;
@@ -135,7 +149,7 @@ section[id] {
    -------------------------------------------------------------------------- */
 
 .t-display {
-  font-family: var(--font-outfit), var(--font-geist-sans), sans-serif;
+  font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
   font-size: clamp(2.5rem, 1.2rem + 5.6vw, 5.25rem);
   line-height: 0.98;
   letter-spacing: -0.035em;
@@ -143,7 +157,7 @@ section[id] {
 }
 
 .t-h2 {
-  font-family: var(--font-outfit), var(--font-geist-sans), sans-serif;
+  font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
   font-size: clamp(1.95rem, 1.1rem + 3.2vw, 3.25rem);
   line-height: 1.04;
   letter-spacing: -0.03em;
@@ -151,7 +165,7 @@ section[id] {
 }
 
 .t-h3 {
-  font-family: var(--font-outfit), var(--font-geist-sans), sans-serif;
+  font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
   font-size: clamp(1.3rem, 1rem + 1.1vw, 1.75rem);
   line-height: 1.15;
   letter-spacing: -0.02em;
@@ -165,7 +179,7 @@ section[id] {
 }
 
 .t-eyebrow {
-  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-family: var(--font-mono);
   font-size: 0.6875rem;
   letter-spacing: 0.22em;
   text-transform: uppercase;

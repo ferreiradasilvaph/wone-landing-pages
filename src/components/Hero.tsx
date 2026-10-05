@@ -1,12 +1,9 @@
 "use client";
 
-import { motion, useReducedMotion } from "motion/react";
 import { ArrowRight } from "lucide-react";
 import { useContent } from "@/i18n";
 import { Marquee } from "./Marquee";
 import { PhoneMockup } from "./PhoneMockup";
-
-const EASE = [0.16, 1, 0.3, 1] as const;
 
 /**
  * Abertura da página: texto à esquerda, aparelho do `PhoneMockup` à direita.
@@ -16,19 +13,19 @@ const EASE = [0.16, 1, 0.3, 1] as const;
  * página genérica. Ficou uma malha discreta no fundo, um título em cor sólida
  * com uma única palavra em laranja, um botão com peso e um link de texto.
  *
- * A prova do produto é o próprio aparelho, desenhado em HTML/CSS: ele mostra o
- * PIX entrando e o acesso sendo liberado, que é exatamente o que o título
- * promete. Nenhuma imagem pesada na primeira dobra.
+ * NÃO ANIME NADA DESTA SEÇÃO NA ENTRADA.
+ *
+ * O `<h1>` daqui é o elemento de LCP da página no mobile. Quando ele nascia em
+ * `opacity: 0` (era um `motion.h1` com `initial`), o navegador não tinha o que
+ * pintar até o React hidratar e a animação rodar: o Lighthouse media 3,5 s de
+ * LCP, dos quais 3.068 ms eram só Render Delay — 87% da métrica — contra 1,3 s
+ * de FCP. O texto agora está pintado no primeiro paint, e o LCP cai para junto
+ * do FCP. Qualquer `opacity`, `blur` ou `translate` inicial aqui devolve o
+ * problema; o movimento de entrada do resto da página fica nas seções abaixo da
+ * dobra, onde não custa métrica.
  */
 export function Hero() {
-  const reduced = useReducedMotion();
   const { hero } = useContent();
-
-  const rise = (delay: number) => ({
-    initial: { opacity: 0, y: 18 },
-    animate: { opacity: 1, y: 0 },
-    transition: { duration: reduced ? 0 : 0.7, delay: reduced ? 0 : delay, ease: EASE },
-  });
 
   return (
     <section id="topo" className="relative overflow-hidden pt-28 pb-16 sm:pt-32">
@@ -42,25 +39,15 @@ export function Hero() {
       <div className="mx-auto grid max-w-6xl grid-cols-1 items-center gap-14 px-5 sm:px-6 lg:grid-cols-[minmax(0,1fr)_auto] lg:gap-16">
         <div>
           {/* Contexto em texto simples: sem borda, sem fundo, sem ponto */}
-          <motion.p {...rise(0)} className="text-sm text-faint">
-            {hero.context}
-          </motion.p>
+          <p className="text-sm text-faint">{hero.context}</p>
 
-          <motion.h1
-            {...rise(0.06)}
-            className="t-display mt-4 max-w-xl text-balance text-cream"
-          >
+          <h1 className="t-display mt-4 max-w-xl text-balance text-cream">
             {hero.titleStart} <span className="text-brand">{hero.titleAccent}</span>
-          </motion.h1>
+          </h1>
 
-          <motion.p {...rise(0.12)} className="t-lead mt-5 max-w-lg text-pretty">
-            {hero.lead}
-          </motion.p>
+          <p className="t-lead mt-5 max-w-lg text-pretty">{hero.lead}</p>
 
-          <motion.div
-            {...rise(0.18)}
-            className="mt-8 flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:gap-7"
-          >
+          <div className="mt-8 flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:gap-7">
             {/* Primário sólido, sem sombra colorida nem varredura de brilho */}
             <a
               href="#fila-de-espera"
@@ -77,13 +64,10 @@ export function Hero() {
               {hero.ctaSecondary}
               <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5" />
             </a>
-          </motion.div>
+          </div>
 
           {/* Fatos em texto corrido: as pills com borda e ícone saíram daqui */}
-          <motion.ul
-            {...rise(0.24)}
-            className="mt-10 flex flex-wrap items-center gap-x-3 gap-y-2 text-[13px] text-faint"
-          >
+          <ul className="mt-10 flex flex-wrap items-center gap-x-3 gap-y-2 text-[13px] text-faint">
             {hero.facts.map((fact, index) => (
               <li key={fact} className="flex items-center gap-3">
                 {index > 0 && (
@@ -94,30 +78,19 @@ export function Hero() {
                 {fact}
               </li>
             ))}
-          </motion.ul>
+          </ul>
         </div>
 
-        <motion.div
-          initial={{ opacity: 0, y: 28 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: reduced ? 0 : 0.9, delay: reduced ? 0 : 0.2, ease: EASE }}
-        >
-          <PhoneMockup />
-        </motion.div>
+        <PhoneMockup />
       </div>
 
       {/* Integrações */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: reduced ? 0 : 0.8, delay: reduced ? 0 : 0.5 }}
-        className="mt-20 sm:mt-24"
-      >
+      <div className="mt-20 sm:mt-24">
         <p className="t-eyebrow mx-auto mb-4 max-w-6xl px-5 text-faint sm:px-6">
           {hero.integrationsLabel}
         </p>
         <Marquee />
-      </motion.div>
+      </div>
     </section>
   );
 }

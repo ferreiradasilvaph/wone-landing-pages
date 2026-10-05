@@ -136,7 +136,7 @@ export function PhoneMockup() {
           halo forte de antes era o maior glow da primeira dobra. */}
       <div
         aria-hidden
-        className="pointer-events-none absolute top-1/2 left-1/2 -z-10 h-[22rem] w-[22rem] -translate-x-1/2 -translate-y-1/2"
+        className="pointer-events-none absolute top-1/2 left-1/2 -z-10 hidden h-[22rem] w-[22rem] -translate-x-1/2 -translate-y-1/2 sm:block"
       >
         <div className="animate-breathe h-full w-full rounded-full bg-brand/10 blur-[90px]" />
       </div>

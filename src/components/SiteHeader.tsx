@@ -67,7 +67,7 @@ export function SiteHeader() {
       <div
         className={`transition-colors duration-500 ${
           scrolled
-            ? "border-b border-line bg-ink-950/80 backdrop-blur-xl"
+            ? "border-b border-line bg-ink-950 sm:bg-ink-950/80 sm:backdrop-blur-xl"
             : "border-b border-transparent bg-transparent"
         }`}
       >
@@ -141,7 +141,7 @@ export function SiteHeader() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -12 }}
             transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
-            className="border-b border-line bg-ink-950/95 backdrop-blur-xl md:hidden"
+            className="border-b border-line bg-ink-950 md:hidden"
           >
             <nav className="mx-auto flex max-w-7xl flex-col gap-1 px-5 py-4">
               {nav.map((link) => (

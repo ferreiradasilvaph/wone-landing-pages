@@ -343,7 +343,7 @@ export function DashboardPreview({ viewId }: { viewId: string }) {
     <div className="surface relative overflow-hidden rounded-3xl p-5 shadow-2xl sm:p-7">
       <div
         aria-hidden
-        className="pointer-events-none absolute -top-24 right-0 h-56 w-56 rounded-full bg-brand/15 blur-[90px]"
+        className="pointer-events-none absolute -top-24 right-0 hidden h-56 w-56 rounded-full bg-brand/15 blur-[90px] sm:block"
       />
 
       <div className="relative">
