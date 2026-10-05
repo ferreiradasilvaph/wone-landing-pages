@@ -48,3 +48,6 @@ next-env.d.ts
 # Relatorios do Lighthouse (grandes, gerados localmente)
 lighthouse-*.report.html
 lighthouse-*.report.json
+
+# Registro verbatim dos prompts: fica local, fora do repo publico
+prompts-originais.local.txt
