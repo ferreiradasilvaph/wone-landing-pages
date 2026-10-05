@@ -143,6 +143,27 @@ export const pt = {
           clear: "Limpar o funil",
           remove: "Remover",
           full: "limite da demo",
+
+          /* Editor: paleta, painel de propriedades e rótulos das saídas. */
+          palette: "Paleta de blocos",
+          properties: "Propriedades",
+          noSelection: "Clique num bloco do canvas para ver as propriedades.",
+          running: "Executando o funil",
+          twoOutputs: "2 saídas",
+          /** Rótulos das duas saídas de "Condição" e de "Divisão A/B". */
+          branchYes: "sim",
+          branchNo: "não",
+          branchA: "A",
+          branchB: "B",
+          fields: {
+            block: "Bloco",
+            category: "Categoria",
+            id: "ID",
+            inputs: "Entradas",
+            outputs: "Saídas",
+            next: "Próximo",
+            none: "—",
+          },
         },
         categories: [
           {

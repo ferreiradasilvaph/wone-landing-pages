@@ -126,6 +126,25 @@ export const en: Content = {
           clear: "Clear the funnel",
           remove: "Remove",
           full: "demo limit",
+
+          palette: "Block palette",
+          properties: "Properties",
+          noSelection: "Click a block on the canvas to see its properties.",
+          running: "Running the funnel",
+          twoOutputs: "2 outputs",
+          branchYes: "yes",
+          branchNo: "no",
+          branchA: "A",
+          branchB: "B",
+          fields: {
+            block: "Block",
+            category: "Category",
+            id: "ID",
+            inputs: "Inputs",
+            outputs: "Outputs",
+            next: "Next",
+            none: "—",
+          },
         },
         categories: [
           {

@@ -3,19 +3,87 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { Zap, Boxes, ShieldCheck, Globe, type LucideIcon } from "lucide-react";
+import dynamic from "next/dynamic";
 import { useContent } from "@/i18n";
 import { Counter } from "./Counter";
 import { Reveal } from "./Reveal";
-import { DeliveryDemo } from "./demos/DeliveryDemo";
-import { BlocksDemo } from "./demos/BlocksDemo";
-import { ConfirmationDemo } from "./demos/ConfirmationDemo";
-import { CheckoutDemo } from "./demos/CheckoutDemo";
 
 const ICONS: Record<string, LucideIcon> = { Zap, Boxes, ShieldCheck, Globe };
 const EASE = [0.16, 1, 0.3, 1] as const;
 const ROTATE_MS = 6000;
 
-const DEMOS = [DeliveryDemo, BlocksDemo, ConfirmationDemo, CheckoutDemo];
+/* --------------------------------------------------------------------------
+   Demos sob demanda
+
+   As quatro eram importadas estaticamente aqui, então as quatro entravam no
+   bundle inicial da página — inclusive o editor de fluxos, a mais pesada, que
+   fica abaixo da primeira dobra. Com `next/dynamic` cada uma vira um chunk
+   próprio, e o `IntersectionObserver` abaixo só monta o painel quando a seção
+   chega perto da viewport: quem não rola até aqui não baixa nenhuma.
+
+   `ssr: false` em todas: são demonstrações interativas, não têm valor em HTML
+   de servidor, e é o que permite ao editor ler `matchMedia` no primeiro render
+   sem risco de divergência na hidratação.
+
+   O caminho do `import()` precisa ser literal — nem variável, nem template —
+   ou o bundler não liga o chunk à chamada.
+   -------------------------------------------------------------------------- */
+
+const DemoSkeleton = () => (
+  <div aria-hidden className="h-72 animate-pulse rounded-2xl bg-ink-800/60" />
+);
+
+const DEMOS = [
+  dynamic(() => import("./demos/DeliveryDemo").then((mod) => mod.DeliveryDemo), {
+    ssr: false,
+    loading: DemoSkeleton,
+  }),
+  dynamic(() => import("./demos/FlowEditorDemo").then((mod) => mod.FlowEditorDemo), {
+    ssr: false,
+    loading: DemoSkeleton,
+  }),
+  dynamic(() => import("./demos/ConfirmationDemo").then((mod) => mod.ConfirmationDemo), {
+    ssr: false,
+    loading: DemoSkeleton,
+  }),
+  dynamic(() => import("./demos/CheckoutDemo").then((mod) => mod.CheckoutDemo), {
+    ssr: false,
+    loading: DemoSkeleton,
+  }),
+];
+
+/**
+ * `true` depois que o elemento encosta na viewport, e nunca volta para `false`:
+ * montar a demo é caro, desmontar ao sair da tela perderia o funil que o lead
+ * montou. `rootMargin` generoso para o chunk chegar antes de a seção aparecer.
+ */
+function useNearViewport<T extends Element>(ref: React.RefObject<T | null>) {
+  const [near, setNear] = useState(false);
+
+  useEffect(() => {
+    const node = ref.current;
+    if (!node || near) return;
+
+    // Navegador sem IntersectionObserver: monta de qualquer forma. O estado vai
+    // num timeout, e não direto no corpo do efeito, porque `setState` síncrono
+    // aqui dispara renderização em cascata (e o lint reprova, com razão).
+    if (typeof IntersectionObserver === "undefined") {
+      const id = window.setTimeout(() => setNear(true), 0);
+      return () => window.clearTimeout(id);
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) setNear(true);
+      },
+      { rootMargin: "400px 0px" },
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [ref, near]);
+
+  return near;
+}
 
 /**
  * Os quatro números do produto, cada um demonstrando o que significa.
@@ -36,6 +104,8 @@ export function Highlights() {
   const [tookOver, setTookOver] = useState(false);
   const [hovering, setHovering] = useState(false);
   const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const nearPanel = useNearViewport(panelRef);
 
   useEffect(() => {
     if (reduced || tookOver || hovering) return;
@@ -74,7 +144,7 @@ export function Highlights() {
     }
   };
 
-  const Demo = DEMOS[active] ?? DeliveryDemo;
+  const Demo = DEMOS[active] ?? DEMOS[0];
 
   return (
     <section
@@ -184,23 +254,29 @@ export function Highlights() {
         {/* Painel da aba ativa. A altura mínima evita que a seção salte. */}
         <Reveal delay={0.1}>
           <div
+            ref={panelRef}
             role="tabpanel"
             id="highlight-panel"
             aria-labelledby={`highlight-tab-${active}`}
             tabIndex={0}
             className="surface-lit relative mt-6 min-h-[28rem] overflow-hidden rounded-3xl p-6 sm:p-8 lg:p-10"
           >
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={active}
-                initial={{ opacity: 0, y: 14 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -14 }}
-                transition={{ duration: reduced ? 0 : 0.35, ease: EASE }}
-              >
-                <Demo />
-              </motion.div>
-            </AnimatePresence>
+            {/* Só monta a demo quando o painel chega perto da viewport */}
+            {nearPanel ? (
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={active}
+                  initial={{ opacity: 0, y: 14 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -14 }}
+                  transition={{ duration: reduced ? 0 : 0.35, ease: EASE }}
+                >
+                  <Demo />
+                </motion.div>
+              </AnimatePresence>
+            ) : (
+              <DemoSkeleton />
+            )}
           </div>
         </Reveal>
       </div>

@@ -129,3 +129,46 @@ Depois aplique:
   Isso NAO deve ser removido.
 
 Mantenha o visual consistente na pagina inteira e responsivo.
+
+===============================================================================
+[09] 2026-10-05
+===============================================================================
+Contexto: a secao "28 blocos para desenhar qualquer funil" tem hoje um construtor
+simplificado (lista de blocos em linha + chips para clicar). A revisao interna
+sugeriu que essa regiao vire uma demo mais proxima do que existe de verdade
+dentro da plataforma. Coloquei o frontend dos fluxos da plataforma na pasta
+/referencia-fluxos (APENAS como referencia visual e de comportamento).
+
+Passo 1: leia a pasta /referencia-fluxos e o componente atual da secao, e me
+explique:
+- como o editor de fluxos real funciona (canvas, nos, conexoes, painel de
+  propriedades, tipos de bloco);
+- o que da para reproduzir na landing de forma leve.
+NAO comece a implementar antes de me mostrar esse plano.
+
+Passo 2 (depois que eu aprovar): reconstrua a demo para parecer o editor real:
+- Mesmo visual dos nos/blocos e das conexoes da plataforma (cores, icones, nomes
+  dos blocos e categorias Fluxo, Conteudo, Venda, Acesso).
+- Interacoes essenciais: adicionar bloco, ver o fluxo se conectar e o botao
+  "Rodar" simulando a execucao passo a passo (destacando o no ativo).
+- Um fluxo de exemplo pre-carregado e realista (ex.: Inicio -> Mensagem ->
+  Oferta -> Checkout PIX -> Gerar convite).
+- Dados 100% mockados. Nenhuma chamada a API, nenhum segredo, nenhum codigo de
+  backend da plataforma vindo para a landing.
+
+Restricoes de performance (a pagina precisa de 95+ no PageSpeed mobile):
+- Nao importe bibliotecas pesadas de grafo/canvas. Se a plataforma usa uma (ex.:
+  React Flow), prefira recriar o visual com HTML/CSS/SVG simples.
+- Carregue esse componente sob demanda (lazy load / dynamic import), so quando a
+  secao entrar na viewport.
+- No mobile, ofereca uma versao simplificada (fluxo vertical, sem arrastar).
+
+Siga o estilo ja ajustado da pagina: sem gradientes em texto, sem excesso de
+outlines e glows.
+
+--- resposta do passo 1 (resumo) -------------------------------------------
+A pasta /referencia-fluxos nao existia em nenhum lugar do disco. Levantei o
+componente atual (trilho horizontal unico, sem canvas nem ramificacao) e
+apresentei o plano. Resposta do usuario: "crie a pasta /referencia-fluxos e
+prossiga" — pasta criada vazia e Passo 2 executado com o vocabulario de blocos
+que ja estava nos dicionarios e a paleta da propria landing.
