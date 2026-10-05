@@ -209,3 +209,39 @@ Sem bibliotecas novas de carrossel; use CSS (scroll-snap) + JS leve.
 o carrossel em "as melhores integracoes do mercado" quero que coloque icones ao
 inves do nome das integracoes (mas o servico/metodo voce mantem, so troca nome ex
 "X Ads" pelo icone
+
+===============================================================================
+[12] 2026-10-05
+===============================================================================
+Requisito obrigatorio: a landing page precisa atingir no minimo 95 de Desempenho
+no PageSpeed Insights MOBILE. Hoje esta em 87, com: FCP 2,3 s, LCP 3,2 s, TBT
+30 ms, CLS 0. Acessibilidade esta em 83 e tambem quero subir para 95+.
+
+Passo 1 - diagnostico (nao altere nada ainda):
+- Build de producao, rodar producao localmente e executar o Lighthouse em modo
+  mobile.
+- Identificar o elemento LCP no mobile. No print do PageSpeed a frase do hero
+  aparece borrada, o que indica animacao de entrada (blur/opacity/translate).
+- Listar recursos que bloqueiam renderizacao, tamanho de JS/CSS por rota, fontes
+  carregadas e imagens acima da dobra.
+- Mostrar o diagnostico e o plano antes de implementar.
+
+Passo 2 (depois de aprovar): hero/LCP sem animacao de entrada; fontes
+auto-hospedadas, subset latin, woff2, preload so do hero, font-display swap,
+menos pesos/familias; CSS critico inline; code-splitting e lazy load abaixo da
+dobra; imagens AVIF/WebP com dimensoes e lazy; reduzir blur/backdrop-filter e
+sombras; terceiros apos interacao; cache e compressao.
+
+Acessibilidade: contraste AA, aria-label em botoes de icone, hierarquia de
+headings, lang correto, alvos de toque adequados.
+
+Passo 3: rodar o Lighthouse 3 vezes, gerar lighthouse-depois.html e mostrar
+tabela antes x depois. Se nao chegar a 95, dizer o proximo gargalo.
+
+Nao remover conteudo nem quebrar o visual. Mudanca visual: perguntar antes.
+
+--- Passo 1 entregue; aguardando aprovacao do plano -------------------------
+Lighthouse local (producao, mobile, throttling simulado): Desempenho 88,
+Acessibilidade 77. LCP 3,5s com Render Delay de 3068ms (87% do LCP). Elemento
+LCP: o <h1> do hero, servido com style="opacity:0;transform:translateY(18px)"
+pelo motion — nao e pintado antes da hidratacao.

@@ -44,3 +44,7 @@ next-env.d.ts
 # Referencia visual da plataforma: conteudo fora do repo da landing
 /referencia-fluxos/*
 !/referencia-fluxos/README.md
+
+# Relatorios do Lighthouse (grandes, gerados localmente)
+lighthouse-*.report.html
+lighthouse-*.report.json
