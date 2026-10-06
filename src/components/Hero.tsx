@@ -3,16 +3,10 @@
 import { useContent } from "@/i18n";
 import { Marquee } from "./Marquee";
 import { PhoneMockup } from "./PhoneMockup";
+import { CTA } from "./cta";
 
-/**
- * Classe das duas chamadas do hero.
- *
- * Existe um único estilo de botão no site, e as duas usam exatamente este — a
- * seta e o tratamento de link de texto que o secundário tinha saíram. Ficando
- * numa constante, não há como uma ser ajustada sem a outra.
- */
-const CTA =
-  "btn-solid inline-flex w-full items-center justify-center rounded-xl px-6 py-3.5 text-[15px] font-semibold sm:w-auto";
+/** As duas chamadas do hero: o botão do site, ocupando a linha no celular. */
+const HERO_CTA = `${CTA} inline-flex w-full sm:w-auto`;
 
 /**
  * Abertura da página: texto à esquerda, aparelho do `PhoneMockup` à direita.
@@ -60,11 +54,11 @@ export function Hero() {
               vez no topo do arquivo. Não é só economia: é o que garante que não
               voltem a divergir num ajuste futuro de uma delas. */}
           <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
-            <a href="#fila-de-espera" className={CTA}>
+            <a href="#fila-de-espera" className={HERO_CTA}>
               {hero.ctaPrimary}
             </a>
 
-            <a href="#como-funciona" className={CTA}>
+            <a href="#como-funciona" className={HERO_CTA}>
               {hero.ctaSecondary}
             </a>
           </div>

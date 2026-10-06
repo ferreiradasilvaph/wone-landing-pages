@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from "react";
 import { ArrowRight, CheckCircle2, Loader2, Send } from "lucide-react";
 import { useContent } from "@/i18n";
+import { CTA } from "./cta";
 
 type Status = "idle" | "loading" | "success" | "error";
 
@@ -96,7 +97,7 @@ export function WaitlistForm() {
           href={TELEGRAM_URL}
           target="_blank"
           rel="noopener noreferrer"
-          className="btn-solid mt-2 inline-flex items-center justify-center gap-2 rounded-xl px-6 py-3 text-sm font-bold"
+          className={`${CTA} mt-2 inline-flex`}
         >
           <Send className="h-4 w-4" />
           {form.openTelegram}
@@ -228,7 +229,7 @@ export function WaitlistForm() {
       <button
         type="submit"
         disabled={isLoading}
-        className="btn-solid mt-1 inline-flex cursor-pointer items-center justify-center gap-2 rounded-xl px-8 py-4 font-bold disabled:cursor-not-allowed disabled:opacity-60"
+        className={`${CTA} mt-1 inline-flex cursor-pointer disabled:cursor-not-allowed disabled:opacity-60`}
       >
         {isLoading ? (
           <>

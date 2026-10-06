@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { AnimatePresence, motion, useScroll, useSpring } from "motion/react";
 import { Menu, X } from "lucide-react";
 import { useContent } from "@/i18n";
+import { CTA_BAR } from "./cta";
 import { WoneIcon } from "./WoneMark";
 import { LanguageToggle } from "./LanguageToggle";
 
@@ -109,7 +110,7 @@ export function SiteHeader() {
 
             <a
               href="#fila-de-espera"
-              className="btn-solid hidden rounded-full px-5 py-2 text-sm font-semibold sm:inline-flex"
+              className={`${CTA_BAR} hidden sm:inline-flex`}
             >
               {hero.ctaPrimary}
             </a>
@@ -157,7 +158,7 @@ export function SiteHeader() {
               <a
                 href="#fila-de-espera"
                 onClick={() => setMenuOpen(false)}
-                className="btn-solid mt-2 rounded-xl px-5 py-3 text-center text-sm font-semibold"
+                className={`${CTA_BAR} mt-2 flex`}
               >
                 {hero.ctaPrimary}
               </a>

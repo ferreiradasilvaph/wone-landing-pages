@@ -339,3 +339,10 @@ use a biblioteca mais grafica suportavel para as ilustracoes das cordas e da
 caixa; preciso de algo impecavel e facil de entender. Depois: o escrito
 "Entregue" abaixo da caixa esta brigando com a sombra do 3D; e "Reconciliacao"
 deve ser a corda da direita.
+
+===============================================================================
+[25] 2026-10-06
+===============================================================================
+No card "4 paises, moeda local", palavras do Designer: "esse eu gostei, mas
+comparado aos demais esta simples, e da para melhorar" — apontando a parte das
+bandeiras. E: "lembrar de padronizar os botoes".

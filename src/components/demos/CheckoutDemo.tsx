@@ -1,12 +1,21 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { Check, Info } from "lucide-react";
+import dynamic from "next/dynamic";
+import { Info } from "lucide-react";
 import { FlagMark } from "../FlagMark";
 import { useContent } from "@/i18n";
 
 const EASE = [0.16, 1, 0.3, 1] as const;
+
+/* O globo num chunk próprio: o three só é baixado por quem abre esta aba. */
+const GlobeScene = dynamic(() => import("./GlobeScene"), {
+  ssr: false,
+  loading: () => (
+    <div aria-hidden className="h-full animate-pulse rounded-full bg-ink-900/40" />
+  ),
+});
 
 /**
  * Checkout do mesmo plano, na moeda de cada país.
@@ -14,6 +23,13 @@ const EASE = [0.16, 1, 0.3, 1] as const;
  * Os países, bandeiras, símbolos e métodos de pagamento vêm de
  * `payments.card.countries` — a mesma lista que a seção de Pagamentos usa, para
  * não existirem duas verdades sobre onde a Wone cobra.
+ *
+ * O designer achou esta demo simples perto das outras, apontando a parte das
+ * bandeiras: era uma lista de quatro linhas num canto. Agora a coluna da
+ * esquerda é um globo de pontos que gira até pôr o país escolhido de frente
+ * (`GlobeScene`), com as quatro bandeiras logo abaixo servindo de seletor — a
+ * bandeira ficou do tamanho de bandeira, e o país virou lugar no mundo em vez
+ * de linha numa lista.
  *
  * Título e subtítulo vivem no cabeçalho do painel, em `Highlights`.
  */
@@ -28,62 +44,70 @@ export function CheckoutDemo() {
   const price =
     demo.prices.find((entry) => entry.code === country.code) ?? demo.prices[0];
 
-  return (
-    /* A lista de países em coluna única, ao lado do checkout e centrada contra
-       ele: em duas colunas ela terminava na metade da altura do card e sobrava
-       um buraco embaixo à esquerda. */
-    <div className="grid grid-cols-1 items-center gap-6 sm:grid-cols-[minmax(0,1fr)_20rem] sm:gap-7">
-      <ul className="grid min-w-0 grid-cols-1 gap-2">
-        {countries.map((entry, entryIndex) => {
-          const isActive = entryIndex === index;
-          /* O preço daquele país na própria linha: a lista deixa de ser um
-             seletor com meia linha de texto e passa a mostrar, de uma vez, o
-             que a seção promete — o mesmo plano em quatro moedas. */
-          const entryPrice = demo.prices.find((item) => item.code === entry.code);
+  /* Identidade estável da lista: sem isto o globo recalcularia os marcadores a
+     cada renderização, e ele só precisa saber quando a lista muda de idioma. */
+  const codes = useMemo(() => countries.map((entry) => entry.code), [countries]);
 
-          return (
-            <li key={entry.code}>
-              <button
-                type="button"
-                onClick={() => setIndex(entryIndex)}
-                aria-pressed={isActive}
-                className={`flex w-full cursor-pointer items-center gap-2.5 rounded-xl px-3 py-2 text-left transition-colors duration-300 ${
-                  isActive ? "bg-ink-750" : "bg-ink-900/60 hover:bg-ink-800"
-                }`}
-              >
-                <FlagMark code={entry.code} active={isActive} className="h-5 w-7" />
-                <span className="min-w-0 leading-tight">
-                  <span
-                    className={`block truncate text-xs font-semibold transition-colors ${
-                      isActive ? "text-cream" : "text-muted"
-                    }`}
-                  >
-                    {entry.name}
-                  </span>
-                  <span className="block font-mono text-[10px] text-faint">
-                    {entry.code}
-                  </span>
-                </span>
-                <span
-                  className={`tnum ml-auto shrink-0 font-mono text-xs transition-colors duration-300 ${
-                    isActive ? "text-cream" : "text-faint"
+  return (
+    <div className="grid grid-cols-1 items-center gap-6 sm:grid-cols-[15rem_minmax(0,1fr)] sm:gap-7">
+      <div className="mx-auto w-[15rem] max-w-full">
+        <div className="h-[13rem] w-full">
+          <GlobeScene codes={codes} active={index} reduced={!!reduced} />
+        </div>
+
+        {/* País de frente no globo, escrito */}
+        <div className="-mt-1 text-center leading-tight">
+          <AnimatePresence mode="wait">
+            <motion.p
+              key={country.code}
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -6 }}
+              transition={{ duration: reduced ? 0 : 0.25, ease: EASE }}
+              className="text-sm font-semibold text-cream"
+            >
+              {country.name}
+            </motion.p>
+          </AnimatePresence>
+          <p className="mt-0.5 text-[11px] text-faint">{country.method}</p>
+        </div>
+
+        {/* As bandeiras: o seletor. Quatro, lado a lado, do tamanho de bandeira */}
+        <ul className="mt-3.5 grid grid-cols-4 gap-1.5">
+          {countries.map((entry, entryIndex) => {
+            const isActive = entryIndex === index;
+
+            return (
+              <li key={entry.code}>
+                <button
+                  type="button"
+                  onClick={() => setIndex(entryIndex)}
+                  aria-pressed={isActive}
+                  aria-label={entry.name}
+                  className={`flex w-full cursor-pointer flex-col items-center gap-1 rounded-xl px-1 py-2 transition-colors duration-300 ${
+                    isActive ? "bg-ink-750" : "bg-ink-900/60 hover:bg-ink-800"
                   }`}
                 >
-                  {entry.symbol} {entryPrice?.display}
-                </span>
-                {/* O visto ocupa lugar mesmo apagado: sem isso o preço escorrega
-                    para o lado a cada troca de país. */}
-                <Check
-                  aria-hidden
-                  className={`h-3.5 w-3.5 shrink-0 stroke-[3] text-brand transition-opacity duration-300 ${
-                    isActive ? "opacity-100" : "opacity-0"
-                  }`}
-                />
-              </button>
-            </li>
-          );
-        })}
-      </ul>
+                  <FlagMark
+                    code={entry.code}
+                    active={isActive}
+                    className={`h-6 w-9 transition-opacity duration-300 ${
+                      isActive ? "opacity-100" : "opacity-60"
+                    }`}
+                  />
+                  <span
+                    className={`font-mono text-[10px] transition-colors duration-300 ${
+                      isActive ? "text-cream" : "text-faint"
+                    }`}
+                  >
+                    {entry.code}
+                  </span>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      </div>
 
       {/* Card de checkout */}
       <div className="surface relative overflow-hidden rounded-2xl p-5">
@@ -136,7 +160,7 @@ export function CheckoutDemo() {
           <button
             type="button"
             disabled
-            className="btn-solid mt-4 w-full cursor-default rounded-xl py-2.5 text-sm font-bold opacity-90"
+            className="btn-solid mt-4 w-full cursor-default rounded-xl py-2.5 text-sm font-semibold opacity-90"
           >
             {country.symbol} {price.display}
           </button>

@@ -21,6 +21,7 @@ import { WoneIcon } from "@/components/WoneMark";
 import { FlagMark } from "@/components/FlagMark";
 import { LanguageToggle } from "@/components/LanguageToggle";
 import { Reveal, RevealGroup, RevealItem } from "@/components/Reveal";
+import { CTA } from "@/components/cta";
 
 /** Cabeçalho de seção: sobrenome, título e linha de apoio, no mesmo ritmo. */
 function SectionHeading({
@@ -129,7 +130,7 @@ export default function Home() {
 
                     <a
                       href="#fila-de-espera"
-                      className="btn-solid mt-9 inline-flex w-full items-center justify-center gap-2 rounded-xl py-3 text-sm font-semibold"
+                      className={`${CTA} mt-9 inline-flex w-full`}
                     >
                       {t.products.cta}
                       <ArrowRight className="h-4 w-4" />
