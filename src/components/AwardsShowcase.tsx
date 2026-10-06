@@ -46,6 +46,20 @@ export function AwardsShowcase() {
   /* Este não é `once`: fora da tela, a placa para de girar. */
   const onScreen = useInView(stageRef, { amount: 0.2 });
 
+  /* Com a seção à vista, as artes das outras placas já vão para o cache do
+     navegador. Assim a troca de prêmio não espera rede nenhuma — é o que, junto
+     com a travessia cruzada lá no `AwardPlaque3D`, tira o molde vazio do meio
+     do caminho. */
+  useEffect(() => {
+    if (!near) return;
+
+    awards.items.forEach((item) => {
+      if (!item.image) return;
+      const probe = new window.Image();
+      probe.src = item.image;
+    });
+  }, [near, awards.items]);
+
   const count = awards.items.length;
   const [progress, setProgress] = useState(0);
   /** Marco sob o cursor; enquanto existe, a barra fica parada nele. */
