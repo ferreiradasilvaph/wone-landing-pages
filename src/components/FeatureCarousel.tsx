@@ -34,7 +34,12 @@ const ICONS: Record<string, LucideIcon> = {
 /** Intervalo da rotação automática. */
 const AUTOPLAY_MS = 4500;
 /** Arrasto mínimo, em px, para contar como passar de card. */
-const SWIPE_PX = 44;
+const SWIPE_PX = 36;
+/** Peteleco: gesto curto, mas rápido, também passa de card. */
+const FLICK_PX = 16;
+const FLICK_MS = 320;
+/** A partir de quantos px o gesto deixa de ser toque e vira arraste. */
+const DRAG_START_PX = 6;
 /** Quanto o dedo arrasta o palco antes de soltar. Menos que 1 é resistência. */
 const DRAG_FOLLOW = 0.6;
 
@@ -83,7 +88,12 @@ export function FeatureCarousel() {
   const [tabHidden, setTabHidden] = useState(false);
   const [reduced, setReduced] = useState(false);
 
-  const paused = hovering || focused || tabHidden;
+  const [touching, setTouching] = useState(false);
+
+  /* O dedo não tem "hover": no celular o rodízio seguia andando por baixo do
+     gesto, e o toque parecia ignorado. Enquanto a mão está no palco, o palco é
+     da mão. */
+  const paused = hovering || focused || tabHidden || touching;
   const playing = !reduced && !paused;
 
   useEffect(() => {
@@ -122,35 +132,62 @@ export function FeatureCarousel() {
     return () => window.clearTimeout(id);
   }, [playing, active, go]);
 
-  /* Arraste: só o eixo horizontal, e só se passar do limiar.
+  /* Arraste: só o eixo horizontal.
 
-     O palco acompanha o dedo enquanto ele anda, com resistência — antes só
-     saltava no fim do gesto, e o carrossel parecia um slideshow com botão
-     escondido. Durante o arraste a transição sai do caminho, senão cada quadro
-     disputaria com a animação de 600 ms. */
+     O palco acompanha o dedo enquanto ele anda, com resistência, e ao soltar
+     anda um card no sentido do gesto — arrastou para a esquerda, entra o
+     próximo; para a direita, volta o anterior. Vale pelo limiar de distância ou
+     por peteleco (gesto curto e rápido), que é como se passa card no celular.
+
+     Durante o arraste a transição sai do caminho, senão cada quadro disputaria
+     com a animação de 600 ms. */
   const dragFrom = useRef<number | null>(null);
+  const dragAt = useRef(0);
+  const captured = useRef(false);
   const [drag, setDrag] = useState(0);
 
-  /* Sem `setPointerCapture`: com a captura, o `click` passa a ser entregue ao
-     palco em vez do card, e clicar num card lateral para trazê-lo ao centro
-     deixaria de funcionar. Quem fecha o gesto quando o dedo sai do palco é o
-     `onPointerLeave`. */
   const onPointerDown = (event: React.PointerEvent) => {
     dragFrom.current = event.clientX;
+    dragAt.current = event.timeStamp;
+    captured.current = false;
+    setTouching(true);
   };
 
   const onPointerMove = (event: React.PointerEvent) => {
     if (dragFrom.current === null) return;
-    setDrag((event.clientX - dragFrom.current) * DRAG_FOLLOW);
+    const dx = event.clientX - dragFrom.current;
+
+    /* A captura só entra depois que o gesto vira arraste. Capturar no toque
+       entregaria o `click` ao palco, e clicar num card lateral para trazê-lo ao
+       centro deixaria de funcionar; capturar depois é o que mantém o dedo
+       rastreado mesmo saindo do palco no meio do caminho. */
+    if (!captured.current && Math.abs(dx) > DRAG_START_PX) {
+      try {
+        event.currentTarget.setPointerCapture(event.pointerId);
+      } catch {
+        /* Ponteiro já solto, ou id que o navegador não reconhece: segue sem
+           captura, que é o comportamento de antes. */
+      }
+      captured.current = true;
+    }
+
+    setDrag(dx * DRAG_FOLLOW);
   };
 
   const endDrag = (event: React.PointerEvent) => {
     const from = dragFrom.current;
+    const since = event.timeStamp - dragAt.current;
     dragFrom.current = null;
+    captured.current = false;
     setDrag(0);
+    setTouching(false);
     if (from === null) return;
+
     const dx = event.clientX - from;
-    if (Math.abs(dx) < SWIPE_PX) return;
+    const passou = Math.abs(dx) >= SWIPE_PX;
+    const peteleco = Math.abs(dx) >= FLICK_PX && since <= FLICK_MS;
+    if (!passou && !peteleco) return;
+
     go(dx < 0 ? 1 : -1);
   };
 
@@ -194,7 +231,6 @@ export function FeatureCarousel() {
         onPointerMove={onPointerMove}
         onPointerUp={endDrag}
         onPointerCancel={endDrag}
-        onPointerLeave={endDrag}
       >
         {/* Holofote atrás do card do meio: é o que faz o centro do palco ser o
             centro do palco, em vez de apenas o card maior. */}

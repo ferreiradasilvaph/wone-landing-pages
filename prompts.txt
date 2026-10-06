@@ -374,3 +374,9 @@ batem muito nessa tecla, entao podemos fazer algo mais chamativo, deixar bem
 evidente, isso tem de ser essencial". E: dar atencao as moedas, dizer qual moeda
 de qual pais, usar esses termos e ocupar mais espaco com dados reais, para ficar
 volumoso.
+
+===============================================================================
+[30] 2026-10-06
+===============================================================================
+o carrossel em "recursos" deve fazer com que a cada touch (do usuario, ser
+humano, no smartphone) scrolle para o sentido do touchscreen do usuario
