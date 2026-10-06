@@ -332,11 +332,9 @@ export function FlowEditorDemo() {
 
   return (
     <div>
-      <h3 className="font-display text-xl font-semibold text-cream">{demo.title}</h3>
-      <p className="mt-1.5 text-sm text-muted">{demo.subtitle}</p>
-
-      {/* Barra do editor */}
-      <div className="mt-5 flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+      {/* Barra do editor. Título e subtítulo vivem no cabeçalho do painel,
+          em `Highlights`, iguais para as quatro demos. */}
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
         <span className="flex items-center gap-2">
           <span className="t-eyebrow text-faint">{builder.canvas}</span>
           <span className="tnum font-mono text-[10px] text-faint">

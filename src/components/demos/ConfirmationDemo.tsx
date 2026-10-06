@@ -14,6 +14,8 @@ const PATH_ICONS = [Webhook, RefreshCw, MousePointerClick];
  * É a demonstração mais importante da seção: o lead desliga uma via e vê que o
  * acesso continua saindo. A redundância deixa de ser promessa e vira algo que
  * ele testou com o próprio cursor.
+ *
+ * Título e subtítulo vivem no cabeçalho do painel, em `Highlights`.
  */
 export function ConfirmationDemo() {
   const { highlights } = useContent();
@@ -29,14 +31,15 @@ export function ConfirmationDemo() {
 
   return (
     <div>
-      <h3 className="font-display text-xl font-semibold text-cream">{demo.title}</h3>
-      <p className="mt-1.5 text-sm text-muted">{demo.subtitle}</p>
+      <div className="grid grid-cols-1 items-center gap-4 lg:grid-cols-[auto_1fr_auto] lg:gap-6">
+        {/* Origem.
 
-      <div className="mt-5 grid grid-cols-1 items-center gap-4 lg:grid-cols-[auto_1fr_auto] lg:gap-6">
-        {/* Origem */}
-        <div className="flex items-center gap-3 rounded-2xl bg-ink-800 p-4 lg:w-44 lg:flex-col lg:text-center">
-          <span className="flex h-11 w-11 shrink-0 items-center justify-center text-brand">
-            <CreditCard className="h-6 w-6" />
+            O fundo era `ink-800`, o mesmo tom da base do painel — o cartão
+            existia no código e não na tela. Agora é o inset mais escuro, igual
+            ao das demais listas das demos. */}
+        <div className="flex items-center gap-3 rounded-2xl bg-ink-900/60 p-3.5 lg:w-40 lg:flex-col lg:text-center">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center text-brand">
+            <CreditCard className="h-5 w-5" />
           </span>
           <span className="text-sm font-semibold text-cream">{demo.payment}</span>
         </div>
@@ -50,7 +53,7 @@ export function ConfirmationDemo() {
             return (
               <li
                 key={path.name}
-                className={`flex items-center gap-3 rounded-xl px-4 py-3 transition-colors duration-300 ${
+                className={`flex items-center gap-3 rounded-xl px-3.5 py-2.5 transition-colors duration-300 ${
                   isDown ? "bg-red-500/10" : "bg-brand/8"
                 }`}
               >
@@ -101,12 +104,12 @@ export function ConfirmationDemo() {
 
         {/* Destino */}
         <div
-          className={`flex items-center gap-3 rounded-2xl p-4 transition-colors duration-500 lg:w-44 lg:flex-col lg:text-center ${
+          className={`flex items-center gap-3 rounded-2xl p-3.5 transition-colors duration-500 lg:w-40 lg:flex-col lg:text-center ${
             delivered ? "bg-emerald-500/12" : "bg-red-500/12"
           }`}
         >
           <span
-            className={`flex h-11 w-11 shrink-0 items-center justify-center transition-colors duration-500 ${
+            className={`flex h-10 w-10 shrink-0 items-center justify-center transition-colors duration-500 ${
               delivered ? "text-emerald-400" : "text-red-400"
             }`}
           >
@@ -136,7 +139,7 @@ export function ConfirmationDemo() {
             transition={{ duration: reduced ? 0 : 0.3, ease: EASE }}
             className="overflow-hidden"
           >
-            <div className="mt-5 flex items-start gap-3 rounded-xl bg-amber-500/12 px-4 py-3">
+            <div className="mt-4 flex items-start gap-3 rounded-xl bg-amber-500/12 px-4 py-3">
               <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-400" />
               <span className="leading-relaxed">
                 <span className="block text-sm font-semibold text-amber-300">

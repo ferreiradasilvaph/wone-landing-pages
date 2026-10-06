@@ -30,27 +30,58 @@ const ROTATE_MS = 6000;
    -------------------------------------------------------------------------- */
 
 const DemoSkeleton = () => (
-  <div aria-hidden className="h-72 animate-pulse rounded-2xl bg-ink-800/60" />
+  <div aria-hidden className="h-48 animate-pulse rounded-2xl bg-ink-800/60" />
 );
 
+/* --------------------------------------------------------------------------
+   A moldura tem a medida de cada demo
+
+   O painel era uma lâmina de 1280 px para as quatro — e o designer apontou o
+   que isso causava no "1,2s": uma tela grande demais para quatro etapas e um
+   cronômetro, com meio metro de vazio entre o texto e o carimbo de tempo.
+
+   Então a largura passa a ser do conteúdo, não do contêiner: cada demo declara
+   a sua, e a moldura anima entre elas quando se troca de aba. O editor de
+   fluxos continua com a página inteira, porque ele usa; os outros três encolhem
+   para a medida em que a composição fecha. O `key` aponta para o texto no
+   dicionário — título e subtítulo saíram de dentro das demos e viraram o
+   cabeçalho desta moldura, iguais para as quatro.
+   -------------------------------------------------------------------------- */
+
 const DEMOS = [
-  dynamic(() => import("./demos/DeliveryDemo").then((mod) => mod.DeliveryDemo), {
-    ssr: false,
-    loading: DemoSkeleton,
-  }),
-  dynamic(() => import("./demos/FlowEditorDemo").then((mod) => mod.FlowEditorDemo), {
-    ssr: false,
-    loading: DemoSkeleton,
-  }),
-  dynamic(() => import("./demos/ConfirmationDemo").then((mod) => mod.ConfirmationDemo), {
-    ssr: false,
-    loading: DemoSkeleton,
-  }),
-  dynamic(() => import("./demos/CheckoutDemo").then((mod) => mod.CheckoutDemo), {
-    ssr: false,
-    loading: DemoSkeleton,
-  }),
-];
+  {
+    key: "delivery",
+    frame: "max-w-xl",
+    Component: dynamic(
+      () => import("./demos/DeliveryDemo").then((mod) => mod.DeliveryDemo),
+      { ssr: false, loading: DemoSkeleton },
+    ),
+  },
+  {
+    key: "blocks",
+    frame: "max-w-7xl",
+    Component: dynamic(
+      () => import("./demos/FlowEditorDemo").then((mod) => mod.FlowEditorDemo),
+      { ssr: false, loading: DemoSkeleton },
+    ),
+  },
+  {
+    key: "confirmation",
+    frame: "max-w-4xl",
+    Component: dynamic(
+      () => import("./demos/ConfirmationDemo").then((mod) => mod.ConfirmationDemo),
+      { ssr: false, loading: DemoSkeleton },
+    ),
+  },
+  {
+    key: "checkout",
+    frame: "max-w-3xl",
+    Component: dynamic(
+      () => import("./demos/CheckoutDemo").then((mod) => mod.CheckoutDemo),
+      { ssr: false, loading: DemoSkeleton },
+    ),
+  },
+] as const;
 
 /**
  * `true` depois que o elemento encosta na viewport, e nunca volta para `false`:
@@ -144,7 +175,9 @@ export function Highlights() {
     }
   };
 
-  const Demo = DEMOS[active] ?? DEMOS[0];
+  const demo = DEMOS[active] ?? DEMOS[0];
+  const Demo = demo.Component;
+  const copy = highlights.demos[demo.key];
 
   return (
     <section
@@ -237,23 +270,23 @@ export function Highlights() {
                     </span>
                   </span>
 
-                  {/* Seta que liga a aba ativa ao painel logo abaixo. Só a
-                      partir de sm, onde as abas ficam em grade sobre ele. */}
-                  {isActive && (
-                    <motion.span
-                      layoutId="highlight-arrow"
-                      aria-hidden
-                      className="absolute -bottom-px left-1/2 hidden h-3 w-3 -translate-x-1/2 translate-y-1/2 rotate-45 bg-ink-800 sm:block"
-                      transition={{ type: "spring", stiffness: 380, damping: 32 }}
-                    />
-                  )}
+                  {/* A seta que apontava da aba para o painel saiu com a
+                      moldura de largura variável: ela nasce no centro da aba, e
+                      o painel estreito já não passa por baixo das quatro. O que
+                      marca a aba ativa é o fio laranja no topo mais a opacidade
+                      — e o painel, que troca à vista. */}
                 </button>
               );
             })}
           </div>
         </Reveal>
 
-        {/* Painel da aba ativa. A altura mínima evita que a seção salte. */}
+        {/* Painel da aba ativa.
+
+            A altura mínima de 19rem saiu junto com a largura fixa: as quatro
+            demos agora fecham entre 17rem e 21rem, e um piso só devolveria o
+            vazio que o designer pediu para tirar. O que estabiliza a seção é a
+            moldura animar entre as medidas em vez de saltar. */}
         <Reveal delay={0.1}>
           <div
             ref={panelRef}
@@ -261,7 +294,7 @@ export function Highlights() {
             id="highlight-panel"
             aria-labelledby={`highlight-tab-${active}`}
             tabIndex={0}
-            className="surface-lit relative mt-6 min-h-[19rem] overflow-hidden rounded-3xl p-5 sm:p-6 lg:p-8"
+            className={`surface-lit relative mx-auto mt-6 w-full overflow-hidden rounded-3xl transition-[max-width] duration-700 ease-[var(--ease-out-expo)] ${demo.frame}`}
           >
             {/* Só monta a demo quando o painel chega perto da viewport */}
             {nearPanel ? (
@@ -273,15 +306,42 @@ export function Highlights() {
                   exit={{ opacity: 0, y: -14 }}
                   transition={{ duration: reduced ? 0 : 0.35, ease: EASE }}
                 >
-                  <Demo />
+                  {/* Cabeçalho da moldura: o título e o subtítulo que cada demo
+                      repetia por conta própria, agora num lugar só e no mesmo
+                      lugar da tela nas quatro. O ícone à direita é o mesmo da
+                      aba clicada — é o fio que liga o card ao painel desde que
+                      a seta saiu. */}
+                  <div className="flex items-start justify-between gap-5 border-b border-line px-5 py-4 sm:px-6 sm:py-5">
+                    <div className="min-w-0">
+                      <h3 className="font-display text-base font-semibold text-balance text-cream sm:text-lg">
+                        {copy.title}
+                      </h3>
+                      <p className="mt-1 text-[13px] text-pretty text-muted sm:text-sm">
+                        {copy.subtitle}
+                      </p>
+                    </div>
+                    <PanelIcon name={items[active]?.icon} />
+                  </div>
+
+                  <div className="p-5 sm:p-6">
+                    <Demo />
+                  </div>
                 </motion.div>
               </AnimatePresence>
             ) : (
-              <DemoSkeleton />
+              <div className="p-5 sm:p-6">
+                <DemoSkeleton />
+              </div>
             )}
           </div>
         </Reveal>
       </div>
     </section>
   );
+}
+
+/** Eco do ícone da aba ativa no cabeçalho do painel. */
+function PanelIcon({ name }: { name?: string }) {
+  const Icon = ICONS[name ?? ""] ?? Zap;
+  return <Icon aria-hidden className="mt-0.5 h-5 w-5 shrink-0 text-brand/70" />;
 }

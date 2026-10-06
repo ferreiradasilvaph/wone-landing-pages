@@ -299,3 +299,10 @@ padronize os botoes, deixe todos igual o "Lista de espera"
 ===============================================================================
 os botoes "Lista de espera" e "Ver como funciona" ainda estao diferentes um do
 outro; padronizar os botoes.
+
+===============================================================================
+[20] 2026-10-06
+===============================================================================
+No card "1,2s", sobre a aba que abre ao clicar: "gosto disso, so acho que e uma
+tela grande demais para algo que pode ser mais bem encaixado" (Designer). Vale
+para as atualizacoes dos 4 cards da secao.
