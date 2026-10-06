@@ -351,3 +351,10 @@ bandeiras. E: "lembrar de padronizar os botoes".
 [26] 2026-10-06
 ===============================================================================
 "28 blocos no editor" esta muito extenso em largura, melhore
+
+===============================================================================
+[27] 2026-10-06
+===============================================================================
+No "passo a passo", palavras do Designer: "os icones podem melhorar". Faca algo
+surpreendente — ele gostou da logica e do crescer ao passar o mouse, mas pode
+ficar mais surpreendente.
