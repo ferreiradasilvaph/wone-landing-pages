@@ -1,13 +1,6 @@
 "use client";
 
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type ReactNode,
-} from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import {
   Database,
@@ -70,11 +63,11 @@ const PULSE_MS = 520;
 
 /* Geometria do canvas, em px. Nó de largura fixa é o que torna a posição de
    cada porta aritmética — sem medir o DOM, sem ResizeObserver. */
-const NODE_W = 168;
-const NODE_H = 64;
-const COL_W = NODE_W + 52;
-const ROW_H = NODE_H + 28;
-const PAD = 16;
+const NODE_W = 150;
+const NODE_H = 52;
+const COL_W = NODE_W + 44;
+const ROW_H = NODE_H + 24;
+const PAD = 14;
 
 const PORT_IDLE = "rgba(255,255,227,0.35)";
 const EDGE_IDLE = "rgba(255,255,227,0.14)";
@@ -252,8 +245,17 @@ export function FlowEditorDemo() {
   );
   const nextUid = useRef(demo.flow.length);
 
-  /** Nó selecionado, cujas propriedades aparecem no painel. */
+  /** Nó selecionado, cujo cartão aparece ao lado do canvas. */
   const [selected, setSelected] = useState<number | null>(null);
+  /**
+   * Bloco espiado na paleta quando o funil já está no limite.
+   *
+   * Clicar na paleta normalmente acrescenta o bloco e o deixa selecionado — é
+   * o "escolhe e ele aparece, um por vez" que o designer descreveu. Com oito
+   * nós no canvas não há o que acrescentar, e sem isto o clique não teria
+   * resposta nenhuma: o cartão troca mesmo assim, só não entra no funil.
+   */
+  const [peek, setPeek] = useState<{ category: number; item: number } | null>(null);
   /** Passo aceso enquanto o funil roda; `-1` quando está parado. */
   const [pulse, setPulse] = useState(-1);
   /** Categoria aberta na paleta. Começa em Fluxo, onde está o "Início". */
@@ -284,13 +286,28 @@ export function FlowEditorDemo() {
 
   // O uid sai do ref fora do updater: mexer nele lá dentro seria efeito
   // colateral em função que o StrictMode invoca duas vezes.
-  const add = useCallback((category: number, item: number) => {
-    const uid = nextUid.current;
-    nextUid.current += 1;
-    setSlots((current) =>
-      current.length >= MAX_NODES ? current : [...current, { uid, category, item }],
-    );
-    setPulse(-1);
+  const add = useCallback(
+    (category: number, item: number, atLimit: boolean) => {
+      if (atLimit) {
+        setPeek({ category, item });
+        return;
+      }
+
+      const uid = nextUid.current;
+      nextUid.current += 1;
+      setSlots((current) =>
+        current.length >= MAX_NODES ? current : [...current, { uid, category, item }],
+      );
+      setPulse(-1);
+      setPeek(null);
+      setSelected(uid);
+    },
+    [],
+  );
+
+  /** Clicar num nó do canvas também é escolher o bloco que o cartão mostra. */
+  const pick = useCallback((uid: number) => {
+    setPeek(null);
     setSelected(uid);
   }, []);
 
@@ -327,8 +344,17 @@ export function FlowEditorDemo() {
   );
 
   const selectedSlot = slots.find((slot) => slot.uid === selected);
-  const selectedEntry = entryOf(selectedSlot);
   const selectedIndex = selectedSlot ? slots.indexOf(selectedSlot) : -1;
+
+  /* O bloco do cartão: o espiado na paleta, quando o funil está cheio, senão o
+     nó selecionado no canvas — que é o último clicado, venha da paleta ou do
+     próprio canvas. */
+  const spot = peek ?? selectedSlot ?? null;
+  const spotEntry = entryOf(spot ?? undefined);
+  const spotMeta = spot ? (CATEGORY_META[spot.category] ?? CATEGORY_META[0]) : null;
+  const spotNext =
+    !peek && selectedSlot ? entryOf(slots[selectedIndex + 1]) : undefined;
+  const spotInputs = peek ? 1 : selectedIndex === 0 ? 0 : 1;
 
   return (
     <div>
@@ -474,7 +500,7 @@ export function FlowEditorDemo() {
                         lit={node.step >= 0 && node.step === pulse}
                         done={node.step >= 0 && pulse > node.step}
                         selected={!derived && node.uid === selected}
-                        onSelect={derived ? undefined : () => setSelected(node.uid)}
+                        onSelect={derived ? undefined : () => pick(node.uid as number)}
                         onRemove={derived ? undefined : () => remove(node.uid as number)}
                         removeLabel={`${builder.remove}: ${entry.name}`}
                       />
@@ -527,7 +553,7 @@ export function FlowEditorDemo() {
                           done={done}
                           selected={slot.uid === selected}
                           branchHint={isBranching(slot) ? builder.twoOutputs : undefined}
-                          onSelect={() => setSelected(slot.uid)}
+                          onSelect={() => pick(slot.uid)}
                           onRemove={() => remove(slot.uid)}
                           removeLabel={`${builder.remove}: ${entry.name}`}
                         />
@@ -549,53 +575,81 @@ export function FlowEditorDemo() {
           )}
         </div>
 
-        {/* Painel de propriedades: só leitura, espelhando o da plataforma */}
+        {/* O bloco escolhido.
+
+            Era uma tabela de seis linhas — Bloco, Categoria, ID, Entradas,
+            Saídas, Próximo — mais o parágrafo. O designer apontou o efeito:
+            "ela tem muitos dados", "às vezes confunde". Agora é um cartão do
+            bloco: ícone e nome, a categoria na cor dela, o que ele faz, e
+            entradas/saídas/próximo num rodapé de uma linha. O ID saiu — numerar
+            o nó não diz nada a quem olha a landing.
+
+            E o cartão é o lugar onde o clique na paleta aparece: um bloco por
+            vez, trocando pelo escolhido, que foi o que o designer pediu. */}
         <aside className="rounded-2xl bg-ink-900/60 p-4">
           <span className="t-eyebrow text-faint">{builder.properties}</span>
 
-          {selectedSlot && selectedEntry ? (
-            <dl className="mt-3 space-y-2.5 text-[11px]">
-              <Field label={builder.fields.block}>
-                <span className="font-semibold text-cream">{selectedEntry.name}</span>
-              </Field>
-              <Field label={builder.fields.category}>
-                <span
-                  className="font-semibold"
-                  style={{ color: CATEGORY_META[selectedSlot.category]?.color }}
-                >
-                  {demo.categories[selectedSlot.category]?.name}
-                </span>
-              </Field>
-              <Field label={builder.fields.id}>
-                <span className="tnum font-mono text-faint">
-                  #{String(selectedSlot.uid + 1).padStart(3, "0")}
-                </span>
-              </Field>
-              <Field label={builder.fields.inputs}>
-                <span className="tnum font-mono text-muted">
-                  {selectedIndex === 0 ? 0 : 1}
-                </span>
-              </Field>
-              <Field label={builder.fields.outputs}>
-                <span className="tnum font-mono text-muted">
-                  {isBranching(selectedSlot) ? 2 : 1}
-                </span>
-              </Field>
-              <Field label={builder.fields.next}>
-                <span className="text-muted">
-                  {entryOf(slots[selectedIndex + 1])?.name ?? builder.fields.none}
-                </span>
-              </Field>
+          <AnimatePresence mode="wait">
+            {spot && spotEntry && spotMeta ? (
+              <motion.div
+                key={`${spot.category}-${spot.item}`}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: reduced ? 0 : 0.22, ease: EASE }}
+              >
+                <div className="mt-3 flex items-start gap-2.5">
+                  <spotMeta.icon
+                    className="mt-0.5 h-4 w-4 shrink-0"
+                    style={{ color: spotMeta.color }}
+                  />
+                  <span className="min-w-0 leading-tight">
+                    <span className="block text-sm font-semibold text-cream">
+                      {spotEntry.name}
+                    </span>
+                    <span
+                      className="t-eyebrow mt-1 block text-[10px]"
+                      style={{ color: spotMeta.color }}
+                    >
+                      {demo.categories[spot.category]?.name}
+                    </span>
+                  </span>
+                </div>
 
-              <p className="border-t border-line pt-2.5 leading-relaxed text-muted">
-                {selectedEntry.detail}
-              </p>
-            </dl>
-          ) : (
-            <p className="mt-3 text-[11px] leading-relaxed text-faint">
-              {builder.noSelection}
-            </p>
-          )}
+                <p className="mt-2.5 text-[11px] leading-relaxed text-muted">
+                  {spotEntry.detail}
+                </p>
+
+                <div className="mt-3 flex flex-wrap gap-x-3 gap-y-1 border-t border-line pt-2.5 font-mono text-[10px] text-faint">
+                  <span>
+                    {builder.fields.inputs}{" "}
+                    <span className="tnum text-muted">{spotInputs}</span>
+                  </span>
+                  <span>
+                    {builder.fields.outputs}{" "}
+                    <span className="tnum text-muted">{isBranching(spot) ? 2 : 1}</span>
+                  </span>
+                  <span className="min-w-0 truncate">
+                    {builder.fields.next}{" "}
+                    <span className="text-muted">
+                      {spotNext?.name ?? builder.fields.none}
+                    </span>
+                  </span>
+                </div>
+              </motion.div>
+            ) : (
+              <motion.p
+                key="vazio"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: reduced ? 0 : 0.2 }}
+                className="mt-3 text-[11px] leading-relaxed text-faint"
+              >
+                {builder.noSelection}
+              </motion.p>
+            )}
+          </AnimatePresence>
         </aside>
       </div>
 
@@ -643,25 +697,14 @@ export function FlowEditorDemo() {
           <li key={item.name}>
             <button
               type="button"
-              onClick={() => add(openCategory, itemIndex)}
-              disabled={full}
-              className="cursor-pointer rounded-lg bg-ink-800 px-2.5 py-1.5 text-xs text-muted transition-colors duration-200 hover:bg-ink-750 hover:text-cream disabled:cursor-default disabled:opacity-40"
+              onClick={() => add(openCategory, itemIndex, full)}
+              className="cursor-pointer rounded-lg bg-ink-800 px-2.5 py-1.5 text-xs text-muted transition-colors duration-200 hover:bg-ink-750 hover:text-cream"
             >
               {item.name}
             </button>
           </li>
         ))}
       </ul>
-    </div>
-  );
-}
-
-/** Linha do painel de propriedades. */
-function Field({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <div className="flex items-baseline justify-between gap-3">
-      <dt className="shrink-0 text-faint">{label}</dt>
-      <dd className="min-w-0 truncate text-right">{children}</dd>
     </div>
   );
 }

@@ -306,3 +306,13 @@ outro; padronizar os botoes.
 No card "1,2s", sobre a aba que abre ao clicar: "gosto disso, so acho que e uma
 tela grande demais para algo que pode ser mais bem encaixado" (Designer). Vale
 para as atualizacoes dos 4 cards da secao.
+
+===============================================================================
+[21] 2026-10-06
+===============================================================================
+No card "28 blocos", palavras do Designer: "acho legal ter todos os blocos, mas
+acho que ficou gigante, novamente"; "poder escolher o bloco, e quando escolhe
+aparecem como novos blocos" (um bloco por vez, trocando pelo escolhido); "como
+se fosse filtro, porque a tabela esta bem grande e as vezes confunde"; "gosto
+de como ela esta diversa, ficou muito util, muito interessante, mas ela tem
+muitos dados". Escolhida a opcao "bloco em destaque + funil".

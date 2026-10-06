@@ -128,8 +128,8 @@ export const en: Content = {
           full: "demo limit",
 
           palette: "Block palette",
-          properties: "Properties",
-          noSelection: "Click a block on the canvas to see its properties.",
+          properties: "Chosen block",
+          noSelection: "Click a block, in the palette or on the canvas, to see what it does.",
           running: "Running the funnel",
           twoOutputs: "2 outputs",
           branchYes: "yes",
@@ -137,9 +137,6 @@ export const en: Content = {
           branchA: "A",
           branchB: "B",
           fields: {
-            block: "Block",
-            category: "Category",
-            id: "ID",
             inputs: "Inputs",
             outputs: "Outputs",
             next: "Next",

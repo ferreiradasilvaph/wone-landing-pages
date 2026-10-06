@@ -146,8 +146,8 @@ export const pt = {
 
           /* Editor: paleta, painel de propriedades e rótulos das saídas. */
           palette: "Paleta de blocos",
-          properties: "Propriedades",
-          noSelection: "Clique num bloco do canvas para ver as propriedades.",
+          properties: "Bloco escolhido",
+          noSelection: "Clique num bloco, na paleta ou no canvas, para ver o que ele faz.",
           running: "Executando o funil",
           twoOutputs: "2 saídas",
           /** Rótulos das duas saídas de "Condição" e de "Divisão A/B". */
@@ -156,9 +156,6 @@ export const pt = {
           branchA: "A",
           branchB: "B",
           fields: {
-            block: "Bloco",
-            category: "Categoria",
-            id: "ID",
             inputs: "Entradas",
             outputs: "Saídas",
             next: "Próximo",
