@@ -129,9 +129,7 @@ export default function Home() {
 
                     <a
                       href="#fila-de-espera"
-                      className={`mt-9 inline-flex w-full items-center justify-center gap-2 rounded-xl py-3 text-sm font-semibold transition-all ${
-                        product.featured ? "btn-solid" : "btn-ghost"
-                      }`}
+                      className="btn-solid mt-9 inline-flex w-full items-center justify-center gap-2 rounded-xl py-3 text-sm font-semibold"
                     >
                       {t.products.cta}
                       <ArrowRight className="h-4 w-4" />

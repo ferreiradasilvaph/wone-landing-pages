@@ -288,3 +288,8 @@ menor em largura, "em pe" como post de Instagram (1080x1350), com carrossel
 infinito. Aparecer 5 cards: um maior no meio, dois na lateral e dois um pouco
 menores, com visao opaca, diminuindo a opacidade, e fazer a rotatividade. No
 tablet nao funciona legal do jeito que esta; no mobile so ocupa espaco.
+
+===============================================================================
+[18] 2026-10-06
+===============================================================================
+padronize os botoes, deixe todos igual o "Lista de espera"

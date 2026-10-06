@@ -152,7 +152,7 @@ export function DeliveryDemo() {
         <button
           type="button"
           onClick={replay}
-          className="btn-ghost inline-flex cursor-pointer items-center gap-2 rounded-xl px-4 py-2 text-xs font-semibold"
+          className="btn-solid inline-flex cursor-pointer items-center gap-2 rounded-xl px-4 py-2 text-xs font-semibold"
         >
           <RotateCcw className="h-3.5 w-3.5" />
           {demo.replay}

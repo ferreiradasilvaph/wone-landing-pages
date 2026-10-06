@@ -261,20 +261,13 @@ section[id] {
   transform: scale(0.985);
 }
 
-/* Botão secundário: fundo em vidro, sem contorno. O peso vem do preenchimento
-   — um tom acima do fundo em repouso, laranja translúcido no hover. */
-.btn-ghost {
-  background: color-mix(in oklab, var(--cream) 7%, transparent);
-  color: var(--cream);
-  backdrop-filter: blur(8px);
-  transition:
-    background-color 0.25s,
-    transform 0.25s var(--ease-out-expo);
-}
-.btn-ghost:hover {
-  background: color-mix(in oklab, var(--brand) 16%, transparent);
-  transform: translateY(-2px);
-}
+/* Não existe mais um botão secundário com estilo próprio.
+
+   O `.btn-ghost` que vivia aqui — fundo de creme a 7%, `backdrop-filter` e
+   laranja translúcido no hover — era o terceiro estilo de botão da página, e a
+   ordem foi padronizar tudo no `.btn-solid`. Onde a ação precisa de menos peso,
+   o caminho é link de texto (como o "Ver como funciona" do hero), não um
+   terceiro botão. */
 
 /* Palco do carrossel de Recursos.
 
