@@ -1,7 +1,7 @@
 "use client";
 
 import { useContent } from "@/i18n";
-import { IntegrationMark, hasIntegrationMark } from "./IntegrationMark";
+import { IntegrationMark } from "./IntegrationMark";
 
 /* Todas as marcas saem no laranja da marca, não na cor de cada serviço. A faixa
    com nove cores diferentes brigava com o resto da página; num tom só, ela lê
@@ -18,6 +18,11 @@ const MARK_COLOR = "#FF7700";
  * Entrega, Rastreio, Atribuição) — o nome escrito saiu, mas continua no HTML em
  * `sr-only`, que é o que um leitor de tela anuncia no lugar do símbolo.
  *
+ * TikTok Ads e Kwai apareciam aqui pelo nome escrito, porque os símbolos
+ * anteriores eram logo de mentira. Agora têm símbolo próprio — do serviço, não
+ * da marca (ver `IntegrationMark`) — e a faixa voltou a ser uma fileira só de
+ * símbolos, sem duas pílulas de texto no meio quebrando o ritmo.
+ *
  * Fundo sólido um tom acima do preto, sem borda e sem ponto: o fundo é `ink-850`
  * porque, sem a borda, um fundo quase igual ao da página deixaria a pílula
  * invisível.
@@ -30,36 +35,21 @@ export function Marquee() {
       <div className="flex w-max animate-marquee gap-3 hover:[animation-play-state:paused]">
         {[0, 1].map((copy) => (
           <div key={copy} aria-hidden={copy === 1} className="flex shrink-0 gap-3">
-            {integrations.map((item) => {
-              /* Com símbolo próprio, o nome fica só para leitor de tela. Sem
-                 símbolo, ele é o que aparece — nada de sinal genérico no lugar
-                 de um logo que não temos. */
-              const marked = hasIntegrationMark(item.icon);
-
-              return (
-                <span
-                  key={`${copy}-${item.name}`}
-                  className="flex items-center gap-2.5 rounded-full bg-ink-850 px-4 py-2 whitespace-nowrap"
-                >
-                  {marked ? (
-                    <>
-                      <IntegrationMark
-                        icon={item.icon}
-                        name={item.name}
-                        color={MARK_COLOR}
-                        className="h-4 w-4"
-                      />
-                      <span className="sr-only">{item.name}</span>
-                    </>
-                  ) : (
-                    <span className="text-sm font-medium text-cream/80">
-                      {item.name}
-                    </span>
-                  )}
-                  <span className="t-eyebrow text-faint">{item.kind}</span>
-                </span>
-              );
-            })}
+            {integrations.map((item) => (
+              <span
+                key={`${copy}-${item.name}`}
+                className="flex items-center gap-2.5 rounded-full bg-ink-850 px-4 py-2 whitespace-nowrap"
+              >
+                <IntegrationMark
+                  icon={item.icon}
+                  name={item.name}
+                  color={MARK_COLOR}
+                  className="h-4 w-4"
+                />
+                <span className="sr-only">{item.name}</span>
+                <span className="t-eyebrow text-faint">{item.kind}</span>
+              </span>
+            ))}
           </div>
         ))}
       </div>

@@ -1,19 +1,6 @@
 import { CreditCard, Infinity as InfinityIcon } from "lucide-react";
 
 /**
- * Integrações que aparecem pelo nome, sem símbolo.
- *
- * A nota musical que servia o TikTok e o monograma "K" do Kwai foram reprovados
- * na revisão — eram sinais genéricos ocupando o lugar de um logo, e liam como
- * enfeite aleatório. Enquanto não existir o SVG oficial dessas duas marcas, o
- * nome escrito é mais honesto que um símbolo que não é delas.
- */
-const WORDMARK_ONLY = new Set(["tiktok", "kwai"]);
-
-/** `true` quando a integração tem símbolo próprio para mostrar. */
-export const hasIntegrationMark = (icon: string) => !WORDMARK_ONLY.has(icon);
-
-/**
  * Marca de cada integração, para a faixa de integrações mostrar o símbolo em vez
  * do nome escrito.
  *
@@ -34,8 +21,11 @@ export const hasIntegrationMark = (icon: string) => !WORDMARK_ONLY.has(icon);
  *     inventar um logo para empresa real seria pior do que não ter: ficaria um
  *     símbolo falso colado num nome verdadeiro. A inicial na cor da marca é
  *     claramente um marcador, não um logo.
- *  4. Sem símbolo — `tiktok` e `kwai`, em `WORDMARK_ONLY` no topo: aparecem pelo
- *     nome escrito, porque a nota musical e o "K" foram reprovados na revisão.
+ *  4. Símbolo do serviço, não da marca — `tiktok` e `kwai`. A nota musical e o
+ *     "K" num quadrado foram reprovados, e com razão: eram logo de mentira. As
+ *     duas entram na faixa como integrações de RASTREIO, então o símbolo conta
+ *     isso — o evento saindo do anúncio — com a geometria de cada plataforma.
+ *     Ver os `case` lá embaixo.
  *
  * Quando os SVG oficiais estiverem disponíveis, é só substituir cada `case` —
  * a assinatura do componente não muda.
@@ -84,6 +74,48 @@ export function IntegrationMark({
 
     case "meta":
       return <InfinityIcon {...common} />;
+
+    case "tiktok":
+      /* Anúncio vertical com eco: o quadro 9:16 do vídeo curto, a linha deslocada
+         à esquerda (o descasamento de cor que é a assinatura visual do TikTok,
+         traduzido para um tom só) e o ponto cheio no meio, que é o pixel de
+         conversão. Não é o logo: é o que a integração faz. */
+      return (
+        <svg
+          {...common}
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.8"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <rect x="9" y="3" width="9.5" height="18" rx="2.6" />
+          <path d="M5.5 7.5v9" />
+          <circle cx="13.75" cy="12" r="1.7" fill="currentColor" stroke="none" />
+        </svg>
+      );
+
+    case "kwai":
+      /* Vídeo que transmite: o play do vídeo curto e, saindo dele, duas ondas —
+         o evento indo embora para a plataforma. Mesma família do TikTok (as
+         duas são rastreio de vídeo curto) com silhueta diferente, para não
+         virarem o mesmo símbolo na faixa. */
+      return (
+        <svg
+          {...common}
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.8"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <path d="M5 6.4a1 1 0 0 1 1.5-.86l7.2 4.46a1 1 0 0 1 0 1.7l-7.2 4.46A1 1 0 0 1 5 15.3z" fill="currentColor" stroke="none" />
+          <path d="M16.8 8.6a4.6 4.6 0 0 1 0 6.8" />
+          <path d="M19.9 5.8a9.4 9.4 0 0 1 0 12.4" />
+        </svg>
+      );
 
     case "x":
       /* O X. Geometria do próprio símbolo: duas barras cruzadas com o vão

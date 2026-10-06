@@ -67,7 +67,7 @@ const DEMOS = [
   },
   {
     key: "confirmation",
-    frame: "max-w-4xl",
+    frame: "max-w-2xl",
     Component: dynamic(
       () => import("./demos/ConfirmationDemo").then((mod) => mod.ConfirmationDemo),
       { ssr: false, loading: DemoSkeleton },
