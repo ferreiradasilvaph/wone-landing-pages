@@ -380,3 +380,9 @@ volumoso.
 ===============================================================================
 o carrossel em "recursos" deve fazer com que a cada touch (do usuario, ser
 humano, no smartphone) scrolle para o sentido do touchscreen do usuario
+
+===============================================================================
+[31] 2026-10-06
+===============================================================================
+os icones do "passo a passo" nao aparecem no mobile; e as placas de premiacao em
+3d estao com um leve delay no smartphone

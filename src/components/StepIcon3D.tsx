@@ -2,7 +2,7 @@
 
 import { useMemo, useRef } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
-import { Center, Environment, Extrude, RoundedBox } from "@react-three/drei";
+import { Center, Environment, Extrude, Lightformer, RoundedBox } from "@react-three/drei";
 import { useReducedMotion } from "motion/react";
 import { Shape, type Group, type Mesh } from "three";
 
@@ -385,26 +385,54 @@ function Scene({ name, hovered }: { name: string; hovered: boolean }) {
 export default function StepIcon3D({
   name,
   hovered,
+  visible = true,
 }: {
   name: string;
   hovered: boolean;
+  /** `false` quando a etapa saiu da tela: o laço de render para junto. */
+  visible?: boolean;
 }) {
   const reduced = useReducedMotion();
-  const dpr = useMemo<[number, number]>(() => [1, 1.5], []);
+
+  /* `dpr` menor no celular: quatro canvas desenhando ao mesmo tempo numa tela
+     retina de telefone era o que fazia a seção engasgar. O componente só roda no
+     cliente (`ssr: false`), então ler a largura aqui é seguro. */
+  const dpr = useMemo<[number, number]>(
+    () => (window.innerWidth < 640 ? [1, 1] : [1, 1.5]),
+    [],
+  );
 
   return (
     <Canvas
       dpr={dpr}
       camera={{ position: [0, 0, 4.9], fov: 42 }}
       gl={{ antialias: true, alpha: true }}
-      // Sem movimento, desenha um quadro e para — nada de laço de render.
-      frameloop={reduced ? "demand" : "always"}
+      /* Mede por `offsetSize`, não por `getBoundingClientRect`: o ícone entra
+         numa caixa que o motion anima de 0,6 até 1, e o retângulo medido no meio
+         dessa animação dava um buffer de 33 px esticado para 56 — ou seja,
+         ícone borrado. `offsetWidth` ignora transformação. */
+      resize={{ offsetSize: true }}
+      // Sem movimento — ou fora da tela — desenha um quadro e para.
+      frameloop={reduced || !visible ? "demand" : "always"}
       style={{ background: "transparent" }}
     >
       <ambientLight intensity={0.6} />
       <directionalLight position={[3, 4, 5]} intensity={2.4} />
       <directionalLight position={[-4, -2, -3]} intensity={0.8} color={BRAND} />
-      <Environment preset="city" />
+
+      {/* Ambiente de reflexo próprio, em 64 px e renderizado uma vez só.
+
+          Era `preset="city"`: um HDR de megabytes baixado de CDN e convertido em
+          PMREM — por canvas. Com quatro ícones mais a placa das premiações, eram
+          cinco conversões dessas no celular, e era isso que dava o engasgo. Três
+          lightformers fazem o metal continuar refletindo alguma coisa por uma
+          fração do custo e sem rede nenhuma. */}
+      <Environment resolution={64} frames={1}>
+        <Lightformer intensity={2.4} color="#FFF4E8" position={[2, 3, 4]} scale={6} />
+        <Lightformer intensity={1.2} color={BRAND} position={[-4, -1, -3]} scale={8} />
+        <Lightformer intensity={0.5} color="#20202a" position={[0, -4, 1]} scale={10} />
+      </Environment>
+
       <Scene name={name} hovered={hovered && !reduced} />
     </Canvas>
   );

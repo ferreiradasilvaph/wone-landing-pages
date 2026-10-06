@@ -43,6 +43,8 @@ export function AwardsShowcase() {
   // a seção se aproxima é o que de fato tira esse peso da primeira visita.
   const stageRef = useRef<HTMLDivElement>(null);
   const near = useInView(stageRef, { once: true, margin: "600px" });
+  /* Este não é `once`: fora da tela, a placa para de girar. */
+  const onScreen = useInView(stageRef, { amount: 0.2 });
 
   const count = awards.items.length;
   const [progress, setProgress] = useState(0);
@@ -195,7 +197,11 @@ export function AwardsShowcase() {
           {/* Placa 3D, sem imagem de fundo: o canvas é transparente */}
           <div ref={stageRef} className="relative aspect-square w-full">
             {near ? (
-              <AwardPlaque3D accent={active.accent} image={active.image} />
+              <AwardPlaque3D
+                accent={active.accent}
+                image={active.image}
+                visible={onScreen}
+              />
             ) : (
               <PlaqueSkeleton />
             )}

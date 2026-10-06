@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
-import { Environment, RoundedBox, useTexture } from "@react-three/drei";
+import { Environment, Lightformer, RoundedBox, useTexture } from "@react-three/drei";
 import { useReducedMotion } from "motion/react";
 import type { Group, Texture } from "three";
 
@@ -166,14 +166,23 @@ function TexturedPlaque({
 export default function AwardPlaque3D({
   accent,
   image,
+  visible = true,
 }: {
   accent: string;
   image?: string;
+  /** `false` quando a seção saiu da tela: o laço de render para junto. */
+  visible?: boolean;
 }) {
   const reduced = useReducedMotion();
-  // `dpr` limitado: em telas retina o custo de preencher o canvas com um
-  // material transmissivo cresce rápido.
-  const dpr = useMemo<[number, number]>(() => [1, 1.5], []);
+
+  /* `dpr` limitado: em telas retina o custo de preencher o canvas com um
+     material transmissivo cresce rápido — e no celular ele era o suficiente
+     para a placa andar aos tropeços. O componente só roda no cliente
+     (`ssr: false`), então ler a largura aqui é seguro. */
+  const dpr = useMemo<[number, number]>(
+    () => (window.innerWidth < 640 ? [1, 1] : [1, 1.5]),
+    [],
+  );
   const ready = useReadyImage(image);
 
   return (
@@ -181,12 +190,25 @@ export default function AwardPlaque3D({
       dpr={dpr}
       camera={{ position: [0, 0, 6.4], fov: 38 }}
       gl={{ antialias: true, alpha: true }}
+      // Fora da tela, desenha um quadro e para.
+      frameloop={reduced || !visible ? "demand" : "always"}
       style={{ background: "transparent" }}
     >
       <ambientLight intensity={0.6} />
       <directionalLight position={[4, 6, 5]} intensity={2.2} />
       <directionalLight position={[-5, -2, -4]} intensity={0.9} color={accent} />
-      <Environment preset="city" />
+
+      {/* Ambiente próprio, em 64 px e renderizado uma vez.
+
+          Era `preset="city"`: um HDR de megabytes vindo de CDN, convertido em
+          PMREM a cada montagem — e a placa remonta a cada prêmio trocado. Era
+          esse o "leve delay" no celular. Os lightformers abaixo dão ao acrílico
+          o que refletir sem rede e sem conversão cara. */}
+      <Environment resolution={64} frames={1}>
+        <Lightformer intensity={2.6} color="#FFF4E8" position={[3, 4, 5]} scale={7} />
+        <Lightformer intensity={1.3} color={accent} position={[-5, -1, -3]} scale={9} />
+        <Lightformer intensity={0.5} color="#20202a" position={[0, -5, 2]} scale={12} />
+      </Environment>
 
       {ready ? (
         <Suspense fallback={<Plaque accent={accent} texture={null} spin={!reduced} />}>

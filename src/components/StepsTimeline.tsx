@@ -29,6 +29,10 @@ function Step({
   // nunca surgir vazio. Sem isso seriam quatro contextos WebGL abertos já no
   // carregamento da página, mesmo com a seção fora da tela.
   const near = useInView(ref, { once: true, margin: "300px" });
+  /* Este não é `once`: enquanto a etapa está fora da tela, o canvas para de
+     desenhar. São quatro deles na seção, e no celular os quatro girando ao mesmo
+     tempo cobravam caro por nada. */
+  const onScreen = useInView(ref, { amount: 0.2 });
   const reduced = useReducedMotion();
   const [hovered, setHovered] = useState(false);
 
@@ -50,7 +54,7 @@ function Step({
         className="absolute top-5 -left-6 hidden h-px w-5 bg-line transition-colors duration-300 group-hover:bg-brand/60 sm:block"
       />
 
-      <div className="flex items-center gap-5">
+      <div className="flex items-center gap-4 sm:gap-5">
         <div className="min-w-0 flex-1 pt-1.5">
           <h3 className="font-display text-xl font-semibold text-cream">{title}</h3>
           <p className="mt-2 max-w-md text-sm leading-relaxed text-muted">
@@ -62,14 +66,22 @@ function Step({
         <motion.div
           onMouseEnter={() => setHovered(true)}
           onMouseLeave={() => setHovered(false)}
-          initial={{ opacity: 0, scale: 0.6 }}
-          animate={inView ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.6 }}
+          /* Entrada sem `scale`: a caixa do ícone carrega um canvas, e o canvas
+             se dimensiona pelo retângulo medido do elemento. Animando a escala,
+             a medida saía no meio do caminho — 33 px de buffer esticados para
+             56 — e o ícone nascia borrado. Opacidade e deslocamento não mexem no
+             tamanho medido. */
+          initial={{ opacity: 0, y: 12 }}
+          animate={inView ? { opacity: 1, y: 0 } : { opacity: 0, y: 12 }}
           transition={{
             duration: reduced ? 0 : 0.7,
             ease: EASE,
             delay: reduced ? 0 : 0.15,
           }}
-          className="relative hidden h-24 w-24 shrink-0 rounded-2xl bg-ink-850 transition-colors duration-500 group-hover:bg-ink-800 sm:block"
+          /* No celular o ícone ficava escondido para dar largura ao texto —
+             mas aí a etapa perdia justamente a cena que a conta. Ele entra
+             menor (3,5rem) e cresce a partir de sm. */
+          className="relative h-14 w-14 shrink-0 rounded-2xl bg-ink-850 transition-colors duration-500 group-hover:bg-ink-800 sm:h-24 sm:w-24"
         >
           {/* Brilho que acende por trás do sólido no hover */}
           <span
@@ -78,7 +90,7 @@ function Step({
           />
 
           {near ? (
-            <StepIcon3D name={icon} hovered={hovered} />
+            <StepIcon3D name={icon} hovered={hovered} visible={onScreen} />
           ) : (
             // Enquanto o canvas não monta, o traço 2D segura o lugar.
             <span className="flex h-full w-full items-center justify-center p-5">
