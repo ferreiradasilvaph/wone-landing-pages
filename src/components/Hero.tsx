@@ -1,9 +1,18 @@
 "use client";
 
-import { ArrowRight } from "lucide-react";
 import { useContent } from "@/i18n";
 import { Marquee } from "./Marquee";
 import { PhoneMockup } from "./PhoneMockup";
+
+/**
+ * Classe das duas chamadas do hero.
+ *
+ * Existe um único estilo de botão no site, e as duas usam exatamente este — a
+ * seta e o tratamento de link de texto que o secundário tinha saíram. Ficando
+ * numa constante, não há como uma ser ajustada sem a outra.
+ */
+const CTA =
+  "btn-solid inline-flex w-full items-center justify-center rounded-xl px-6 py-3.5 text-[15px] font-semibold sm:w-auto";
 
 /**
  * Abertura da página: texto à esquerda, aparelho do `PhoneMockup` à direita.
@@ -47,22 +56,16 @@ export function Hero() {
 
           <p className="t-lead mt-5 max-w-lg text-pretty">{hero.lead}</p>
 
-          <div className="mt-8 flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:gap-7">
-            {/* Primário sólido, sem sombra colorida nem varredura de brilho */}
-            <a
-              href="#fila-de-espera"
-              className="btn-solid inline-flex w-full items-center justify-center rounded-xl px-6 py-3.5 text-[15px] font-semibold sm:w-auto"
-            >
+          {/* As duas chamadas usam a MESMA constante de classe, declarada uma
+              vez no topo do arquivo. Não é só economia: é o que garante que não
+              voltem a divergir num ajuste futuro de uma delas. */}
+          <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
+            <a href="#fila-de-espera" className={CTA}>
               {hero.ctaPrimary}
             </a>
 
-            {/* Secundário: link de texto com seta, no lugar do botão outline */}
-            <a
-              href="#como-funciona"
-              className="group inline-flex items-center gap-1.5 text-sm font-medium text-muted transition-colors hover:text-cream"
-            >
+            <a href="#como-funciona" className={CTA}>
               {hero.ctaSecondary}
-              <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5" />
             </a>
           </div>
 

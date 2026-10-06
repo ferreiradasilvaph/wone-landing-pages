@@ -293,3 +293,9 @@ tablet nao funciona legal do jeito que esta; no mobile so ocupa espaco.
 [18] 2026-10-06
 ===============================================================================
 padronize os botoes, deixe todos igual o "Lista de espera"
+
+===============================================================================
+[19] 2026-10-06
+===============================================================================
+os botoes "Lista de espera" e "Ver como funciona" ainda estao diferentes um do
+outro; padronizar os botoes.
