@@ -281,8 +281,15 @@ section[id] {
    um respiro para o card do meio nao encostar nas bordas. */
 .feature-stage {
   --card-w: clamp(13rem, 44vw, 16rem);
-  --card-gap: clamp(7rem, 20vw, 12.5rem);
+  --card-gap: clamp(8rem, 23vw, 14.5rem);
   height: calc(var(--card-w) * 1.25);
+
+  /* A perspectiva e o que transforma a fileira em carrossel de verdade: os
+     cards das laterais giram no proprio eixo e passam a ser vistos de lado, em
+     vez de so encolherem. O ponto de fuga fica um pouco acima do centro, que e
+     de onde se olha uma vitrine. */
+  perspective: 1100px;
+  perspective-origin: 50% 42%;
 }
 
 .feature-slot {

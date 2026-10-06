@@ -358,3 +358,9 @@ bandeiras. E: "lembrar de padronizar os botoes".
 No "passo a passo", palavras do Designer: "os icones podem melhorar". Faca algo
 surpreendente — ele gostou da logica e do crescer ao passar o mouse, mas pode
 ficar mais surpreendente.
+
+===============================================================================
+[28] 2026-10-06
+===============================================================================
+em "recursos" gostei do carrossel de cards como te pedi, mas preciso que
+visualmente fique extraordinario

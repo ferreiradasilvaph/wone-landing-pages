@@ -35,6 +35,8 @@ const ICONS: Record<string, LucideIcon> = {
 const AUTOPLAY_MS = 4500;
 /** Arrasto mínimo, em px, para contar como passar de card. */
 const SWIPE_PX = 44;
+/** Quanto o dedo arrasta o palco antes de soltar. Menos que 1 é resistência. */
+const DRAG_FOLLOW = 0.6;
 
 /**
  * Degraus de profundidade por distância do centro.
@@ -49,9 +51,9 @@ const SWIPE_PX = 44;
  * desktop sem risco de divergência na hidratação.
  */
 const DEPTH = [
-  { scale: 1, opacity: 1, z: 30 },
-  { scale: 0.88, opacity: 0.55, z: 20 },
-  { scale: 0.76, opacity: 0.22, z: 10 },
+  { scale: 1, opacity: 1, z: 30, push: 0, turn: 0 },
+  { scale: 0.9, opacity: 0.62, z: 20, push: -120, turn: 17 },
+  { scale: 0.8, opacity: 0.26, z: 10, push: -220, turn: 24 },
 ] as const;
 
 /**
@@ -120,16 +122,32 @@ export function FeatureCarousel() {
     return () => window.clearTimeout(id);
   }, [playing, active, go]);
 
-  /** Arraste: só o eixo horizontal, e só se passar do limiar. */
-  const dragFrom = useRef<number | null>(null);
+  /* Arraste: só o eixo horizontal, e só se passar do limiar.
 
+     O palco acompanha o dedo enquanto ele anda, com resistência — antes só
+     saltava no fim do gesto, e o carrossel parecia um slideshow com botão
+     escondido. Durante o arraste a transição sai do caminho, senão cada quadro
+     disputaria com a animação de 600 ms. */
+  const dragFrom = useRef<number | null>(null);
+  const [drag, setDrag] = useState(0);
+
+  /* Sem `setPointerCapture`: com a captura, o `click` passa a ser entregue ao
+     palco em vez do card, e clicar num card lateral para trazê-lo ao centro
+     deixaria de funcionar. Quem fecha o gesto quando o dedo sai do palco é o
+     `onPointerLeave`. */
   const onPointerDown = (event: React.PointerEvent) => {
     dragFrom.current = event.clientX;
   };
 
-  const onPointerUp = (event: React.PointerEvent) => {
+  const onPointerMove = (event: React.PointerEvent) => {
+    if (dragFrom.current === null) return;
+    setDrag((event.clientX - dragFrom.current) * DRAG_FOLLOW);
+  };
+
+  const endDrag = (event: React.PointerEvent) => {
     const from = dragFrom.current;
     dragFrom.current = null;
+    setDrag(0);
     if (from === null) return;
     const dx = event.clientX - from;
     if (Math.abs(dx) < SWIPE_PX) return;
@@ -173,9 +191,24 @@ export function FeatureCarousel() {
       <div
         className="feature-stage relative touch-pan-y select-none overflow-hidden"
         onPointerDown={onPointerDown}
-        onPointerUp={onPointerUp}
-        onPointerCancel={() => (dragFrom.current = null)}
+        onPointerMove={onPointerMove}
+        onPointerUp={endDrag}
+        onPointerCancel={endDrag}
+        onPointerLeave={endDrag}
       >
+        {/* Holofote atrás do card do meio: é o que faz o centro do palco ser o
+            centro do palco, em vez de apenas o card maior. */}
+        <span
+          aria-hidden
+          className="pointer-events-none absolute top-1/2 left-1/2 h-[78%] w-[58%] -translate-x-1/2 -translate-y-1/2 rounded-full bg-brand/18 blur-[80px]"
+        />
+
+        {/* Sombra no chão, sob o card do meio */}
+        <span
+          aria-hidden
+          className="pointer-events-none absolute bottom-1 left-1/2 h-8 w-[38%] -translate-x-1/2 rounded-[50%] bg-black/70 blur-lg"
+        />
+
         {items.map((item, index) => {
           const offset = offsetOf(index);
           const distance = Math.abs(offset);
@@ -191,11 +224,19 @@ export function FeatureCarousel() {
               aria-roledescription="slide"
               aria-label={item.title}
               aria-hidden={far}
-              className="feature-slot absolute top-0 left-1/2 transition-[transform,opacity] duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]"
+              className={`feature-slot absolute top-0 left-1/2 ease-[cubic-bezier(0.16,1,0.3,1)] ${
+                drag ? "" : "transition-[transform,opacity] duration-[600ms]"
+              }`}
               style={{
-                transform: `translateX(calc(-50% + ${offset} * var(--card-gap))) scale(${
-                  far ? DEPTH[DEPTH.length - 1].scale : depth.scale
-                })`,
+                /* Ordem importa: desloca, afasta no eixo Z, gira no próprio eixo
+                   e só então escala. Invertendo, o giro arrastaria o card para
+                   fora do lugar. */
+                transform: [
+                  `translateX(calc(-50% + ${offset} * var(--card-gap) + ${drag}px))`,
+                  `translateZ(${depth.push}px)`,
+                  `rotateY(${offset < 0 ? depth.turn : -depth.turn}deg)`,
+                  `scale(${far ? DEPTH[DEPTH.length - 1].scale : depth.scale})`,
+                ].join(" "),
                 opacity: far ? 0 : depth.opacity,
                 zIndex: far ? 0 : depth.z,
                 pointerEvents: far ? "none" : undefined,
@@ -206,19 +247,48 @@ export function FeatureCarousel() {
                 tabIndex={isCenter ? 0 : -1}
                 aria-current={isCenter}
                 onClick={() => !isCenter && setActive(index)}
-                className={`flex h-full w-full flex-col justify-between rounded-3xl p-6 text-left sm:p-7 ${
+                className={`relative flex h-full w-full flex-col justify-between overflow-hidden rounded-3xl p-6 text-left sm:p-7 ${
                   isCenter ? "surface-lit cursor-default" : "surface cursor-pointer"
                 }`}
               >
+                {/* Luz no canto e fio laranja no topo: as duas marcas que o
+                    resto da página usa para dizer "este é o ativo". */}
                 <span
-                  className={`flex h-11 w-11 items-center justify-center transition-colors duration-500 ${
-                    isCenter ? "text-brand" : "text-faint"
-                  }`}
-                >
-                  <Icon className="h-6 w-6" />
+                  aria-hidden
+                  className="pointer-events-none absolute inset-0 transition-opacity duration-500"
+                  style={{
+                    opacity: isCenter ? 1 : 0,
+                    background:
+                      "radial-gradient(120% 80% at 0% 0%, rgba(255,119,0,0.16), transparent 62%)",
+                  }}
+                />
+                <span
+                  aria-hidden
+                  className="absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-brand to-transparent transition-opacity duration-500"
+                  style={{ opacity: isCenter ? 1 : 0 }}
+                />
+
+                <span className="relative flex items-start justify-between">
+                  <span
+                    className={`relative flex h-11 w-11 items-center justify-center transition-colors duration-500 ${
+                      isCenter ? "text-brand" : "text-faint"
+                    }`}
+                  >
+                    {/* Brilho atrás do ícone, só no card do meio */}
+                    <span
+                      aria-hidden
+                      className="absolute h-9 w-9 rounded-full bg-brand/35 blur-lg transition-opacity duration-500"
+                      style={{ opacity: isCenter ? 1 : 0 }}
+                    />
+                    <Icon className={isCenter ? "relative h-7 w-7" : "relative h-6 w-6"} />
+                  </span>
+
+                  <span className="tnum font-mono text-[11px] text-faint">
+                    {String(index + 1).padStart(2, "0")}
+                  </span>
                 </span>
 
-                <span>
+                <span className="relative">
                   <span className="font-display block text-lg leading-tight font-semibold text-cream sm:text-xl">
                     {item.title}
                   </span>
