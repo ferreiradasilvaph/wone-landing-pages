@@ -137,6 +137,11 @@ export function ConfirmationDemo() {
   const reduced = useReducedMotion();
 
   const [down, setDown] = useState<boolean[]>([false, false, false]);
+  /* O mesmo valor num ref: dois cliques rápidos, antes de o React repintar,
+     leriam o mesmo `down` do render anterior e o segundo apagaria o primeiro. O
+     ref é atualizado no próprio evento, então cada clique parte do estado que o
+     anterior deixou. */
+  const downRef = useRef(down);
   /** Via sob o ponteiro: acende a corda correspondente. */
   const [hot, setHot] = useState<number | null>(null);
   const [phase, setPhase] = useState<Phase>("hanging");
@@ -163,7 +168,8 @@ export function ConfirmationDemo() {
   };
 
   const toggle = (index: number) => {
-    const next = down.map((value, i) => (i === index ? !value : value));
+    const next = downRef.current.map((value, i) => (i === index ? !value : value));
+    downRef.current = next;
     setDown(next);
 
     const nextAlive = next.filter((isDown) => !isDown).length;
@@ -259,12 +265,14 @@ export function ConfirmationDemo() {
                 <stop offset="0" stopColor={BRAND} stopOpacity="0.3" />
                 <stop offset="1" stopColor={BRAND} stopOpacity="0" />
               </radialGradient>
-              {/* O limbo: névoa que engole a caixa no pé do quadro */}
-              <linearGradient id="wone-limbo" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0" stopColor="#0a0a0d" stopOpacity="0" />
-                <stop offset="0.55" stopColor="#0a0a0d" stopOpacity="0.85" />
-                <stop offset="1" stopColor="#0a0a0d" stopOpacity="0.98" />
-              </linearGradient>
+              {/* O limbo: névoa que engole a caixa no pé do quadro. Elipse, e
+                  não faixa: um retângulo deixaria uma borda reta atravessando o
+                  painel, que é justamente o que não pode aparecer. */}
+              <radialGradient id="wone-limbo">
+                <stop offset="0" stopColor="#07070a" stopOpacity="0.92" />
+                <stop offset="0.6" stopColor="#07070a" stopOpacity="0.6" />
+                <stop offset="1" stopColor="#07070a" stopOpacity="0" />
+              </radialGradient>
             </defs>
 
             {/* Balanço lento do conjunto todo, pendurado no trilho */}
@@ -344,29 +352,46 @@ export function ConfirmationDemo() {
 
                 return (
                   <g key={path.name}>
+                    {/* Sombra deslocada um fio: é o que dá espessura à corda */}
+                    <g transform="translate(1.2,1.2)">
+                      <motion.path
+                        initial={false}
+                        animate={{ d, opacity: isDown ? 0.3 : 0.5 }}
+                        transition={{ d: ropeMove, default: { duration: seconds(260) } }}
+                        fill="none"
+                        stroke={TWIST}
+                        strokeWidth={lit ? taut + 1.2 : taut + 0.4}
+                        strokeLinecap="round"
+                      />
+                    </g>
+
                     <motion.path
                       initial={false}
                       animate={{
                         d,
                         stroke: isDown ? CUT : BRAND,
-                        opacity: isDown ? 0.75 : lit ? 1 : 0.92,
+                        opacity: isDown ? 0.78 : 1,
                         strokeWidth: lit ? taut + 0.8 : taut,
                       }}
                       transition={{ d: ropeMove, default: { duration: seconds(260) } }}
                       fill="none"
                       strokeLinecap="round"
                     />
+
+                    {/* Brilho tracejado por cima: a luz batendo em cada volta da
+                        torção. Claro, não escuro — com o tracejado escuro a
+                        corda lia como linha pontilhada de diagrama. */}
                     <motion.path
                       initial={false}
                       animate={{
                         d,
-                        opacity: isDown ? 0.4 : 0.55,
-                        strokeWidth: lit ? taut + 0.8 : taut,
+                        opacity: isDown ? 0.3 : 0.6,
+                        stroke: isDown ? "#FCA5A5" : "#FFC089",
                       }}
                       transition={{ d: ropeMove, default: { duration: seconds(260) } }}
                       fill="none"
-                      stroke={TWIST}
-                      strokeDasharray="1.6 5.5"
+                      strokeWidth="1.1"
+                      strokeDasharray="1.4 4.2"
                       strokeLinecap="round"
                     />
 
@@ -511,7 +536,7 @@ export function ConfirmationDemo() {
             </motion.g>
 
             {/* O limbo fica fora do balanço: é o fundo, não faz parte da carga */}
-            <rect x="0" y="168" width="240" height="52" fill="url(#wone-limbo)" />
+            <ellipse cx="120" cy="216" rx="128" ry="48" fill="url(#wone-limbo)" />
           </svg>
         </div>
 
