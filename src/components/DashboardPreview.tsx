@@ -5,9 +5,12 @@ import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useContent } from "@/i18n";
 import { HOURLY_REVENUE, FUNNEL_STEPS } from "@/data/content";
 
-const BRL = new Intl.NumberFormat("pt-BR", {
+/* O dolar e a moeda principal do site: o produto cobra em varios paises e a
+   vitrine fala para quem vende fora. O locale fica en-US para o separador de
+   milhar e o decimal sairem como o mercado espera do dolar. */
+const USD = new Intl.NumberFormat("en-US", {
   style: "currency",
-  currency: "BRL",
+  currency: "USD",
   maximumFractionDigits: 0,
 });
 
@@ -56,7 +59,7 @@ function RevenueView() {
       <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-2">
         <div className="flex flex-wrap items-baseline gap-x-3">
           <span className="text-3xl font-semibold tracking-tight text-cream sm:text-4xl">
-            {BRL.format(total)}
+            {USD.format(total)}
           </span>
           <span className="text-sm text-muted">{analytics.panel.accumulated}</span>
         </div>
@@ -69,7 +72,7 @@ function RevenueView() {
               : ""}
           </span>
           <span className="tnum text-sm font-semibold text-cream">
-            {BRL.format(HOURLY_REVENUE[activeIndex])}
+            {USD.format(HOURLY_REVENUE[activeIndex])}
           </span>
         </div>
       </div>

@@ -324,16 +324,6 @@ export default function Home() {
           </div>
         </section>
 
-        {/* FAQ */}
-        <section id="faq" className="relative px-5 py-24 sm:px-6">
-          <div className="mx-auto max-w-7xl">
-            <SectionHeading eyebrow={t.faq.eyebrow} title={t.faq.title} />
-            <Reveal className="mt-14">
-              <FaqSection />
-            </Reveal>
-          </div>
-        </section>
-
         {/* Premiações */}
         <section
           id="premios"
@@ -359,6 +349,16 @@ export default function Home() {
             </Reveal>
 
             <AwardsShowcase />
+          </div>
+        </section>
+
+        {/* FAQ */}
+        <section id="faq" className="relative px-5 py-24 sm:px-6">
+          <div className="mx-auto max-w-7xl">
+            <SectionHeading eyebrow={t.faq.eyebrow} title={t.faq.title} />
+            <Reveal className="mt-14">
+              <FaqSection />
+            </Reveal>
           </div>
         </section>
 

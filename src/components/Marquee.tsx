@@ -3,6 +3,12 @@
 import { useContent } from "@/i18n";
 import { IntegrationMark, hasIntegrationMark } from "./IntegrationMark";
 
+/* Todas as marcas saem no laranja da marca, não na cor de cada serviço. A faixa
+   com nove cores diferentes brigava com o resto da página; num tom só, ela lê
+   como uma fileira de logos da Wone. O campo `dot` dos dicionários continua
+   servindo a lista do rodapé. */
+const MARK_COLOR = "#FF7700";
+
 /**
  * Faixa infinita com as integrações. A lista é renderizada duas vezes e o
  * keyframe desloca exatamente -50%, então a emenda cai sempre no mesmo ponto e
@@ -40,7 +46,7 @@ export function Marquee() {
                       <IntegrationMark
                         icon={item.icon}
                         name={item.name}
-                        color={item.dot}
+                        color={MARK_COLOR}
                         className="h-4 w-4"
                       />
                       <span className="sr-only">{item.name}</span>

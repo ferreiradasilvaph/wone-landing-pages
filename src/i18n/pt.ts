@@ -26,7 +26,7 @@ export const pt = {
      *   2. "Pagou no PIX, entrou no canal"        — destaque em "PIX"
      *   3. "Telegram que cobra e entrega sozinho" — destaque em "sozinho"
      */
-    titleStart: "Venda no Telegram no",
+    titleStart: "Venda pelo Telegram no",
     titleAccent: "automático",
 
     /**
@@ -503,7 +503,7 @@ export const pt = {
         "Concluíram a compra",
       ],
       ltvRows: [
-        { label: "LTV médio", value: "R$ 486,00" },
+        { label: "LTV médio", value: "$486.00" },
         { label: "Tempo até a 1ª compra", value: "14 min" },
         { label: "Permanência média", value: "4,2 meses" },
         { label: "Renovação no vencimento", value: "71%" },
@@ -515,10 +515,10 @@ export const pt = {
         { label: "Recuperação de PIX", value: 24 },
       ],
       statementRows: [
-        { time: "21:47", flow: "Plano Anual VIP", gateway: "Dotfy", value: "R$ 197,00" },
-        { time: "21:31", flow: "Order bump · Pack", gateway: "Dotfy", value: "R$ 47,00" },
-        { time: "20:58", flow: "Plano Mensal", gateway: "Mercado Pago", value: "R$ 97,00" },
-        { time: "20:12", flow: "Plano Trimestral", gateway: "Dotfy", value: "R$ 247,00" },
+        { time: "21:47", flow: "Plano Anual VIP", gateway: "Dotfy", value: "$197.00" },
+        { time: "21:31", flow: "Order bump · Pack", gateway: "Dotfy", value: "$47.00" },
+        { time: "20:58", flow: "Plano Mensal", gateway: "Mercado Pago", value: "$97.00" },
+        { time: "20:12", flow: "Plano Trimestral", gateway: "Dotfy", value: "$247.00" },
       ],
       statementHeaders: ["Hora", "Fluxo", "Gateway", "Valor"],
     },
@@ -615,7 +615,7 @@ export const pt = {
       {
         tier: "10K",
         image: "/placas/placa-10k.png",
-        title: "Troféu Bronze • R$ 10.000",
+        title: "Troféu Bronze • $10,000",
         subtitle: "A validação da primeira escala",
         description:
           "A validação da sua operação e as primeiras centenas de membros retidos na sua comunidade VIP.",
@@ -625,7 +625,7 @@ export const pt = {
       {
         tier: "100K",
         image: "/placas/placa-100k.png",
-        title: "Placa Acrílico 100K • R$ 100.000",
+        title: "Placa Acrílico 100K • $100,000",
         subtitle: "Clube dos 6 Dígitos",
         description:
           "Troféu comemorativo em bloco maciço de acrílico cristal facetado com a Raposa Wone oficial 100K. Acompanha a Pulseira Oficial Wone em couro nobre com fecho em titânio.",
@@ -635,7 +635,7 @@ export const pt = {
       {
         tier: "500K",
         image: "/placas/placa-500k.png",
-        title: "Placa Cerimonial 500K • R$ 500.000",
+        title: "Placa Cerimonial 500K • $500,000",
         subtitle: "Meio Milhão Faturado",
         description:
           "Troféu em acrílico especial com a Raposa Wone em traje cerimonial e brasão cromado em alto relevo. Acompanha a joia exclusiva: colar com pingente cravado em safiras laranjas.",
@@ -645,7 +645,7 @@ export const pt = {
       {
         tier: "1M",
         image: "/placas/placa-1m.png",
-        title: "Placa Black Diamond 1M • R$ 1.000.000",
+        title: "Placa Black Diamond 1M • $1,000,000",
         subtitle: "O Olimpo dos 7 Dígitos",
         description:
           "Troféu monumental Wone 1M para grandes produtores com ecossistemas dominantes. Acompanha o cobiçado Anel de Campeonato Ouro 18k e Titânio Negro gravado “1M WONE BOT”.",
@@ -712,22 +712,22 @@ export const pt = {
   phone: {
     botName: "Wone Bot",
     online: "online",
-    approved: "PIX aprovado",
+    approved: "Pagamento aprovado",
     received: "Recebido no mês",
     /** Valor de partida do acumulado do mês; cada venda que desce soma a ele. */
     monthStart: 142580,
     success: "Sucesso",
     transactions: [
-      { label: "Plano Anual VIP", amount: "R$ 197,00", value: 197 },
-      { label: "Plano Trimestral", amount: "R$ 147,00", value: 147 },
-      { label: "Plano Mensal", amount: "R$ 97,00", value: 97 },
-      { label: "Pack avulso", amount: "R$ 67,00", value: 67 },
-      { label: "Order bump · Pack", amount: "R$ 57,00", value: 57 },
-      { label: "Plano Semestral", amount: "R$ 227,00", value: 227 },
-      { label: "Acesso vitalício", amount: "R$ 247,00", value: 247 },
+      { label: "Plano Anual VIP", amount: "$197.00", value: 197 },
+      { label: "Plano Trimestral", amount: "$147.00", value: 147 },
+      { label: "Plano Mensal", amount: "$97.00", value: 97 },
+      { label: "Pack avulso", amount: "$67.00", value: 67 },
+      { label: "Order bump · Pack", amount: "$57.00", value: 57 },
+      { label: "Plano Semestral", amount: "$227.00", value: 227 },
+      { label: "Acesso vitalício", amount: "$247.00", value: 247 },
     ],
     ariaLabel:
-      "Tela do Wone Bot: um PIX aprovado, R$ 142.580,00 recebidos no mês e entregas com status de sucesso.",
+      "Tela do Wone Bot: um pagamento aprovado, $142,580.00 recebidos no mês e entregas com status de sucesso.",
   },
 };
 

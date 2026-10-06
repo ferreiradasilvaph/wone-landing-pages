@@ -479,7 +479,7 @@ export const en: Content = {
       funnelNote: "who generated the PIX and didn't pay enter automatic recovery.",
       funnelSteps: ["Started the bot", "Generated the PIX key", "Completed the purchase"],
       ltvRows: [
-        { label: "Average LTV", value: "R$ 486.00" },
+        { label: "Average LTV", value: "$486.00" },
         { label: "Time to first purchase", value: "14 min" },
         { label: "Average retention", value: "4.2 months" },
         { label: "Renewal at expiry", value: "71%" },
@@ -491,10 +491,10 @@ export const en: Content = {
         { label: "PIX recovery", value: 24 },
       ],
       statementRows: [
-        { time: "21:47", flow: "Annual VIP Plan", gateway: "Dotfy", value: "R$ 197.00" },
-        { time: "21:31", flow: "Order bump · Pack", gateway: "Dotfy", value: "R$ 47.00" },
-        { time: "20:58", flow: "Monthly Plan", gateway: "Mercado Pago", value: "R$ 97.00" },
-        { time: "20:12", flow: "Quarterly Plan", gateway: "Dotfy", value: "R$ 247.00" },
+        { time: "21:47", flow: "Annual VIP Plan", gateway: "Dotfy", value: "$197.00" },
+        { time: "21:31", flow: "Order bump · Pack", gateway: "Dotfy", value: "$47.00" },
+        { time: "20:58", flow: "Monthly Plan", gateway: "Mercado Pago", value: "$97.00" },
+        { time: "20:12", flow: "Quarterly Plan", gateway: "Dotfy", value: "$247.00" },
       ],
       statementHeaders: ["Time", "Flow", "Gateway", "Amount"],
     },
@@ -591,7 +591,7 @@ export const en: Content = {
       {
         tier: "10K",
         image: "/placas/placa-10k.png",
-        title: "Bronze Trophy • R$ 10,000",
+        title: "Bronze Trophy • $10,000",
         subtitle: "Proof of the first scale",
         description:
           "Validation of your operation and the first few hundred members retained in your VIP community.",
@@ -601,7 +601,7 @@ export const en: Content = {
       {
         tier: "100K",
         image: "/placas/placa-100k.png",
-        title: "100K Acrylic Plaque • R$ 100,000",
+        title: "100K Acrylic Plaque • $100,000",
         subtitle: "The 6-Figure Club",
         description:
           "Commemorative trophy in a solid faceted crystal acrylic block with the official 100K Wone Fox. Comes with the Official Wone Bracelet in fine leather with a titanium clasp.",
@@ -611,7 +611,7 @@ export const en: Content = {
       {
         tier: "500K",
         image: "/placas/placa-500k.png",
-        title: "500K Ceremonial Plaque • R$ 500,000",
+        title: "500K Ceremonial Plaque • $500,000",
         subtitle: "Half a Million in Revenue",
         description:
           "Special acrylic trophy with the Wone Fox in ceremonial dress and a chrome crest in high relief. Comes with the exclusive jewel: a necklace with an orange sapphire pendant.",
@@ -621,7 +621,7 @@ export const en: Content = {
       {
         tier: "1M",
         image: "/placas/placa-1m.png",
-        title: "1M Black Diamond Plaque • R$ 1,000,000",
+        title: "1M Black Diamond Plaque • $1,000,000",
         subtitle: "The Olympus of 7 Figures",
         description:
           "Monumental Wone 1M trophy for major producers with dominant ecosystems. Comes with the coveted Championship Ring in 18k gold and black titanium engraved “1M WONE BOT”.",
@@ -687,21 +687,21 @@ export const en: Content = {
   phone: {
     botName: "Wone Bot",
     online: "online",
-    approved: "PIX approved",
+    approved: "Payment approved",
     received: "Received this month",
     /** Valor de partida do acumulado do mês; cada venda que desce soma a ele. */
     monthStart: 142580,
     success: "Success",
     transactions: [
-      { label: "Annual VIP Plan", amount: "R$ 197.00", value: 197 },
-      { label: "Quarterly Plan", amount: "R$ 147.00", value: 147 },
-      { label: "Monthly Plan", amount: "R$ 97.00", value: 97 },
-      { label: "Single pack", amount: "R$ 67.00", value: 67 },
-      { label: "Order bump · Pack", amount: "R$ 57.00", value: 57 },
-      { label: "Biannual Plan", amount: "R$ 227.00", value: 227 },
-      { label: "Lifetime access", amount: "R$ 247.00", value: 247 },
+      { label: "Annual VIP Plan", amount: "$197.00", value: 197 },
+      { label: "Quarterly Plan", amount: "$147.00", value: 147 },
+      { label: "Monthly Plan", amount: "$97.00", value: 97 },
+      { label: "Single pack", amount: "$67.00", value: 67 },
+      { label: "Order bump · Pack", amount: "$57.00", value: 57 },
+      { label: "Biannual Plan", amount: "$227.00", value: 227 },
+      { label: "Lifetime access", amount: "$247.00", value: 247 },
     ],
     ariaLabel:
-      "Wone Bot screen: an approved PIX, R$ 142,580.00 received this month and deliveries marked as successful.",
+      "Wone Bot screen: an approved payment, $142,580.00 received this month and deliveries marked as successful.",
   },
 };

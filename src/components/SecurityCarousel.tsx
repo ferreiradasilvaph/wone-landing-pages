@@ -15,26 +15,24 @@ import { useContent } from "@/i18n";
 const ICONS: Record<string, LucideIcon> = { KeyRound, CopySlash, Network, Vault };
 const EASE = [0.16, 1, 0.3, 1] as const;
 
-/** Intervalo do autoplay. O mesmo valor alimenta a barra de progresso. */
-const AUTOPLAY_MS = 4500;
-/** Janela em que a rolagem programática não é lida de volta. */
-const SYNC_LOCK_MS = 700;
+/** Intervalo do avanço automático. O mesmo valor alimenta a barra de progresso. */
+const AUTOPLAY_MS = 5000;
 
 /**
- * Carrossel dos itens de segurança: faixa com scroll-snap à esquerda e painel
- * de detalhe do item ativo.
+ * Segurança: os quatro itens como lista de cards clicáveis à esquerda e o
+ * detalhe do item escolhido à direita.
  *
- * A posição vem do scroll nativo, não de um `translateX` calculado. A versão
- * anterior media a largura do card e deslocava a lista por múltiplos dessa
- * medida; qualquer erro de meio pixel acumulava a cada passo e deixava uma
- * fatia do card anterior aparecendo na borda esquerda, já esmaecida pela
- * opacidade — o "corte" que parecia bug. Com `scroll-snap-align: start` o
- * alinhamento é do navegador e não tem como derivar. De graça vem o swipe no
- * celular e a rolagem por teclado.
+ * A faixa com scroll-snap saiu. O designer pediu os quatro cards visíveis ao
+ * mesmo tempo, sem rolagem, e o clique trocando o card do lado — e ele está
+ * certo: com quatro itens, rolar para ver o que já caberia na tela é trabalho
+ * sem recompensa.
  *
- * O autoplay empurra o scroll e pausa em três situações independentes: ponteiro
- * sobre o carrossel, foco de teclado dentro dele e aba em segundo plano. Com
- * `prefers-reduced-motion` ele não liga.
+ * O avanço automático ficou, porque atende o outro pedido da equipe (a seção
+ * "andar sozinha") sem reintroduzir rolagem: o que avança é a seleção, não a
+ * posição. Pausa com o ponteiro em cima, com foco de teclado dentro da seção e
+ * com a aba em segundo plano; pausar guarda quanto falta do intervalo e retomar
+ * continua de onde parou, igual à barra de progresso do card ativo. Com
+ * `prefers-reduced-motion` não liga.
  */
 export function SecurityCarousel() {
   const { security } = useContent();
@@ -42,7 +40,6 @@ export function SecurityCarousel() {
   const items = security.items;
   const count = items.length;
 
-  const scrollerRef = useRef<HTMLDivElement>(null);
   const [active, setActive] = useState(0);
   const activeRef = useRef(0);
 
@@ -53,47 +50,21 @@ export function SecurityCarousel() {
   const paused = hovering || focused || tabHidden;
   const playing = !reduced && !paused;
 
-  /* Quanto falta do intervalo atual. Pausar guarda o resto, retomar continua de
-     onde parou — o mesmo que a barra de progresso faz com animation-play-state,
-     então as duas coisas congelam e voltam juntas. */
+  /* Quanto falta do intervalo atual. */
   const remaining = useRef(AUTOPLAY_MS);
   const startedAt = useRef(0);
-
-  /* Enquanto a rolagem programática está em curso, a posição não é lida de
-     volta: a rolagem suave passa pelas posições intermediárias e o indicador
-     piscaria entre os cards do caminho. */
-  const syncLockUntil = useRef(0);
 
   useEffect(() => {
     activeRef.current = active;
   }, [active]);
 
-  /** Alinha o card à borda esquerda da faixa, pelo retângulo — sem depender de
-      quem é o `offsetParent` nem de medir a largura do card. */
-  const goTo = useCallback(
-    (index: number) => {
-      const scroller = scrollerRef.current;
-      const card = scroller?.querySelectorAll<HTMLElement>("[data-slide]")[index];
-      if (!scroller || !card) return;
+  const select = useCallback((index: number) => {
+    remaining.current = AUTOPLAY_MS;
+    activeRef.current = index;
+    setActive(index);
+  }, []);
 
-      const pad = Number.parseFloat(getComputedStyle(scroller).paddingLeft) || 0;
-      const left =
-        card.getBoundingClientRect().left -
-        scroller.getBoundingClientRect().left +
-        scroller.scrollLeft -
-        pad;
-
-      syncLockUntil.current = Date.now() + SYNC_LOCK_MS;
-      remaining.current = AUTOPLAY_MS;
-      activeRef.current = index;
-      setActive(index);
-      scroller.scrollTo({ left, behavior: reduced ? "auto" : "smooth" });
-    },
-    [reduced],
-  );
-
-  /* Autoplay. O efeito depende de `active`, então clicar num card ou num
-     indicador reinicia o intervalo sem nenhum código extra. */
+  /* O efeito depende de `active`, então clicar num card reinicia o intervalo. */
   useEffect(() => {
     if (!playing) {
       if (startedAt.current) {
@@ -109,11 +80,11 @@ export function SecurityCarousel() {
     startedAt.current = Date.now();
     const id = window.setTimeout(() => {
       startedAt.current = 0;
-      goTo((activeRef.current + 1) % count);
+      select((activeRef.current + 1) % count);
     }, remaining.current);
 
     return () => window.clearTimeout(id);
-  }, [playing, active, count, goTo]);
+  }, [playing, active, count, select]);
 
   /** Aba em segundo plano pausa — e não gasta o intervalo escondido. */
   useEffect(() => {
@@ -123,200 +94,124 @@ export function SecurityCarousel() {
     return () => document.removeEventListener("visibilitychange", onVisibility);
   }, []);
 
-  /* Swipe e rolagem por teclado: a posição do scroll manda no item ativo. Um
-     quadro por evento, para arrastar o dedo não disparar um render por pixel. */
-  useEffect(() => {
-    const scroller = scrollerRef.current;
-    if (!scroller) return;
-
-    let frame = 0;
-
-    const onScroll = () => {
-      if (frame) return;
-      frame = requestAnimationFrame(() => {
-        frame = 0;
-        if (Date.now() < syncLockUntil.current) return;
-
-        const cards = scroller.querySelectorAll<HTMLElement>("[data-slide]");
-        const pad = Number.parseFloat(getComputedStyle(scroller).paddingLeft) || 0;
-        const base = scroller.getBoundingClientRect().left + pad;
-
-        let nearest = 0;
-        let shortest = Infinity;
-        cards.forEach((card, index) => {
-          const distance = Math.abs(card.getBoundingClientRect().left - base);
-          if (distance < shortest) {
-            shortest = distance;
-            nearest = index;
-          }
-        });
-
-        /* Nas duas pontas o card mais próximo da borda esquerda não é o item
-           corrente: no fim da faixa o scroll satura antes de o último card
-           chegar à esquerda, e o vizinho ganharia por distância. Quem está no
-           fim do scroll está vendo o último card. */
-        const maxScroll = scroller.scrollWidth - scroller.clientWidth;
-        if (scroller.scrollLeft >= maxScroll - 2) nearest = cards.length - 1;
-        else if (scroller.scrollLeft <= 2) nearest = 0;
-
-        if (nearest !== activeRef.current) {
-          activeRef.current = nearest;
-          remaining.current = AUTOPLAY_MS;
-          setActive(nearest);
-        }
-      });
-    };
-
-    scroller.addEventListener("scroll", onScroll, { passive: true });
-    return () => {
-      scroller.removeEventListener("scroll", onScroll);
-      if (frame) cancelAnimationFrame(frame);
-    };
-  }, []);
-
   const item = items[active];
   const ActiveIcon = ICONS[item.icon] ?? ShieldCheck;
 
   return (
     <div
-      role="group"
-      aria-roledescription="carousel"
-      aria-label={security.title}
-      className="grid grid-cols-1 items-center gap-8 lg:grid-cols-[1.25fr_1fr] lg:gap-12"
+      className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[1fr_1.1fr] lg:gap-10"
       onMouseEnter={() => setHovering(true)}
       onMouseLeave={() => setHovering(false)}
       onFocus={() => setFocused(true)}
-      /* Só despausa quando o foco sai do carrossel de verdade. Sem a checagem,
-         andar de um card ao seguinte com Tab dispara blur e depois focus, e o
-         intervalo reiniciava no meio do caminho. */
+      /* Só despausa quando o foco sai da seção: andar de um card ao seguinte com
+         Tab dispara blur e depois focus, e o intervalo reiniciaria no caminho. */
       onBlur={(event) => {
         if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
           setFocused(false);
         }
       }}
     >
-      <div className="min-w-0">
-        {/* Desvanecer só à direita, para sugerir que há mais card adiante. À
-            esquerda nunca: lá fica o card ativo, e apagá-lo era metade do
-            efeito de "bug" que a seção tinha. */}
-        <div
-          ref={scrollerRef}
-          className="snap-x snap-mandatory overflow-x-auto px-1 py-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-          style={{
-            maskImage: "linear-gradient(to right, #000 0%, #000 82%, transparent 100%)",
-            WebkitMaskImage:
-              "linear-gradient(to right, #000 0%, #000 82%, transparent 100%)",
-            scrollPaddingLeft: "0.25rem",
-          }}
-        >
-          <ul className="flex items-stretch gap-4">
-            {items.map((entry, index) => {
-              const Icon = ICONS[entry.icon] ?? ShieldCheck;
-              const isActive = index === active;
+      {/* Os quatro, sempre visíveis. Lista de opções que controla o painel ao
+          lado: `tablist` é o papel correto, e as setas do teclado andam nela. */}
+      <div
+        role="tablist"
+        aria-orientation="vertical"
+        aria-label={security.title}
+        className="flex flex-col gap-2.5"
+      >
+        {items.map((entry, index) => {
+          const Icon = ICONS[entry.icon] ?? ShieldCheck;
+          const isActive = index === active;
 
-              return (
-                <li
-                  key={entry.title}
-                  data-slide
-                  className="w-[min(20rem,78vw)] shrink-0 snap-start"
-                >
-                  {/* O papel de slide fica neste wrapper, não no <li>. Um
-                      role="group" direto no item reprovava três auditorias de
-                      ARIA — list, listitem e aria-allowed-role — porque um <ul>
-                      só admite <li>, e um <li> com role deixa de contar como
-                      item de lista. */}
-                  <div
-                    role="group"
-                    aria-roledescription="slide"
-                    aria-label={entry.title}
-                    className="h-full"
-                  >
-                  <button
-                    type="button"
-                    onClick={() => goTo(index)}
-                    aria-current={isActive}
-                    /* Ativo se destaca pela superfície clara. Saíram o glow
-                       laranja, a varredura de brilho, a rotação 3D e a
-                       opacidade que escondia os cards inativos — eles agora
-                       aparecem inteiros. */
-                    className={`${
-                      isActive ? "surface-lit" : "surface"
-                    } flex h-full w-full cursor-pointer flex-col rounded-2xl p-6 text-left transition-transform duration-300 hover:-translate-y-0.5`}
-                  >
-                    <span
-                      className={`flex h-12 w-12 items-center justify-center transition-colors duration-300 ${
-                        isActive ? "text-brand" : "text-faint"
-                      }`}
-                    >
-                      <Icon className="h-6 w-6" />
-                    </span>
-
-                    <span className="font-display mt-5 block text-lg font-semibold text-cream">
-                      {entry.title}
-                    </span>
-                    <span className="mt-2 block text-sm leading-relaxed text-muted">
-                      {entry.description}
-                    </span>
-                  </button>
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-        </div>
-
-        {/* Indicadores. O ativo é uma trilha que o progresso do autoplay
-            preenche; parado ou com movimento reduzido, fica cheia. */}
-        <div className="mt-4 flex gap-1.5">
-          {items.map((entry, index) => {
-            const isActive = index === active;
-
-            return (
-              <button
-                key={entry.title}
-                type="button"
-                onClick={() => goTo(index)}
-                aria-label={entry.title}
-                aria-current={isActive}
-                className={`h-1.5 cursor-pointer overflow-hidden rounded-full transition-[width,background-color] duration-300 ${
-                  isActive ? "w-8 bg-cream/20" : "w-3 bg-cream/15 hover:bg-cream/25"
-                }`}
+          return (
+            <button
+              key={entry.title}
+              type="button"
+              role="tab"
+              id={`security-tab-${index}`}
+              aria-selected={isActive}
+              aria-controls="security-panel"
+              tabIndex={isActive ? 0 : -1}
+              onClick={() => select(index)}
+              onKeyDown={(event) => {
+                const last = count - 1;
+                let next: number | null = null;
+                if (event.key === "ArrowDown" || event.key === "ArrowRight") {
+                  next = index === last ? 0 : index + 1;
+                }
+                if (event.key === "ArrowUp" || event.key === "ArrowLeft") {
+                  next = index === 0 ? last : index - 1;
+                }
+                if (event.key === "Home") next = 0;
+                if (event.key === "End") next = last;
+                if (next === null) return;
+                event.preventDefault();
+                select(next);
+              }}
+              className={`group relative flex cursor-pointer items-start gap-3.5 overflow-hidden rounded-2xl p-4 text-left transition-colors duration-300 sm:p-5 ${
+                isActive ? "surface-lit" : "surface hover:bg-ink-800"
+              }`}
+            >
+              {/* Barra da seleção à esquerda. No card ativo ela é o progresso do
+                  avanço automático: cresce de cima para baixo ao longo do
+                  intervalo e congela quando a seção pausa. */}
+              <span
+                aria-hidden
+                className="absolute inset-y-0 left-0 w-[3px] overflow-hidden"
               >
                 {isActive && (
-                  /* A barra existe só no indicador ativo, então trocar de card
-                     desmonta e remonta o elemento — a animação recomeça do zero
-                     sem precisar de `key`. Pausar congela no meio com
-                     `animation-play-state`, em vez de voltar a zero. */
                   <span
-                    aria-hidden
-                    className="block h-full w-full origin-left rounded-full bg-brand"
+                    className="block h-full w-full origin-top bg-brand"
                     style={
-                      reduced
-                        ? // Sem autoplay a barra não tem o que contar: fica cheia.
-                          { transform: "scaleX(1)" }
+                      reduced || !playing
+                        ? undefined
                         : {
-                            animation: `carousel-progress ${AUTOPLAY_MS}ms linear forwards`,
+                            animation: `security-progress ${AUTOPLAY_MS}ms linear forwards`,
                             animationPlayState: paused ? "paused" : "running",
                           }
                     }
                   />
                 )}
-              </button>
-            );
-          })}
-        </div>
+              </span>
+
+              <span
+                className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center transition-colors duration-300 ${
+                  isActive ? "text-brand" : "text-faint group-hover:text-brand"
+                }`}
+              >
+                <Icon className="h-5 w-5" />
+              </span>
+
+              <span className="min-w-0">
+                <span
+                  className={`font-display block text-[15px] leading-snug font-semibold transition-colors duration-300 ${
+                    isActive ? "text-cream" : "text-cream/80"
+                  }`}
+                >
+                  {entry.title}
+                </span>
+                <span className="mt-1 block text-[13px] leading-relaxed text-muted">
+                  {entry.description}
+                </span>
+              </span>
+            </button>
+          );
+        })}
       </div>
 
-      {/* Painel do item ativo.
+      {/* Painel do item escolhido.
 
-          `aria-live` fica em "off" enquanto o carrossel gira sozinho: anunciar
+          `aria-live` fica em "off" enquanto a seleção anda sozinha: anunciar
           cada troca automática encheria o leitor de tela de interrupções que o
-          usuário não pediu. Quando está pausado, a troca partiu de um clique ou
-          do teclado, e aí o anúncio é esperado. */}
+          usuário não pediu. Pausado, a troca partiu de um clique ou do teclado,
+          e aí o anúncio é esperado. */}
       <div
-        className="surface relative min-h-[18rem] overflow-hidden rounded-3xl p-7"
+        role="tabpanel"
+        id="security-panel"
+        aria-labelledby={`security-tab-${active}`}
         aria-live={paused ? "polite" : "off"}
         aria-atomic="true"
+        className="surface relative overflow-hidden rounded-3xl p-7 sm:p-9 lg:sticky lg:top-28"
       >
         <AnimatePresence mode="wait">
           <motion.div
@@ -325,10 +220,9 @@ export function SecurityCarousel() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0 }}
             transition={{ duration: reduced ? 0 : 0.22, ease: EASE }}
-            className="relative"
           >
-            <div className="relative mb-6 flex h-28 items-center justify-center">
-              {[112, 84, 60].map((size, index) => (
+            <div className="relative mb-6 flex h-24 items-center justify-center">
+              {[104, 78, 56].map((size, index) => (
                 <span
                   key={size}
                   aria-hidden
@@ -336,18 +230,21 @@ export function SecurityCarousel() {
                   style={{ height: size, width: size, opacity: 0.2 - index * 0.04 }}
                 />
               ))}
-              <span className="relative flex h-16 w-16 items-center justify-center text-brand">
-                <ActiveIcon className="h-8 w-8" />
+              <span className="relative flex h-14 w-14 items-center justify-center text-brand">
+                <ActiveIcon className="h-7 w-7" />
               </span>
             </div>
 
-            {/* h3 e nao h4: o titulo da secao e um h2, e pular nivel reprova
-                a auditoria de hierarquia de cabecalhos. */}
-            <h3 className="font-display text-center text-base font-semibold text-cream">
+            <h3 className="font-display text-center text-lg font-semibold text-cream">
               {item.title}
             </h3>
             <p className="mt-3 text-center text-sm leading-relaxed text-muted">
               {item.detail}
+            </p>
+
+            {/* Posição na lista, para quem chegou pelo teclado saber onde está */}
+            <p className="t-eyebrow mt-6 text-center text-faint">
+              {active + 1}/{count}
             </p>
           </motion.div>
         </AnimatePresence>

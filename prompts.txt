@@ -268,3 +268,14 @@ em "as melhores integracoes do mercado" aparecem um icone de nota musical e um
 ===============================================================================
 o cto mandou a url do webhook de deploy do Easypanel (host 144.126.151.115,
 token redigido: o repositorio e publico).
+
+===============================================================================
+[16] 2026-10-06 — observacoes de design (Designer Dotfy)
+===============================================================================
+Lista de 14 itens: dolar como moeda principal; "Venda pelo Telegram"; padronizar
+botoes; icones das integracoes em laranja; tirar o blur laranja dos cards de
+Destaques; reduzir o tamanho dos 4 paineis de demo; "28 blocos" como filtro;
+"3 vias" com metafora de gancho/cordas/caixa; "4 paises" mais rico; icones do
+passo a passo melhores; "Recursos" em cards verticais com carrossel infinito;
+"Checkout Internacional" mais agressivo com moeda por pais; Seguranca com 4
+cards clicaveis sem rolagem; Premiacoes antes do FAQ.

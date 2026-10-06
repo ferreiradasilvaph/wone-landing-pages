@@ -430,12 +430,15 @@ section[id] {
    É animação CSS, e não um contador em JS, justamente para poder congelar no
    meio com `animation-play-state: paused` quando o carrossel pausa — e voltar
    de onde parou, não do zero. */
-@keyframes carousel-progress {
+/* Progresso da selecao na secao Seguranca: a barra do card ativo cresce de
+   cima para baixo ao longo do intervalo. Vertical, por isso um keyframe
+   proprio em vez de reusar o do carrossel. */
+@keyframes security-progress {
   from {
-    transform: scaleX(0);
+    transform: scaleY(0);
   }
   to {
-    transform: scaleX(1);
+    transform: scaleY(1);
   }
 }
 

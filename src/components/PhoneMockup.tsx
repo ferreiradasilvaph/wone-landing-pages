@@ -21,9 +21,12 @@ const VISIBLE = 3;
 /** Altura de cada linha, em px — usada no deslocamento vertical. */
 const ROW_H = 48;
 
-const BRL = new Intl.NumberFormat("pt-BR", {
+/* O dolar e a moeda principal do site: o produto cobra em varios paises e a
+   vitrine fala para quem vende fora. O locale fica en-US para o separador de
+   milhar e o decimal sairem como o mercado espera do dolar. */
+const USD = new Intl.NumberFormat("en-US", {
   style: "currency",
-  currency: "BRL",
+  currency: "USD",
   minimumFractionDigits: 2,
 });
 
@@ -216,7 +219,7 @@ export function PhoneMockup() {
                   </span>
                   <span className="min-w-0 leading-tight">
                     <span className="tnum block text-base font-bold text-emerald-400">
-                      +{BRL.format(announced.value)}
+                      +{USD.format(announced.value)}
                     </span>
                     {/* O nome da venda aqui é o que amarra o cartão à linha que
                         desce em seguida: o lead vê o mesmo item nos dois. */}
@@ -239,7 +242,7 @@ export function PhoneMockup() {
               transition={{ duration: reduced ? 0 : 0.5 }}
               className="tnum mt-0.5 text-xl font-bold text-cream"
             >
-              {BRL.format(total)}
+              {USD.format(total)}
             </motion.p>
           </div>
 

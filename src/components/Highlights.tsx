@@ -201,12 +201,9 @@ export function Highlights() {
                     isActive ? "opacity-100" : "opacity-55 hover:opacity-85"
                   }`}
                 >
-                  <span
-                    aria-hidden
-                    className={`pointer-events-none absolute -top-16 -right-10 h-32 w-32 rounded-full bg-brand/25 blur-2xl transition-opacity duration-500 ${
-                      isActive ? "opacity-100" : "opacity-0"
-                    }`}
-                  />
+                  {/* O halo laranja desfocado no canto saiu: roubava a atenção
+                      de quem lia o número. O que marca a aba ativa é o fio de
+                      1px no topo, abaixo, mais a opacidade do card. */}
                   <span
                     aria-hidden
                     className={`absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-brand to-transparent transition-opacity duration-500 ${
