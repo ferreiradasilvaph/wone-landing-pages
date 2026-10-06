@@ -364,3 +364,13 @@ ficar mais surpreendente.
 ===============================================================================
 em "recursos" gostei do carrossel de cards como te pedi, mas preciso que
 visualmente fique extraordinario
+
+===============================================================================
+[29] 2026-10-06
+===============================================================================
+Na secao "Pagamentos e rastreio", palavras do Designer: "a sessao 'Checkout
+Internacional' esta muito pequena, tinha de ser mais agressiva; os superiores
+batem muito nessa tecla, entao podemos fazer algo mais chamativo, deixar bem
+evidente, isso tem de ser essencial". E: dar atencao as moedas, dizer qual moeda
+de qual pais, usar esses termos e ocupar mais espaco com dados reais, para ficar
+volumoso.

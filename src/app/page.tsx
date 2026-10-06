@@ -1,7 +1,6 @@
 "use client";
 
-import { useState } from "react";
-import { Check, ArrowRight, CreditCard, Radar, ChevronDown } from "lucide-react";
+import { Check, ArrowRight, CreditCard, Radar } from "lucide-react";
 
 import { useContent } from "@/i18n";
 import { Hero } from "@/components/Hero";
@@ -18,8 +17,8 @@ import { AwardsShowcase } from "@/components/AwardsShowcase";
 import { FaqSection } from "@/components/FaqSection";
 import { WaitlistForm } from "@/components/WaitlistForm";
 import { WoneIcon } from "@/components/WoneMark";
-import { FlagMark } from "@/components/FlagMark";
 import { LanguageToggle } from "@/components/LanguageToggle";
+import { CheckoutBoard } from "@/components/CheckoutBoard";
 import { Reveal, RevealGroup, RevealItem } from "@/components/Reveal";
 import { CTA } from "@/components/cta";
 
@@ -68,7 +67,6 @@ function BenefitList({ items }: { items: readonly string[] }) {
 
 export default function Home() {
   const t = useContent();
-  const [moreOpen, setMoreOpen] = useState(false);
 
   return (
     <div className="relative">
@@ -176,61 +174,22 @@ export default function Home() {
               description={t.payments.description}
             />
 
-            <RevealGroup className="mt-14 grid grid-cols-1 gap-6 lg:grid-cols-2">
-              {/* Pagamentos: checkout internacional em primeiro plano */}
+            {/* O checkout internacional abre a seção, do tamanho da promessa */}
+            <Reveal className="mt-14">
+              <CheckoutBoard />
+            </Reveal>
+
+            <RevealGroup className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
+              {/* As garantias do pagamento, que viviam escondidas num acordeão */}
               <RevealItem className="h-full">
                 <SpotlightCard className="h-full p-6 sm:p-8">
-                  {/* Coluna flex: o acordeão desce para a base e o card
-                      acompanha a altura do vizinho sem deixar buraco. */}
-                  <div className="flex h-full flex-col">
                   <span className="mb-5 flex h-11 w-11 items-center justify-center text-brand">
                     <CreditCard className="h-5 w-5" />
                   </span>
-                  <span className="t-eyebrow text-brand">{t.payments.card.title}</span>
-                  <h3 className="t-h3 mt-2 text-cream">{t.payments.card.headline}</h3>
-                  <p className="mt-3 text-sm leading-relaxed text-muted">
-                    {t.payments.card.lead}
-                  </p>
+                  <h3 className="t-h3 text-cream">{t.payments.card.moreLabel}</h3>
 
-                  <ul className="mt-6 grid grid-cols-1 gap-2.5 min-[26rem]:grid-cols-2">
-                    {t.payments.card.countries.map((country) => (
-                      <li
-                        key={country.name}
-                        className="flex items-center gap-2.5 rounded-xl bg-ink-900/70 px-3 py-2.5"
-                      >
-                        <FlagMark code={country.code} className="h-5 w-7" />
-                        <span className="min-w-0 leading-tight">
-                          <span className="block truncate text-xs font-semibold text-cream">
-                            {country.name}
-                          </span>
-                          <span className="block truncate text-[11px] text-faint">
-                            {country.method}
-                          </span>
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-
-                  {/* Demais garantias recolhidas, para não competir com a manchete */}
-                  <button
-                    type="button"
-                    onClick={() => setMoreOpen((open) => !open)}
-                    aria-expanded={moreOpen}
-                    className="mt-auto flex w-full cursor-pointer items-center justify-between gap-3 border-t border-line pt-5 text-sm font-medium text-muted transition-colors hover:text-cream"
-                  >
-                    {t.payments.card.moreLabel}
-                    <ChevronDown
-                      className={`h-4 w-4 transition-transform duration-300 ${
-                        moreOpen ? "rotate-180 text-brand" : ""
-                      }`}
-                    />
-                  </button>
-
-                  {moreOpen && (
-                    <div className="pt-5">
-                      <BenefitList items={t.payments.card.more} />
-                    </div>
-                  )}
+                  <div className="mt-6">
+                    <BenefitList items={t.payments.card.more} />
                   </div>
                 </SpotlightCard>
               </RevealItem>
