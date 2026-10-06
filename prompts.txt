@@ -346,3 +346,8 @@ deve ser a corda da direita.
 No card "4 paises, moeda local", palavras do Designer: "esse eu gostei, mas
 comparado aos demais esta simples, e da para melhorar" — apontando a parte das
 bandeiras. E: "lembrar de padronizar os botoes".
+
+===============================================================================
+[26] 2026-10-06
+===============================================================================
+"28 blocos no editor" esta muito extenso em largura, melhore

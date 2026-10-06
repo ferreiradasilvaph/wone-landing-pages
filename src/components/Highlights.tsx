@@ -59,7 +59,7 @@ const DEMOS = [
   },
   {
     key: "blocks",
-    frame: "max-w-7xl",
+    frame: "max-w-5xl",
     Component: dynamic(
       () => import("./demos/FlowEditorDemo").then((mod) => mod.FlowEditorDemo),
       { ssr: false, loading: DemoSkeleton },

@@ -65,7 +65,7 @@ const PULSE_MS = 520;
    cada porta aritmética — sem medir o DOM, sem ResizeObserver. */
 const NODE_W = 150;
 const NODE_H = 52;
-const COL_W = NODE_W + 44;
+const COL_W = NODE_W + 34;
 const ROW_H = NODE_H + 24;
 const PAD = 14;
 
@@ -412,7 +412,7 @@ export function FlowEditorDemo() {
         </span>
       </div>
 
-      <div className="mt-3 grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_13.5rem]">
+      <div className="mt-3">
         {/* Canvas: a malha de pontos é o que faz ler como área de edição */}
         <div
           className="relative overflow-x-auto rounded-2xl bg-ink-900/60 p-1"
@@ -584,43 +584,48 @@ export function FlowEditorDemo() {
             entradas/saídas/próximo num rodapé de uma linha. O ID saiu — numerar
             o nó não diz nada a quem olha a landing.
 
-            E o cartão é o lugar onde o clique na paleta aparece: um bloco por
-            vez, trocando pelo escolhido, que foi o que o designer pediu. */}
-        <aside className="rounded-2xl bg-ink-900/60 p-4">
-          <span className="t-eyebrow text-faint">{builder.properties}</span>
+            Depois ele voltou: a demo continuava larga demais. Era este painel —
+            uma coluna de 13,5rem colada no canvas, que empurrava o funil para a
+            direita e obrigava a seção a ocupar a página inteira. Virou a faixa
+            de uma linha abaixo, o canvas ficou com a largura toda e a moldura
+            caiu de 80rem para 64rem sem perder nada.
 
+            E a faixa é o lugar onde o clique na paleta aparece: um bloco por
+            vez, trocando pelo escolhido, que foi o que o designer pediu. */}
+        <div className="mt-3 overflow-hidden rounded-2xl bg-ink-900/60 px-3.5 py-2.5">
           <AnimatePresence mode="wait">
             {spot && spotEntry && spotMeta ? (
               <motion.div
                 key={`${spot.category}-${spot.item}`}
-                initial={{ opacity: 0, y: 8 }}
+                initial={{ opacity: 0, y: 6 }}
                 animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -8 }}
+                exit={{ opacity: 0, y: -6 }}
                 transition={{ duration: reduced ? 0 : 0.22, ease: EASE }}
+                className="flex flex-wrap items-center gap-x-3 gap-y-1.5"
               >
-                <div className="mt-3 flex items-start gap-2.5">
-                  <spotMeta.icon
-                    className="mt-0.5 h-4 w-4 shrink-0"
-                    style={{ color: spotMeta.color }}
-                  />
-                  <span className="min-w-0 leading-tight">
-                    <span className="block text-sm font-semibold text-cream">
-                      {spotEntry.name}
-                    </span>
-                    <span
-                      className="t-eyebrow mt-1 block text-[10px]"
-                      style={{ color: spotMeta.color }}
-                    >
-                      {demo.categories[spot.category]?.name}
-                    </span>
-                  </span>
-                </div>
+                <span className="t-eyebrow shrink-0 text-faint">
+                  {builder.properties}
+                </span>
 
-                <p className="mt-2.5 text-[11px] leading-relaxed text-muted">
+                <spotMeta.icon
+                  className="h-4 w-4 shrink-0"
+                  style={{ color: spotMeta.color }}
+                />
+                <span className="shrink-0 text-sm font-semibold text-cream">
+                  {spotEntry.name}
+                </span>
+                <span
+                  className="t-eyebrow shrink-0 text-[10px]"
+                  style={{ color: spotMeta.color }}
+                >
+                  {demo.categories[spot.category]?.name}
+                </span>
+
+                <span className="min-w-0 flex-1 truncate text-[11px] text-muted">
                   {spotEntry.detail}
-                </p>
+                </span>
 
-                <div className="mt-3 flex flex-wrap gap-x-3 gap-y-1 border-t border-line pt-2.5 font-mono text-[10px] text-faint">
+                <span className="flex shrink-0 gap-x-3 font-mono text-[10px] text-faint">
                   <span>
                     {builder.fields.inputs}{" "}
                     <span className="tnum text-muted">{spotInputs}</span>
@@ -629,28 +634,31 @@ export function FlowEditorDemo() {
                     {builder.fields.outputs}{" "}
                     <span className="tnum text-muted">{isBranching(spot) ? 2 : 1}</span>
                   </span>
-                  <span className="min-w-0 truncate">
+                  <span className="max-w-[9rem] truncate">
                     {builder.fields.next}{" "}
                     <span className="text-muted">
                       {spotNext?.name ?? builder.fields.none}
                     </span>
                   </span>
-                </div>
+                </span>
               </motion.div>
             ) : (
-              <motion.p
+              <motion.div
                 key="vazio"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: reduced ? 0 : 0.2 }}
-                className="mt-3 text-[11px] leading-relaxed text-faint"
+                className="flex flex-wrap items-center gap-x-3 gap-y-1"
               >
-                {builder.noSelection}
-              </motion.p>
+                <span className="t-eyebrow shrink-0 text-faint">
+                  {builder.properties}
+                </span>
+                <span className="text-[11px] text-faint">{builder.noSelection}</span>
+              </motion.div>
             )}
           </AnimatePresence>
-        </aside>
+        </div>
       </div>
 
       {/* Paleta filtrada por categoria.
