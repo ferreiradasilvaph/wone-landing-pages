@@ -33,7 +33,7 @@ export function CheckoutDemo() {
         <p className="mt-1.5 text-sm text-muted">{demo.subtitle}</p>
 
         {/* Seletor de país */}
-        <ul className="mt-7 grid grid-cols-1 gap-2.5 min-[26rem]:grid-cols-2">
+        <ul className="mt-5 grid grid-cols-1 gap-2.5 min-[26rem]:grid-cols-2">
           {countries.map((entry, entryIndex) => {
             const isActive = entryIndex === index;
 
@@ -121,7 +121,7 @@ export function CheckoutDemo() {
           <button
             type="button"
             disabled
-            className="btn-brand mt-6 w-full cursor-default rounded-xl py-3 text-sm font-bold opacity-90"
+            className="btn-solid mt-6 w-full cursor-default rounded-xl py-3 text-sm font-bold opacity-90"
           >
             {country.symbol} {price.display}
           </button>

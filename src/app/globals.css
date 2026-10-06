@@ -240,45 +240,13 @@ section[id] {
    Componentes utilitários
    -------------------------------------------------------------------------- */
 
-/* Botão principal: brilho que varre a superfície ao passar o mouse */
-.btn-brand {
-  position: relative;
-  overflow: hidden;
-  isolation: isolate;
-  background: linear-gradient(180deg, var(--brand-soft), var(--brand));
-  color: #130800;
-  box-shadow:
-    0 1px 0 0 color-mix(in oklab, #fff 45%, transparent) inset,
-    0 10px 30px -10px color-mix(in oklab, var(--brand) 70%, transparent);
-  transition:
-    transform 0.25s var(--ease-out-expo),
-    box-shadow 0.25s var(--ease-out-expo);
-}
-.btn-brand::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  transform: translateX(-120%) skewX(-18deg);
-  background: linear-gradient(90deg, transparent, color-mix(in oklab, #fff 55%, transparent), transparent);
-  transition: transform 0.75s var(--ease-out-expo);
-}
-.btn-brand:hover {
-  transform: translateY(-2px);
-  box-shadow:
-    0 1px 0 0 color-mix(in oklab, #fff 55%, transparent) inset,
-    0 18px 40px -12px color-mix(in oklab, var(--brand) 85%, transparent);
-}
-.btn-brand:hover::after {
-  transform: translateX(120%) skewX(-18deg);
-}
-.btn-brand:active {
-  transform: translateY(0) scale(0.985);
-}
+/* Botão principal do site: laranja chapado.
 
-/* Botão principal do hero: laranja chapado, sem sombra colorida e sem a
-   varredura de brilho do `.btn-brand`. Na primeira dobra o efeito competia com
-   o conteúdo e dava ar de template; nas outras seções o `.btn-brand` continua. */
+   É o único estilo de botão primário que existe. O `.btn-brand` que vivia aqui
+   — degradê de cima para baixo, sombra laranja de 30px e uma varredura de
+   brilho que atravessava a superfície no hover — saiu inteiro: o designer
+   aprovou o chapado como padrão, e manter dois primários diferentes na mesma
+   página era o que fazia cada seção parecer de um site diferente. */
 .btn-solid {
   background: var(--brand);
   color: #130800;

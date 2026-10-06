@@ -160,7 +160,7 @@ export default function Home() {
                     <a
                       href="#fila-de-espera"
                       className={`mt-9 inline-flex w-full items-center justify-center gap-2 rounded-xl py-3 text-sm font-semibold transition-all ${
-                        product.featured ? "btn-brand" : "btn-ghost"
+                        product.featured ? "btn-solid" : "btn-ghost"
                       }`}
                     >
                       {t.products.cta}

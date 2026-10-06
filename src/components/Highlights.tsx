@@ -261,7 +261,7 @@ export function Highlights() {
             id="highlight-panel"
             aria-labelledby={`highlight-tab-${active}`}
             tabIndex={0}
-            className="surface-lit relative mt-6 min-h-[28rem] overflow-hidden rounded-3xl p-6 sm:p-8 lg:p-10"
+            className="surface-lit relative mt-6 min-h-[19rem] overflow-hidden rounded-3xl p-5 sm:p-6 lg:p-8"
           >
             {/* Só monta a demo quando o painel chega perto da viewport */}
             {nearPanel ? (

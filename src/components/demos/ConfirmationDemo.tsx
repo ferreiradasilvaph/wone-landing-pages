@@ -32,7 +32,7 @@ export function ConfirmationDemo() {
       <h3 className="font-display text-xl font-semibold text-cream">{demo.title}</h3>
       <p className="mt-1.5 text-sm text-muted">{demo.subtitle}</p>
 
-      <div className="mt-7 grid grid-cols-1 items-center gap-5 lg:grid-cols-[auto_1fr_auto] lg:gap-6">
+      <div className="mt-5 grid grid-cols-1 items-center gap-4 lg:grid-cols-[auto_1fr_auto] lg:gap-6">
         {/* Origem */}
         <div className="flex items-center gap-3 rounded-2xl bg-ink-800 p-4 lg:w-44 lg:flex-col lg:text-center">
           <span className="flex h-11 w-11 shrink-0 items-center justify-center text-brand">

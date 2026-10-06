@@ -256,6 +256,8 @@ export function FlowEditorDemo() {
   const [selected, setSelected] = useState<number | null>(null);
   /** Passo aceso enquanto o funil roda; `-1` quando está parado. */
   const [pulse, setPulse] = useState(-1);
+  /** Categoria aberta na paleta. Começa em Fluxo, onde está o "Início". */
+  const [openCategory, setOpenCategory] = useState(FLOW_CATEGORY);
   const [wide, setWide] = useState(() => window.matchMedia("(min-width: 768px)").matches);
 
   useEffect(() => {
@@ -334,7 +336,7 @@ export function FlowEditorDemo() {
       <p className="mt-1.5 text-sm text-muted">{demo.subtitle}</p>
 
       {/* Barra do editor */}
-      <div className="mt-6 flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+      <div className="mt-5 flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
         <span className="flex items-center gap-2">
           <span className="t-eyebrow text-faint">{builder.canvas}</span>
           <span className="tnum font-mono text-[10px] text-faint">
@@ -599,45 +601,59 @@ export function FlowEditorDemo() {
         </aside>
       </div>
 
-      {/* Paleta: os 28 blocos, por categoria */}
-      <p className="t-eyebrow mt-7 mb-3 text-faint">{builder.palette}</p>
+      {/* Paleta filtrada por categoria.
 
-      <div className="space-y-4">
+          As sete categorias apareciam todas abertas, empilhadas: 28 botões em
+          sete blocos com cabeçalho, uns 420 px só de paleta, e a demo inteira
+          passava de 760 px de altura. Era a maior parte do "ficou gigante".
+
+          Agora a categoria é um filtro: a fileira de cima escolhe, e só os
+          blocos dela aparecem. Os 28 continuam todos alcançáveis — em dois
+          cliques em vez de um — e a paleta caiu para uma linha. */}
+      <div className="mt-6 flex flex-wrap items-center gap-x-2 gap-y-1.5">
+        <span className="t-eyebrow mr-1 text-faint">{builder.palette}</span>
         {demo.categories.map((category, categoryIndex) => {
           const meta = CATEGORY_META[categoryIndex] ?? CATEGORY_META[0];
           const Icon = meta.icon;
+          const isOpen = categoryIndex === openCategory;
 
           return (
-            <div key={category.name}>
-              <div className="mb-2 flex items-center gap-2">
-                <Icon className="h-3.5 w-3.5 shrink-0" style={{ color: meta.color }} />
-                <span className="t-eyebrow" style={{ color: meta.color }}>
-                  {category.name}
-                </span>
-                <span className="h-px flex-1 bg-line" />
-                <span className="tnum font-mono text-[10px] text-faint">
-                  {category.items.length}
-                </span>
-              </div>
-
-              <ul className="flex flex-wrap gap-1.5">
-                {category.items.map((item, itemIndex) => (
-                  <li key={item.name}>
-                    <button
-                      type="button"
-                      onClick={() => add(categoryIndex, itemIndex)}
-                      disabled={full}
-                      className="cursor-pointer rounded-lg bg-ink-800 px-2.5 py-1.5 text-xs text-muted transition-colors duration-200 hover:bg-ink-750 hover:text-cream disabled:cursor-default disabled:opacity-40"
-                    >
-                      {item.name}
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </div>
+            <button
+              key={category.name}
+              type="button"
+              aria-pressed={isOpen}
+              onClick={() => setOpenCategory(categoryIndex)}
+              className={`flex cursor-pointer items-center gap-1.5 rounded-lg px-2 py-1 text-[11px] font-semibold transition-colors duration-200 ${
+                isOpen ? "bg-ink-750 text-cream" : "text-faint hover:bg-ink-800"
+              }`}
+            >
+              <Icon
+                className="h-3 w-3 shrink-0"
+                style={{ color: isOpen ? meta.color : undefined }}
+              />
+              {category.name}
+              <span className="tnum font-mono text-[9px] opacity-60">
+                {category.items.length}
+              </span>
+            </button>
           );
         })}
       </div>
+
+      <ul className="mt-2.5 flex min-h-9 flex-wrap gap-1.5">
+        {(demo.categories[openCategory]?.items ?? []).map((item, itemIndex) => (
+          <li key={item.name}>
+            <button
+              type="button"
+              onClick={() => add(openCategory, itemIndex)}
+              disabled={full}
+              className="cursor-pointer rounded-lg bg-ink-800 px-2.5 py-1.5 text-xs text-muted transition-colors duration-200 hover:bg-ink-750 hover:text-cream disabled:cursor-default disabled:opacity-40"
+            >
+              {item.name}
+            </button>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

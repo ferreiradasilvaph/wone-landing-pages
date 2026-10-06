@@ -58,7 +58,7 @@ export function DeliveryDemo() {
         <h3 className="font-display text-xl font-semibold text-cream">{demo.title}</h3>
         <p className="mt-1.5 text-sm text-muted">{demo.subtitle}</p>
 
-        <ol className="mt-7 space-y-1">
+        <ol className="mt-5 space-y-1">
           {demo.steps.map((step, index) => {
             const active = shown >= STEP_AT[index];
 

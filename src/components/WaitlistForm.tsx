@@ -96,7 +96,7 @@ export function WaitlistForm() {
           href={TELEGRAM_URL}
           target="_blank"
           rel="noopener noreferrer"
-          className="btn-brand mt-2 inline-flex items-center justify-center gap-2 rounded-xl px-6 py-3 text-sm font-bold"
+          className="btn-solid mt-2 inline-flex items-center justify-center gap-2 rounded-xl px-6 py-3 text-sm font-bold"
         >
           <Send className="h-4 w-4" />
           {form.openTelegram}
@@ -228,7 +228,7 @@ export function WaitlistForm() {
       <button
         type="submit"
         disabled={isLoading}
-        className="btn-brand mt-1 inline-flex cursor-pointer items-center justify-center gap-2 rounded-xl px-8 py-4 font-bold disabled:cursor-not-allowed disabled:opacity-60"
+        className="btn-solid mt-1 inline-flex cursor-pointer items-center justify-center gap-2 rounded-xl px-8 py-4 font-bold disabled:cursor-not-allowed disabled:opacity-60"
       >
         {isLoading ? (
           <>

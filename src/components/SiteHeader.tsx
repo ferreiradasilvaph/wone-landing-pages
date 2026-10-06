@@ -109,7 +109,7 @@ export function SiteHeader() {
 
             <a
               href="#fila-de-espera"
-              className="btn-brand hidden rounded-full px-5 py-2 text-sm font-semibold sm:inline-flex"
+              className="btn-solid hidden rounded-full px-5 py-2 text-sm font-semibold sm:inline-flex"
             >
               {hero.ctaPrimary}
             </a>
@@ -157,7 +157,7 @@ export function SiteHeader() {
               <a
                 href="#fila-de-espera"
                 onClick={() => setMenuOpen(false)}
-                className="btn-brand mt-2 rounded-xl px-5 py-3 text-center text-sm font-semibold"
+                className="btn-solid mt-2 rounded-xl px-5 py-3 text-center text-sm font-semibold"
               >
                 {hero.ctaPrimary}
               </a>
