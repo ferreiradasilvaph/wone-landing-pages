@@ -342,6 +342,9 @@ export const pt = {
     title: "Tudo o que seu funil precisa para",
     titleAccent: "vender mais",
     description: "Os recursos que fazem a diferença entre uma venda e dezenas.",
+    /** Rotulos das setas do carrossel de Recursos. */
+    prev: "Recurso anterior",
+    next: "Proximo recurso",
     items: [
       {
         title: "Order bump",

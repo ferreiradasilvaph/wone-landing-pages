@@ -323,6 +323,8 @@ export const en: Content = {
     title: "Everything your funnel needs to",
     titleAccent: "sell more",
     description: "The features that turn one sale into dozens.",
+    prev: "Previous feature",
+    next: "Next feature",
     items: [
       {
         title: "Order bump",

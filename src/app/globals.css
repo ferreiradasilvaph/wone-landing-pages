@@ -276,6 +276,27 @@ section[id] {
   transform: translateY(-2px);
 }
 
+/* Palco do carrossel de Recursos.
+
+   O card tem a proporcao de um post de Instagram (1080x1350 = 4:5), e a largura
+   e o espacamento vem de `clamp()`: no desktop cabem o do meio e quatro
+   vizinhos, no tablet tres, e no celular o do meio com as beiradas dos vizinhos
+   aparecendo. Nenhum JavaScript mede a tela para decidir isso — o que define e
+   o `overflow-hidden` do palco cortando quem nao cabe.
+
+   A altura do palco acompanha a largura do card pela mesma conta (x1.25), mais
+   um respiro para o card do meio nao encostar nas bordas. */
+.feature-stage {
+  --card-w: clamp(13rem, 44vw, 16rem);
+  --card-gap: clamp(7rem, 20vw, 12.5rem);
+  height: calc(var(--card-w) * 1.25);
+}
+
+.feature-slot {
+  width: var(--card-w);
+  height: calc(var(--card-w) * 1.25);
+}
+
 /* Superfície de cartão padrão do site.
 
    Sem borda: o que separa o cartão do fundo é o tom (ink-850 sobre o quase

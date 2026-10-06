@@ -279,3 +279,12 @@ Destaques; reduzir o tamanho dos 4 paineis de demo; "28 blocos" como filtro;
 passo a passo melhores; "Recursos" em cards verticais com carrossel infinito;
 "Checkout Internacional" mais agressivo com moeda por pais; Seguranca com 4
 cards clicaveis sem rolagem; Premiacoes antes do FAQ.
+
+===============================================================================
+[17] 2026-10-06
+===============================================================================
+Em "Recursos": o excesso de cards ocupa muito espaco. Card maior em altura e
+menor em largura, "em pe" como post de Instagram (1080x1350), com carrossel
+infinito. Aparecer 5 cards: um maior no meio, dois na lateral e dois um pouco
+menores, com visao opaca, diminuindo a opacidade, e fazer a rotatividade. No
+tablet nao funciona legal do jeito que esta; no mobile so ocupa espaco.

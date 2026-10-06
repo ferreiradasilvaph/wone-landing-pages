@@ -1,24 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import {
-  ShoppingBag,
-  TrendingUp,
-  Boxes,
-  Calendar,
-  RefreshCw,
-  Sliders,
-  TestTube,
-  Megaphone,
-  Zap,
-  Bot,
-  Check,
-  ArrowRight,
-  CreditCard,
-  Radar,
-  ChevronDown,
-  type LucideIcon,
-} from "lucide-react";
+import { Check, ArrowRight, CreditCard, Radar, ChevronDown } from "lucide-react";
 
 import { useContent } from "@/i18n";
 import { Hero } from "@/components/Hero";
@@ -27,7 +10,7 @@ import { InteractiveBackground } from "@/components/InteractiveBackground";
 import { SpotlightCard } from "@/components/SpotlightCard";
 import { StepsTimeline } from "@/components/StepsTimeline";
 import { Highlights } from "@/components/Highlights";
-import { FeatureCard } from "@/components/FeatureCard";
+import { FeatureCarousel } from "@/components/FeatureCarousel";
 import { TrackingFlow } from "@/components/TrackingFlow";
 import { AnalyticsSection } from "@/components/AnalyticsSection";
 import { SecurityCarousel } from "@/components/SecurityCarousel";
@@ -38,19 +21,6 @@ import { WoneIcon } from "@/components/WoneMark";
 import { FlagMark } from "@/components/FlagMark";
 import { LanguageToggle } from "@/components/LanguageToggle";
 import { Reveal, RevealGroup, RevealItem } from "@/components/Reveal";
-
-const FEATURE_ICONS: Record<string, LucideIcon> = {
-  ShoppingBag,
-  TrendingUp,
-  Boxes,
-  Calendar,
-  RefreshCw,
-  Sliders,
-  TestTube,
-  Megaphone,
-  Zap,
-  Bot,
-};
 
 /** Cabeçalho de seção: sobrenome, título e linha de apoio, no mesmo ritmo. */
 function SectionHeading({
@@ -187,31 +157,11 @@ export default function Home() {
               description={t.features.description}
             />
 
-            {/* `auto-rows-fr` iguala a altura de todas as linhas, então os dez
-                cards saem do mesmo tamanho mesmo com descrições de uma linha. */}
-            <RevealGroup
-              stagger={0.05}
-              className="mt-14 grid auto-rows-fr grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3"
-            >
-              {t.features.items.map((item, index) => {
-                // São 10 recursos: em 3 colunas o último sobraria sozinho na
-                // ponta da última linha, então começa na coluna do meio e fica
-                // centrado. Em 2 colunas as cinco linhas já fecham cheias.
-                const isLast = index === t.features.items.length - 1;
-                return (
-                  <RevealItem
-                    key={item.title}
-                    className={`h-full ${isLast ? "lg:col-start-2" : ""}`}
-                  >
-                    <FeatureCard
-                      title={item.title}
-                      description={item.description}
-                      Icon={FEATURE_ICONS[item.icon] ?? Zap}
-                    />
-                  </RevealItem>
-                );
-              })}
-            </RevealGroup>
+            {/* Carrossel no lugar da grade: os dez recursos ocupavam quatro
+                linhas de cards, e agora a secao cabe na altura de um card. */}
+            <Reveal className="mt-12">
+              <FeatureCarousel />
+            </Reveal>
           </div>
         </section>
 
