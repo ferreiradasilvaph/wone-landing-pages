@@ -392,3 +392,11 @@ os icones do "passo a passo" nao aparecem no mobile; e as placas de premiacao em
 ===============================================================================
 queria uma mudanca mais sutil de placa para placa; esta com um leve delay onde
 aparece o molde original do 3d
+
+===============================================================================
+[33] 2026-10-07
+===============================================================================
+no card "4 paises, moeda local", coloque na ilustracao um globo terrestre melhor
+renderizado
+
+melhore o globo terrestre
