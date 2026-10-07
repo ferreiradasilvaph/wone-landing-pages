@@ -400,3 +400,9 @@ no card "4 paises, moeda local", coloque na ilustracao um globo terrestre melhor
 renderizado
 
 melhore o globo terrestre
+
+===============================================================================
+[34] 2026-10-07
+===============================================================================
+no smartphone, ao scrollar para baixo, em um determinado momento a barra
+superior e a logo somem, corrija isto

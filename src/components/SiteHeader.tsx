@@ -64,7 +64,12 @@ export function SiteHeader() {
   }, [menuOpen]);
 
   return (
-    <header className="fixed inset-x-0 top-0 z-50">
+    /* A promoção a camada própria (`transform-gpu` + `will-change`) não é
+       enfeite: sem ela o compositor do celular pinta o header junto com o
+       conteúdo que rola e, quando um canvas WebGL entra em cena e a página é
+       re-camadada, a barra some junto com a rolagem. E o z-70 põe a barra acima
+       do grão, que é a outra camada fixa de tela cheia da página. */
+    <header className="fixed inset-x-0 top-0 z-[70] transform-gpu backface-hidden will-change-transform">
       <div
         className={`transition-colors duration-500 ${
           scrolled

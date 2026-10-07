@@ -1,22 +1,43 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useSyncExternalStore } from "react";
+
+/** Tem cursor de verdade e não pediu menos movimento? */
+function subscribe(notify: () => void) {
+  const queries = [
+    window.matchMedia("(pointer: fine)"),
+    window.matchMedia("(prefers-reduced-motion: reduce)"),
+  ];
+  queries.forEach((query) => query.addEventListener("change", notify));
+  return () =>
+    queries.forEach((query) => query.removeEventListener("change", notify));
+}
+
+function snapshot() {
+  return (
+    window.matchMedia("(pointer: fine)").matches &&
+    !window.matchMedia("(prefers-reduced-motion: reduce)").matches
+  );
+}
 
 /**
  * Halo laranja que acompanha o cursor pela página inteira.
  *
  * `mix-blend-screen` faz a luz somar em vez de cobrir o conteúdo, e z-30 a
- * mantém acima do fundo das seções, abaixo do grão (z-60) e do header (z-50).
- * Os eventos de mousemove são agrupados em um repaint por frame, e ponteiros
- * grosseiros (toque) nem registram o listener.
+ * mantém acima do fundo das seções e abaixo do header. Os eventos de mousemove
+ * são agrupados em um repaint por frame.
+ *
+ * Quem não tem cursor não vê nada disto — e agora a div nem chega a existir no
+ * celular. Não é só economia: uma camada fixa de tela cheia com blend obriga o
+ * compositor a rasterizar o fundo inteiro, e era parte do motivo de a barra do
+ * topo sumir ao rolar no telefone.
  */
 export function InteractiveBackground() {
   const ref = useRef<HTMLDivElement>(null);
+  const lit = useSyncExternalStore(subscribe, snapshot, () => false);
 
   useEffect(() => {
-    const noMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const coarse = window.matchMedia("(pointer: coarse)").matches;
-    if (noMotion || coarse) return;
+    if (!lit) return;
 
     let frame = 0;
     let x = 0;
@@ -48,7 +69,9 @@ export function InteractiveBackground() {
       window.removeEventListener("mousemove", handleMouseMove);
       document.removeEventListener("mouseleave", handleMouseLeave);
     };
-  }, []);
+  }, [lit]);
+
+  if (!lit) return null;
 
   return (
     <div

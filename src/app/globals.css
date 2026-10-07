@@ -196,11 +196,16 @@ section[id] {
    Texturas de fundo
    -------------------------------------------------------------------------- */
 
-/* Grão fino sobre tudo. É o detalhe que tira o ar de preto chapado. */
+/* Grão fino sobre o conteúdo. É o detalhe que tira o ar de preto chapado.
+   Fica em z-60: acima de tudo, menos do header, que precisa ser a camada de
+   cima no celular para não sumir na rolagem.
+
+   `inset: 0` e não `-50%`: a camada é fixa, então nada além da viewport chega a
+   aparecer, e o -50% fazia o telefone rasterizar quatro vezes a área à toa. */
 .grain::after {
   content: "";
   position: fixed;
-  inset: -50%;
+  inset: 0;
   z-index: 60;
   pointer-events: none;
   opacity: 0.035;
