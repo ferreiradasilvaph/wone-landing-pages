@@ -215,7 +215,6 @@ export const en: Content = {
         subtitle: "Switch one off and watch access go out through the others",
         payment: "Payment made",
         delivered: "Delivered",
-        failLabel: "Simulate failure",
         offline: "Path offline",
         allDownTitle: "All three at once doesn't happen",
         allDown:

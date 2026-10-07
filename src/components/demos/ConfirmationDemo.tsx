@@ -180,24 +180,29 @@ export function ConfirmationDemo() {
                   </span>
                 </span>
 
-                {/* Interruptor de falha: é a tesoura daquela corda */}
+                {/* O interruptor da via: ligado é a corda inteira, desligado é
+                    a ponta solta. A polaridade já esteve ao contrário — era um
+                    "simular falha", e ligá-lo é que cortava a corda. O CTO
+                    apontou, e o subtítulo da demo ("desligue uma via") sempre
+                    esteve do lado dele: botão desligado é coisa que não
+                    funciona, em qualquer tela que a pessoa já tenha usado. */}
                 <button
                   type="button"
                   role="switch"
-                  aria-checked={isDown}
-                  aria-label={`${demo.failLabel}: ${path.name}`}
+                  aria-checked={!isDown}
+                  aria-label={path.name}
                   onFocus={() => setHot(index)}
                   onBlur={() => setHot((current) => (current === index ? null : current))}
                   onClick={() => toggle(index)}
                   className={`relative h-6 w-11 shrink-0 cursor-pointer rounded-full transition-colors duration-300 ${
-                    isDown ? "bg-red-500/30" : "bg-ink-750"
+                    isDown ? "bg-ink-750" : "bg-brand/35"
                   }`}
                 >
                   <motion.span
                     layout
                     transition={{ duration: reduced ? 0 : 0.2, ease: EASE }}
                     className={`absolute top-1/2 block h-4 w-4 -translate-y-1/2 rounded-full ${
-                      isDown ? "right-1 bg-red-400" : "left-1 bg-cream/60"
+                      isDown ? "left-1 bg-cream/35" : "right-1 bg-brand"
                     }`}
                   />
                 </button>

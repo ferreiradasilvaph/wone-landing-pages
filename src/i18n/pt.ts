@@ -234,7 +234,6 @@ export const pt = {
         subtitle: "Desligue uma via e veja o acesso sair pelas outras",
         payment: "Pagamento feito",
         delivered: "Entregue",
-        failLabel: "Simular falha",
         offline: "Via fora do ar",
         allDownTitle: "As três ao mesmo tempo não acontece",
         allDown:

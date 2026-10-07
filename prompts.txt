@@ -406,3 +406,9 @@ melhore o globo terrestre
 ===============================================================================
 no smartphone, ao scrollar para baixo, em um determinado momento a barra
 superior e a logo somem, corrija isto
+
+===============================================================================
+[35] 2026-10-07
+===============================================================================
+no card "3 vias de confirmacao" o CTO olhou o projeto e disse: "inverte a logica
+disso, quando o botao esta desligado que as pontas deveriam sair"
