@@ -412,3 +412,9 @@ superior e a logo somem, corrija isto
 ===============================================================================
 no card "3 vias de confirmacao" o CTO olhou o projeto e disse: "inverte a logica
 disso, quando o botao esta desligado que as pontas deveriam sair"
+
+===============================================================================
+[36] 2026-10-08
+===============================================================================
+chat, mantenha tudo, porem, melhore (aja como senior developer com 30 anos de
+mercado)

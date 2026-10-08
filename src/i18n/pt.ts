@@ -643,7 +643,7 @@ export const pt = {
     items: [
       {
         tier: "10K",
-        image: "/placas/placa-10k.png",
+        image: "/placas/placa-10k.webp",
         title: "Troféu Bronze • $10,000",
         subtitle: "A validação da primeira escala",
         description:
@@ -653,7 +653,7 @@ export const pt = {
       },
       {
         tier: "100K",
-        image: "/placas/placa-100k.png",
+        image: "/placas/placa-100k.webp",
         title: "Placa Acrílico 100K • $100,000",
         subtitle: "Clube dos 6 Dígitos",
         description:
@@ -663,7 +663,7 @@ export const pt = {
       },
       {
         tier: "500K",
-        image: "/placas/placa-500k.png",
+        image: "/placas/placa-500k.webp",
         title: "Placa Cerimonial 500K • $500,000",
         subtitle: "Meio Milhão Faturado",
         description:
@@ -673,7 +673,7 @@ export const pt = {
       },
       {
         tier: "1M",
-        image: "/placas/placa-1m.png",
+        image: "/placas/placa-1m.webp",
         title: "Placa Black Diamond 1M • $1,000,000",
         subtitle: "O Olimpo dos 7 Dígitos",
         description:

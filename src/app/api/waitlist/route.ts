@@ -1,17 +1,38 @@
 import { saveWaitlistEntry } from "@/lib/waitlist";
+import { clientAddress, rateLimited } from "@/lib/rate-limit";
 
 const MAX_FIELD_LENGTH = 120;
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+/** Corpo maior que isto não é um cadastro, é alguém testando a rota. */
+const MAX_BODY_BYTES = 4_096;
 
 function asTrimmedString(value: unknown): string {
   return typeof value === "string" ? value.trim() : "";
 }
 
 export async function POST(request: Request) {
+  if (rateLimited(clientAddress(request))) {
+    return Response.json(
+      { error: "Muitas tentativas seguidas. Aguarde um minuto e tente de novo." },
+      { status: 429, headers: { "Retry-After": "60" } },
+    );
+  }
+
+  /* O corpo é lido como texto antes de virar JSON: assim o tamanho é conferido
+     com o que realmente chegou, e não com o que o cliente diz no Content-Length,
+     que ninguém é obrigado a mandar nem a mandar certo. */
+  const raw = await request.text();
+  if (raw.length > MAX_BODY_BYTES) {
+    return Response.json({ error: "Dados enviados grandes demais." }, { status: 413 });
+  }
+
   let payload: Record<string, unknown>;
 
   try {
-    payload = await request.json();
+    payload = JSON.parse(raw);
+    if (payload === null || typeof payload !== "object" || Array.isArray(payload)) {
+      throw new Error("corpo não é um objeto");
+    }
   } catch {
     return Response.json(
       { error: "Não foi possível ler os dados enviados." },

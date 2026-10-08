@@ -617,7 +617,7 @@ export const en: Content = {
     items: [
       {
         tier: "10K",
-        image: "/placas/placa-10k.png",
+        image: "/placas/placa-10k.webp",
         title: "Bronze Trophy • $10,000",
         subtitle: "Proof of the first scale",
         description:
@@ -627,7 +627,7 @@ export const en: Content = {
       },
       {
         tier: "100K",
-        image: "/placas/placa-100k.png",
+        image: "/placas/placa-100k.webp",
         title: "100K Acrylic Plaque • $100,000",
         subtitle: "The 6-Figure Club",
         description:
@@ -637,7 +637,7 @@ export const en: Content = {
       },
       {
         tier: "500K",
-        image: "/placas/placa-500k.png",
+        image: "/placas/placa-500k.webp",
         title: "500K Ceremonial Plaque • $500,000",
         subtitle: "Half a Million in Revenue",
         description:
@@ -647,7 +647,7 @@ export const en: Content = {
       },
       {
         tier: "1M",
-        image: "/placas/placa-1m.png",
+        image: "/placas/placa-1m.webp",
         title: "1M Black Diamond Plaque • $1,000,000",
         subtitle: "The Olympus of 7 Figures",
         description:
