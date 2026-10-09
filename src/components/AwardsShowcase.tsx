@@ -218,7 +218,6 @@ export function AwardsShowcase() {
               <AwardPlaque3D
                 accent={active.accent}
                 image={active.image}
-                item={active.item}
                 photo={active.photo}
                 visible={onScreen}
               />
