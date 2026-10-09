@@ -461,3 +461,8 @@ agora preciso que elas girem em 3d, estao em 2d
 ===============================================================================
 entao crie os objetos em questao em 3d e substitua as fotos por eles (hoje eu
 quero extrair muito de voce, caro amigo...)
+
+===============================================================================
+[42] 2026-10-09
+===============================================================================
+remova o fade ao redor do mouse

@@ -5,7 +5,6 @@ import { Check, ArrowRight, CreditCard, Radar } from "lucide-react";
 import { useContent } from "@/i18n";
 import { Hero } from "@/components/Hero";
 import { SiteHeader } from "@/components/SiteHeader";
-import { InteractiveBackground } from "@/components/InteractiveBackground";
 import { SpotlightCard } from "@/components/SpotlightCard";
 import { StepsTimeline } from "@/components/StepsTimeline";
 import { Highlights } from "@/components/Highlights";
@@ -70,7 +69,6 @@ export default function Home() {
 
   return (
     <div className="relative">
-      <InteractiveBackground />
       <SiteHeader />
       <main>
         <Hero />
