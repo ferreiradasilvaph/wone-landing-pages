@@ -497,3 +497,12 @@ todo. trabalhe com excelencia
 legal, top. mas nas ilustracoes do colar e da pulseira, troque as imagens que
 aparecem 4 vezes por 1 imagem so, dividindo espaco com as suas respectivas
 placas
+
+===============================================================================
+[47] 2026-10-09
+===============================================================================
+melhore / tudo / visualmente falando / em especifico o colar e a pulseira
+
+as imagens dos aneis precisam estar girando livre no ar
+
+os aneis devem girar em circulos em torno de si mesmos

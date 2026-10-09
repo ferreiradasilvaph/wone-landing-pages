@@ -1,10 +1,10 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 760" width="760" height="760">
   <defs>
-    <linearGradient id="pele" x1="0.1" y1="0" x2="0.92" y2="0.9">
-      <stop offset="0" stop-color="#34343F"/>
-      <stop offset="0.4" stop-color="#1D1D26"/>
-      <stop offset="0.8" stop-color="#101016"/>
-      <stop offset="1" stop-color="#0C0C11"/>
+    <linearGradient id="pele" x1="0.14" y1="0.18" x2="0.86" y2="0.82">
+      <stop offset="0" stop-color="#5E5E6C"/>
+      <stop offset="0.46" stop-color="#32323F"/>
+      <stop offset="0.8" stop-color="#17171F"/>
+      <stop offset="1" stop-color="#101016"/>
     </linearGradient>
 
     <linearGradient id="topo" x1="0.1" y1="0" x2="0.9" y2="1">
@@ -66,16 +66,21 @@
     <g fill="none" stroke="#FFFFE3" stroke-linecap="round">
       <path d="M320 30 L 318 152 C 316 198 300 216 262 232
                C 196 260 128 284 96 312 C 74 332 66 358 62 394 L 48 760"
-            stroke-width="44" opacity="0.07"/>
+            stroke-width="46" opacity="0.1"/>
       <path d="M320 30 L 318 152 C 316 198 300 216 262 232
                C 196 260 128 284 96 312 C 74 332 66 358 62 394 L 48 760"
-            stroke-width="10" opacity="0.18"/>
+            stroke-width="11" opacity="0.3"/>
     </g>
 
     <!-- Sombra que o maxilar deixaria no pescoço -->
     <ellipse cx="380" cy="22" rx="98" ry="54" fill="#000000" opacity="0.42"/>
     <!-- Sombra onde o pescoço encontra o peito -->
     <ellipse cx="380" cy="214" rx="130" ry="56" fill="#000000" opacity="0.3"/>
+
+    <!-- O volume do peito: um realce largo de um lado e sombra do outro. Sem
+         isto o tronco é uma chapa, por mais degradê que tenha. -->
+    <ellipse cx="282" cy="420" rx="150" ry="210" fill="#FFFFE3" opacity="0.055"/>
+    <ellipse cx="506" cy="470" rx="130" ry="220" fill="#000000" opacity="0.22"/>
 
     <!-- Clavículas -->
     <path d="M268 252 C 312 290 348 302 380 302 C 412 302 448 290 492 252"
@@ -99,15 +104,15 @@
           transform="translate(4,7)"/>
     <!-- o metal -->
     <path d="M300 140 C 304 252 334 320 380 320 C 426 320 456 252 460 140"
-          stroke="url(#metal)" stroke-width="14"/>
+          stroke="url(#metal)" stroke-width="16"/>
     <!-- os vincos que separam elo de elo: finos e juntos, senao a corrente
          vira colar de contas -->
     <path d="M300 140 C 304 252 334 320 380 320 C 426 320 456 252 460 140"
-          stroke="#0B0B10" stroke-opacity="0.5" stroke-width="15"
+          stroke="#0B0B10" stroke-opacity="0.55" stroke-width="17"
           stroke-dasharray="1.6 8"/>
     <!-- o brilho corre continuo por cima, nao pontilhado -->
     <path d="M300 140 C 304 252 334 320 380 320 C 426 320 456 252 460 140"
-          stroke="#FFFFE3" stroke-opacity="0.4" stroke-width="3"
+          stroke="#FFFFE3" stroke-opacity="0.72" stroke-width="4"
           transform="translate(-2.5,-2.5)"/>
   </g>
 

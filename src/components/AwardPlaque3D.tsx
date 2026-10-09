@@ -120,14 +120,17 @@ const FOTO_PELE = 0.005;
 /**
  * O flutuar de cada objeto.
  *
- * `olha` é a amplitude do virar. A peça é uma imagem recortada, então ela
- * oscila em vez de dar a volta inteira: girando de verdade, mostraria o verso
- * de um papel, e a pessoa do busto ficaria de costas para quem olha.
+ * `gira` é a volta contínua da joia solta: ela roda em torno do próprio eixo,
+ * como rodaria na mão de alguém. As duas faces costas com costas seguram isso
+ * — a imagem nunca some de perfil nem aparece espelhada do outro lado.
  *
- * `sobe` e `balanca` completam — três senos de períodos que não se dividem,
- * para a pose nunca se repetir exatamente.
+ * `olha` é para a joia vestida, que não dá a volta: um busto girando põe a
+ * pessoa de costas para quem olha, e a joia some junto. Essa oscila.
+ *
+ * `sobe` e `balanca` completam — senos de períodos que não se dividem, para a
+ * pose nunca se repetir exatamente.
  */
-const FLOAT = { sobe: 0.085, balanca: 0.22, olha: 0.32 };
+const FLOAT = { sobe: 0.085, balanca: 0.22, olha: 0.32, gira: 0.5 };
 
 /**
  * Um dos quatro objetos.
@@ -144,6 +147,7 @@ function ItemCard({
   foto,
   spot,
   quadro,
+  vestida,
   outgoing,
   reduced,
 }: {
@@ -152,6 +156,8 @@ function ItemCard({
   spot: (typeof ITEM_SPOTS)[number];
   /** O quadro em que ela cabe: o dos cantos ou o da joia vestida. */
   quadro: { w: number; h: number };
+  /** Vestida oscila; solta dá a volta. */
+  vestida: boolean;
   outgoing?: boolean;
   reduced: boolean;
 }) {
@@ -180,13 +186,15 @@ function ItemCard({
     pivot.current.visible = next > 0.012;
     if (!pivot.current.visible) return;
 
-    /* Solta no ar: vira para um lado e para o outro, balança e sobe e desce
-       devagar — três senos de períodos que não se dividem, então a peça nunca
-       repete exatamente a mesma pose. */
+    /* No ar: a joia solta dá a volta inteira, a vestida oscila. As duas sobem
+       e descem e balançam junto, em senos de períodos que não se dividem —
+       então a pose nunca se repete exatamente. */
     if (!reduced) {
       const t = state.clock.elapsedTime + spot.fase;
       pivot.current.position.y = spot.pos[1] + Math.sin(t * 0.62) * FLOAT.sobe;
-      pivot.current.rotation.y = Math.sin(t * 0.39 * spot.giro) * FLOAT.olha;
+      pivot.current.rotation.y = vestida
+        ? Math.sin(t * 0.39 * spot.giro) * FLOAT.olha
+        : t * FLOAT.gira * spot.giro;
       pivot.current.rotation.x = Math.sin(t * 0.43) * FLOAT.balanca;
     }
   });
@@ -428,6 +436,7 @@ function Plaque({
               foto={fotos.prev}
               spot={spot}
               quadro={worn ? FOTO_SOLO : FOTO_MAX}
+              vestida={worn}
               outgoing
               reduced={reduced}
             />
@@ -438,6 +447,7 @@ function Plaque({
               foto={fotos.curr}
               spot={spot}
               quadro={worn ? FOTO_SOLO : FOTO_MAX}
+              vestida={worn}
               reduced={reduced}
             />
           )}
