@@ -88,7 +88,12 @@ export function CheckoutBoard() {
         <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
           <div className="min-w-0">
             <span className="t-eyebrow text-brand">{card.title}</span>
-            <h3 className="t-h2 mt-2 text-balance text-cream">{card.headline}</h3>
+            {/* `t-h2-caps` por causa da palavra em caixa alta: o aperto do
+                `t-h2` é calibrado para caixa baixa e deixa "INTERNACIONAL"
+                com as letras encostadas. */}
+            <h3 className="t-h2 t-h2-caps mt-2 text-balance text-cream">
+              {card.headline}
+            </h3>
           </div>
 
           <span className="flex shrink-0 items-center gap-2 rounded-full bg-brand/12 px-3.5 py-2 text-[11px] font-semibold text-brand">

@@ -164,6 +164,14 @@ section[id] {
   font-weight: 600;
 }
 
+/* Título que carrega uma palavra em caixa alta.
+   O aperto de -0.03em existe para caixa baixa, onde as minúsculas já abrem
+   espaço entre as hastes. Em caixa alta não há o que abrir: as letras encostam
+   umas nas outras. Acompanha o `t-h2`, nunca sozinho. */
+.t-h2-caps {
+  letter-spacing: -0.012em;
+}
+
 .t-h3 {
   font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
   font-size: clamp(1.3rem, 1rem + 1.1vw, 1.75rem);

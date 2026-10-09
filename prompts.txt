@@ -418,3 +418,9 @@ disso, quando o botao esta desligado que as pontas deveriam sair"
 ===============================================================================
 chat, mantenha tudo, porem, melhore (aja como senior developer com 30 anos de
 mercado)
+
+===============================================================================
+[37] 2026-10-08
+===============================================================================
+chat, no checkout internacional o "internacional" tem de ser escrito em
+maiusculo

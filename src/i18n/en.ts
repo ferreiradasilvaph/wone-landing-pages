@@ -385,7 +385,7 @@ export const en: Content = {
 
     card: {
       title: "Payments",
-      headline: "International checkout",
+      headline: "INTERNATIONAL checkout",
       lead: "Charge in local currency and let customers pay the way they already pay at home. No manual conversion, no English-only checkout.",
       badge: "4 countries · 4 currencies · 1 checkout",
       priceLabel: "The same annual plan, in each country's currency",

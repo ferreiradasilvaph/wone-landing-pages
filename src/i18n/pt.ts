@@ -405,7 +405,7 @@ export const pt = {
 
     card: {
       title: "Pagamentos",
-      headline: "Checkout internacional",
+      headline: "Checkout INTERNACIONAL",
       lead: "Cobre em moeda local e deixe o cliente pagar do jeito que ele já paga no país dele. Sem conversão manual, sem checkout em inglês.",
       /** Selo do quadro de moedas. O número acompanha a lista abaixo. */
       badge: "4 países · 4 moedas · 1 checkout",
