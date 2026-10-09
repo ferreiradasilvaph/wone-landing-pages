@@ -646,6 +646,8 @@ export const pt = {
         image: "/placas/placa-10k.webp",
         /** Peça do marco, modelada em `AwardItem3D`. O 10K ainda não tem a sua. */
         item: "",
+        /** Foto real da joia sendo usada. O 10K nao tem joia. */
+        photo: "",
         title: "Troféu Bronze • $10,000",
         subtitle: "A validação da primeira escala",
         description:
@@ -657,6 +659,7 @@ export const pt = {
         tier: "100K",
         image: "/placas/placa-100k.webp",
         item: "pulseira",
+        photo: "",
         title: "Placa Acrílico 100K • $100,000",
         subtitle: "Clube dos 6 Dígitos",
         description:
@@ -668,6 +671,7 @@ export const pt = {
         tier: "500K",
         image: "/placas/placa-500k.webp",
         item: "colar",
+        photo: "",
         title: "Placa Cerimonial 500K • $500,000",
         subtitle: "Meio Milhão Faturado",
         description:
@@ -679,6 +683,7 @@ export const pt = {
         tier: "1M",
         image: "/placas/placa-1m.webp",
         item: "anel",
+        photo: "/images/anel-1m.webp",
         title: "Placa Black Diamond 1M • $1,000,000",
         subtitle: "O Olimpo dos 7 Dígitos",
         description:

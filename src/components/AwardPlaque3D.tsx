@@ -89,6 +89,16 @@ const ITEM_SPOTS: {
 /** Quanto a peça cresce sob o cursor. */
 const ITEM_HOVER = 1.16;
 /**
+ * O quadro em que uma foto real cabe.
+ *
+ * Menor que a malha, de propósito: a foto é uma chapa, e chapa grande no ar
+ * chama mais atenção do que merece — a placa é que é o assunto. O pedido foi
+ * esse, para a foto do anel, e vale para todas.
+ */
+const FOTO_MAX = { w: 0.82, h: 0.68 };
+/** Meia espessura entre as duas faces de uma foto. */
+const FOTO_PELE = 0.005;
+/**
  * O flutuar de cada objeto.
  *
  * `gira` é rotação contínua em Y — a peça dá a volta em profundidade, não no
@@ -103,7 +113,7 @@ const ITEM_HOVER = 1.16;
  *
  * `balanca` é a inclinação que acompanha, para o giro não virar um torno.
  */
-const FLOAT = { sobe: 0.085, balanca: 0.22, gira: 0.5 };
+const FLOAT = { sobe: 0.085, balanca: 0.22, gira: 0.5, olha: 0.3 };
 
 /**
  * Um dos quatro objetos.
@@ -118,11 +128,15 @@ const FLOAT = { sobe: 0.085, balanca: 0.22, gira: 0.5 };
  */
 function ItemCard({
   kind,
+  foto,
   spot,
   outgoing,
   reduced,
 }: {
-  kind: ItemKind;
+  /** A peça modelada, quando este canto mostra a malha. */
+  kind?: ItemKind;
+  /** A textura da foto real, quando este canto mostra a foto. */
+  foto?: Texture;
   spot: (typeof ITEM_SPOTS)[number];
   outgoing?: boolean;
   reduced: boolean;
@@ -155,11 +169,18 @@ function ItemCard({
     /* Solta no ar: dá a volta em torno do próprio eixo, balança para a frente e
        para trás e sobe e desce devagar. O giro é contínuo; os outros dois são
        senos de períodos que não se dividem, então a peça nunca repete
-       exatamente a mesma pose — é o que tira a cara de laço. */
+       exatamente a mesma pose — é o que tira a cara de laço.
+
+       A foto real não dá a volta inteira: ela oscila. Uma malha girando mostra
+       o outro lado da joia; uma foto girando mostra o verso de um papel, e a
+       pessoa no busto ficaria de costas para quem olha. Meia dúzia de graus
+       para cada lado dá vida sem contar essa mentira. */
     if (!reduced) {
       const t = state.clock.elapsedTime + spot.fase;
       pivot.current.position.y = spot.pos[1] + Math.sin(t * 0.62) * FLOAT.sobe;
-      pivot.current.rotation.y = t * FLOAT.gira * spot.giro;
+      pivot.current.rotation.y = foto
+        ? Math.sin(t * 0.39) * FLOAT.olha
+        : t * FLOAT.gira * spot.giro;
       pivot.current.rotation.x = Math.sin(t * 0.43) * FLOAT.balanca;
     }
   });
@@ -181,7 +202,22 @@ function ItemCard({
         document.body.style.cursor = "";
       }}
     >
-      <AwardItem kind={kind} />
+      {kind && <AwardItem kind={kind} />}
+
+      {/* A foto real, em duas faces costas com costas: assim ela não some ao
+          virar de perfil nem aparece espelhada do outro lado. */}
+      {foto && (
+        <>
+          <mesh position={[0, 0, FOTO_PELE]}>
+            <planeGeometry args={planeSize(foto, FOTO_MAX.w, FOTO_MAX.h)} />
+            <meshBasicMaterial map={foto} transparent toneMapped={false} />
+          </mesh>
+          <mesh position={[0, 0, -FOTO_PELE]} rotation={[0, Math.PI, 0]}>
+            <planeGeometry args={planeSize(foto, FOTO_MAX.w, FOTO_MAX.h)} />
+            <meshBasicMaterial map={foto} transparent toneMapped={false} />
+          </mesh>
+        </>
+      )}
     </group>
   );
 }
@@ -203,6 +239,22 @@ function loadArt(src: string) {
       reject,
     );
   });
+}
+
+/**
+ * O que cada canto mostra.
+ *
+ * Um marco pode trazer a peça modelada, a foto real de quem a está usando, ou
+ * as duas — é o caso do 1M, que mantém o anel em malha e ganha a foto. Quando
+ * vêm as duas, os cantos se revezam: a malha nos opostos de cima-esquerda e
+ * baixo-esquerda, a foto nos outros dois. Quatro fotos iguais seriam quatro
+ * chapas; quatro malhas esconderiam a peça real.
+ */
+function reparte(kind: ItemKind | null, foto: Texture | null, index: number) {
+  if (kind && foto) return index % 2 === 0 ? { kind } : { foto };
+  if (foto) return { foto };
+  if (kind) return { kind };
+  return null;
 }
 
 /**
@@ -287,12 +339,14 @@ function Plaque({
   accent,
   art,
   items,
+  fotos,
   spin,
   reduced,
 }: {
   accent: string;
   art: { prev: Texture | null; curr: Texture | null };
   items: { prev: ItemKind | null; curr: ItemKind | null; volta: number };
+  fotos: { prev: Texture | null; curr: Texture | null };
   reduced: boolean;
   spin: boolean;
 }) {
@@ -394,26 +448,32 @@ function Plaque({
 
       {/* Os quatro objetos do marco, atrás da placa e em cada canto. Os do
           marco que sai continuam em cena até a travessia terminar. */}
-      {items.prev &&
-        ITEM_SPOTS.map((spot, index) => (
-          <ItemCard
-            key={`sai-${items.volta}-${index}`}
-            kind={items.prev!}
-            spot={spot}
-            outgoing
-            reduced={reduced}
-          />
-        ))}
+      {ITEM_SPOTS.map((spot, index) => {
+        const sai = reparte(items.prev, fotos.prev, index);
+        const entra = reparte(items.curr, fotos.curr, index);
 
-      {items.curr &&
-        ITEM_SPOTS.map((spot, index) => (
-          <ItemCard
-            key={`entra-${items.volta}-${index}`}
-            kind={items.curr!}
-            spot={spot}
-            reduced={reduced}
-          />
-        ))}
+        return (
+          <group key={index}>
+            {sai && (
+              <ItemCard
+                key={`sai-${items.volta}`}
+                {...sai}
+                spot={spot}
+                outgoing
+                reduced={reduced}
+              />
+            )}
+            {entra && (
+              <ItemCard
+                key={`entra-${items.volta}`}
+                {...entra}
+                spot={spot}
+                reduced={reduced}
+              />
+            )}
+          </group>
+        );
+      })}
 
       {/* Base escura, para a placa parecer apoiada */}
       <mesh position={[0, -1.72, 0]}>
@@ -432,12 +492,15 @@ export default function AwardPlaque3D({
   accent,
   image,
   item,
+  photo,
   visible = true,
 }: {
   accent: string;
   image?: string;
   /** Foto do item fisico do marco, repetida nos quatro cantos. */
   item?: string;
+  /** Caminho da foto real da joia, quando o marco tem uma. */
+  photo?: string;
   /** `false` quando a seção saiu da tela: o laço de render para junto. */
   visible?: boolean;
 }) {
@@ -453,6 +516,7 @@ export default function AwardPlaque3D({
   );
   const art = useArtPair(image);
   const items = useKindPair(item && isItemKind(item) ? item : null);
+  const fotos = useArtPair(photo || undefined);
 
   return (
     <Canvas
@@ -482,6 +546,7 @@ export default function AwardPlaque3D({
         accent={accent}
         art={art}
         items={items}
+        fotos={fotos}
         spin={!reduced}
         reduced={!!reduced}
       />

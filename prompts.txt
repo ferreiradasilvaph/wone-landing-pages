@@ -473,3 +473,12 @@ remova o fade ao redor do mouse
 por que esta quebrando?
 
 corrija
+
+===============================================================================
+[44] 2026-10-09
+===============================================================================
+vamos retrabalhar, o designer quer um busto para mostrar ao cliente do site como
+fica o colar (a imagem real, sem ser as imagens que pedi pra voce criar), um
+pulso para mostrar a pulseira (imagem real). o anel pode se manter como esta,
+mas seria interessante, nesse caso, deixar a imagem real do anel, diminui a
+imagem do anel quando subir ela e mantenha o 3d
