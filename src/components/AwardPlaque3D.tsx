@@ -80,10 +80,10 @@ const ITEM_SPOTS: {
   fase: number;
   giro: number;
 }[] = [
-  { pos: [-1.5, 1.34, -0.3], tilt: 0.07, fase: 0, giro: 1 },
-  { pos: [1.5, 1.34, -0.3], tilt: -0.07, fase: 1.9, giro: -0.82 },
-  { pos: [-1.5, -1.34, -0.3], tilt: -0.05, fase: 3.4, giro: 0.74 },
-  { pos: [1.5, -1.34, -0.3], tilt: 0.05, fase: 5.1, giro: -1.08 },
+  { pos: [-1.74, 1.46, -0.6], tilt: 0.07, fase: 0, giro: 1 },
+  { pos: [1.74, 1.46, -0.6], tilt: -0.07, fase: 1.9, giro: -0.82 },
+  { pos: [-1.74, -1.46, -0.6], tilt: -0.05, fase: 3.4, giro: 0.74 },
+  { pos: [1.74, -1.46, -0.6], tilt: 0.05, fase: 5.1, giro: -1.08 },
 ];
 
 /** Quanto a peça cresce sob o cursor. */
@@ -457,7 +457,7 @@ export default function AwardPlaque3D({
   return (
     <Canvas
       dpr={dpr}
-      camera={{ position: [0, 0, 6.4], fov: 38 }}
+      camera={{ position: [0, 0, 7.3], fov: 38 }}
       gl={{ antialias: true, alpha: true }}
       // Fora da tela, desenha um quadro e para.
       frameloop={reduced || !visible ? "demand" : "always"}

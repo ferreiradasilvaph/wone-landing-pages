@@ -178,7 +178,7 @@ function MarcaWone({
  */
 function Pulseira() {
   return (
-    <group rotation={[0.52, 0, 0]} scale={1.3}>
+    <group rotation={[0.52, 0, 0]} scale={1.12}>
       <Corrente elos={18} raio={0.34} elo={0.082} tubo={0.031} />
 
       {/* A plaqueta, na frente da corrente */}
@@ -203,7 +203,7 @@ function Colar() {
     /* Deslocado para cima: o pingente pendura abaixo da corrente, então sem
        isto a peça inteira nasceria fora de centro em relação ao seu eixo — e
        giraria em torno de um ponto que não é o meio dela. */
-    <group rotation={[0.46, 0, 0]} scale={1.08} position={[0, 0.17, 0]}>
+    <group rotation={[0.46, 0, 0]} scale={0.95} position={[0, 0.17, 0]}>
       <Corrente elos={24} raio={0.34} elo={0.066} tubo={0.024} />
 
       {/* Argola de ligação, entre a corrente e o pingente */}
@@ -230,7 +230,7 @@ function Colar() {
  */
 function Anel() {
   return (
-    <group rotation={[0.34, 0, 0]} scale={1.5}>
+    <group rotation={[0.34, 0, 0]} scale={1.3}>
       {/* O aro, grosso: anel de campeonato não tem aro de aliança */}
       <mesh rotation={[Math.PI / 2, 0, 0]}>
         <torusGeometry args={[0.2, 0.072, 12, 36]} />
