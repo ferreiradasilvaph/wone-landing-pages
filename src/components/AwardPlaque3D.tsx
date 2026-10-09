@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { AwardItem, isItemKind, type ItemKind } from "./AwardItem3D";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { Environment, Lightformer, RoundedBox } from "@react-three/drei";
 import { useReducedMotion } from "motion/react";
@@ -57,10 +58,10 @@ function planeSize(
 /* --------------------------------------------------------------------------
    Os objetos em volta
 
-   Cada marco manda junto a foto do item físico — a pulseira do 100K, o colar
-   do 500K, o anel do 1M. A mesma foto aparece quatro vezes, uma em cada canto,
+   Cada marco traz a joia que o acompanha — a pulseira do 100K, o colar do
+   500K, o anel do 1M. A mesma peça aparece quatro vezes, uma em cada canto,
    atrás da placa: lidas juntas, as quatro dizem "isto também chega na sua
-   casa" sem precisar de legenda.
+   casa" sem precisar de legenda. As malhas estão em `AwardItem3D`.
 
    Ficam na mesma `group` da placa, então acompanham o vaivém e ganham
    paralaxe em vez de parecerem adesivos colados no canvas.
@@ -85,28 +86,24 @@ const ITEM_SPOTS: {
   { pos: [1.5, -1.34, -0.3], tilt: 0.05, fase: 5.1, giro: -1.08 },
 ];
 
-const ITEM_MAX = { w: 1.02, h: 0.82 };
-/** Quanto o objeto cresce sob o cursor. */
+/** Quanto a peça cresce sob o cursor. */
 const ITEM_HOVER = 1.16;
 /**
  * O flutuar de cada objeto.
  *
- * `gira` é rotação contínua em Y — o objeto dá a volta em profundidade, não no
- * plano da tela. Duas versões ficaram pelo caminho: oscilar ±15° num período de
- * treze segundos (em movimento no papel, parado aos olhos) e girar no eixo Z
- * (em movimento de verdade, mas rodando feito um ponteiro, que é giro de duas
- * dimensões).
+ * `gira` é rotação contínua em Y — a peça dá a volta em profundidade, não no
+ * plano da tela. Três versões ficaram pelo caminho antes desta: oscilar quinze
+ * graus (em movimento no papel, parada aos olhos), girar no eixo Z (movimento
+ * de verdade, mas de duas dimensões) e girar em Y com a foto em duas faces
+ * costas com costas — que resolvia o espelhamento, mas continuava sendo uma
+ * chapa: de perfil, uma linha.
  *
- * Girar em Y num plano sem espessura tem um problema: a cada meia volta ele
- * fica de perfil e some, e na outra metade mostraria a imagem espelhada — com a
- * gravação "WONE BOT · 100K CLUB" ao contrário. `ItemCard` resolve os dois com
- * duas faces costas com costas, cada uma virada para o seu lado.
+ * Agora a peça é malha, então a volta é volta: tem espessura em qualquer
+ * ângulo, e o reflexo corre pelo metal em vez de ficar congelado na textura.
  *
  * `balanca` é a inclinação que acompanha, para o giro não virar um torno.
  */
 const FLOAT = { sobe: 0.085, balanca: 0.22, gira: 0.5 };
-/** Meia espessura entre as duas faces. O suficiente para não brigarem pelo Z. */
-const ITEM_SKIN = 0.005;
 
 /**
  * Um dos quatro objetos.
@@ -116,59 +113,55 @@ const ITEM_SKIN = 0.005;
  * lugar em qualquer taxa de quadros. Quem pediu menos movimento recebe o
  * tamanho final na hora, sem o caminho.
  *
- * A opacidade vem do mesmo contador de travessia da placa: quando o marco
- * muda, os objetos do marco que sai se apagam no compasso da placa que sai.
+ * Entrar e sair também é tamanho: a peça nasce em zero e cresce, e a do marco
+ * anterior encolhe até sumir.
  */
 function ItemCard({
-  texture,
+  kind,
   spot,
-  fade,
   outgoing,
   reduced,
 }: {
-  texture: Texture;
+  kind: ItemKind;
   spot: (typeof ITEM_SPOTS)[number];
-  fade: { current: number };
   outgoing?: boolean;
   reduced: boolean;
 }) {
   const pivot = useRef<Group>(null);
-  const frente = useRef<MeshBasicMaterial>(null);
-  const costas = useRef<MeshBasicMaterial>(null);
   const [hot, setHot] = useState(false);
-  const size = useMemo(
-    () => planeSize(texture, ITEM_MAX.w, ITEM_MAX.h),
-    [texture],
-  );
 
   /* O cursor é do documento, não do mesh: sair da página com ele em "pointer"
      deixaria a mão pendurada na tela. */
   useEffect(() => () => void (document.body.style.cursor = ""), []);
 
   useFrame((state, delta) => {
-    const target = hot && !outgoing ? ITEM_HOVER : 1;
+    if (!pivot.current) return;
 
-    if (pivot.current) {
-      const now = pivot.current.scale.x;
-      const step = reduced ? 1 : 1 - Math.exp(-10 * Math.min(delta, 0.05));
-      pivot.current.scale.setScalar(now + (target - now) * step);
+    /* A travessia entre marcos é feita no tamanho, não na opacidade. Metal
+       meio transparente mostra o próprio avesso e vira vidro sujo; encolher
+       até sumir mantém a peça sólida do começo ao fim. */
+    const target = outgoing ? 0 : hot ? ITEM_HOVER : 1;
 
-      /* Solto no ar: dá a volta em torno do próprio eixo, balança para a frente
-         e para trás e sobe e desce devagar. O giro é contínuo; os outros dois
-         são senos de períodos que não se dividem, então o objeto nunca repete
-         exatamente a mesma pose — é o que tira a cara de laço. */
-      if (!reduced) {
-        const t = state.clock.elapsedTime + spot.fase;
-        pivot.current.position.y = spot.pos[1] + Math.sin(t * 0.62) * FLOAT.sobe;
-        pivot.current.rotation.y = t * FLOAT.gira * spot.giro;
-        pivot.current.rotation.x = Math.sin(t * 0.43) * FLOAT.balanca;
-      }
+    const now = pivot.current.scale.x;
+    const step = reduced ? 1 : 1 - Math.exp(-10 * Math.min(delta, 0.05));
+    const next = now + (target - now) * step;
+    pivot.current.scale.setScalar(next);
+
+    /* Encolheu até sumir: para de ser desenhada. Sem isto a peça que saiu
+       continuaria no laço de render para sempre, do tamanho de nada. */
+    pivot.current.visible = next > 0.012;
+    if (!pivot.current.visible) return;
+
+    /* Solta no ar: dá a volta em torno do próprio eixo, balança para a frente e
+       para trás e sobe e desce devagar. O giro é contínuo; os outros dois são
+       senos de períodos que não se dividem, então a peça nunca repete
+       exatamente a mesma pose — é o que tira a cara de laço. */
+    if (!reduced) {
+      const t = state.clock.elapsedTime + spot.fase;
+      pivot.current.position.y = spot.pos[1] + Math.sin(t * 0.62) * FLOAT.sobe;
+      pivot.current.rotation.y = t * FLOAT.gira * spot.giro;
+      pivot.current.rotation.x = Math.sin(t * 0.43) * FLOAT.balanca;
     }
-
-    const opacity =
-      (outgoing ? 1 - fade.current : fade.current) * (hot && !outgoing ? 1 : 0.9);
-    if (frente.current) frente.current.opacity = opacity;
-    if (costas.current) costas.current.opacity = opacity;
   });
 
   return (
@@ -176,6 +169,7 @@ function ItemCard({
       ref={pivot}
       position={spot.pos}
       rotation={[0, 0, spot.tilt]}
+      scale={0}
       onPointerOver={(event) => {
         if (outgoing) return;
         event.stopPropagation();
@@ -187,31 +181,7 @@ function ItemCard({
         document.body.style.cursor = "";
       }}
     >
-      {/* A face da frente e a de trás, viradas uma para cada lado. A de trás é
-          a mesma imagem girada meia volta, então ela aparece do jeito certo
-          quando o objeto está de costas — e não espelhada, que é o que um
-          material de duas faces daria. */}
-      <mesh position={[0, 0, ITEM_SKIN]}>
-        <planeGeometry args={size} />
-        <meshBasicMaterial
-          ref={frente}
-          map={texture}
-          transparent
-          depthWrite={false}
-          toneMapped={false}
-        />
-      </mesh>
-
-      <mesh position={[0, 0, -ITEM_SKIN]} rotation={[0, Math.PI, 0]}>
-        <planeGeometry args={size} />
-        <meshBasicMaterial
-          ref={costas}
-          map={texture}
-          transparent
-          depthWrite={false}
-          toneMapped={false}
-        />
-      </mesh>
+      <AwardItem kind={kind} />
     </group>
   );
 }
@@ -233,6 +203,30 @@ function loadArt(src: string) {
       reject,
     );
   });
+}
+
+/**
+ * A joia em cena e a que está saindo.
+ *
+ * O ajuste é feito durante a renderização, e não num efeito: é o caminho que o
+ * próprio React recomenda para estado que acompanha uma propriedade, e evita o
+ * quadro intermediário em que a peça nova já chegou mas a antiga ainda não
+ * saiu. A que sai continua montada até a seguinte trocar — encolhida a zero e
+ * fora do laço de render, custa nada.
+ */
+function useKindPair(kind: ItemKind | null) {
+  const [pair, setPair] = useState<{
+    prev: ItemKind | null;
+    curr: ItemKind | null;
+    /** Só para diferenciar a chave de duas idas ao mesmo marco. */
+    volta: number;
+  }>({ prev: null, curr: kind, volta: 0 });
+
+  if (pair.curr !== kind) {
+    setPair({ prev: pair.curr, curr: kind, volta: pair.volta + 1 });
+  }
+
+  return pair;
 }
 
 /**
@@ -298,7 +292,7 @@ function Plaque({
 }: {
   accent: string;
   art: { prev: Texture | null; curr: Texture | null };
-  items: { prev: Texture | null; curr: Texture | null };
+  items: { prev: ItemKind | null; curr: ItemKind | null; volta: number };
   reduced: boolean;
   spin: boolean;
 }) {
@@ -403,10 +397,9 @@ function Plaque({
       {items.prev &&
         ITEM_SPOTS.map((spot, index) => (
           <ItemCard
-            key={`sai-${index}`}
-            texture={items.prev!}
+            key={`sai-${items.volta}-${index}`}
+            kind={items.prev!}
             spot={spot}
-            fade={fade}
             outgoing
             reduced={reduced}
           />
@@ -415,10 +408,9 @@ function Plaque({
       {items.curr &&
         ITEM_SPOTS.map((spot, index) => (
           <ItemCard
-            key={`entra-${index}`}
-            texture={items.curr!}
+            key={`entra-${items.volta}-${index}`}
+            kind={items.curr!}
             spot={spot}
-            fade={fade}
             reduced={reduced}
           />
         ))}
@@ -460,7 +452,7 @@ export default function AwardPlaque3D({
     [],
   );
   const art = useArtPair(image);
-  const items = useArtPair(item || undefined);
+  const items = useKindPair(item && isItemKind(item) ? item : null);
 
   return (
     <Canvas

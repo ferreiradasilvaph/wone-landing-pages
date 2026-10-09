@@ -618,7 +618,7 @@ export const en: Content = {
       {
         tier: "10K",
         image: "/placas/placa-10k.webp",
-        /** Sem objeto ainda: o 10K e o unico marco cujo item fisico nao foi fotografado. */
+        /** Peça do marco, modelada em `AwardItem3D`. O 10K ainda não tem a sua. */
         item: "",
         title: "Bronze Trophy • $10,000",
         subtitle: "Proof of the first scale",
@@ -630,7 +630,7 @@ export const en: Content = {
       {
         tier: "100K",
         image: "/placas/placa-100k.webp",
-        item: "/images/pulseira-100k.webp",
+        item: "pulseira",
         title: "100K Acrylic Plaque • $100,000",
         subtitle: "The 6-Figure Club",
         description:
@@ -641,7 +641,7 @@ export const en: Content = {
       {
         tier: "500K",
         image: "/placas/placa-500k.webp",
-        item: "/images/colar-500k.webp",
+        item: "colar",
         title: "500K Ceremonial Plaque • $500,000",
         subtitle: "Half a Million in Revenue",
         description:
@@ -652,7 +652,7 @@ export const en: Content = {
       {
         tier: "1M",
         image: "/placas/placa-1m.webp",
-        item: "/images/anel-1m.webp",
+        item: "anel",
         title: "1M Black Diamond Plaque • $1,000,000",
         subtitle: "The Olympus of 7 Figures",
         description:
