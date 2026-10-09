@@ -447,3 +447,11 @@ aumentar, levemente, ao passar com o cursor por cima dos mesmos
 
 diminui um pouco o tamanho dos objetos em volta das placas e deixa eles
 "livres" no ar, girando levemente e so expandindo ao passar o cursor por cima
+
+===============================================================================
+[40] 2026-10-09
+===============================================================================
+chat, as imagens dos objetos tem de estar girando livremente no ar, e nao
+estaticas, como estao. corrija
+
+agora preciso que elas girem em 3d, estao em 2d

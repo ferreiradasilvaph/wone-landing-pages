@@ -8,7 +8,6 @@ import {
   SRGBColorSpace,
   TextureLoader,
   type Group,
-  type Mesh,
   type MeshBasicMaterial,
   type Texture,
 } from "three";
@@ -74,18 +73,40 @@ function planeSize(
  * os quatro subiriam e desceriam em formação, que é a única coisa que denuncia
  * na hora que aquilo é código e não um objeto solto no ar.
  */
-const ITEM_SPOTS: { pos: [number, number, number]; tilt: number; fase: number }[] = [
-  { pos: [-1.5, 1.34, -0.3], tilt: 0.07, fase: 0 },
-  { pos: [1.5, 1.34, -0.3], tilt: -0.07, fase: 1.9 },
-  { pos: [-1.5, -1.34, -0.3], tilt: -0.05, fase: 3.4 },
-  { pos: [1.5, -1.34, -0.3], tilt: 0.05, fase: 5.1 },
+const ITEM_SPOTS: {
+  pos: [number, number, number];
+  tilt: number;
+  fase: number;
+  giro: number;
+}[] = [
+  { pos: [-1.5, 1.34, -0.3], tilt: 0.07, fase: 0, giro: 1 },
+  { pos: [1.5, 1.34, -0.3], tilt: -0.07, fase: 1.9, giro: -0.82 },
+  { pos: [-1.5, -1.34, -0.3], tilt: -0.05, fase: 3.4, giro: 0.74 },
+  { pos: [1.5, -1.34, -0.3], tilt: 0.05, fase: 5.1, giro: -1.08 },
 ];
 
 const ITEM_MAX = { w: 1.02, h: 0.82 };
 /** Quanto o objeto cresce sob o cursor. */
 const ITEM_HOVER = 1.16;
-/** Amplitudes do flutuar: sobe e desce, vira de leve, inclina de leve. */
-const FLOAT = { sobe: 0.085, vira: 0.26, inclina: 0.07 };
+/**
+ * O flutuar de cada objeto.
+ *
+ * `gira` é rotação contínua em Y — o objeto dá a volta em profundidade, não no
+ * plano da tela. Duas versões ficaram pelo caminho: oscilar ±15° num período de
+ * treze segundos (em movimento no papel, parado aos olhos) e girar no eixo Z
+ * (em movimento de verdade, mas rodando feito um ponteiro, que é giro de duas
+ * dimensões).
+ *
+ * Girar em Y num plano sem espessura tem um problema: a cada meia volta ele
+ * fica de perfil e some, e na outra metade mostraria a imagem espelhada — com a
+ * gravação "WONE BOT · 100K CLUB" ao contrário. `ItemCard` resolve os dois com
+ * duas faces costas com costas, cada uma virada para o seu lado.
+ *
+ * `balanca` é a inclinação que acompanha, para o giro não virar um torno.
+ */
+const FLOAT = { sobe: 0.085, balanca: 0.22, gira: 0.5 };
+/** Meia espessura entre as duas faces. O suficiente para não brigarem pelo Z. */
+const ITEM_SKIN = 0.005;
 
 /**
  * Um dos quatro objetos.
@@ -111,8 +132,9 @@ function ItemCard({
   outgoing?: boolean;
   reduced: boolean;
 }) {
-  const mesh = useRef<Mesh>(null);
-  const material = useRef<MeshBasicMaterial>(null);
+  const pivot = useRef<Group>(null);
+  const frente = useRef<MeshBasicMaterial>(null);
+  const costas = useRef<MeshBasicMaterial>(null);
   const [hot, setHot] = useState(false);
   const size = useMemo(
     () => planeSize(texture, ITEM_MAX.w, ITEM_MAX.h),
@@ -126,33 +148,32 @@ function ItemCard({
   useFrame((state, delta) => {
     const target = hot && !outgoing ? ITEM_HOVER : 1;
 
-    if (mesh.current) {
-      const now = mesh.current.scale.x;
+    if (pivot.current) {
+      const now = pivot.current.scale.x;
       const step = reduced ? 1 : 1 - Math.exp(-10 * Math.min(delta, 0.05));
-      mesh.current.scale.setScalar(now + (target - now) * step);
+      pivot.current.scale.setScalar(now + (target - now) * step);
 
-      /* Solto no ar: sobe e desce devagar, vira um pouco para cada lado e
-         inclina junto. São três senos de períodos diferentes — o objeto nunca
-         repete exatamente a mesma pose, que é o que tira a cara de laço. O giro
-         fica curto de propósito: o plano é de uma face só, e virar demais o
-         mostraria de perfil, como uma lasca. */
+      /* Solto no ar: dá a volta em torno do próprio eixo, balança para a frente
+         e para trás e sobe e desce devagar. O giro é contínuo; os outros dois
+         são senos de períodos que não se dividem, então o objeto nunca repete
+         exatamente a mesma pose — é o que tira a cara de laço. */
       if (!reduced) {
         const t = state.clock.elapsedTime + spot.fase;
-        mesh.current.position.y = spot.pos[1] + Math.sin(t * 0.62) * FLOAT.sobe;
-        mesh.current.rotation.y = Math.sin(t * 0.47) * FLOAT.vira;
-        mesh.current.rotation.z = spot.tilt + Math.sin(t * 0.33) * FLOAT.inclina;
+        pivot.current.position.y = spot.pos[1] + Math.sin(t * 0.62) * FLOAT.sobe;
+        pivot.current.rotation.y = t * FLOAT.gira * spot.giro;
+        pivot.current.rotation.x = Math.sin(t * 0.43) * FLOAT.balanca;
       }
     }
 
-    if (material.current) {
-      material.current.opacity =
-        (outgoing ? 1 - fade.current : fade.current) * (hot && !outgoing ? 1 : 0.9);
-    }
+    const opacity =
+      (outgoing ? 1 - fade.current : fade.current) * (hot && !outgoing ? 1 : 0.9);
+    if (frente.current) frente.current.opacity = opacity;
+    if (costas.current) costas.current.opacity = opacity;
   });
 
   return (
-    <mesh
-      ref={mesh}
+    <group
+      ref={pivot}
       position={spot.pos}
       rotation={[0, 0, spot.tilt]}
       onPointerOver={(event) => {
@@ -166,15 +187,32 @@ function ItemCard({
         document.body.style.cursor = "";
       }}
     >
-      <planeGeometry args={size} />
-      <meshBasicMaterial
-        ref={material}
-        map={texture}
-        transparent
-        depthWrite={false}
-        toneMapped={false}
-      />
-    </mesh>
+      {/* A face da frente e a de trás, viradas uma para cada lado. A de trás é
+          a mesma imagem girada meia volta, então ela aparece do jeito certo
+          quando o objeto está de costas — e não espelhada, que é o que um
+          material de duas faces daria. */}
+      <mesh position={[0, 0, ITEM_SKIN]}>
+        <planeGeometry args={size} />
+        <meshBasicMaterial
+          ref={frente}
+          map={texture}
+          transparent
+          depthWrite={false}
+          toneMapped={false}
+        />
+      </mesh>
+
+      <mesh position={[0, 0, -ITEM_SKIN]} rotation={[0, Math.PI, 0]}>
+        <planeGeometry args={size} />
+        <meshBasicMaterial
+          ref={costas}
+          map={texture}
+          transparent
+          depthWrite={false}
+          toneMapped={false}
+        />
+      </mesh>
+    </group>
   );
 }
 
