@@ -8,13 +8,12 @@ import {
   SRGBColorSpace,
   TextureLoader,
   type Group,
+  type Mesh,
   type MeshBasicMaterial,
   type Texture,
 } from "three";
 
 const PLAQUE = { w: 2.2, h: 2.9, d: 0.34 };
-/** Proporção do plano onde a arte é aplicada. */
-const PLANE_RATIO = PLAQUE.w / PLAQUE.h;
 /** Quanto dura a passagem de uma placa para a outra, em segundos. */
 const CROSSFADE_S = 0.55;
 
@@ -36,27 +35,147 @@ const CROSSFADE_S = 0.55;
 const CACHE = new Map<string, Texture>();
 
 /**
- * Enquadra como `object-fit: cover` — a arte preenche a placa e o excedente é
- * cortado, em vez de esticar. Sem isso, uma foto em paisagem (1200×896) num
- * plano em retrato sai achatada.
+ * Tamanho do plano que mostra a arte, no estilo `object-fit: contain`.
+ *
+ * Era `cover`: a arte preenchia a face e o excedente era cortado, que é o certo
+ * quando a imagem é só a estampa e o acrílico está em volta, feito de malha.
+ * Com as fotos novas a imagem É a placa inteira, recortada — cortar o excedente
+ * passaria a serrar a borda do próprio acrílico. Então agora ela cabe inteira,
+ * e é o plano que muda de proporção, nunca a imagem.
  */
-function fitCover(texture: Texture) {
+function planeSize(
+  texture: Texture,
+  maxW = PLAQUE.w,
+  maxH = PLAQUE.h,
+): [number, number] {
   const image = texture.image as { width: number; height: number } | undefined;
-  if (!image?.width || !image?.height) return texture;
+  if (!image?.width || !image?.height) return [maxW, maxH];
 
   const ratio = image.width / image.height;
-  if (ratio > PLANE_RATIO) {
-    const scale = PLANE_RATIO / ratio;
-    texture.repeat.set(scale, 1);
-    texture.offset.set((1 - scale) / 2, 0);
-  } else {
-    const scale = ratio / PLANE_RATIO;
-    texture.repeat.set(1, scale);
-    texture.offset.set(0, (1 - scale) / 2);
-  }
+  return ratio > maxW / maxH ? [maxW, maxW / ratio] : [maxH * ratio, maxH];
+}
 
-  texture.needsUpdate = true;
-  return texture;
+/* --------------------------------------------------------------------------
+   Os objetos em volta
+
+   Cada marco manda junto a foto do item físico — a pulseira do 100K, o colar
+   do 500K, o anel do 1M. A mesma foto aparece quatro vezes, uma em cada canto,
+   atrás da placa: lidas juntas, as quatro dizem "isto também chega na sua
+   casa" sem precisar de legenda.
+
+   Ficam na mesma `group` da placa, então acompanham o vaivém e ganham
+   paralaxe em vez de parecerem adesivos colados no canvas.
+   -------------------------------------------------------------------------- */
+
+/**
+ * Cantos onde os quatro objetos se posicionam.
+ *
+ * `fase` desencontra o flutuar de cada um: com o mesmo relógio e a mesma conta,
+ * os quatro subiriam e desceriam em formação, que é a única coisa que denuncia
+ * na hora que aquilo é código e não um objeto solto no ar.
+ */
+const ITEM_SPOTS: { pos: [number, number, number]; tilt: number; fase: number }[] = [
+  { pos: [-1.5, 1.34, -0.3], tilt: 0.07, fase: 0 },
+  { pos: [1.5, 1.34, -0.3], tilt: -0.07, fase: 1.9 },
+  { pos: [-1.5, -1.34, -0.3], tilt: -0.05, fase: 3.4 },
+  { pos: [1.5, -1.34, -0.3], tilt: 0.05, fase: 5.1 },
+];
+
+const ITEM_MAX = { w: 1.02, h: 0.82 };
+/** Quanto o objeto cresce sob o cursor. */
+const ITEM_HOVER = 1.16;
+/** Amplitudes do flutuar: sobe e desce, vira de leve, inclina de leve. */
+const FLOAT = { sobe: 0.085, vira: 0.26, inclina: 0.07 };
+
+/**
+ * Um dos quatro objetos.
+ *
+ * A escala é interpolada quadro a quadro em vez de sair de uma transição CSS —
+ * dentro do canvas não existe CSS, e o amortecimento exponencial chega ao mesmo
+ * lugar em qualquer taxa de quadros. Quem pediu menos movimento recebe o
+ * tamanho final na hora, sem o caminho.
+ *
+ * A opacidade vem do mesmo contador de travessia da placa: quando o marco
+ * muda, os objetos do marco que sai se apagam no compasso da placa que sai.
+ */
+function ItemCard({
+  texture,
+  spot,
+  fade,
+  outgoing,
+  reduced,
+}: {
+  texture: Texture;
+  spot: (typeof ITEM_SPOTS)[number];
+  fade: { current: number };
+  outgoing?: boolean;
+  reduced: boolean;
+}) {
+  const mesh = useRef<Mesh>(null);
+  const material = useRef<MeshBasicMaterial>(null);
+  const [hot, setHot] = useState(false);
+  const size = useMemo(
+    () => planeSize(texture, ITEM_MAX.w, ITEM_MAX.h),
+    [texture],
+  );
+
+  /* O cursor é do documento, não do mesh: sair da página com ele em "pointer"
+     deixaria a mão pendurada na tela. */
+  useEffect(() => () => void (document.body.style.cursor = ""), []);
+
+  useFrame((state, delta) => {
+    const target = hot && !outgoing ? ITEM_HOVER : 1;
+
+    if (mesh.current) {
+      const now = mesh.current.scale.x;
+      const step = reduced ? 1 : 1 - Math.exp(-10 * Math.min(delta, 0.05));
+      mesh.current.scale.setScalar(now + (target - now) * step);
+
+      /* Solto no ar: sobe e desce devagar, vira um pouco para cada lado e
+         inclina junto. São três senos de períodos diferentes — o objeto nunca
+         repete exatamente a mesma pose, que é o que tira a cara de laço. O giro
+         fica curto de propósito: o plano é de uma face só, e virar demais o
+         mostraria de perfil, como uma lasca. */
+      if (!reduced) {
+        const t = state.clock.elapsedTime + spot.fase;
+        mesh.current.position.y = spot.pos[1] + Math.sin(t * 0.62) * FLOAT.sobe;
+        mesh.current.rotation.y = Math.sin(t * 0.47) * FLOAT.vira;
+        mesh.current.rotation.z = spot.tilt + Math.sin(t * 0.33) * FLOAT.inclina;
+      }
+    }
+
+    if (material.current) {
+      material.current.opacity =
+        (outgoing ? 1 - fade.current : fade.current) * (hot && !outgoing ? 1 : 0.9);
+    }
+  });
+
+  return (
+    <mesh
+      ref={mesh}
+      position={spot.pos}
+      rotation={[0, 0, spot.tilt]}
+      onPointerOver={(event) => {
+        if (outgoing) return;
+        event.stopPropagation();
+        setHot(true);
+        document.body.style.cursor = "pointer";
+      }}
+      onPointerOut={() => {
+        setHot(false);
+        document.body.style.cursor = "";
+      }}
+    >
+      <planeGeometry args={size} />
+      <meshBasicMaterial
+        ref={material}
+        map={texture}
+        transparent
+        depthWrite={false}
+        toneMapped={false}
+      />
+    </mesh>
+  );
 }
 
 /** Carrega (ou devolve do cache) a arte já enquadrada. Sempre assíncrono. */
@@ -69,7 +188,6 @@ function loadArt(src: string) {
       src,
       (texture) => {
         texture.colorSpace = SRGBColorSpace;
-        fitCover(texture);
         CACHE.set(src, texture);
         resolve(texture);
       },
@@ -94,7 +212,17 @@ function useArtPair(src?: string) {
   const current = useRef<Texture | null>(null);
 
   useEffect(() => {
-    if (!src) return;
+    /* Marco sem imagem — hoje só o 10K, que ainda não tem foto do item. O que
+       estava em cena sai pela travessia em vez de ficar pendurado do marco
+       anterior. */
+    if (!src) {
+      if (current.current) {
+        const prev = current.current;
+        current.current = null;
+        setPair({ prev, curr: null });
+      }
+      return;
+    }
 
     let alive = true;
     loadArt(src)
@@ -117,20 +245,23 @@ function useArtPair(src?: string) {
 }
 
 /**
- * Placa com a arte aplicada na face.
+ * A placa em cena, com os quatro objetos em volta.
  *
- * O bloco é acrílico translúcido e a arte entra como textura num plano logo à
- * frente — assim a imagem fica nítida e o vidro continua lendo como vidro. O
- * plano recorta a arte no formato da placa, que é o que a faz assentar no
- * preto da página em vez de parecer uma foto colada.
+ * A arte já vem recortada do fundo, e é ela que carrega o acrílico inteiro —
+ * bisel, reflexo e volume. O bloco de malha só aparece antes da primeira
+ * imagem, como molde.
  */
 function Plaque({
   accent,
   art,
+  items,
   spin,
+  reduced,
 }: {
   accent: string;
   art: { prev: Texture | null; curr: Texture | null };
+  items: { prev: Texture | null; curr: Texture | null };
+  reduced: boolean;
   spin: boolean;
 }) {
   const group = useRef<Group>(null);
@@ -162,31 +293,39 @@ function Plaque({
 
   return (
     <group ref={group}>
-      <RoundedBox args={[PLAQUE.w, PLAQUE.h, PLAQUE.d]} radius={0.1} smoothness={6}>
-        {/* Com a arte na frente, o acrílico quase não transmite: o material
-            transmissivo compõe num passo próprio e, com valor alto, passa por
-            cima da textura e lava as cores da placa. */}
-        <meshPhysicalMaterial
-          transmission={hasArt ? 0.18 : 0.94}
-          thickness={1.1}
-          roughness={0.12}
-          ior={1.46}
-          clearcoat={1}
-          clearcoatRoughness={0.06}
-          attenuationColor={accent}
-          attenuationDistance={2.4}
-          color={hasArt ? "#0b0b0f" : "#ffffff"}
-        />
-      </RoundedBox>
+      {/* O bloco de acrílico, agora só enquanto não há arte.
+
+          Ele existia para ser o corpo da placa, com a estampa aplicada na face.
+          As fotos novas já vêm com o acrílico inteiro renderizado e com fundo
+          recortado — então o bloco deixou de ser o corpo e virou o que ele
+          parecia na tela: um retângulo preto atrás de uma imagem transparente,
+          tapando a página. Fora de cena quando há arte, a transparência do PNG
+          encosta direto no fundo do site, que é o que se pediu. */}
+      {!hasArt && (
+        <RoundedBox args={[PLAQUE.w, PLAQUE.h, PLAQUE.d]} radius={0.1} smoothness={6}>
+          <meshPhysicalMaterial
+            transmission={0.94}
+            thickness={1.1}
+            roughness={0.12}
+            ior={1.46}
+            clearcoat={1}
+            clearcoatRoughness={0.06}
+            attenuationColor={accent}
+            attenuationDistance={2.4}
+            color="#ffffff"
+          />
+        </RoundedBox>
+      )}
 
       {/* A placa que sai, um fio atrás da que entra */}
       {art.prev && (
         <mesh position={[0, 0, PLAQUE.d / 2 + 0.01]}>
-          <planeGeometry args={[PLAQUE.w * 0.9, PLAQUE.h * 0.9]} />
+          <planeGeometry args={planeSize(art.prev)} />
           <meshBasicMaterial
             ref={back}
             map={art.prev}
             transparent
+            depthWrite={false}
             toneMapped={false}
           />
         </mesh>
@@ -194,11 +333,12 @@ function Plaque({
 
       {art.curr && (
         <mesh position={[0, 0, PLAQUE.d / 2 + 0.012]}>
-          <planeGeometry args={[PLAQUE.w * 0.9, PLAQUE.h * 0.9]} />
+          <planeGeometry args={planeSize(art.curr)} />
           <meshBasicMaterial
             ref={front}
             map={art.curr}
             transparent
+            depthWrite={false}
             opacity={0}
             toneMapped={false}
           />
@@ -220,6 +360,31 @@ function Plaque({
           </mesh>
         ))}
 
+      {/* Os quatro objetos do marco, atrás da placa e em cada canto. Os do
+          marco que sai continuam em cena até a travessia terminar. */}
+      {items.prev &&
+        ITEM_SPOTS.map((spot, index) => (
+          <ItemCard
+            key={`sai-${index}`}
+            texture={items.prev!}
+            spot={spot}
+            fade={fade}
+            outgoing
+            reduced={reduced}
+          />
+        ))}
+
+      {items.curr &&
+        ITEM_SPOTS.map((spot, index) => (
+          <ItemCard
+            key={`entra-${index}`}
+            texture={items.curr!}
+            spot={spot}
+            fade={fade}
+            reduced={reduced}
+          />
+        ))}
+
       {/* Base escura, para a placa parecer apoiada */}
       <mesh position={[0, -1.72, 0]}>
         <cylinderGeometry args={[1.15, 1.3, 0.3, 48]} />
@@ -236,10 +401,13 @@ function Plaque({
 export default function AwardPlaque3D({
   accent,
   image,
+  item,
   visible = true,
 }: {
   accent: string;
   image?: string;
+  /** Foto do item fisico do marco, repetida nos quatro cantos. */
+  item?: string;
   /** `false` quando a seção saiu da tela: o laço de render para junto. */
   visible?: boolean;
 }) {
@@ -254,6 +422,7 @@ export default function AwardPlaque3D({
     [],
   );
   const art = useArtPair(image);
+  const items = useArtPair(item || undefined);
 
   return (
     <Canvas
@@ -279,7 +448,13 @@ export default function AwardPlaque3D({
         <Lightformer intensity={0.5} color="#20202a" position={[0, -5, 2]} scale={12} />
       </Environment>
 
-      <Plaque accent={accent} art={art} spin={!reduced} />
+      <Plaque
+        accent={accent}
+        art={art}
+        items={items}
+        spin={!reduced}
+        reduced={!!reduced}
+      />
     </Canvas>
   );
 }

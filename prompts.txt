@@ -429,3 +429,21 @@ maiusculo
 [38] 2026-10-09
 ===============================================================================
 chat, troquei algumas imagens de placa... atualiza ai
+
+===============================================================================
+[39] 2026-10-09
+===============================================================================
+chat, remove esse fundo preto que ficou atras das placas transparentes, preciso
+que as placas estejam transparentes no site...
+
+voce vai ver que em /public/images/ eu adicionei "anel-1m.webp",
+"colar-500k.webp" e "pulseira-100k.webp". Preciso que essas imagens fiquem ao
+redor das respectivas placas (use 4 vezes a mesma imagem, em volta de cada uma
+de suas respectivas placas). So falta o objeto que representa a
+"placa-10k.webp" mas enquanto nao temos... trabalhe
+
+ao passar o mouse pelos objetos em voltas das placas, os objetos devem
+aumentar, levemente, ao passar com o cursor por cima dos mesmos
+
+diminui um pouco o tamanho dos objetos em volta das placas e deixa eles
+"livres" no ar, girando levemente e so expandindo ao passar o cursor por cima
