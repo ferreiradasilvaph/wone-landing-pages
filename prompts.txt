@@ -506,3 +506,10 @@ melhore / tudo / visualmente falando / em especifico o colar e a pulseira
 as imagens dos aneis precisam estar girando livre no ar
 
 os aneis devem girar em circulos em torno de si mesmos
+
+===============================================================================
+[48] 2026-10-09
+===============================================================================
+diminui o tamanho dos aneis
+
+melhore a aparencia do pulso e do dorso

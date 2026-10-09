@@ -108,11 +108,11 @@ const ITEM_HOVER = 1.16;
 /**
  * O quadro em que uma foto real cabe.
  *
- * Contido, de propósito: a imagem é uma chapa, e chapa grande no ar chama mais
- * atenção do que merece — a placa é que é o assunto. O pedido foi esse, para a
- * foto do anel, e vale para as três.
+ * Contido, de propósito: são quatro cópias da mesma peça girando em volta da
+ * placa, e quatro chapas grandes no ar disputam com o que elas deveriam estar
+ * acompanhando. A placa é que é o assunto.
  */
-const FOTO_MAX = { w: 0.86, h: 0.94 };
+const FOTO_MAX = { w: 0.6, h: 0.66 };
 /** O quadro da joia vestida, que aparece sozinha e precisa encarar a placa. */
 const FOTO_SOLO = { w: 1.5, h: 2.45 };
 /** Meia espessura entre as duas faces de uma foto. */

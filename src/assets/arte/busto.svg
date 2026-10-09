@@ -27,14 +27,16 @@
 
     <!-- O recorte do busto, reaproveitado pela silhueta e pelas luzes -->
     <path id="silhueta" d="M320 30
-      L 318 152
-      C 316 198 300 216 262 232
-      C 196 260 128 284 96 312
-      C 74 332 66 358 62 394
-      L 48 760 L 712 760 L 698 394
-      C 694 358 686 332 664 312
-      C 632 284 564 260 498 232
-      C 460 216 444 198 442 152
+      L 318 136
+      C 316 184 298 204 258 222
+      C 192 250 124 278 94 310
+      C 72 334 64 360 60 396
+      C 56 470 52 600 56 760
+      L 704 760
+      C 708 600 704 470 700 396
+      C 696 360 688 334 666 310
+      C 636 278 568 250 502 222
+      C 462 204 444 184 442 136
       L 440 30 Z"/>
     <clipPath id="corpo"><use href="#silhueta"/></clipPath>
   </defs>
@@ -47,28 +49,22 @@
          espessura decrescente no lugar de um desfoque: assim o resultado não
          depende do rasterizador ter filtro, e a queda fica igual. -->
     <g fill="none" stroke="url(#brasa)" stroke-linecap="round">
-      <path d="M440 30 L 442 152 C 444 198 460 216 498 232
-               C 564 260 632 284 664 312 C 686 332 694 358 698 394 L 712 760"
+      <path d="M440 30 L 442 136 C 444 184 462 204 502 222 C 568 250 636 278 666 310 C 688 334 696 360 700 396 C 704 470 708 600 704 760"
             stroke-width="76" opacity="0.1"/>
-      <path d="M440 30 L 442 152 C 444 198 460 216 498 232
-               C 564 260 632 284 664 312 C 686 332 694 358 698 394 L 712 760"
+      <path d="M440 30 L 442 136 C 444 184 462 204 502 222 C 568 250 636 278 666 310 C 688 334 696 360 700 396 C 704 470 708 600 704 760"
             stroke-width="38" opacity="0.22"/>
-      <path d="M440 30 L 442 152 C 444 198 460 216 498 232
-               C 564 260 632 284 664 312 C 686 332 694 358 698 394 L 712 760"
+      <path d="M440 30 L 442 136 C 444 184 462 204 502 222 C 568 250 636 278 666 310 C 688 334 696 360 700 396 C 704 470 708 600 704 760"
             stroke-width="15" opacity="0.5"/>
-      <path d="M440 30 L 442 152 C 444 198 460 216 498 232
-               C 564 260 632 284 664 312 C 686 332 694 358 698 394 L 712 760"
+      <path d="M440 30 L 442 136 C 444 184 462 204 502 222 C 568 250 636 278 666 310 C 688 334 696 360 700 396 C 704 470 708 600 704 760"
             stroke-width="5" opacity="0.9"/>
     </g>
 
     <!-- O mesmo na esquerda, em creme e bem mais fraco: só para o volume não
          ficar iluminado de um lado só. -->
     <g fill="none" stroke="#FFFFE3" stroke-linecap="round">
-      <path d="M320 30 L 318 152 C 316 198 300 216 262 232
-               C 196 260 128 284 96 312 C 74 332 66 358 62 394 L 48 760"
+      <path d="M320 30 L 318 136 C 316 184 298 204 258 222 C 192 250 124 278 94 310 C 72 334 64 360 60 396 C 56 470 52 600 56 760"
             stroke-width="46" opacity="0.1"/>
-      <path d="M320 30 L 318 152 C 316 198 300 216 262 232
-               C 196 260 128 284 96 312 C 74 332 66 358 62 394 L 48 760"
+      <path d="M320 30 L 318 136 C 316 184 298 204 258 222 C 192 250 124 278 94 310 C 72 334 64 360 60 396 C 56 470 52 600 56 760"
             stroke-width="11" opacity="0.3"/>
     </g>
 
@@ -81,6 +77,15 @@
          isto o tronco é uma chapa, por mais degradê que tenha. -->
     <ellipse cx="282" cy="420" rx="150" ry="210" fill="#FFFFE3" opacity="0.055"/>
     <ellipse cx="506" cy="470" rx="130" ry="220" fill="#000000" opacity="0.22"/>
+
+    <!-- Onde o braço encosta no peito. Sem este par de vincos o tronco e os
+         braços são uma massa só, e a silhueta lê como sino. -->
+    <path d="M150 392 C 136 500 132 630 136 760"
+          fill="none" stroke="#000000" stroke-opacity="0.34" stroke-width="14"
+          stroke-linecap="round"/>
+    <path d="M610 392 C 624 500 628 630 624 760"
+          fill="none" stroke="#000000" stroke-opacity="0.4" stroke-width="14"
+          stroke-linecap="round"/>
 
     <!-- Clavículas -->
     <path d="M268 252 C 312 290 348 302 380 302 C 412 302 448 290 492 252"
