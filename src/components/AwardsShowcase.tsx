@@ -219,6 +219,7 @@ export function AwardsShowcase() {
                 accent={active.accent}
                 image={active.image}
                 photo={active.photo}
+                worn={active.photoWorn}
                 visible={onScreen}
               />
             ) : (

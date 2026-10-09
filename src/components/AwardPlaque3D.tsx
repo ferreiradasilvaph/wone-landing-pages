@@ -85,6 +85,24 @@ const ITEM_SPOTS: {
   { pos: [1.74, -1.46, -0.6], tilt: 0.05, fase: 5.1, giro: -1.08 },
 ];
 
+/**
+ * O lugar da joia quando ela aparece uma vez só, ao lado da placa.
+ *
+ * Uma joia solta — o anel na caixa — se repete nos quatro cantos: são quatro
+ * vistas do mesmo objeto, e juntas enchem o quadro. Uma joia vestida não: o
+ * busto e o pulso já trazem corpo, e quatro corpos em volta de uma placa viram
+ * multidão. Um só, do tamanho da placa, divide o quadro em dois assuntos — o
+ * troféu e quem o usa.
+ */
+const ITEM_SOLO: (typeof ITEM_SPOTS)[number] = {
+  pos: [1.52, 0.04, -0.25],
+  tilt: 0.03,
+  fase: 0.7,
+  giro: 1,
+};
+/** Para onde a placa anda quando divide o quadro com a joia vestida. */
+const PLACA_DESLOCA = -0.84;
+
 /** Quanto a peça cresce sob o cursor. */
 const ITEM_HOVER = 1.16;
 /**
@@ -95,6 +113,8 @@ const ITEM_HOVER = 1.16;
  * foto do anel, e vale para as três.
  */
 const FOTO_MAX = { w: 0.86, h: 0.94 };
+/** O quadro da joia vestida, que aparece sozinha e precisa encarar a placa. */
+const FOTO_SOLO = { w: 1.5, h: 2.45 };
 /** Meia espessura entre as duas faces de uma foto. */
 const FOTO_PELE = 0.005;
 /**
@@ -123,12 +143,15 @@ const FLOAT = { sobe: 0.085, balanca: 0.22, olha: 0.32 };
 function ItemCard({
   foto,
   spot,
+  quadro,
   outgoing,
   reduced,
 }: {
   /** A imagem da joia que este canto mostra. */
   foto: Texture;
   spot: (typeof ITEM_SPOTS)[number];
+  /** O quadro em que ela cabe: o dos cantos ou o da joia vestida. */
+  quadro: { w: number; h: number };
   outgoing?: boolean;
   reduced: boolean;
 }) {
@@ -188,11 +211,11 @@ function ItemCard({
       {/* Duas faces costas com costas: assim a imagem não some ao virar de
           perfil nem aparece espelhada do outro lado. */}
       <mesh position={[0, 0, FOTO_PELE]}>
-        <planeGeometry args={planeSize(foto, FOTO_MAX.w, FOTO_MAX.h)} />
+        <planeGeometry args={planeSize(foto, quadro.w, quadro.h)} />
         <meshBasicMaterial map={foto} transparent toneMapped={false} />
       </mesh>
       <mesh position={[0, 0, -FOTO_PELE]} rotation={[0, Math.PI, 0]}>
-        <planeGeometry args={planeSize(foto, FOTO_MAX.w, FOTO_MAX.h)} />
+        <planeGeometry args={planeSize(foto, quadro.w, quadro.h)} />
         <meshBasicMaterial map={foto} transparent toneMapped={false} />
       </mesh>
     </group>
@@ -276,12 +299,15 @@ function Plaque({
   accent,
   art,
   fotos,
+  worn,
   spin,
   reduced,
 }: {
   accent: string;
   art: { prev: Texture | null; curr: Texture | null };
   fotos: { prev: Texture | null; curr: Texture | null };
+  /** A joia e vestida: aparece uma vez so, ao lado da placa. */
+  worn: boolean;
   reduced: boolean;
   spin: boolean;
 }) {
@@ -314,6 +340,9 @@ function Plaque({
 
   return (
     <group ref={group}>
+      {/* Tudo o que e a placa anda junto quando ela divide o quadro com a joia
+          vestida: o acrilico, a arte, os aneis do molde e a base. */}
+      <group position={[worn ? PLACA_DESLOCA : 0, 0, 0]}>
       {/* O bloco de acrílico, agora só enquanto não há arte.
 
           Ele existia para ser o corpo da placa, com a estampa aplicada na face.
@@ -381,15 +410,24 @@ function Plaque({
           </mesh>
         ))}
 
-      {/* Os quatro objetos do marco, atrás da placa e em cada canto. Os do
-          marco que sai continuam em cena até a travessia terminar. */}
-      {ITEM_SPOTS.map((spot, index) => (
+        {/* Base escura, para a placa parecer apoiada */}
+        <mesh position={[0, -1.72, 0]}>
+          <cylinderGeometry args={[1.15, 1.3, 0.3, 48]} />
+          <meshStandardMaterial color="#0a0a0d" metalness={0.85} roughness={0.3} />
+        </mesh>
+      </group>
+
+      {/* A joia: uma vez ao lado da placa quando é vestida, quatro vezes nos
+          cantos quando é a peça solta. A do marco que sai continua em cena até
+          a travessia terminar. */}
+      {(worn ? [ITEM_SOLO] : ITEM_SPOTS).map((spot, index) => (
         <group key={index}>
           {fotos.prev && (
             <ItemCard
               key={`sai-${fotos.prev.uuid}`}
               foto={fotos.prev}
               spot={spot}
+              quadro={worn ? FOTO_SOLO : FOTO_MAX}
               outgoing
               reduced={reduced}
             />
@@ -399,17 +437,12 @@ function Plaque({
               key={`entra-${fotos.curr.uuid}`}
               foto={fotos.curr}
               spot={spot}
+              quadro={worn ? FOTO_SOLO : FOTO_MAX}
               reduced={reduced}
             />
           )}
         </group>
       ))}
-
-      {/* Base escura, para a placa parecer apoiada */}
-      <mesh position={[0, -1.72, 0]}>
-        <cylinderGeometry args={[1.15, 1.3, 0.3, 48]} />
-        <meshStandardMaterial color="#0a0a0d" metalness={0.85} roughness={0.3} />
-      </mesh>
     </group>
   );
 }
@@ -422,6 +455,7 @@ export default function AwardPlaque3D({
   accent,
   image,
   photo,
+  worn = false,
   visible = true,
 }: {
   accent: string;
@@ -429,6 +463,8 @@ export default function AwardPlaque3D({
   /** Foto do item fisico do marco, repetida nos quatro cantos. */
   /** Caminho da imagem da joia, quando o marco tem uma. */
   photo?: string;
+  /** A joia aparece vestida: uma vez só, dividindo o quadro com a placa. */
+  worn?: boolean;
   /** `false` quando a seção saiu da tela: o laço de render para junto. */
   visible?: boolean;
 }) {
@@ -473,6 +509,7 @@ export default function AwardPlaque3D({
         accent={accent}
         art={art}
         fotos={fotos}
+        worn={worn && Boolean(photo)}
         spin={!reduced}
         reduced={!!reduced}
       />

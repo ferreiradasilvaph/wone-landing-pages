@@ -620,6 +620,9 @@ export const en: Content = {
         image: "/placas/placa-10k.webp",
         /** A joia do marco, como imagem. O 10K ainda não tem a sua. */
         photo: "",
+        /** Vestida (busto, pulso) aparece uma vez ao lado da placa; solta,
+            repete nos quatro cantos. */
+        photoWorn: false,
         title: "Bronze Trophy • $10,000",
         subtitle: "Proof of the first scale",
         description:
@@ -631,6 +634,7 @@ export const en: Content = {
         tier: "100K",
         image: "/placas/placa-100k.webp",
         photo: "/images/pulso-100k.webp",
+        photoWorn: true,
         title: "100K Acrylic Plaque • $100,000",
         subtitle: "The 6-Figure Club",
         description:
@@ -642,6 +646,7 @@ export const en: Content = {
         tier: "500K",
         image: "/placas/placa-500k.webp",
         photo: "/images/busto-500k.webp",
+        photoWorn: true,
         title: "500K Ceremonial Plaque • $500,000",
         subtitle: "Half a Million in Revenue",
         description:
@@ -653,6 +658,7 @@ export const en: Content = {
         tier: "1M",
         image: "/placas/placa-1m.webp",
         photo: "/images/anel-1m.webp",
+        photoWorn: false,
         title: "1M Black Diamond Plaque • $1,000,000",
         subtitle: "The Olympus of 7 Figures",
         description:
