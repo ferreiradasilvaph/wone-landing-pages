@@ -633,7 +633,7 @@ export const en: Content = {
       {
         tier: "100K",
         image: "/placas/placa-100k.webp",
-        photo: "/images/pulso-100k.webp",
+        photo: "/images/pulseira-100k.webp",
         photoWorn: true,
         title: "100K Acrylic Plaque • $100,000",
         subtitle: "The 6-Figure Club",
@@ -645,7 +645,7 @@ export const en: Content = {
       {
         tier: "500K",
         image: "/placas/placa-500k.webp",
-        photo: "/images/busto-500k.webp",
+        photo: "/images/colar-500k.webp",
         photoWorn: true,
         title: "500K Ceremonial Plaque • $500,000",
         subtitle: "Half a Million in Revenue",

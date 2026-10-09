@@ -659,7 +659,7 @@ export const pt = {
       {
         tier: "100K",
         image: "/placas/placa-100k.webp",
-        photo: "/images/pulso-100k.webp",
+        photo: "/images/pulseira-100k.webp",
         photoWorn: true,
         title: "Placa Acrílico 100K • $100,000",
         subtitle: "Clube dos 6 Dígitos",
@@ -671,7 +671,7 @@ export const pt = {
       {
         tier: "500K",
         image: "/placas/placa-500k.webp",
-        photo: "/images/busto-500k.webp",
+        photo: "/images/colar-500k.webp",
         photoWorn: true,
         title: "Placa Cerimonial 500K • $500,000",
         subtitle: "Meio Milhão Faturado",
