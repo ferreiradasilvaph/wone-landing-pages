@@ -1,68 +1,66 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 918 1430" width="918" height="1430">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1280" width="1000" height="1280">
   <!--
-    O dorso do marco 500K: um busto de joalheria, cortado em cima no pescoco e
-    embaixo na cintura, com a foto real do colar vestida nele.
+    O dorso do marco 500K: pescoco, tronco e bracos, cortados nas quatro
+    pontas, com a foto real do colar vestida nele.
 
-    Tres versoes ficaram pelo caminho e explicam o desenho de agora. Solido,
-    com a casca oca e brasa acesa por dentro, leu como frasco de perfume.
-    Esvaziado ate virar so contorno de luz, resolveu o frasco mas ficou um
-    recorte de papel. Com volume de volta e a silhueta lisa, voltou a ser
-    frasco — massa escura, gargalo cilindrico, ombro redondo e base estreita
-    sao exatamente o desenho de um frasco.
+    O ERRO QUE SEGUROU AS TRES VERSOES ANTERIORES era de proporcao, nao de
+    pintura: o pescoco tinha o triplo do comprimento que devia. Medido, dava
+    quase metade da altura do tronco — gargalo, nao pescoco. Nenhuma sombra
+    desmente isso, e era por isso que a peca voltava a ler como frasco de
+    perfume toda vez que ganhava volume.
 
-    O que tira o frasco e a silhueta, e nao a pintura: deltoide saindo do
-    contorno, axila entrando, cintura caindo reta, e os dois lados
-    diferentes. Frasco e simetrico; corpo nao. Aqui o ombro direito e mais
-    alto e mais curto que o esquerdo, que e o que a foto pede — ela e um
-    tres-quartos, com o pingente pendendo para a esquerda.
+    A escala agora sai da propria foto. A corrente desce cerca de 12 cm do
+    pescoco ate o fecho do pingente, e esse trecho mede 240 no arquivo: da 20
+    por centimetro. Com isso tudo se amarra — cabeca de 460, ombro de dois
+    cabecas (920), furcula ao mamilo uma cabeca, mamilo ao umbigo outra,
+    cotovelo a 1,9 cabeca da furcula. O pescoco visivel ficou em 165, que e o
+    que sobra de um pescoco cortado no meio.
 
-    Esse recorte so coube porque o contorno do pingente foi medido linha a
-    linha na foto, em vez de estimado. A margem e pequena e em alguns pontos
-    chega a 15: em y 576 a borda direita do corpo precisa passar de 851, em
-    y 813 de 802, e a esquerda precisa chegar a 47 em y 852. Mexer na
-    silhueta sem refazer essa medida serra o pingente.
+    OS BRACOS. Caem colados ao tronco e so se soltam onde a cintura estreita,
+    por volta de y 895 — que e onde a lateral do tronco cruza a borda de
+    dentro do braco. Acima disso nao ha vao nenhum: o braco cobre a lateral
+    do peito, e o que separa um do outro e sombra, nao contorno. Isso e
+    anatomia, e tambem conveniencia: vao na silhueta vira corte na foto.
 
-    A pintura segue a mesma receita do pulso do 100K:
+    O RECORTE DA FOTO so vale acima de y 528. Ele existe para cortar as duas
+    pontas soltas da corrente — a esquerda contra o pescoco, a direita contra
+    o ombro — e nada mais. Abaixo dali o pingente pende na frente do corpo,
+    como pingente pende, e passa por cima de tudo, inclusive do vao entre
+    braco e tronco. Foi o que liberou a silhueta: enquanto a foto era
+    recortada inteira, cada vao serrava a joia, e o corpo tinha de ser um
+    bloco macico.
 
-    - o degrade atravessando a largura e o que faz o tronco ser redondo;
-    - o pescoco tem o cilindro dele, em tres passagens largas. O degrade do
-      tronco e medido na largura do peito: o pescoco cai todo na mesma faixa
-      dele e sairia chapado;
-    - os realces sao degrades radiais que acabam em nada. Elipse de borda
-      dura, no escuro, le como mancha colada na pele;
-    - a anatomia e sombra larga e fraca, nunca linha clara e fina: do tamanho
-      em que isto aparece na pagina, linha fina e clara le como risco;
-    - o contorno e so a luz que lambe a borda. Com massa embaixo, o fio aceso
-      da versao anterior lia como neon.
+    A pintura segue a receita do pulso do 100K: degrade atravessando a
+    largura para o cilindro, realces em degrade radial que acabam em nada, e
+    anatomia em sombra larga — nunca linha clara e fina, que do tamanho em
+    que isto aparece le como risco. Cada braco tem o cilindro dele; o degrade
+    do tronco e medido na largura do peito e os deixaria chapados.
 
-    O corte do pescoco e um vazio escuro com a aresta da frente acesa, e nao
-    um oco iluminado: foi a luz por dentro que fez o frasco.
+    O QUE O DESENHO PROCURA, de cima para baixo: os dois
+    esternocleidomastoideos descendo em V ate a furcula; a clavicula em S com
+    a fossa escavada por cima; o deltoide como touca, com a insercao em V no
+    meio do umero — e esse V que impede o braco de nascer do tronco como um
+    cano; a borda de baixo do peitoral, que e aresta e nao degrade; as
+    digitacoes do serratil, diagonais; biceps por dentro e triceps por fora
+    do braco, com o cotovelo alargando antes do corte; e no abdome a linha
+    alba, duas intersecoes tendineas e a crista iliaca fechando.
 
-    A foto entra POR CIMA, no quadro x 55..935 / y 260..1068, e e recortada
-    por esta silhueta. E o recorte que faz as duas pontas da corrente sumirem
-    atras do corpo em vez de acabarem no ar: a esquerda ela e cortada no
-    contorno do pescoco e a direita na borda do ombro.
-
-    O comentario de compor.html tem a mesma silhueta copiada — as duas
-    precisam andar juntas.
+    A foto entra no quadro x 76..956 / y 220..1028.
+    O comentario de compor.html tem a mesma silhueta copiada.
   -->
   <defs>
-    <!-- O cilindro do tronco. Atravessa a largura (x 38 a 886), nao a
-         altura: e a secao que e redonda. -->
     <linearGradient id="cilindro" gradientUnits="userSpaceOnUse"
-                    x1="38" y1="0" x2="886" y2="0">
-      <stop offset="0" stop-color="#0B0B10"/>
-      <stop offset="0.08" stop-color="#1F1F27"/>
-      <stop offset="0.26" stop-color="#2C2C36"/>
-      <stop offset="0.42" stop-color="#25252E"/>
-      <stop offset="0.64" stop-color="#1A1A21"/>
-      <stop offset="0.85" stop-color="#101016"/>
+                    x1="40" y1="0" x2="956" y2="0">
+      <stop offset="0" stop-color="#0D0D12"/>
+      <stop offset="0.1" stop-color="#20202A"/>
+      <stop offset="0.28" stop-color="#2D2D38"/>
+      <stop offset="0.44" stop-color="#26262F"/>
+      <stop offset="0.66" stop-color="#1A1A21"/>
+      <stop offset="0.86" stop-color="#101016"/>
       <stop offset="0.95" stop-color="#1D1319"/>
       <stop offset="1" stop-color="#2E1C11"/>
     </linearGradient>
 
-    <!-- Luz e sombra moles. Elipse de borda dura, no escuro, le como mancha
-         colada na pele; estes degrades acabam em nada. -->
     <radialGradient id="realce">
       <stop offset="0" stop-color="#F2F2FA" stop-opacity="0.9"/>
       <stop offset="0.45" stop-color="#F2F2FA" stop-opacity="0.4"/>
@@ -73,194 +71,267 @@
       <stop offset="0.5" stop-color="#000000" stop-opacity="0.4"/>
       <stop offset="1" stop-color="#000000" stop-opacity="0"/>
     </radialGradient>
-
-    <!-- O vazio do corte: escuro, com a parede do fundo um pouco menos. -->
     <radialGradient id="oco" cx="0.5" cy="0.78" r="0.8">
       <stop offset="0" stop-color="#07070A"/>
       <stop offset="0.55" stop-color="#0D0D12"/>
       <stop offset="1" stop-color="#1A1A21"/>
     </radialGradient>
 
-    <path id="silhueta" d="M348 80
-      C 340 190 336 300 332 390
-      C 240 420 166 486 128 562
-      C 78 606 36 660 38 726
-      C 40 792 44 844 48 878
-      C 60 912 76 924 90 935
-      C 98 958 100 972 100 990
-      C 128 1066 168 1140 190 1210
-      C 192 1252 190 1296 188 1330
-      A 282 44 0 0 0 752 1330
-      C 750 1296 748 1252 750 1210
-      C 742 1160 734 1150 732 1120
-      C 734 1070 738 1030 740 1000
-      C 758 968 774 944 786 918
-      C 800 890 812 862 816 832
-      C 820 796 822 770 826 746
-      C 868 700 894 656 886 612
-      C 870 560 846 536 802 516
-      C 736 456 672 414 630 390
-      C 626 300 622 190 612 80
-      A 132 38 0 0 0 348 80 Z"/>
+    <!--
+      A silhueta, no sentido horario a partir do corte do pescoco: pescoco,
+      trapezio, deltoide, braco esquerdo ate o corte abaixo do cotovelo, volta
+      pela borda de dentro ate o apice do vao (218, 895), desce a lateral do
+      tronco, corte da cintura, sobe a outra lateral, e o mesmo do outro lado.
+      Os dois apices sao o ponto onde o tronco fica mais estreito que o braco.
+    -->
+    <path id="silhueta" d="M370 60
+      C 364 130 362 180 362 225
+      C 352 258 300 282 240 312
+      C 160 350 42 396 40 456
+      C 44 520 70 580 92 630
+      C 84 680 76 730 76 780
+      C 82 860 96 940 104 1020
+      C 94 1068 82 1096 80 1120
+      C 86 1156 96 1180 102 1195
+      A 60 16 0 0 0 222 1195
+      C 216 1130 214 1020 218 895
+      C 228 960 248 1080 262 1195
+      A 236 36 0 0 0 734 1195
+      C 748 1080 768 960 780 895
+      C 782 1020 784 1130 778 1192
+      A 58 16 0 0 0 894 1192
+      C 900 1174 912 1150 916 1115
+      C 912 1090 898 1052 892 1010
+      C 902 930 914 846 920 770
+      C 918 720 910 664 904 612
+      C 928 562 958 496 956 436
+      C 958 396 836 350 756 312
+      C 696 282 644 258 634 225
+      C 634 180 632 130 626 60
+      A 128 36 0 0 0 370 60 Z"/>
     <clipPath id="corpo"><use href="#silhueta"/></clipPath>
 
-    <path id="ladoD" d="M612 80 C 622 190 626 300 630 390
-      C 672 414 736 456 802 516 C 846 536 870 560 886 612
-      C 894 656 868 700 826 746 C 822 770 820 796 816 832
-      C 812 862 800 890 786 918 C 774 944 758 968 740 1000
-      C 738 1030 734 1070 732 1120 C 734 1150 742 1160 750 1210
-      C 748 1252 750 1296 752 1330"/>
-    <path id="ladoE" d="M348 80 C 340 190 336 300 332 390
-      C 240 420 166 486 128 562 C 78 606 36 660 38 726
-      C 40 792 44 844 48 878 C 60 912 76 924 90 935
-      C 98 958 100 972 100 990 C 128 1066 168 1140 190 1210
-      C 192 1252 190 1296 188 1330"/>
-    <path id="base" d="M188 1330 A 282 44 0 0 0 752 1330"/>
+    <path id="ladoD" d="M626 60 C 632 130 634 180 634 225
+      C 644 258 696 282 756 312 C 836 350 958 396 956 436
+      C 958 496 928 562 904 612 C 910 664 918 720 920 770
+      C 914 846 902 930 892 1010 C 898 1052 912 1090 916 1115
+      C 912 1150 900 1174 894 1192"/>
+    <path id="ladoE" d="M370 60 C 364 130 362 180 362 225
+      C 352 258 300 282 240 312 C 160 350 42 396 40 456
+      C 44 520 70 580 92 630 C 84 680 76 730 76 780
+      C 82 860 96 940 104 1020 C 94 1068 82 1096 80 1120
+      C 86 1156 96 1180 102 1195"/>
+    <path id="dentroE" d="M222 1195 C 216 1130 214 1020 218 895"/>
+    <path id="dentroD" d="M780 895 C 782 1020 784 1130 778 1192"/>
+    <path id="baseE" d="M102 1195 A 60 16 0 0 0 222 1195"/>
+    <path id="baseC" d="M262 1195 A 236 36 0 0 0 734 1195"/>
+    <path id="baseD" d="M778 1192 A 58 16 0 0 0 894 1192"/>
   </defs>
 
   <use href="#silhueta" fill="url(#cilindro)"/>
 
   <g clip-path="url(#corpo)" fill="none" stroke-linecap="round">
-    <!-- ===================== O PESCOCO =====================
-         Cilindro proprio: o degrade do tronco e medido na largura do peito e
-         atravessa o pescoco numa faixa so, entao ele sairia chapado. -->
-    <path d="M412 100 C 408 200 406 300 406 392"
-          stroke="#F2F2FA" stroke-opacity="0.085" stroke-width="92"/>
-    <path d="M352 106 C 348 210 346 300 344 386"
-          stroke="#000000" stroke-opacity="0.32" stroke-width="38"/>
-    <path d="M600 106 C 604 210 606 300 608 386"
-          stroke="#000000" stroke-opacity="0.42" stroke-width="58"/>
-    <!-- o esternocleidomastoideo, que amarra o pescoco ao esterno -->
-    <path d="M440 112 C 420 210 392 300 366 382"
-          stroke="#F2F2FA" stroke-opacity="0.05" stroke-width="30"/>
-    <path d="M528 116 C 546 212 570 302 592 382"
-          stroke="#F2F2FA" stroke-opacity="0.025" stroke-width="26"/>
+    <!-- ===================== PESCOCO =====================
+         Curto, como pescoco e. Cilindro proprio: o degrade do tronco e
+         medido na largura do peito e o deixaria chapado. -->
+    <path d="M428 76 C 426 130 424 180 424 226"
+          stroke="#F2F2FA" stroke-opacity="0.09" stroke-width="88"/>
+    <path d="M370 82 C 368 134 366 182 366 224"
+          stroke="#000000" stroke-opacity="0.34" stroke-width="38"/>
+    <path d="M620 82 C 622 134 624 182 624 224"
+          stroke="#000000" stroke-opacity="0.44" stroke-width="54"/>
+    <!-- Os dois esternocleidomastoideos descendo em V ate a furcula: sao
+         eles que dao frente e lado ao pescoco. -->
+    <path d="M438 80 C 430 140 452 206 486 248"
+          stroke="#F2F2FA" stroke-opacity="0.06" stroke-width="30"/>
+    <path d="M556 82 C 566 142 544 208 510 248"
+          stroke="#F2F2FA" stroke-opacity="0.032" stroke-width="28"/>
+    <path d="M498 110 C 498 160 498 206 498 240"
+          stroke="#000000" stroke-opacity="0.16" stroke-width="15"/>
 
-    <!-- ===================== OMBROS E CLAVICULAS =====================
-         As covas acima das claviculas, que e onde o pescoco acaba. -->
-    <ellipse cx="326" cy="440" rx="100" ry="48" fill="url(#sombra)"
-             opacity="0.5" stroke="none"/>
-    <ellipse cx="628" cy="438" rx="92" ry="44" fill="url(#sombra)"
-             opacity="0.58" stroke="none"/>
-    <!-- o alto do trapezio, que pega luz de cima -->
-    <path d="M336 400 C 276 424 216 466 166 522"
-          stroke="#F2F2FA" stroke-opacity="0.055" stroke-width="66"/>
-    <path d="M624 402 C 684 426 738 456 790 500"
-          stroke="#F2F2FA" stroke-opacity="0.03" stroke-width="58"/>
-    <!-- as claviculas: crista clara em cima, sombra logo abaixo -->
-    <path d="M316 492 C 372 530 430 546 478 546"
-          stroke="#F2F2FA" stroke-opacity="0.07" stroke-width="18"/>
-    <path d="M636 486 C 582 522 528 538 482 540"
-          stroke="#F2F2FA" stroke-opacity="0.04" stroke-width="18"/>
-    <path d="M316 516 C 372 554 430 570 478 570"
-          stroke="#000000" stroke-opacity="0.22" stroke-width="16"/>
-    <path d="M636 510 C 582 546 528 562 482 564"
-          stroke="#000000" stroke-opacity="0.26" stroke-width="16"/>
-    <!-- a cova do esterno, entre as duas -->
-    <ellipse cx="480" cy="512" rx="42" ry="28" fill="url(#sombra)"
-             opacity="0.45" stroke="none"/>
+    <!-- ===================== CINTURA ESCAPULAR =====================
+         A fossa supraclavicular, escavada por cima da clavicula. -->
+    <ellipse cx="346" cy="282" rx="96" ry="40" fill="url(#sombra)"
+             opacity="0.54" stroke="none"/>
+    <ellipse cx="636" cy="268" rx="88" ry="36" fill="url(#sombra)"
+             opacity="0.6" stroke="none"/>
+    <!-- o alto do trapezio, que recebe a luz de cima -->
+    <path d="M356 240 C 300 258 244 288 198 322"
+          stroke="#F2F2FA" stroke-opacity="0.06" stroke-width="54"/>
+    <path d="M640 236 C 696 254 752 284 798 316"
+          stroke="#F2F2FA" stroke-opacity="0.03" stroke-width="48"/>
+    <!-- A clavicula em S: do acromio ate a furcula, crista clara em cima e
+         sombra logo abaixo. -->
+    <path d="M212 338 C 300 340 406 334 492 300"
+          stroke="#F2F2FA" stroke-opacity="0.08" stroke-width="16"/>
+    <path d="M790 322 C 706 326 602 324 514 296"
+          stroke="#F2F2FA" stroke-opacity="0.05" stroke-width="16"/>
+    <path d="M216 360 C 302 364 406 356 492 322"
+          stroke="#000000" stroke-opacity="0.26" stroke-width="15"/>
+    <path d="M790 344 C 706 348 602 346 514 318"
+          stroke="#000000" stroke-opacity="0.3" stroke-width="15"/>
+    <!-- a furcula -->
+    <ellipse cx="500" cy="276" rx="36" ry="22" fill="url(#sombra)"
+             opacity="0.52" stroke="none"/>
 
-    <!-- ===================== DELTOIDES =====================
-         Sao a massa que faz o ombro ser ombro. O da esquerda pega a luz
-         cheia; o da direita fica na sombra e recebe a brasa so na aresta. -->
-    <ellipse cx="104" cy="660" rx="110" ry="138" fill="url(#realce)"
-             opacity="0.22" stroke="none"/>
-    <ellipse cx="846" cy="672" rx="92" ry="120" fill="url(#sombra)"
-             opacity="0.32" stroke="none"/>
-    <ellipse cx="872" cy="648" rx="44" ry="92" fill="url(#realce)"
-             opacity="0.07" stroke="none"/>
-    <!-- a aresta de baixo do deltoide, onde ele larga o braco -->
-    <path d="M58 862 C 76 896 98 918 124 930"
-          stroke="#000000" stroke-opacity="0.34" stroke-width="20"/>
-    <path d="M812 832 C 800 868 786 896 768 918"
-          stroke="#000000" stroke-opacity="0.4" stroke-width="20"/>
+    <!-- ===================== DELTOIDE =====================
+         A touca que cobre a articulacao. O da esquerda pega a luz cheia; o
+         da direita fica na sombra e so recebe a brasa na aresta. -->
+    <ellipse cx="118" cy="486" rx="116" ry="128" fill="url(#realce)"
+             opacity="0.24" stroke="none"/>
+    <ellipse cx="882" cy="472" rx="98" ry="114" fill="url(#sombra)"
+             opacity="0.3" stroke="none"/>
+    <ellipse cx="912" cy="450" rx="42" ry="86" fill="url(#realce)"
+             opacity="0.08" stroke="none"/>
+    <!-- o sulco deltopeitoral, do acromio para a axila -->
+    <path d="M226 348 C 214 406 212 452 222 498"
+          stroke="#000000" stroke-opacity="0.3" stroke-width="24"/>
+    <path d="M770 332 C 782 392 784 438 774 484"
+          stroke="#000000" stroke-opacity="0.36" stroke-width="24"/>
+    <!-- A insercao em V, no meio do umero: e a juncao do ombro com o braco,
+         e sem ela o braco nasce do tronco como um cano. -->
+    <path d="M94 636 C 128 672 170 680 206 666"
+          stroke="#000000" stroke-opacity="0.32" stroke-width="20"/>
+    <path d="M902 618 C 870 654 832 662 798 648"
+          stroke="#000000" stroke-opacity="0.36" stroke-width="20"/>
+    <path d="M96 612 C 130 648 172 656 208 644"
+          stroke="#F2F2FA" stroke-opacity="0.055" stroke-width="15"/>
 
-    <!-- a axila: o vinco fundo onde o braco encosta no peito -->
-    <ellipse cx="116" cy="930" rx="70" ry="52" fill="url(#sombra)"
-             opacity="0.62" stroke="none"/>
-    <ellipse cx="770" cy="914" rx="64" ry="48" fill="url(#sombra)"
-             opacity="0.68" stroke="none"/>
+    <!-- ===================== AXILA =====================
+         O vinco fundo onde o braco encosta no tronco. -->
+    <ellipse cx="224" cy="512" rx="58" ry="48" fill="url(#sombra)"
+             opacity="0.66" stroke="none"/>
+    <ellipse cx="774" cy="492" rx="54" ry="44" fill="url(#sombra)"
+             opacity="0.72" stroke="none"/>
+    <!-- a juncao braco/tronco, enquanto eles ainda se tocam -->
+    <path d="M222 530 C 224 640 220 770 218 895"
+          stroke="#000000" stroke-opacity="0.48" stroke-width="24"/>
+    <path d="M776 510 C 778 626 780 760 780 895"
+          stroke="#000000" stroke-opacity="0.54" stroke-width="22"/>
 
-    <!-- ===================== PEITO E TRONCO =====================
-         Quase tudo isto fica atras do pingente; o que se ve de verdade sao
-         as bordas e o que sobra abaixo dele. -->
-    <ellipse cx="300" cy="712" rx="166" ry="128" fill="url(#realce)"
+    <!-- ===================== PEITORAL =====================
+         O que conta e a borda de baixo, que e aresta e nao degrade: e ela
+         que sustenta o peito e o separa do abdome. -->
+    <ellipse cx="344" cy="640" rx="148" ry="112" fill="url(#realce)"
              opacity="0.1" stroke="none"/>
-    <ellipse cx="636" cy="722" rx="152" ry="120" fill="url(#realce)"
+    <ellipse cx="648" cy="648" rx="138" ry="106" fill="url(#realce)"
              opacity="0.045" stroke="none"/>
-    <!-- a aba de baixo do peitoral, que joga sombra na costela -->
-    <path d="M186 744 C 268 834 372 866 466 866"
-          stroke="#000000" stroke-opacity="0.2" stroke-width="22"/>
-    <path d="M762 744 C 686 834 586 866 492 866"
-          stroke="#000000" stroke-opacity="0.24" stroke-width="22"/>
-    <!-- o esterno, descendo entre os dois -->
-    <path d="M478 548 L 478 960"
-          stroke="#000000" stroke-opacity="0.12" stroke-width="40"/>
-    <!-- o serratil, nas costelas de fora -->
-    <g stroke="#F2F2FA" stroke-opacity="0.035" stroke-width="18">
-      <path d="M118 866 C 162 900 202 918 238 926"/>
-      <path d="M124 926 C 166 958 204 974 240 982"/>
-      <path d="M140 986 C 178 1016 214 1030 246 1036"/>
+    <path d="M238 690 C 312 776 400 806 484 806"
+          stroke="#000000" stroke-opacity="0.28" stroke-width="20"/>
+    <path d="M760 684 C 690 772 600 802 514 804"
+          stroke="#000000" stroke-opacity="0.32" stroke-width="20"/>
+    <path d="M498 300 L 498 880"
+          stroke="#000000" stroke-opacity="0.13" stroke-width="36"/>
+
+    <!-- ===================== SERRATIL =====================
+         As digitacoes nas costelas, abaixo da axila. Sao diagonais, nunca
+         horizontais. -->
+    <g stroke="#F2F2FA" stroke-opacity="0.042" stroke-width="16">
+      <path d="M248 812 C 278 836 308 850 336 856"/>
+      <path d="M252 866 C 280 892 308 906 334 912"/>
+      <path d="M262 918 C 288 944 314 956 338 962"/>
+    </g>
+    <g stroke="#F2F2FA" stroke-opacity="0.024" stroke-width="14">
+      <path d="M752 802 C 726 828 700 842 676 848"/>
+      <path d="M748 856 C 722 882 698 896 674 902"/>
     </g>
 
-    <!-- ===================== ABDOME E CINTURA =====================
-         E o que mais aparece abaixo do pingente, e a cintura reta e o que
-         desmente a base arredondada de frasco. -->
-    <path d="M460 1040 C 456 1140 458 1240 462 1320"
-          stroke="#F2F2FA" stroke-opacity="0.05" stroke-width="140"/>
-    <path d="M214 1100 C 226 1190 234 1266 238 1326"
-          stroke="#000000" stroke-opacity="0.26" stroke-width="54"/>
-    <path d="M724 1100 C 712 1190 704 1266 700 1326"
-          stroke="#000000" stroke-opacity="0.34" stroke-width="62"/>
-    <!-- a crista iliaca, que e onde o tronco deixa de ser peito -->
-    <path d="M226 1226 C 290 1264 360 1282 440 1286"
-          stroke="#F2F2FA" stroke-opacity="0.045" stroke-width="16"/>
-    <path d="M712 1226 C 650 1264 582 1282 500 1286"
-          stroke="#F2F2FA" stroke-opacity="0.03" stroke-width="16"/>
-    <!-- a linha alba e o umbigo -->
-    <path d="M470 1050 L 470 1240"
-          stroke="#000000" stroke-opacity="0.14" stroke-width="22"/>
-    <ellipse cx="468" cy="1222" rx="24" ry="30" fill="url(#sombra)"
-             opacity="0.42" stroke="none"/>
+    <!-- ===================== BRACOS =====================
+         Biceps por dentro pegando luz, triceps por fora na sombra, e o
+         cotovelo alargando antes do corte. -->
+    <path d="M124 680 C 112 790 112 920 122 1090"
+          stroke="#F2F2FA" stroke-opacity="0.09" stroke-width="56"/>
+    <path d="M74 700 C 70 810 74 930 86 1090"
+          stroke="#000000" stroke-opacity="0.2" stroke-width="22"/>
+    <path d="M202 690 C 208 800 212 940 216 1120"
+          stroke="#000000" stroke-opacity="0.4" stroke-width="44"/>
+    <ellipse cx="140" cy="800" rx="58" ry="92" fill="url(#realce)"
+             opacity="0.1" stroke="none"/>
+    <ellipse cx="114" cy="1122" rx="44" ry="44" fill="url(#realce)"
+             opacity="0.13" stroke="none"/>
+    <path d="M104 1046 C 134 1062 170 1064 196 1056"
+          stroke="#000000" stroke-opacity="0.22" stroke-width="17"/>
 
-    <!-- o corte de baixo e visto por baixo: nao se ve o vazio, ve-se a
-         aresta, e a barriga dele fica na sombra -->
-    <ellipse cx="470" cy="1392" rx="282" ry="112" fill="#000000"
+    <path d="M868 666 C 862 780 862 910 870 1080"
+          stroke="#F2F2FA" stroke-opacity="0.05" stroke-width="46"/>
+    <path d="M918 686 C 922 796 918 920 906 1080"
+          stroke="#000000" stroke-opacity="0.24" stroke-width="22"/>
+    <path d="M794 670 C 790 786 788 930 782 1110"
+          stroke="#000000" stroke-opacity="0.46" stroke-width="40"/>
+    <ellipse cx="856" cy="790" rx="48" ry="86" fill="url(#realce)"
+             opacity="0.05" stroke="none"/>
+    <ellipse cx="884" cy="1114" rx="38" ry="40" fill="url(#realce)"
+             opacity="0.06" stroke="none"/>
+
+    <!-- ===================== ABDOME =====================
+         E o que mais aparece abaixo do pingente. A cintura reta e as
+         intersecoes tendineas sao o que desmente uma base de frasco. -->
+    <path d="M490 960 C 486 1040 488 1120 492 1200"
+          stroke="#F2F2FA" stroke-opacity="0.05" stroke-width="124"/>
+    <path d="M312 1000 C 324 1070 332 1140 336 1200"
+          stroke="#000000" stroke-opacity="0.26" stroke-width="50"/>
+    <path d="M676 1000 C 664 1070 656 1140 652 1200"
+          stroke="#000000" stroke-opacity="0.34" stroke-width="56"/>
+    <path d="M498 950 L 498 1180"
+          stroke="#000000" stroke-opacity="0.17" stroke-width="19"/>
+    <path d="M384 996 C 426 1010 570 1010 612 996"
+          stroke="#000000" stroke-opacity="0.15" stroke-width="13"/>
+    <path d="M376 1086 C 422 1102 574 1102 620 1086"
+          stroke="#000000" stroke-opacity="0.15" stroke-width="13"/>
+    <!-- a crista iliaca, onde o tronco deixa de ser peito -->
+    <path d="M314 1136 C 372 1168 430 1182 490 1186"
+          stroke="#F2F2FA" stroke-opacity="0.05" stroke-width="15"/>
+    <path d="M674 1136 C 620 1168 566 1182 506 1186"
+          stroke="#F2F2FA" stroke-opacity="0.032" stroke-width="15"/>
+    <ellipse cx="496" cy="1130" rx="21" ry="26" fill="url(#sombra)"
+             opacity="0.44" stroke="none"/>
+
+    <!-- os cortes de baixo sao vistos por baixo: nao se ve o vazio, ve-se a
+         aresta, e a barriga de cada um fica na sombra -->
+    <ellipse cx="498" cy="1248" rx="236" ry="80" fill="#000000"
+             opacity="0.5" stroke="none"/>
+    <ellipse cx="162" cy="1232" rx="60" ry="42" fill="#000000"
+             opacity="0.45" stroke="none"/>
+    <ellipse cx="836" cy="1230" rx="58" ry="40" fill="#000000"
              opacity="0.5" stroke="none"/>
   </g>
 
   <!-- ===================== O CONTORNO =====================
        So a luz que lambe a borda: acesa na direita, fria na esquerda, que e o
-       mesmo par de luzes do acrilico das placas. -->
+       mesmo par de luzes do acrilico das placas. A borda de dentro de cada
+       braco tambem recebe o seu fio — sem ele o vao entre braco e tronco e o
+       mesmo preto do fundo, e o braco nao se descola. -->
   <g fill="none" stroke-linecap="round">
     <g stroke="#FF7700">
       <use href="#ladoD" stroke-width="32" opacity="0.09"/>
       <use href="#ladoD" stroke-width="12" opacity="0.17"/>
       <use href="#ladoD" stroke-width="2.8" opacity="0.5"/>
-      <use href="#base" stroke-width="20" opacity="0.07"/>
-      <use href="#base" stroke-width="3" opacity="0.4"/>
+      <use href="#dentroD" stroke-width="9" opacity="0.1"/>
+      <use href="#dentroD" stroke-width="2" opacity="0.3"/>
+      <use href="#baseC" stroke-width="18" opacity="0.07"/>
+      <use href="#baseC" stroke-width="2.8" opacity="0.38"/>
+      <use href="#baseD" stroke-width="2.2" opacity="0.32"/>
     </g>
     <g stroke="#E6EAF6">
       <use href="#ladoE" stroke-width="24" opacity="0.07"/>
       <use href="#ladoE" stroke-width="9" opacity="0.13"/>
       <use href="#ladoE" stroke-width="2.4" opacity="0.45"/>
+      <use href="#dentroE" stroke-width="9" opacity="0.07"/>
+      <use href="#dentroE" stroke-width="2" opacity="0.26"/>
+      <use href="#baseE" stroke-width="2.2" opacity="0.26"/>
     </g>
   </g>
 
   <!-- ===================== O CORTE DO PESCOCO =====================
-       A elipse inteira: e ela que diz que isto e um busto, e nao gente sem
-       cabeca. Vazio escuro, nao oco aceso — foi a luz por dentro que fez a
-       peca ler como frasco. -->
-  <ellipse cx="480" cy="80" rx="132" ry="38" fill="url(#oco)" stroke="none"/>
-  <!-- a parede do fundo, que pega um fio de luz -->
-  <path d="M364 70 A 116 27 0 0 1 596 70" fill="none"
+       Vazio escuro com a aresta da frente acesa. Luz por dentro foi o que, na
+       primeira versao, fez a peca ler como frasco. -->
+  <ellipse cx="498" cy="60" rx="128" ry="36" fill="url(#oco)" stroke="none"/>
+  <path d="M386 50 A 112 26 0 0 1 610 50" fill="none"
         stroke="#F2F2FA" stroke-opacity="0.12" stroke-width="7"/>
-  <!-- a espessura da casca -->
-  <ellipse cx="480" cy="80" rx="132" ry="38" fill="none"
+  <ellipse cx="498" cy="60" rx="128" ry="36" fill="none"
            stroke="#E6EAF6" stroke-opacity="0.22" stroke-width="2.4"/>
-  <!-- e a aresta da frente, acesa -->
-  <path d="M348 80 A 132 38 0 0 0 612 80" fill="none"
+  <path d="M370 60 A 128 36 0 0 0 626 60" fill="none"
         stroke="#FF7700" stroke-opacity="0.1" stroke-width="16"/>
-  <path d="M348 80 A 132 38 0 0 0 612 80" fill="none"
+  <path d="M370 60 A 128 36 0 0 0 626 60" fill="none"
         stroke="#FF7700" stroke-opacity="0.6" stroke-width="3"/>
 </svg>
