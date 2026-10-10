@@ -1,0 +1,119 @@
+<!doctype html><meta charset="utf-8"><title>compor as joias vestidas</title>
+<!--
+  Monta as duas imagens de joia vestida dos marcos 100K e 500K.
+
+  Cada uma e a foto real da peca sobre um corpo desenhado aqui ao lado, em
+  SVG. O resultado e derivado: `/images/colar-500k-vestido.webp` e
+  `/images/pulseira-100k-vestida.webp`, que sao o que a cena 3D carrega.
+
+  Para refazer: `npm run dev`, abra /arte/compor.html, confira as duas e
+  clique em baixar. Os arquivos caem na pasta de downloads com o nome certo;
+  e so mover para public/images.
+
+  Esta pagina mora em public/ junto com os SVG porque precisa ser SERVIDA
+  para funcionar: desenhar SVG e webp num canvas e ler o resultado de volta
+  exige mesma origem. Em file:// o canvas sai contaminado e o toDataURL
+  falha. Como os SVG tambem precisam estar aqui, os fontes ficam todos neste
+  diretorio em vez de em src/assets — um lugar so, sem copia.
+-->
+<style>
+  body{margin:0;background:#050506;color:#CFCFD6;font:13px ui-monospace,monospace}
+  .linha{display:flex;gap:48px;align-items:flex-end;padding:24px}
+  figure{margin:0;text-align:center}
+  canvas{outline:1px dashed #22222a}
+  .grande canvas{height:560px;width:auto}
+  .peq canvas{height:200px;width:auto}
+  a{color:#FF7700;display:inline-block;margin-top:8px}
+  #log{padding:0 24px 24px;white-space:pre-wrap;color:#777}
+</style>
+<div class="linha grande" id="g"></div>
+<div class="linha peq" id="p"></div>
+<pre id="log"></pre>
+<script>
+/* O corpo do 500K. A foto e recortada por ele, e e isso que faz as duas
+   pontas da corrente sumirem atras do pescoco e do ombro em vez de acabarem
+   no ar. Tem de ser igual ao `silhueta` de dorso.svg. */
+const BUSTO = "M408 120 C 402 220 400 330 398 420 C 322 452 240 510 168 596"
+  + " C 104 640 76 712 84 790 C 90 856 114 904 146 964"
+  + " C 176 1030 210 1130 236 1250 C 240 1300 242 1346 240 1380"
+  + " A 300 46 0 0 0 840 1380 C 838 1346 840 1300 844 1250"
+  + " C 870 1130 904 1030 934 964 C 966 904 990 856 996 790"
+  + " C 1004 712 976 640 912 596 C 840 510 758 452 682 420"
+  + " C 680 330 678 220 672 120 A 132 38 0 0 0 408 120 Z";
+
+/* O arco de baixo do vao da pulseira, medido na propria foto. Divide a
+   imagem em duas: acima dele o braco passa na frente do metal, abaixo passa
+   atras. Os dois recortes partem do mesmo arco, entao nenhum pedaco do braco
+   e pintado duas vezes — o que importa, porque ele e semitransparente. */
+const ARCO = "L 704.6 588 A 281.6 75.6 0 0 1 141.4 588 L -400 588 Z";
+const ACIMA = "M-400 -600 L 1600 -600 L 1600 588 " + ARCO;
+const ABAIXO = "M-400 2200 L 1600 2200 L 1600 588 " + ARCO;
+
+const PECAS = [
+  {
+    nome: "colar-500k-vestido.webp", w: 1200, h: 1540,
+    arte: "/arte/dorso.svg", foto: "/images/colar-500k.webp",
+    quadro: [115, 300, 880, 808],
+    camadas: [{ o: "arte" }, { o: "foto", recorte: BUSTO }],
+  },
+  {
+    nome: "pulseira-100k-vestida.webp", w: 831, h: 1120,
+    arte: "/arte/pulso.svg", foto: "/images/pulseira-100k.webp",
+    quadro: [41.9, 346, 760, 458.3],
+    camadas: [
+      { o: "arte", recorte: ABAIXO },
+      { o: "foto" },
+      { o: "arte", recorte: ACIMA },
+    ],
+  },
+];
+
+const log = (s) => (document.getElementById("log").textContent += s + "\n");
+
+/* O SVG precisa de largura e altura explicitas antes de entrar no canvas:
+   sem elas o navegador o desenha no tamanho intrinseco e a composicao sai
+   fora de escala. */
+function carrega(src, w, h) {
+  return new Promise((ok, erro) => {
+    const i = new Image();
+    if (w) { i.width = w; i.height = h; }
+    i.onload = () => ok(i);
+    i.onerror = () => erro(new Error("falhou: " + src));
+    i.src = src;
+  });
+}
+
+(async () => {
+  for (const peca of PECAS) {
+    const [arte, foto] = await Promise.all([
+      carrega(peca.arte, peca.w, peca.h), carrega(peca.foto),
+    ]);
+    const c = document.createElement("canvas");
+    c.width = peca.w; c.height = peca.h;
+    const x = c.getContext("2d");
+    const [fx, fy, fw, fh] = peca.quadro;
+
+    for (const camada of peca.camadas) {
+      x.save();
+      if (camada.recorte) x.clip(new Path2D(camada.recorte));
+      if (camada.o === "arte") x.drawImage(arte, 0, 0, peca.w, peca.h);
+      else x.drawImage(foto, fx, fy, fw, fh);
+      x.restore();
+    }
+
+    const url = c.toDataURL("image/webp", 0.92);
+    for (const alvo of ["g", "p"]) {
+      const fig = document.createElement("figure");
+      const v = document.createElement("canvas");
+      v.width = peca.w; v.height = peca.h;
+      v.getContext("2d").drawImage(c, 0, 0);
+      const a = document.createElement("a");
+      a.href = url; a.download = peca.nome; a.textContent = "baixar " + peca.nome;
+      fig.append(v, document.createElement("br"), a);
+      document.getElementById(alvo).append(fig);
+    }
+    log(peca.nome + "  " + peca.w + "x" + peca.h
+        + "  razao " + (peca.w / peca.h).toFixed(4));
+  }
+})().catch((e) => log("ERRO " + e.message + "\n" + e.stack));
+</script>

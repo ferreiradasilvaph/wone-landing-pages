@@ -620,8 +620,8 @@ export const en: Content = {
         image: "/placas/placa-10k.webp",
         /** A joia do marco, como imagem. O 10K ainda não tem a sua. */
         photo: "",
-        /** Vestida (busto, pulso) aparece uma vez ao lado da placa; solta,
-            repete nos quatro cantos. */
+        /** Vestida — a foto já vem sobre o dorso ou o pulso desenhado — aparece
+            uma vez ao lado da placa; solta, repete nos quatro cantos. */
         photoWorn: false,
         title: "Bronze Trophy • $10,000",
         subtitle: "Proof of the first scale",
@@ -633,7 +633,7 @@ export const en: Content = {
       {
         tier: "100K",
         image: "/placas/placa-100k.webp",
-        photo: "/images/pulseira-100k.webp",
+        photo: "/images/pulseira-100k-vestida.webp",
         photoWorn: true,
         title: "100K Acrylic Plaque • $100,000",
         subtitle: "The 6-Figure Club",
@@ -645,7 +645,7 @@ export const en: Content = {
       {
         tier: "500K",
         image: "/placas/placa-500k.webp",
-        photo: "/images/colar-500k.webp",
+        photo: "/images/colar-500k-vestido.webp",
         photoWorn: true,
         title: "500K Ceremonial Plaque • $500,000",
         subtitle: "Half a Million in Revenue",

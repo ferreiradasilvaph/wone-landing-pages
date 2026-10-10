@@ -1,0 +1,133 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 831 1120" width="831" height="1120">
+  <!--
+    O pulso do marco 100K. Irmao do dorso: contorno de luz, interior quase
+    vazio, e a unica materia solida da imagem e a joia fotografada.
+
+    Quatro tentativas ficaram pelo caminho, e cada uma explica uma decisao
+    daqui. A mao cheia, de grafite, leu como luva. A mao desenhada, com unha
+    em cada dedo, continuou lendo como luva — quatro dedos retos e paralelos
+    sao o desenho de uma luva, e unha nenhuma desfaz isso. O antebraco na
+    vertical leu como copo: um cilindro que abre para cima, com uma boca no
+    alto. Deitado e inteiro, com o corte no cotovelo, leu como cano — e,
+    pior, engoliu a joia: o vao da pulseira obriga um punho largo, e tudo que
+    nasce de um punho largo fica maior que a pulseira.
+
+    Entao o braco encurtou ate virar so a passagem: um trecho acima do aro,
+    outro abaixo, e as duas pontas se perdendo no ar em vez de terminarem num
+    corte. Sem corte nao ha boca, e sem comprimento nao ha cano. Dois trechos
+    alinhados dos dois lados do aro bastam para o olho fechar o membro — e a
+    pulseira volta a ser a maior coisa da imagem, que e o ponto. O quadro e
+    apertado em volta deles pela mesma razao: cada pixel de margem e pixel
+    que a joia perde quando a cena encaixa a imagem no lugar dela.
+
+    Deitado 22 graus: recipiente e vertical, membro nao. A pulseira fica
+    nivelada, que e onde ela mesma ficaria — solta no pulso, escorrega e se
+    nivela.
+
+    A imagem e montada em tres camadas, e a ordem importa: o braco atras, a
+    foto, e o braco de novo na frente, recortado no arco de baixo do vao. E o
+    que poe o aro de tras atras do punho e o de perto na frente. Os dois
+    recortes de compor.html partem do mesmo arco, entao nenhum pedaco do
+    braco e pintado duas vezes — o que importa, porque ele e semitransparente.
+
+    O vao foi medido na propria foto: elipse de centro (423, 588) e raios
+    281,6 x 75,6. O punho tem 58% dessa largura, que e a folga certa entre o
+    braco e o metal. A foto entra em x 41,9..801,9 / y 346..804,3.
+
+    O braco e desenhado na vertical e deitado pelo `rotate` do grupo — mexer
+    num dos dois pede recalcular o outro.
+  -->
+  <defs>
+    <!-- As duas pontas se perdendo no ar: a transparencia esta nas proprias
+         tintas, em vez de numa mascara, porque assim o contorno e o corpo
+         somem juntos e no mesmo ritmo. -->
+    <linearGradient id="vazio" x1="0" y1="0" x2="0.25" y2="1">
+      <stop offset="0" stop-color="#17171E" stop-opacity="0"/>
+      <stop offset="0.2" stop-color="#17171E" stop-opacity="0.93"/>
+      <stop offset="0.62" stop-color="#101016" stop-opacity="0.93"/>
+      <stop offset="0.88" stop-color="#0A0A0F" stop-opacity="0.88"/>
+      <stop offset="1" stop-color="#0A0A0F" stop-opacity="0"/>
+    </linearGradient>
+
+    <linearGradient id="brasa" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFC58C" stop-opacity="0"/>
+      <stop offset="0.18" stop-color="#FFB267" stop-opacity="1"/>
+      <stop offset="0.5" stop-color="#FF7700" stop-opacity="1"/>
+      <stop offset="0.86" stop-color="#D96200" stop-opacity="1"/>
+      <stop offset="1" stop-color="#B84E00" stop-opacity="0"/>
+    </linearGradient>
+
+    <linearGradient id="frio" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#F2F2FA" stop-opacity="0"/>
+      <stop offset="0.2" stop-color="#F2F2FA" stop-opacity="1"/>
+      <stop offset="0.84" stop-color="#F2F2FA" stop-opacity="1"/>
+      <stop offset="1" stop-color="#F2F2FA" stop-opacity="0"/>
+    </linearGradient>
+
+    <path id="silhueta" d="M218 48
+      C 214 248 256 468 273 588
+      C 250 768 226 928 225 1068
+      L 621 1068
+      C 620 928 596 768 573 588
+      C 590 468 632 248 628 48 Z"/>
+    <clipPath id="corpo"><use href="#silhueta"/></clipPath>
+
+    <path id="ladoD" d="M628 48 C 632 248 590 468 573 588
+      C 596 768 620 928 621 1068"/>
+    <path id="ladoE" d="M218 48 C 214 248 256 468 273 588
+      C 250 768 226 928 225 1068"/>
+  </defs>
+
+  <g transform="rotate(-22 423 588)">
+    <!-- o pouco de materia que sobra: quase o fundo do site, so o bastante
+         para a joia ter onde pousar -->
+    <use href="#silhueta" fill="url(#vazio)"/>
+
+    <!-- ===================== O CONTORNO =====================
+         Tres passagens de espessura decrescente no lugar de um desfoque:
+         assim o resultado nao depende de o rasterizador ter filtro. -->
+    <g fill="none" stroke-linecap="round">
+      <g stroke="url(#brasa)">
+        <use href="#ladoD" stroke-width="34" opacity="0.1"/>
+        <use href="#ladoD" stroke-width="13" opacity="0.26"/>
+        <use href="#ladoD" stroke-width="4" opacity="0.95"/>
+      </g>
+      <g stroke="url(#frio)">
+        <use href="#ladoE" stroke-width="28" opacity="0.12"/>
+        <use href="#ladoE" stroke-width="10" opacity="0.26"/>
+        <use href="#ladoE" stroke-width="3.5" opacity="0.95"/>
+      </g>
+    </g>
+
+    <!-- ===================== O QUE ACONTECE DENTRO ===================== -->
+    <g clip-path="url(#corpo)" fill="none" stroke-linecap="round">
+      <!-- A luz que corre pelo alto do cilindro e a sombra que fecha o lado
+           de dentro. Sao as duas que tiram a peca de tabua: um contorno sem
+           elas e um recorte de papel, por mais curvo que seja. -->
+      <path d="M356 -32 C 342 288 352 728 364 1158"
+            stroke="url(#frio)" stroke-opacity="0.08" stroke-width="86"/>
+      <path d="M328 8 C 316 308 324 708 334 1108"
+            stroke="url(#frio)" stroke-opacity="0.07" stroke-width="26"/>
+      <path d="M560 -12 C 572 308 556 728 540 1158"
+            stroke="#000000" stroke-opacity="0.45" stroke-width="46"/>
+      <!-- o sulco entre os dois grupos musculares -->
+      <path d="M472 48 C 488 288 484 768 468 1118"
+            stroke="url(#frio)" stroke-opacity="0.08" stroke-width="3"/>
+
+      <!-- Os tendoes do punho e os dois vincos, logo acima do aro: sao o
+           detalhe que diz "punho" e nao "tubo", e ficam onde se olha. -->
+      <g stroke="url(#frio)" stroke-opacity="0.13" stroke-width="15">
+        <path d="M356 394 C 354 460 356 528 358 584"/>
+        <path d="M423 398 C 423 466 423 534 423 590"/>
+        <path d="M490 394 C 492 460 490 528 488 584"/>
+      </g>
+      <g stroke="url(#frio)" stroke-opacity="0.15" stroke-width="3.5">
+        <path d="M280 478 C 328 500 518 500 566 478"/>
+        <path d="M277 530 C 326 552 520 552 569 530"/>
+      </g>
+      <!-- o osso do punho, saliente do lado de fora -->
+      <path d="M548 460 C 564 488 566 528 557 566"
+            stroke="url(#brasa)" stroke-opacity="0.34" stroke-width="6"/>
+    </g>
+  </g>
+</svg>

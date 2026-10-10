@@ -95,13 +95,13 @@ const ITEM_SPOTS: {
  * troféu e quem o usa.
  */
 const ITEM_SOLO: (typeof ITEM_SPOTS)[number] = {
-  pos: [1.52, 0.04, -0.25],
+  pos: [1.42, 0.04, -0.25],
   tilt: 0.03,
   fase: 0.7,
   giro: 1,
 };
 /** Para onde a placa anda quando divide o quadro com a joia vestida. */
-const PLACA_DESLOCA = -0.84;
+const PLACA_DESLOCA = -1;
 
 /** Quanto a peça cresce sob o cursor. */
 const ITEM_HOVER = 1.16;
@@ -113,8 +113,15 @@ const ITEM_HOVER = 1.16;
  * acompanhando. A placa é que é o assunto.
  */
 const FOTO_MAX = { w: 0.6, h: 0.66 };
-/** O quadro da joia vestida, que aparece sozinha e precisa encarar a placa. */
-const FOTO_SOLO = { w: 1.5, h: 2.45 };
+/**
+ * O quadro da joia vestida, que aparece sozinha e precisa encarar a placa.
+ *
+ * Maior que o da joia solta porque a imagem não é só a joia: ela já vem com o
+ * corpo que a veste desenhado em volta, e a peça de metal ocupa menos da
+ * metade do quadro. Os dois arquivos foram compostos para caber aqui — o
+ * dorso é mais largo e para na largura, o pulso é mais alto e para na altura.
+ */
+const FOTO_SOLO = { w: 2.05, h: 3 };
 /** Meia espessura entre as duas faces de uma foto. */
 const FOTO_PELE = 0.005;
 /**

@@ -1,0 +1,133 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 1540" width="1200" height="1540">
+  <!--
+    O dorso do marco 500K.
+
+    Nao e um corpo cheio: e um contorno de luz. Tentei o busto solido, com a
+    casca oca e brasa por dentro, e ele leu como frasco de perfume — massa
+    escura, boca redonda, luz dentro. O que tira isso e esvaziar a peca: o
+    interior quase some no fundo do site e sobra a linha, acesa na borda
+    direita e fria na esquerda, que e o mesmo par de luzes do acrilico das
+    placas. Assim a unica coisa solida da imagem e a joia fotografada — que e
+    o ponto.
+
+    A foto real do colar entra POR CIMA, no quadro x 115..995 / y 300..1108.
+    Acima de y 600 ela e recortada por esta silhueta: e o que faz as duas
+    pontas da corrente sumirem atras do corpo em vez de acabarem no ar, a
+    esquerda atras do pescoco e a direita atras do ombro. Abaixo de 600 nao ha
+    recorte, senao o pingente — que e mais largo que o tronco — seria serrado
+    nos dois lados.
+  -->
+  <defs>
+    <linearGradient id="vazio" x1="0" y1="0" x2="0.4" y2="1">
+      <stop offset="0" stop-color="#17171E"/>
+      <stop offset="0.55" stop-color="#101016"/>
+      <stop offset="1" stop-color="#0A0A0F"/>
+    </linearGradient>
+
+    <linearGradient id="brasa" x1="0" y1="0" x2="0.2" y2="1">
+      <stop offset="0" stop-color="#FFC58C"/>
+      <stop offset="0.4" stop-color="#FF7700"/>
+      <stop offset="1" stop-color="#B84E00"/>
+    </linearGradient>
+
+    <path id="silhueta" d="M408 120
+      C 402 220 400 330 398 420
+      C 322 452 240 510 168 596
+      C 104 640 76 712 84 790
+      C 90 856 114 904 146 964
+      C 176 1030 210 1130 236 1250
+      C 240 1300 242 1346 240 1380
+      A 300 46 0 0 0 840 1380
+      C 838 1346 840 1300 844 1250
+      C 870 1130 904 1030 934 964
+      C 966 904 990 856 996 790
+      C 1004 712 976 640 912 596
+      C 840 510 758 452 682 420
+      C 680 330 678 220 672 120
+      A 132 38 0 0 0 408 120 Z"/>
+    <clipPath id="corpo"><use href="#silhueta"/></clipPath>
+
+    <!-- as duas metades do contorno, para cada uma ter a sua luz -->
+    <path id="ladoD" d="M672 120 C 678 220 680 330 682 420
+      C 758 452 840 510 912 596 C 976 640 1004 712 996 790
+      C 990 856 966 904 934 964 C 904 1030 870 1130 844 1250
+      C 840 1300 838 1346 840 1380"/>
+    <path id="ladoE" d="M408 120 C 402 220 400 330 398 420
+      C 322 452 240 510 168 596 C 104 640 76 712 84 790
+      C 90 856 114 904 146 964 C 176 1030 210 1130 236 1250
+      C 240 1300 242 1346 240 1380"/>
+    <path id="base" d="M240 1380 A 300 46 0 0 0 840 1380"/>
+  </defs>
+
+  <!-- o pouco de materia que sobra: quase o fundo do site, so o bastante para
+       a joia ter onde pousar -->
+  <use href="#silhueta" fill="url(#vazio)" opacity="0.93"/>
+
+  <!-- ===================== O CONTORNO =====================
+       Tres passagens de espessura decrescente no lugar de um desfoque: assim
+       o resultado nao depende de o rasterizador ter filtro. -->
+  <g fill="none" stroke-linecap="round">
+    <g stroke="url(#brasa)">
+      <use href="#ladoD" stroke-width="40" opacity="0.1"/>
+      <use href="#ladoD" stroke-width="15" opacity="0.26"/>
+      <use href="#ladoD" stroke-width="4.5" opacity="0.95"/>
+      <use href="#base" stroke-width="26" opacity="0.08"/>
+      <use href="#base" stroke-width="4" opacity="0.5"/>
+    </g>
+    <g stroke="#F2F2FA">
+      <use href="#ladoE" stroke-width="34" opacity="0.1"/>
+      <use href="#ladoE" stroke-width="12" opacity="0.22"/>
+      <use href="#ladoE" stroke-width="4" opacity="0.85"/>
+    </g>
+  </g>
+
+  <!-- ===================== O QUE ACONTECE DENTRO =====================
+       So as linhas que um desenho anatomico guardaria. Sem elas o contorno e
+       um recorte de papel. -->
+  <g clip-path="url(#corpo)" fill="none" stroke-linecap="round">
+    <!-- as laterais do pescoco, que o fazem cilindro -->
+    <g stroke="#E8E8F2" stroke-opacity="0.1">
+      <path d="M470 158 C 456 262 440 348 412 414" stroke-width="22"/>
+      <path d="M610 158 C 624 262 640 348 668 414" stroke-width="22"/>
+    </g>
+    <!-- a cova do pescoco e as claviculas -->
+    <g stroke="#E8E8F2" stroke-opacity="0.16" stroke-width="4">
+      <path d="M470 440 C 496 472 514 486 540 486 C 566 486 584 472 610 440"/>
+      <path d="M470 452 C 400 480 330 520 262 578"/>
+      <path d="M610 452 C 680 480 750 520 818 578"/>
+    </g>
+    <!-- o esterno, descendo entre os peitorais -->
+    <path d="M540 520 L 540 1060" stroke="#E8E8F2" stroke-opacity="0.1"
+          stroke-width="3"/>
+    <!-- o peitoral e a curva de baixo dele -->
+    <g stroke="#E8E8F2" stroke-opacity="0.09" stroke-width="3.5">
+      <path d="M278 620 C 330 760 420 852 528 858"/>
+      <path d="M802 620 C 750 760 660 852 552 858"/>
+    </g>
+    <!-- a linha do deltoide, onde o braco se separa do peito -->
+    <g stroke="url(#brasa)" stroke-opacity="0.3" stroke-width="4">
+      <path d="M196 614 C 164 700 166 800 198 880"/>
+      <path d="M884 614 C 916 700 914 800 882 880"/>
+    </g>
+    <!-- as costelas de baixo, que dao cintura ao tronco -->
+    <g stroke="#E8E8F2" stroke-opacity="0.07" stroke-width="3">
+      <path d="M262 1040 C 364 1112 448 1138 540 1140"/>
+      <path d="M818 1040 C 716 1112 632 1138 540 1140"/>
+    </g>
+  </g>
+
+  <!-- ===================== O CORTE DO PESCOCO =====================
+       A elipse inteira: e ela que diz que isto e um busto, e nao gente sem
+       cabeca. Aresta acesa na frente, fria atras, e a espessura da casca
+       numa segunda elipse por dentro. -->
+  <g fill="none">
+    <ellipse cx="540" cy="120" rx="132" ry="38" stroke="#E8E8F2"
+             stroke-opacity="0.3" stroke-width="3"/>
+    <ellipse cx="540" cy="124" rx="112" ry="30" stroke="#E8E8F2"
+             stroke-opacity="0.13" stroke-width="2.5"/>
+    <path d="M408 120 A 132 38 0 0 0 672 120" stroke="url(#brasa)"
+          stroke-width="22" stroke-opacity="0.12"/>
+    <path d="M408 120 A 132 38 0 0 0 672 120" stroke="url(#brasa)"
+          stroke-width="4.5" stroke-opacity="0.9"/>
+  </g>
+</svg>
