@@ -59,22 +59,22 @@ const BUSTO = "M372 60 C 366 140 364 180 364 225 C 330 246 286 266 236 288"
    ombro — e nada mais. Abaixo, o pingente pende na frente do corpo e passa
    por cima de tudo, inclusive do vao entre braco e tronco; recortar ali
    obrigaria o corpo a ser um bloco macico. */
-const CORRENTE = "M-500 -500 L 1600 -500 L 1600 455 L -500 455 Z";
-const PINGENTE = "M-500 455 L 1600 455 L 1600 2300 L -500 2300 Z";
+const CORRENTE = "M-500 -500 L 1600 -500 L 1600 398 L -500 398 Z";
+const PINGENTE = "M-500 398 L 1600 398 L 1600 2300 L -500 2300 Z";
 
 /* O arco de baixo do vao da pulseira, medido na propria foto. Divide a
    imagem em duas: acima dele o braco passa na frente do metal, abaixo passa
    atras. Os dois recortes partem do mesmo arco, entao nenhum pedaco do braco
    e pintado duas vezes — o que importa, porque ele e semitransparente. */
-const ARCO = "L 687.6 421 A 281.6 75.6 0 0 1 124.4 421 L -400 421 Z";
-const ACIMA = "M-400 -600 L 1600 -600 L 1600 421 " + ARCO;
-const ABAIXO = "M-400 2200 L 1600 2200 L 1600 421 " + ARCO;
+const ARCO = "L 727.6 526 A 281.6 75.6 0 0 1 164.4 526 L -400 526 Z";
+const ACIMA = "M-400 -600 L 1600 -600 L 1600 526 " + ARCO;
+const ABAIXO = "M-400 2200 L 1600 2200 L 1600 526 " + ARCO;
 
 const PECAS = [
   {
     nome: "colar-500k-vestido.webp", w: 1000, h: 1500,
     arte: "/arte/dorso.svg", foto: "/images/colar-500k.webp",
-    quadro: [76, 150, 880, 808],
+    quadro: [130.4, 154, 704, 646.4],
     camadas: [
       { o: "arte" },
       { o: "foto", recorte: [BUSTO, CORRENTE] },
@@ -82,9 +82,9 @@ const PECAS = [
     ],
   },
   {
-    nome: "pulseira-100k-vestida.webp", w: 843, h: 1199,
+    nome: "pulseira-100k-vestida.webp", w: 970, h: 1465,
     arte: "/arte/pulso.svg", foto: "/images/pulseira-100k.webp",
-    quadro: [24.9, 179, 760, 458.3],
+    quadro: [64.9, 284, 760, 458.3],
     camadas: [
       { o: "arte", recorte: ABAIXO },
       { o: "foto" },

@@ -566,3 +566,10 @@ adicione bracos a imagem do dorso, chat
 [56] 2026-10-10
 ===============================================================================
 chat, refaz esse dorso, crie um com bracos
+
+
+===============================================================================
+[57] 2026-10-10
+===============================================================================
+diminui um pouco o tamanho da imagem do colar e da pulseira, para ficarem
+proporcionais ao dorso e pulso
