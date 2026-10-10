@@ -33,29 +33,34 @@
 /* O corpo do 500K. A foto e recortada por ele, e e isso que faz as duas
    pontas da corrente sumirem atras do pescoco e do ombro em vez de acabarem
    no ar. Tem de ser igual ao `silhueta` de dorso.svg. */
-const BUSTO = "M370 60 C 364 130 362 180 362 225 C 352 258 300 282 240 312"
-  + " C 160 350 42 396 40 456 C 44 520 70 580 92 630"
-  + " C 84 680 76 730 76 780 C 84 860 98 930 104 1000"
-  + " C 92 1050 82 1082 82 1105 C 88 1180 96 1250 104 1300"
-  + " C 112 1370 120 1420 122 1440 A 43 14 0 0 0 208 1440"
-  + " C 204 1360 198 1250 200 1180 C 212 1090 226 1010 232 950"
-  + " C 242 1030 256 1130 258 1200 C 256 1270 252 1310 250 1330"
-  + " A 250 38 0 0 0 750 1330 C 748 1310 744 1270 742 1200"
-  + " C 744 1130 758 1030 768 950 C 774 1010 788 1090 800 1180"
-  + " C 802 1250 796 1400 792 1440 A 42 14 0 0 0 876 1440"
-  + " C 880 1400 888 1350 892 1300 C 902 1240 912 1160 916 1105"
-  + " C 914 1070 902 1030 894 1000 C 902 930 914 860 920 780"
-  + " C 918 720 910 664 904 612 C 928 562 958 496 956 436"
-  + " C 958 396 836 350 756 312 C 696 282 644 258 634 225"
-  + " C 634 180 632 130 626 60 A 128 36 0 0 0 370 60 Z";
+const BUSTO = "M372 60 C 366 140 364 180 364 225 C 330 246 286 266 236 288"
+  + " C 150 318 36 388 34 470 C 40 540 58 596 64 640"
+  + " C 58 700 52 756 54 800 C 60 900 72 990 76 1060"
+  + " C 66 1100 56 1130 56 1152 C 62 1220 72 1280 82 1330"
+  + " C 90 1390 98 1430 100 1448 A 59 15 0 0 0 218 1448"
+  + " C 216 1400 212 1360 212 1330 C 200 1250 190 1190 192 1150"
+  + " C 194 1060 198 1000 200 950 C 206 860 212 770 215 700"
+  + " C 220 620 226 560 230 520 C 234 600 236 660 236 700"
+  + " C 244 800 250 880 252 950 C 260 1040 266 1100 268 1150"
+  + " C 262 1230 252 1300 248 1330 A 252 38 0 0 0 752 1330"
+  + " C 748 1300 738 1230 732 1150 C 734 1100 740 1040 748 950"
+  + " C 750 880 756 800 764 700 C 764 660 766 600 770 500"
+  + " C 774 560 780 620 785 700 C 788 770 794 860 800 950"
+  + " C 802 1000 806 1060 808 1150 C 810 1190 800 1250 788 1330"
+  + " C 788 1360 784 1400 782 1448 A 59 15 0 0 0 900 1448"
+  + " C 902 1430 910 1390 918 1330 C 928 1280 938 1220 944 1152"
+  + " C 944 1130 934 1100 924 1060 C 928 990 940 900 946 800"
+  + " C 948 756 942 700 936 640 C 942 596 960 540 966 470"
+  + " C 964 388 850 318 764 288 C 714 266 670 246 636 225"
+  + " C 636 180 634 140 628 60 A 128 36 0 0 0 372 60 Z";
 
 /* O recorte da foto so vale acima da corrente. Ele existe para cortar as
    duas pontas soltas dela — a esquerda contra o pescoco, a direita contra o
    ombro — e nada mais. Abaixo, o pingente pende na frente do corpo e passa
    por cima de tudo, inclusive do vao entre braco e tronco; recortar ali
    obrigaria o corpo a ser um bloco macico. */
-const CORRENTE = "M-500 -500 L 1600 -500 L 1600 528 L -500 528 Z";
-const PINGENTE = "M-500 528 L 1600 528 L 1600 2300 L -500 2300 Z";
+const CORRENTE = "M-500 -500 L 1600 -500 L 1600 455 L -500 455 Z";
+const PINGENTE = "M-500 455 L 1600 455 L 1600 2300 L -500 2300 Z";
 
 /* O arco de baixo do vao da pulseira, medido na propria foto. Divide a
    imagem em duas: acima dele o braco passa na frente do metal, abaixo passa
@@ -67,9 +72,9 @@ const ABAIXO = "M-400 2200 L 1600 2200 L 1600 421 " + ARCO;
 
 const PECAS = [
   {
-    nome: "colar-500k-vestido.webp", w: 1000, h: 1520,
+    nome: "colar-500k-vestido.webp", w: 1000, h: 1500,
     arte: "/arte/dorso.svg", foto: "/images/colar-500k.webp",
-    quadro: [76, 220, 880, 808],
+    quadro: [76, 150, 880, 808],
     camadas: [
       { o: "arte" },
       { o: "foto", recorte: [BUSTO, CORRENTE] },
