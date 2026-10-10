@@ -1,59 +1,64 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 831 1120" width="831" height="1120">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 843 1199" width="843" height="1199">
   <!--
-    O pulso do marco 100K.
+    O pulso do marco 100K: antebraco, punho e mao, com a pulseira fotografada
+    vestida no punho.
 
-    A composicao e a mesma de antes — so a passagem do braco pelo aro, um
-    trecho acima e outro abaixo, as duas pontas se perdendo no ar — mas o
-    braco deixou de ser contorno e virou volume. Como contorno de luz, igual
-    ao dorso, ele lia como chapa escura: duas linhas quase retas separadas
-    por nada, e nada no meio que dissesse de que lado vem a luz. No dorso
-    aquilo funciona porque o contorno e todo curvo e cheio de acidentes; num
-    antebraco, que e quase um cilindro, nao sobra desenho nenhum.
+    A mao ja leu como luva em varias tentativas, e cada correcao aqui vem de
+    uma delas:
 
-    O que o faz braco agora:
+    - dedos recolhidos, nao esticados, e com as pontas convergindo para o
+      centro da mao. Esticados e paralelos, sao o desenho de uma luva;
+    - mas recolhidos ate a metade, viram cotos e a mao vira pata. O
+      comprimento visivel do medio e quatro quintos da palma — mais curto que
+      isso perde a mao, mais longo recupera a luva;
+    - a palma e mais comprida que larga. Igual nas duas medidas ela le como
+      mitene antes mesmo de os dedos serem olhados;
+    - cada dedo tem a sua luz de borda. O vao entre dois dedos e o mesmo preto
+      do fundo do site: separa-los por vao nao separa nada, e o que os faz
+      serem contados e a linha de luz correndo na borda de cada um;
+    - a luz cai como cai numa mao em repouso: as cabecas dos metacarpos sao a
+      parte mais clara da imagem, porque sao o que aponta para cima, e os
+      dedos escurecem sem parar ate a ponta, porque dobram para longe da luz.
+      Iluminados por igual, viram quatro tubos de plastico;
+    - os realces sao degrades que acabam em nada. Elipse de borda dura, no
+      escuro, le como mancha colada na pele — quatro juntas e quatro unhas
+      viravam oito contas claras;
+    - comprimentos escalonados de verdade (medio, anular, indicador,
+      mindinho, nessa ordem) e o polegar saindo para fora do contorno da
+      palma, com o monte carnudo embaixo dele.
 
-    - o degrade atravessado, que e o cilindro. Borda escura, banda de luz a
-      um quarto da largura, sombra fechando do outro lado e um rebote quente
-      na aresta direita. E a unica coisa que transforma um poligono em algo
-      redondo;
-    - a silhueta em ampulheta. Estreita no punho, abrindo para cima no ventre
-      do antebraco e para baixo na base da mao, com o monte do polegar
-      saliente do lado de dentro. Membro nenhum tem lados paralelos;
-    - o processo estiloide da ulna, a saliencia do osso logo acima do aro. E
-      um acidente pequeno, mas e o que o olho reconhece como punho;
-    - os vincos do punho, a sombra que a pulseira joga nele e a veia.
-      Superficie, nao contorno — e larga e fraca, nunca linha clara e fina,
-      que de longe le como risco e nao como pele.
+    O resto do braco segue o que ja estava: degrade atravessando a largura
+    para dar o cilindro, silhueta em ampulheta, o processo estiloide da ulna
+    saliente acima do aro, e a sombra que a pulseira joga no punho.
+    Superficie larga e fraca, nunca linha clara e fina: do tamanho em que
+    isto aparece na pagina, linha fina e clara le como risco e nao como pele.
 
-    As pontas se desfazem por uma mascara, e nao por tinta transparente como
-    antes: com o degrade atravessado fazendo o volume, o desvanecer tinha de
-    vir por fora, senao cada tinta precisaria do seu proprio.
+    So a ponta de cima se desfaz, pela mascara — o antebraco nao tem onde
+    acabar. E ela se desfaz depressa, em 110 unidades: esticada, deixava o
+    punho translucido e a placa do fecho aparecia atraves do braco.
 
     A imagem e montada em tres camadas, e a ordem importa: o braco atras, a
     foto, e o braco de novo na frente, recortado no arco de baixo do vao. E o
     que poe o aro de tras atras do punho e o de perto na frente. Os dois
     recortes de compor.html partem do mesmo arco, entao nenhum pedaco do
-    braco e pintado duas vezes — o que importa, porque ele e semitransparente.
+    braco e pintado duas vezes.
 
-    O vao foi medido na propria foto: elipse de centro (423, 588) e raios
+    O vao foi medido na propria foto: elipse de centro (406, 421) e raios
     281,6 x 75,6. O punho tem 52% dessa largura, que e a folga certa entre o
-    braco e o metal. A foto entra em x 41,9..801,9 / y 346..804,3.
+    braco e o metal. A foto entra em x 24,9..784,9 / y 179..637,3.
 
     O braco e desenhado na vertical e deitado pelo `rotate` do grupo — mexer
-    num dos dois pede recalcular o outro. A inclinacao de 22 graus continua
-    valendo: recipiente e vertical, membro nao, e a pulseira fica nivelada,
-    que e onde ela mesma ficaria, solta no pulso.
+    num dos dois pede recalcular o outro.
   -->
   <defs>
     <!--
-      O cilindro. Atravessa a largura do braco (x 203 a 643 no sistema local,
-      antes da rotacao), nao a altura: e a secao que e redonda. A banda clara
-      fica a um quarto da largura, nao no meio, que e onde ela cai num
-      cilindro iluminado de cima e da esquerda; a aresta direita recebe o
-      rebote quente da luz da marca.
+      O cilindro. Atravessa a largura (x 191 a 621 no sistema local, antes da
+      rotacao), nao a altura: e a secao que e redonda. A banda clara fica a um
+      quarto da largura, que e onde ela cai num cilindro iluminado de cima e
+      da esquerda; a aresta direita recebe o rebote quente da luz da marca.
     -->
     <linearGradient id="cilindro" gradientUnits="userSpaceOnUse"
-                    x1="203" y1="0" x2="643" y2="0">
+                    x1="191" y1="0" x2="621" y2="0">
       <stop offset="0" stop-color="#0B0B10"/>
       <stop offset="0.08" stop-color="#1F1F27"/>
       <stop offset="0.26" stop-color="#2C2C36"/>
@@ -64,119 +69,269 @@
       <stop offset="1" stop-color="#2E1C11"/>
     </linearGradient>
 
-    <!-- As duas pontas se perdendo no ar. -->
+    <!-- So o alto se perde no ar: embaixo a mao acaba sozinha. -->
     <linearGradient id="desvanece" gradientUnits="userSpaceOnUse"
-                    x1="0" y1="60" x2="0" y2="1060">
+                    x1="0" y1="86" x2="0" y2="196">
       <stop offset="0" stop-color="#000000"/>
-      <stop offset="0.15" stop-color="#FFFFFF"/>
-      <stop offset="0.78" stop-color="#FFFFFF"/>
-      <stop offset="1" stop-color="#000000"/>
+      <stop offset="1" stop-color="#FFFFFF"/>
     </linearGradient>
     <mask id="pontas" maskUnits="userSpaceOnUse"
-          x="-300" y="-300" width="1500" height="1800">
-      <rect x="-300" y="-300" width="1500" height="1800" fill="url(#desvanece)"/>
+          x="-300" y="-300" width="1600" height="2000">
+      <rect x="-300" y="-300" width="1600" height="2000" fill="url(#desvanece)"/>
     </mask>
 
+    <!-- Luz mole. Elipse de borda dura, no escuro, le como mancha colada na
+         pele; este degrade acaba em nada. -->
+    <radialGradient id="realce">
+      <stop offset="0" stop-color="#F2F2FA" stop-opacity="0.9"/>
+      <stop offset="0.45" stop-color="#F2F2FA" stop-opacity="0.4"/>
+      <stop offset="1" stop-color="#F2F2FA" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- Os dedos dobram para longe da luz: escurecem sem parar da junta ate a
+         ponta. E uma sombra so, em degrade, e nao um filete por dedo. -->
+    <linearGradient id="dedosNaSombra" gradientUnits="userSpaceOnUse"
+                    x1="0" y1="846" x2="0" y2="1190">
+      <stop offset="0" stop-color="#000000" stop-opacity="0"/>
+      <stop offset="0.45" stop-color="#000000" stop-opacity="0.34"/>
+      <stop offset="1" stop-color="#000000" stop-opacity="0.62"/>
+    </linearGradient>
+
     <!--
-      A ampulheta. De cima para baixo: ventre do antebraco, descida para o
-      punho, o estiloide da ulna saindo do contorno a direita, o punho no
-      ponto mais estreito e a base da mao abrindo de novo, mais do lado do
-      polegar que do outro.
+      A mao inteira num caminho so, em subcaminhos que se sobrepoem: o
+      conjunto antebraco-palma, o polegar e um por dedo. O preenchimento
+      `nonzero` costura tudo num contorno, e e esse mesmo caminho que recorta
+      o que vai dentro. Os dedos nascem em y 850 e a palma so acaba em 900: a
+      sobreposicao e de proposito, para que a separacao entre eles venha da
+      comissura escura e nao de um vao vazado.
     -->
-    <path id="silhueta" d="M208 60
-      C 203 180 206 310 232 440
-      C 256 520 270 558 276 596
-      C 272 650 260 700 255 752
-      C 238 812 226 874 222 936
-      C 219 992 212 1030 210 1060
-      L 616 1060
-      C 614 1030 610 992 606 936
-      C 602 874 594 812 591 752
-      C 586 700 574 650 570 596
-      C 572 572 580 556 586 544
-      C 598 536 601 520 593 506
-      C 601 478 608 456 614 440
-      C 640 310 643 180 638 60 Z"/>
+    <path id="silhueta" d="
+      M 191 86
+      C 186 200 214 330 259 429
+      C 240 470 224 532 222 620
+      C 220 700 222 782 228 849
+      C 229 870 229 886 230 900
+      L 588 900
+      C 589 886 589 870 590 849
+      C 596 782 598 700 596 620
+      C 594 532 578 470 553 429
+      C 570 416 594 404 590 390
+      C 598 378 600 354 598 330
+      C 614 240 626 160 621 86 Z
+
+      M 226 486
+      C 188 560 150 650 130 744
+      C 120 782 142 822 178 816
+      C 204 812 220 786 226 758
+      C 240 692 262 620 280 556 Z
+
+      M 228 850
+      C 222 912 224 982 236 1048
+      C 244 1106 258 1142 278 1142
+      C 298 1142 310 1106 308 1048
+      C 312 982 314 912 316 850 Z
+
+      M 330 850
+      C 324 918 326 996 338 1072
+      C 346 1138 358 1184 378 1184
+      C 398 1184 410 1142 408 1072
+      C 412 996 414 918 420 850 Z
+
+      M 434 850
+      C 428 914 430 988 440 1054
+      C 447 1114 458 1154 470 1154
+      C 484 1154 496 1116 494 1054
+      C 502 988 506 914 514 850 Z
+
+      M 528 850
+      C 523 902 524 962 532 1014
+      C 538 1060 546 1084 554 1084
+      C 564 1084 574 1058 572 1014
+      C 578 962 582 902 590 850 Z"/>
     <clipPath id="corpo"><use href="#silhueta"/></clipPath>
 
-    <path id="ladoD" d="M638 60 C 643 180 640 310 614 440
-      C 608 456 601 478 593 506 C 601 520 598 536 586 544
-      C 580 556 572 572 570 596 C 574 650 586 700 591 752
-      C 594 812 602 874 606 936 C 610 992 614 1030 616 1060"/>
-    <path id="ladoE" d="M208 60 C 203 180 206 310 232 440
-      C 256 520 270 558 276 596 C 272 650 260 700 255 752
-      C 238 812 226 874 222 936 C 219 992 212 1030 210 1060"/>
+    <path id="ladoD" d="M621 86 C 626 160 614 240 598 330
+      C 600 354 598 378 590 390 C 594 404 570 416 553 429
+      C 578 470 594 532 596 620 C 598 700 596 782 590 849
+      C 589 870 589 886 588 900"/>
+    <path id="ladoE" d="M191 86 C 186 200 214 330 259 429
+      C 240 470 224 532 222 620 C 220 700 222 782 228 849
+      C 229 870 229 886 230 900"/>
+    <path id="ladoPolegar" d="M226 486 C 188 560 150 650 130 744
+      C 120 782 142 822 178 816"/>
+
+    <!--
+      A borda de cada dedo. Sem ela os dedos nao se contam: o vao entre dois
+      dedos e o mesmo preto do fundo do site, entao separa-los por vao nao
+      separa nada.
+    -->
+    <g id="dedosE" fill="none">
+      <path d="M228 850 C 222 912 224 982 236 1048 C 244 1106 258 1142 278 1142"/>
+      <path d="M330 850 C 324 918 326 996 338 1072 C 346 1138 358 1184 378 1184"/>
+      <path d="M434 850 C 428 914 430 988 440 1054 C 447 1114 458 1154 470 1154"/>
+      <path d="M528 850 C 523 902 524 962 532 1014 C 538 1060 546 1084 554 1084"/>
+    </g>
+    <g id="dedosD" fill="none">
+      <path d="M316 850 C 314 912 312 982 308 1048 C 310 1106 298 1142 278 1142"/>
+      <path d="M420 850 C 414 918 412 996 408 1072 C 410 1142 398 1184 378 1184"/>
+      <path d="M514 850 C 506 914 502 988 494 1054 C 496 1116 484 1154 470 1154"/>
+      <path d="M590 850 C 582 902 578 962 572 1014 C 574 1058 564 1084 554 1084"/>
+    </g>
   </defs>
 
-  <g transform="rotate(-22 423 588)">
+  <g transform="rotate(-22 406 421)">
     <g mask="url(#pontas)">
       <use href="#silhueta" fill="url(#cilindro)"/>
 
       <g clip-path="url(#corpo)" fill="none" stroke-linecap="round">
-        <!-- o brilho da pele na banda de luz, estreito e fora do centro -->
-        <path d="M296 150 C 286 340 318 540 326 736
-                 C 310 850 300 952 296 1030"
-              stroke="#F2F2FA" stroke-opacity="0.07" stroke-width="54"/>
-        <path d="M290 220 C 282 380 312 540 318 700"
-              stroke="#F2F2FA" stroke-opacity="0.06" stroke-width="18"/>
-
+        <!-- o brilho da pele na banda de luz do antebraco -->
+        <path d="M284 130 C 274 280 292 380 300 450"
+              stroke="#F2F2FA" stroke-opacity="0.06" stroke-width="52"/>
         <!-- a sombra que fecha o lado de dentro -->
-        <path d="M566 140 C 578 330 548 540 548 740
-                 C 556 860 566 960 570 1030"
-              stroke="#000000" stroke-opacity="0.3" stroke-width="44"/>
-
-        <!-- a veia, que corre do dorso da mao para o antebraco -->
-        <path d="M470 300 C 452 420 468 520 450 604"
-              stroke="#F2F2FA" stroke-opacity="0.035" stroke-width="12"/>
-
-        <!-- O sulco raso entre os dois grupos de tendoes. Os tendoes em si
-             sairam: desenhados como linhas claras eles viram barras pousadas
-             no braco, e o punho passa a parecer riscado. Uma sombra larga
-             diz a mesma coisa sem deixar marca. -->
-        <path d="M423 430 C 423 492 423 548 423 600"
+        <path d="M554 120 C 566 280 540 400 540 500"
+              stroke="#000000" stroke-opacity="0.3" stroke-width="42"/>
+        <!-- o sulco entre os dois grupos de tendoes do antebraco -->
+        <path d="M406 150 C 406 240 406 330 406 420"
               stroke="#000000" stroke-opacity="0.1" stroke-width="34"/>
 
-        <!-- o estiloide, pegando luz por cima e sombra por baixo -->
-        <path d="M582 506 C 596 514 601 524 597 536"
-              stroke="#F2F2FA" stroke-opacity="0.1" stroke-width="16"/>
-        <path d="M578 546 C 590 544 597 538 600 530"
+        <!-- o estiloide da ulna, pegando luz por cima e sombra por baixo -->
+        <path d="M570 376 C 586 384 592 394 588 404"
+              stroke="#F2F2FA" stroke-opacity="0.1" stroke-width="15"/>
+        <path d="M566 414 C 578 412 586 406 590 398"
               stroke="#000000" stroke-opacity="0.22" stroke-width="12"/>
 
         <!-- os dois vincos do punho, insinuados e nao riscados -->
         <g stroke="#000000" stroke-opacity="0.13" stroke-width="11">
-          <path d="M304 468 C 354 486 494 486 544 468"/>
-          <path d="M300 504 C 352 522 498 522 550 504"/>
+          <path d="M262 334 C 318 354 494 354 548 334"/>
+          <path d="M256 374 C 314 394 500 394 554 374"/>
+        </g>
+        <!-- a sombra que a pulseira joga no punho -->
+        <path d="M252 404 C 312 432 492 432 552 404"
+              stroke="#000000" stroke-opacity="0.4" stroke-width="54"/>
+
+        <!-- ===================== O DORSO DA MAO =====================
+             O volume primeiro: a luz corre pelo alto, a sombra fecha o lado
+             de dentro e cada borda tem o seu monte carnudo. -->
+        <path d="M296 500 C 282 600 282 700 290 820"
+              stroke="#F2F2FA" stroke-opacity="0.045" stroke-width="68"/>
+        <path d="M566 520 C 582 620 582 720 574 830"
+              stroke="#000000" stroke-opacity="0.24" stroke-width="50"/>
+        <!-- o monte do polegar e o do mindinho -->
+        <path d="M244 540 C 224 610 218 680 224 746"
+              stroke="#F2F2FA" stroke-opacity="0.045" stroke-width="54"/>
+        <path d="M586 600 C 598 660 600 720 594 780"
+              stroke="#F2F2FA" stroke-opacity="0.03" stroke-width="40"/>
+        <!-- a veia que atravessa o dorso -->
+        <path d="M452 540 C 436 480 452 460 436 416"
+              stroke="#F2F2FA" stroke-opacity="0.03" stroke-width="12"/>
+
+        <!-- Os tendoes extensores, do punho as juntas. Largos e quase
+             apagados: finos e claros, viram quatro barras pousadas na mao. -->
+        <g stroke="#F2F2FA" stroke-opacity="0.03" stroke-width="24">
+          <path d="M296 480 C 286 580 278 700 272 806"/>
+          <path d="M364 472 C 360 580 358 700 358 822"/>
+          <path d="M442 472 C 450 580 456 700 462 810"/>
+          <path d="M508 482 C 520 580 534 690 544 782"/>
         </g>
 
-        <!-- a sombra que a pulseira joga no punho, logo acima dela -->
-        <path d="M286 560 C 346 584 500 584 560 560"
-              stroke="#000000" stroke-opacity="0.4" stroke-width="56"/>
+        <!-- As cabecas dos metacarpos: a parte mais clara da imagem, porque
+             sao o que aponta para cima. Escalonadas — o medio mais baixo, o
+             mindinho mais alto —, e e isso que faz a linha das juntas. -->
+        <g fill="url(#realce)" stroke="none">
+          <ellipse cx="272" cy="840" rx="50" ry="34" opacity="0.14"/>
+          <ellipse cx="375" cy="858" rx="52" ry="36" opacity="0.15"/>
+          <ellipse cx="474" cy="844" rx="48" ry="34" opacity="0.14"/>
+          <ellipse cx="559" cy="814" rx="38" ry="26" opacity="0.12"/>
+        </g>
 
-        <!-- o monte do polegar, cheio, e a ruga da base da mao -->
-        <path d="M266 818 C 248 876 242 926 246 976"
-              stroke="#F2F2FA" stroke-opacity="0.055" stroke-width="56"/>
-        <path d="M252 790 C 300 806 352 812 392 806"
-              stroke="#000000" stroke-opacity="0.14" stroke-width="12"/>
+        <!-- A sombra que cresce da junta ate a ponta. E ela que diz que os
+             dedos estao dobrados para longe da luz. -->
+        <rect x="100" y="846" width="700" height="344" fill="url(#dedosNaSombra)"
+              stroke="none"/>
 
-        <!-- o inicio das juntas, ja quase apagado pela ponta que se desfaz -->
-        <path d="M236 988 C 306 958 526 958 596 988"
-              stroke="#F2F2FA" stroke-opacity="0.045" stroke-width="40"/>
+        <!-- a ruga logo abaixo de cada junta -->
+        <g stroke="#000000" stroke-opacity="0.2" stroke-width="12">
+          <path d="M242 874 C 256 884 288 884 302 874"/>
+          <path d="M344 892 C 358 902 392 902 406 892"/>
+          <path d="M444 878 C 458 888 490 888 504 878"/>
+          <path d="M536 848 C 548 856 570 856 582 848"/>
+        </g>
+
+        <!-- As comissuras: e por elas que o olho conta os dedos onde o vao
+             ainda nao abriu. -->
+        <g stroke="#000000" stroke-opacity="0.55" stroke-width="18">
+          <path d="M323 846 L 323 912"/>
+          <path d="M427 862 L 427 928"/>
+          <path d="M521 842 L 521 904"/>
+        </g>
+
+        <!-- A luz que sobra em cada dedo: so na primeira falange, que e a
+             unica que ainda aponta um pouco para cima. -->
+        <g stroke="#F2F2FA" stroke-opacity="0.05">
+          <path d="M252 880 C 247 934 249 988 254 1032" stroke-width="22"/>
+          <path d="M354 898 C 349 956 351 1014 356 1064" stroke-width="22"/>
+          <path d="M456 884 C 451 940 453 994 458 1040" stroke-width="20"/>
+          <path d="M546 854 C 541 900 543 946 548 986" stroke-width="16"/>
+        </g>
+        <!-- e a borda de dentro de cada um, que cai na sombra do vizinho -->
+        <g stroke="#000000" stroke-opacity="0.3">
+          <path d="M308 886 C 306 952 304 1016 300 1070" stroke-width="14"/>
+          <path d="M412 904 C 410 976 408 1044 404 1110" stroke-width="14"/>
+          <path d="M506 890 C 500 954 496 1016 490 1078" stroke-width="12"/>
+          <path d="M582 860 C 576 918 572 970 568 1016" stroke-width="10"/>
+        </g>
+
+        <!-- as rugas da articulacao do meio -->
+        <g stroke="#000000" stroke-opacity="0.22" stroke-width="8">
+          <path d="M236 1034 C 254 1044 290 1044 308 1034"/>
+          <path d="M338 1058 C 356 1068 392 1068 408 1058"/>
+          <path d="M440 1040 C 456 1050 490 1050 494 1040"/>
+          <path d="M532 1000 C 544 1008 566 1008 572 1000"/>
+        </g>
+
+        <!-- As unhas, nas pontas que a dobra dos dedos deixa a vista. Sao a
+             unica coisa clara la embaixo, e e por isso que funcionam. -->
+        <g fill="url(#realce)" stroke="none">
+          <ellipse cx="278" cy="1116" rx="26" ry="19" opacity="0.2"/>
+          <ellipse cx="378" cy="1158" rx="27" ry="20" opacity="0.2"/>
+          <ellipse cx="470" cy="1128" rx="25" ry="18" opacity="0.19"/>
+          <ellipse cx="554" cy="1058" rx="20" ry="15" opacity="0.17"/>
+        </g>
+
+        <!-- o polegar: cilindro proprio, ruga da articulacao e unha -->
+        <path d="M210 580 C 182 650 160 724 152 776"
+              stroke="#F2F2FA" stroke-opacity="0.055" stroke-width="30"/>
+        <path d="M256 584 C 230 656 208 726 200 772"
+              stroke="#000000" stroke-opacity="0.3" stroke-width="22"/>
+        <path d="M162 700 C 176 712 194 716 208 712"
+              stroke="#000000" stroke-opacity="0.2" stroke-width="8"/>
+        <ellipse cx="160" cy="788" rx="22" ry="17" fill="url(#realce)"
+                 opacity="0.18" stroke="none"
+                 transform="rotate(-32 160 788)"/>
+        <!-- a membrana entre o polegar e o indicador -->
+        <path d="M240 524 C 258 548 268 580 270 612"
+              stroke="#000000" stroke-opacity="0.3" stroke-width="18"/>
       </g>
 
       <!-- ===================== O CONTORNO =====================
-           Agora e so a luz que lambe a borda, nao mais o desenho inteiro:
-           duas passagens de cada lado, acesa na direita e fria na esquerda,
-           que e o mesmo par de luzes do acrilico das placas. -->
+           So a luz que lambe a borda: acesa na direita, fria na esquerda, que
+           e o mesmo par de luzes do acrilico das placas. -->
       <g fill="none" stroke-linecap="round">
         <g stroke="#FF7700">
           <use href="#ladoD" stroke-width="30" opacity="0.1"/>
           <use href="#ladoD" stroke-width="11" opacity="0.18"/>
           <use href="#ladoD" stroke-width="2.6" opacity="0.5"/>
+          <use href="#dedosD" stroke-width="8" opacity="0.07"/>
+          <use href="#dedosD" stroke-width="1.8" opacity="0.22"/>
         </g>
         <g stroke="#E6EAF6">
           <use href="#ladoE" stroke-width="22" opacity="0.07"/>
           <use href="#ladoE" stroke-width="8" opacity="0.13"/>
           <use href="#ladoE" stroke-width="2.2" opacity="0.45"/>
+          <use href="#ladoPolegar" stroke-width="7" opacity="0.1"/>
+          <use href="#ladoPolegar" stroke-width="2" opacity="0.35"/>
+          <use href="#dedosE" stroke-width="9" opacity="0.07"/>
+          <use href="#dedosE" stroke-width="2.2" opacity="0.3"/>
         </g>
       </g>
     </g>

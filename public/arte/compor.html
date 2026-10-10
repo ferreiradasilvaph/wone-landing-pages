@@ -45,9 +45,9 @@ const BUSTO = "M408 120 C 402 220 400 330 398 420 C 322 452 240 510 168 596"
    imagem em duas: acima dele o braco passa na frente do metal, abaixo passa
    atras. Os dois recortes partem do mesmo arco, entao nenhum pedaco do braco
    e pintado duas vezes — o que importa, porque ele e semitransparente. */
-const ARCO = "L 704.6 588 A 281.6 75.6 0 0 1 141.4 588 L -400 588 Z";
-const ACIMA = "M-400 -600 L 1600 -600 L 1600 588 " + ARCO;
-const ABAIXO = "M-400 2200 L 1600 2200 L 1600 588 " + ARCO;
+const ARCO = "L 687.6 421 A 281.6 75.6 0 0 1 124.4 421 L -400 421 Z";
+const ACIMA = "M-400 -600 L 1600 -600 L 1600 421 " + ARCO;
+const ABAIXO = "M-400 2200 L 1600 2200 L 1600 421 " + ARCO;
 
 const PECAS = [
   {
@@ -57,9 +57,9 @@ const PECAS = [
     camadas: [{ o: "arte" }, { o: "foto", recorte: BUSTO }],
   },
   {
-    nome: "pulseira-100k-vestida.webp", w: 831, h: 1120,
+    nome: "pulseira-100k-vestida.webp", w: 843, h: 1199,
     arte: "/arte/pulso.svg", foto: "/images/pulseira-100k.webp",
-    quadro: [41.9, 346, 760, 458.3],
+    quadro: [24.9, 179, 760, 458.3],
     camadas: [
       { o: "arte", recorte: ABAIXO },
       { o: "foto" },
