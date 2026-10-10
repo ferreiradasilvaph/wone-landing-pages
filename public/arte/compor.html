@@ -33,13 +33,16 @@
 /* O corpo do 500K. A foto e recortada por ele, e e isso que faz as duas
    pontas da corrente sumirem atras do pescoco e do ombro em vez de acabarem
    no ar. Tem de ser igual ao `silhueta` de dorso.svg. */
-const BUSTO = "M408 120 C 402 220 400 330 398 420 C 322 452 240 510 168 596"
-  + " C 104 640 76 712 84 790 C 90 856 114 904 146 964"
-  + " C 176 1030 210 1130 236 1250 C 240 1300 242 1346 240 1380"
-  + " A 300 46 0 0 0 840 1380 C 838 1346 840 1300 844 1250"
-  + " C 870 1130 904 1030 934 964 C 966 904 990 856 996 790"
-  + " C 1004 712 976 640 912 596 C 840 510 758 452 682 420"
-  + " C 680 330 678 220 672 120 A 132 38 0 0 0 408 120 Z";
+const BUSTO = "M348 80 C 340 190 336 300 332 390 C 240 420 166 486 128 562"
+  + " C 78 606 36 660 38 726 C 40 792 44 844 48 878"
+  + " C 60 912 76 924 90 935 C 98 958 100 972 100 990"
+  + " C 128 1066 168 1140 190 1210 C 192 1252 190 1296 188 1330"
+  + " A 282 44 0 0 0 752 1330 C 750 1296 748 1252 750 1210"
+  + " C 742 1160 734 1150 732 1120 C 734 1070 738 1030 740 1000"
+  + " C 758 968 774 944 786 918 C 800 890 812 862 816 832"
+  + " C 820 796 822 770 826 746 C 868 700 894 656 886 612"
+  + " C 870 560 846 536 802 516 C 736 456 672 414 630 390"
+  + " C 626 300 622 190 612 80 A 132 38 0 0 0 348 80 Z";
 
 /* O arco de baixo do vao da pulseira, medido na propria foto. Divide a
    imagem em duas: acima dele o braco passa na frente do metal, abaixo passa
@@ -51,9 +54,9 @@ const ABAIXO = "M-400 2200 L 1600 2200 L 1600 421 " + ARCO;
 
 const PECAS = [
   {
-    nome: "colar-500k-vestido.webp", w: 1200, h: 1540,
+    nome: "colar-500k-vestido.webp", w: 918, h: 1430,
     arte: "/arte/dorso.svg", foto: "/images/colar-500k.webp",
-    quadro: [115, 300, 880, 808],
+    quadro: [55, 260, 880, 808],
     camadas: [{ o: "arte" }, { o: "foto", recorte: BUSTO }],
   },
   {
