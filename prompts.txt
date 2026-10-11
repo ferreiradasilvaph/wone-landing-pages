@@ -573,3 +573,9 @@ chat, refaz esse dorso, crie um com bracos
 ===============================================================================
 diminui um pouco o tamanho da imagem do colar e da pulseira, para ficarem
 proporcionais ao dorso e pulso
+
+
+===============================================================================
+[58] 2026-10-11
+===============================================================================
+diminui o tamanho da imagem do colar,

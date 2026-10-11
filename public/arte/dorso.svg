@@ -12,7 +12,7 @@
     eles se soltam na axila e descem com vao aberto ate o punho.
 
     O que permitiu afastar e um detalhe do recorte: a foto so e recortada
-    ACIMA de y 398. Esse recorte existe para cortar as duas pontas soltas da
+    ACIMA de y 358. Esse recorte existe para cortar as duas pontas soltas da
     corrente — a esquerda contra o pescoco, a direita contra o ombro — e nada
     mais. Abaixo dali o pingente pende na frente do corpo, como pingente
     pende, e passa por cima de tudo. Ou seja: o tronco nao precisa ser tao
@@ -45,12 +45,14 @@
     no cotovelo e o braquiorradial engrossando o antebraco logo abaixo; e no
     abdome a linha alba, duas intersecoes tendineas e a crista iliaca.
 
-    A foto entra no quadro x 130,4..834,4 / y 154..800,4 — 704 de largura,
-    80% do tamanho original. O pingente da foto e grande demais para o
-    tronco: em escala cheia ele dava 1,67 vez a largura do peito, o que
-    nenhum pescoco sustentaria. Em 80% cai para 1,33, que ainda e peca de
-    statement mas ja cabe no corpo. A corrente encolhe junto, entao o quadro
-    teve de subir para a ponta dela continuar caindo sobre o pescoco.
+    A foto entra no quadro x 171,6..752,4 / y 156,8..690,1 — 580,8 de
+    largura, 66% do tamanho original. O pingente da foto e grande demais
+    para o tronco: em escala cheia dava 1,67 vez a largura do peito, o que
+    nenhum pescoco sustentaria. Em 66% fica em 1,03 — do tamanho do peito,
+    que e o maximo que um pingente de verdade chega. A corrente encolhe
+    junto, entao a posicao do quadro e amarrada: a ponta esquerda dela tem
+    de cair exatamente sobre o contorno do pescoco, em (366, 170), senao ela
+    acaba no ar no meio do peito. Mexer na escala pede refazer essa conta.
     O comentario de compor.html tem a mesma silhueta copiada.
   -->
   <defs>
