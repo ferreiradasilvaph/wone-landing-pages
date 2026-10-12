@@ -579,3 +579,10 @@ proporcionais ao dorso e pulso
 [58] 2026-10-11
 ===============================================================================
 diminui o tamanho da imagem do colar,
+
+
+===============================================================================
+[59] 2026-10-12
+===============================================================================
+lindo, aumente o tamanho do dorso com bracos e faca com que a imagem alterne
+com a imgem da placa, que elas interajam entre si trocando de lugar

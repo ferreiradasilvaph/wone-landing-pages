@@ -94,14 +94,73 @@ const ITEM_SPOTS: {
  * multidão. Um só, do tamanho da placa, divide o quadro em dois assuntos — o
  * troféu e quem o usa.
  */
+/**
+ * Os dois lugares que a placa e a joia vestida dividem entre si.
+ *
+ * Não são "o lugar da placa" e "o lugar da joia": são dois postos vagos, e
+ * cada uma ocupa um de cada vez. A troca é o que amarra as duas numa cena só
+ * — paradas lado a lado, elas eram dois cartazes pendurados no mesmo quadro;
+ * revezando o mesmo par de lugares, viram duas peças de uma coisa só.
+ */
+const POSTO = { esq: -1.2, dir: 1.3 };
+
 const ITEM_SOLO: (typeof ITEM_SPOTS)[number] = {
-  pos: [1.42, 0.04, -0.25],
+  pos: [POSTO.dir, 0.04, -0.25],
   tilt: 0.03,
   fase: 0.7,
   giro: 1,
 };
-/** Para onde a placa anda quando divide o quadro com a joia vestida. */
-const PLACA_DESLOCA = -1;
+
+/**
+ * O compasso do rodízio.
+ *
+ * `parada` é o tempo em que cada uma fica no seu posto — longo de propósito:
+ * a placa traz texto, e texto que anda não se lê. `passo` é a travessia.
+ *
+ * `frente` e `fundo` são o quanto cada uma sai do plano ao atravessar. Elas
+ * se cruzam no meio do caminho, e sem essa diferença de profundidade os dois
+ * planos passariam um dentro do outro — o `depthWrite: false` da arte faria o
+ * cruzamento virar uma sobreposição confusa, sem dizer qual está na frente.
+ * Com ela, uma passa por cima e a outra por baixo, e a cada troca os papéis
+ * se invertem.
+ *
+ * `frente` é bem menor que `fundo` porque vir para a frente aproxima da
+ * câmera, e o que se aproxima cresce: 0.7 já dá 11% a mais de tamanho
+ * aparente, que é o suficiente para ler como passagem por cima sem que a
+ * peça encoste nas bordas do canvas.
+ */
+const TROCA = { parada: 4.2, passo: 1.6, frente: 0.7, fundo: 1.5 };
+
+/** Começa devagar, acelera, chega devagar. */
+function suave(p: number) {
+  const q = Math.min(1, Math.max(0, p));
+  return q * q * (3 - 2 * q);
+}
+
+/**
+ * Onde está, neste instante, quem começou a cena no posto `lado`.
+ *
+ * As duas leem o mesmo relógio e fazem a mesma conta, cada uma com o seu
+ * `lado` — então ninguém precisa avisar ninguém de nada. Sem estado
+ * compartilhado não há como as duas saírem de sincronia e acabarem as duas no
+ * mesmo lugar, que é o único jeito de esta cena quebrar feio.
+ */
+function posto(t: number, lado: 0 | 1) {
+  const ciclo = TROCA.parada + TROCA.passo;
+  const voltas = Math.floor(t / ciclo);
+  const p = suave((t - voltas * ciclo - TROCA.parada) / TROCA.passo);
+
+  /* A cada volta os dois postos se invertem: quem estava à esquerda na volta
+     par está à direita na ímpar. */
+  const naEsquerda = (lado + voltas) % 2 === 0;
+  const de = naEsquerda ? POSTO.esq : POSTO.dir;
+  const para = naEsquerda ? POSTO.dir : POSTO.esq;
+
+  return {
+    x: de + (para - de) * p,
+    z: Math.sin(Math.PI * p) * (naEsquerda ? TROCA.frente : -TROCA.fundo),
+  };
+}
 
 /** Quanto a peça cresce sob o cursor. */
 const ITEM_HOVER = 1.16;
@@ -118,10 +177,21 @@ const FOTO_MAX = { w: 0.6, h: 0.66 };
  *
  * Maior que o da joia solta porque a imagem não é só a joia: ela já vem com o
  * corpo que a veste desenhado em volta, e a peça de metal ocupa menos da
- * metade do quadro. Os dois arquivos foram compostos para caber aqui — o
- * dorso é mais largo e para na largura, o pulso é mais alto e para na altura.
+ * metade do quadro. Os dois arquivos são mais altos que largos — 1000×1500 o
+ * dorso, 970×1465 o pulso —, então os dois param na altura, e `w` aqui é só o
+ * teto que nenhum dos dois alcança.
+ *
+ * Cresceu de 3 para 3.6 de altura. O corpo tinha de encarar a placa, que tem
+ * 2.9: no tamanho antigo o dorso chegava quase ao mesmo, e dois objetos do
+ * mesmo tamanho lado a lado não dizem qual deles é o assunto. Agora o corpo é
+ * claramente o maior dos dois — ele é quem usa a joia, a placa é o troféu que
+ * a acompanha.
+ *
+ * Não cresce mais que isto porque a altura visível em z = 0 é de pouco mais
+ * de 5, e a peça ainda sobe e desce no ar; passando daqui, a cabeça do busto
+ * começa a encostar na borda de cima do canvas.
  */
-const FOTO_SOLO = { w: 2.05, h: 3 };
+const FOTO_SOLO = { w: 2.42, h: 3.6 };
 /** Meia espessura entre as duas faces de uma foto. */
 const FOTO_PELE = 0.005;
 /**
@@ -203,6 +273,16 @@ function ItemCard({
         ? Math.sin(t * 0.39 * spot.giro) * FLOAT.olha
         : t * FLOAT.gira * spot.giro;
       pivot.current.rotation.x = Math.sin(t * 0.43) * FLOAT.balanca;
+
+      /* A joia vestida reveza os postos com a placa. O relógio da travessia é
+         o limpo, sem a `fase` — essa desencontra o flutuar dos quatro cantos,
+         e aqui ela atrasaria a troca em relação à placa, que lê o mesmo
+         relógio do outro lado. */
+      if (vestida) {
+        const lugar = posto(state.clock.elapsedTime, 1);
+        pivot.current.position.x = lugar.x;
+        pivot.current.position.z = spot.pos[2] + lugar.z;
+      }
     }
   });
 
@@ -327,6 +407,8 @@ function Plaque({
   spin: boolean;
 }) {
   const group = useRef<Group>(null);
+  /** Tudo o que é a placa, que anda em bloco quando ela troca de posto. */
+  const palco = useRef<Group>(null);
   const front = useRef<MeshBasicMaterial>(null);
   const back = useRef<MeshBasicMaterial>(null);
   const fade = useRef(0);
@@ -346,6 +428,14 @@ function Plaque({
       group.current.rotation.x = -state.pointer.y * 0.18;
     }
 
+    /* O outro lado do rodízio. Quando não há joia vestida para revezar, a
+       placa fica no meio do quadro e nada disto roda. */
+    if (palco.current && worn && !reduced) {
+      const lugar = posto(state.clock.elapsedTime, 0);
+      palco.current.position.x = lugar.x;
+      palco.current.position.z = lugar.z;
+    }
+
     fade.current = Math.min(1, fade.current + delta / CROSSFADE_S);
     if (front.current) front.current.opacity = fade.current;
     if (back.current) back.current.opacity = 1 - fade.current;
@@ -355,9 +445,11 @@ function Plaque({
 
   return (
     <group ref={group}>
-      {/* Tudo o que e a placa anda junto quando ela divide o quadro com a joia
-          vestida: o acrilico, a arte, os aneis do molde e a base. */}
-      <group position={[worn ? PLACA_DESLOCA : 0, 0, 0]}>
+      {/* Tudo o que e a placa anda junto quando ela reveza o quadro com a joia
+          vestida: o acrilico, a arte, os aneis do molde e a base. A posicao
+          aqui e a do primeiro quadro e a de quem pediu menos movimento; o
+          resto do tempo quem manda e o rodizio, la em cima. */}
+      <group ref={palco} position={[worn ? POSTO.esq : 0, 0, 0]}>
       {/* O bloco de acrílico, agora só enquanto não há arte.
 
           Ele existia para ser o corpo da placa, com a estampa aplicada na face.
