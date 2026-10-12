@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { Environment, Lightformer, RoundedBox } from "@react-three/drei";
 import { useReducedMotion } from "motion/react";
+import { arte } from "@/lib/arte";
 import {
   SRGBColorSpace,
   TextureLoader,
@@ -317,8 +318,15 @@ function ItemCard({
   );
 }
 
-/** Carrega (ou devolve do cache) a arte já enquadrada. Sempre assíncrono. */
-function loadArt(src: string) {
+/**
+ * Carrega (ou devolve do cache) a arte já enquadrada. Sempre assíncrono.
+ *
+ * O endereço passa por `arte()`, que carimba a versão da build. Sem isso o
+ * navegador devolve do disco a placa do deploy anterior e a arte nova só
+ * aparece horas depois — ou nunca, para quem não limpa o cache.
+ */
+function loadArt(caminho: string) {
+  const src = arte(caminho);
   const cached = CACHE.get(src);
   if (cached) return Promise.resolve(cached);
 

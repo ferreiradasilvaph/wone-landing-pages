@@ -599,3 +599,11 @@ dorso com bracos (e a placa e o pulso)
 [61] 2026-10-12
 ===============================================================================
 as placas nao estao transparentes em https://pedrinho.wone.bot
+
+
+===============================================================================
+[62] 2026-10-12
+===============================================================================
+chat, dei ctrl shift r, em https://pedrinho.wone.bot nao esta aparecendo as
+imagens 3d, transparente. esta aparecendo as imagens da placa, em 2d e com
+fundo branco... corrija

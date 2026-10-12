@@ -55,7 +55,18 @@ const SECURITY_HEADERS = [
  */
 const ARTE_SEMPRE_FRESCA = [{ key: "Cache-Control", value: "no-cache" }];
 
+/**
+ * O carimbo que vai no fim do endereço de cada arte — veja `src/lib/arte.ts`.
+ *
+ * É avaliado uma vez, quando a build acontece, e viaja embutido no pacote do
+ * cliente. Muda a cada deploy e só a cada deploy: a arte recarrega uma vez
+ * quando sobe algo novo, e fica guardada até o próximo.
+ */
+const VERSAO_DA_ARTE = String(Date.now());
+
 const nextConfig: NextConfig = {
+  env: { NEXT_PUBLIC_ARTE_V: VERSAO_DA_ARTE },
+
   /* `experimental.inlineCss` foi testado e revertido.
      Ele injeta o CSS da rota no <head> e remove o único recurso bloqueante da
      página (12,7 kB custando 157 ms). O problema é o que entra no lugar: o

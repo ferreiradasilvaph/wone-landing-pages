@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 import { AnimatePresence, motion, useInView, useReducedMotion } from "motion/react";
 import { Award, Sparkles } from "lucide-react";
 import { useContent } from "@/i18n";
+import { arte } from "@/lib/arte";
 
 /** O three fica fora do bundle inicial e nunca roda no servidor. */
 const AwardPlaque3D = dynamic(() => import("./AwardPlaque3D"), {
@@ -59,7 +60,9 @@ export function AwardsShowcase() {
       [item.image, item.photo].forEach((src) => {
         if (!src) return;
         const probe = new window.Image();
-        probe.src = src;
+        /* O mesmo endereço carimbado que a cena 3D vai pedir: sem o carimbo,
+           isto aqueceria uma entrada de cache que ninguém usa. */
+        probe.src = arte(src);
       });
     });
   }, [near, awards.items]);
