@@ -407,7 +407,7 @@ function Plaque({
   spin: boolean;
 }) {
   const group = useRef<Group>(null);
-  /** Tudo o que é a placa, que anda em bloco quando ela troca de posto. */
+  /** A placa, que anda em bloco quando troca de posto — sem o pódio. */
   const palco = useRef<Group>(null);
   const front = useRef<MeshBasicMaterial>(null);
   const back = useRef<MeshBasicMaterial>(null);
@@ -445,10 +445,11 @@ function Plaque({
 
   return (
     <group ref={group}>
-      {/* Tudo o que e a placa anda junto quando ela reveza o quadro com a joia
-          vestida: o acrilico, a arte, os aneis do molde e a base. A posicao
-          aqui e a do primeiro quadro e a de quem pediu menos movimento; o
-          resto do tempo quem manda e o rodizio, la em cima. */}
+      {/* A placa propriamente dita — o acrilico, a arte e os aneis do molde —,
+          que anda em bloco quando reveza o quadro com a joia vestida. O podio
+          ficou de fora: ele nao sai do lugar. A posicao aqui e a do primeiro
+          quadro e a de quem pediu menos movimento; o resto do tempo quem manda
+          e o rodizio, la em cima. */}
       <group ref={palco} position={[worn ? POSTO.esq : 0, 0, 0]}>
       {/* O bloco de acrílico, agora só enquanto não há arte.
 
@@ -517,12 +518,19 @@ function Plaque({
           </mesh>
         ))}
 
-        {/* Base escura, para a placa parecer apoiada */}
-        <mesh position={[0, -1.72, 0]}>
-          <cylinderGeometry args={[1.15, 1.3, 0.3, 48]} />
-          <meshStandardMaterial color="#0a0a0d" metalness={0.85} roughness={0.3} />
-        </mesh>
       </group>
+
+      {/* O pódio.
+
+          Fica onde está e não acompanha o rodízio: ele não é a placa, é o
+          chão dela. Andando junto virava um objeto voador, e eram três coisas
+          se mexendo num quadro só. Parado, vira o ponto de referência que
+          deixa a troca legível — é contra ele que se vê a placa sair e a joia
+          chegar. */}
+      <mesh position={[worn ? POSTO.esq : 0, -1.72, 0]}>
+        <cylinderGeometry args={[1.15, 1.3, 0.3, 48]} />
+        <meshStandardMaterial color="#0a0a0d" metalness={0.85} roughness={0.3} />
+      </mesh>
 
       {/* A joia: uma vez ao lado da placa quando é vestida, quatro vezes nos
           cantos quando é a peça solta. A do marco que sai continua em cena até

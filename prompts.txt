@@ -586,3 +586,10 @@ diminui o tamanho da imagem do colar,
 ===============================================================================
 lindo, aumente o tamanho do dorso com bracos e faca com que a imagem alterne
 com a imgem da placa, que elas interajam entre si trocando de lugar
+
+
+===============================================================================
+[60] 2026-10-12
+===============================================================================
+mantenha o podio onde a placa esta situada no lugar, mova apenas a placa e o
+dorso com bracos (e a placa e o pulso)
