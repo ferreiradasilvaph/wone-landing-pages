@@ -31,6 +31,30 @@ const SECURITY_HEADERS = [
   },
 ];
 
+/**
+ * As artes trocadas à mão: revalidar sempre.
+ *
+ * Tudo em `public/` sai com `max-age=14400` — quatro horas de cache que o
+ * navegador nem pergunta se ainda valem. Para um logotipo isso é ótimo. Para
+ * `placas/`, `images/` e `arte/` é veneno: são arquivos de nome fixo que mudam
+ * de conteúdo a cada ajuste de arte, e foi exatamente assim que as placas
+ * novas — recortadas, com o acrílico translúcido — subiram para o servidor e
+ * ninguém viu. Quem já tinha visitado o site continuou com as antigas, chapadas
+ * e opacas, por quatro horas, enquanto o servidor respondia a versão certa a
+ * quem chegasse de primeira.
+ *
+ * `no-cache` não proíbe guardar: manda perguntar antes de usar. O navegador
+ * guarda igual e pergunta com o `ETag` na mão; se nada mudou, a resposta é um
+ * `304` de alguns bytes. O preço é uma ida ao servidor por imagem, e só quando
+ * a seção entra em cena — as artes carregam sob demanda. Barato perto de uma
+ * tarde inteira mostrando a imagem errada.
+ *
+ * Fora daqui, o resto segue como está: os pacotes do Next já nascem com hash
+ * no nome e podem ser guardados para sempre, porque um nome novo é um arquivo
+ * novo.
+ */
+const ARTE_SEMPRE_FRESCA = [{ key: "Cache-Control", value: "no-cache" }];
+
 const nextConfig: NextConfig = {
   /* `experimental.inlineCss` foi testado e revertido.
      Ele injeta o CSS da rota no <head> e remove o único recurso bloqueante da
@@ -41,7 +65,10 @@ const nextConfig: NextConfig = {
      ms de bloqueio por 36 kB no caminho crítico é prejuízo. */
 
   async headers() {
-    return [{ source: "/:path*", headers: SECURITY_HEADERS }];
+    return [
+      { source: "/:path*", headers: SECURITY_HEADERS },
+      { source: "/:pasta(placas|images|arte)/:arquivo*", headers: ARTE_SEMPRE_FRESCA },
+    ];
   },
 };
 

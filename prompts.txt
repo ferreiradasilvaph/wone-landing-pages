@@ -593,3 +593,9 @@ com a imgem da placa, que elas interajam entre si trocando de lugar
 ===============================================================================
 mantenha o podio onde a placa esta situada no lugar, mova apenas a placa e o
 dorso com bracos (e a placa e o pulso)
+
+
+===============================================================================
+[61] 2026-10-12
+===============================================================================
+as placas nao estao transparentes em https://pedrinho.wone.bot
