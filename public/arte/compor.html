@@ -32,27 +32,18 @@
 <script>
 /* O corpo do 500K. A foto e recortada por ele, e e isso que faz as duas
    pontas da corrente sumirem atras do pescoco e do ombro em vez de acabarem
-   no ar. Tem de ser igual ao `silhueta` de dorso.svg. */
-const BUSTO = "M372 60 C 366 140 364 180 364 225 C 330 246 286 266 236 288"
-  + " C 150 318 36 388 34 470 C 40 540 58 596 64 640"
-  + " C 58 700 52 756 54 800 C 60 900 72 990 76 1060"
-  + " C 66 1100 56 1130 56 1152 C 62 1220 72 1280 82 1330"
-  + " C 90 1390 98 1430 100 1448 A 59 15 0 0 0 218 1448"
-  + " C 216 1400 212 1360 212 1330 C 200 1250 190 1190 192 1150"
-  + " C 194 1060 198 1000 200 950 C 206 860 212 770 215 700"
-  + " C 220 620 226 560 230 520 C 234 600 236 660 236 700"
-  + " C 244 800 250 880 252 950 C 260 1040 266 1100 268 1150"
-  + " C 262 1230 252 1300 248 1330 A 252 38 0 0 0 752 1330"
-  + " C 748 1300 738 1230 732 1150 C 734 1100 740 1040 748 950"
-  + " C 750 880 756 800 764 700 C 764 660 766 600 770 500"
-  + " C 774 560 780 620 785 700 C 788 770 794 860 800 950"
-  + " C 802 1000 806 1060 808 1150 C 810 1190 800 1250 788 1330"
-  + " C 788 1360 784 1400 782 1448 A 59 15 0 0 0 900 1448"
-  + " C 902 1430 910 1390 918 1330 C 928 1280 938 1220 944 1152"
-  + " C 944 1130 934 1100 924 1060 C 928 990 940 900 946 800"
-  + " C 948 756 942 700 936 640 C 942 596 960 540 966 470"
-  + " C 964 388 850 318 764 288 C 714 266 670 246 636 225"
-  + " C 636 180 634 140 628 60 A 128 36 0 0 0 372 60 Z";
+   no ar.
+
+   Vem lido do proprio dorso.svg, do path #silhueta. Antes era uma copia
+   colada aqui com o aviso de manter as duas iguais, e no primeiro ajuste de
+   anatomia elas ja sairam diferentes — a foto passou a ser recortada por um
+   corpo que nao existia mais. Agora so existe uma silhueta, e e a do desenho. */
+async function silhuetaDe(svg, id) {
+  const txt = await fetch(svg).then((r) => r.text());
+  const el = new DOMParser().parseFromString(txt, "image/svg+xml").getElementById(id);
+  if (!el) throw new Error("falta #" + id + " em " + svg);
+  return el.getAttribute("d");
+}
 
 /* O recorte da foto so vale acima da corrente. Ele existe para cortar as
    duas pontas soltas dela — a esquerda contra o pescoco, a direita contra o
@@ -70,28 +61,6 @@ const ARCO = "L 727.6 526 A 281.6 75.6 0 0 1 164.4 526 L -400 526 Z";
 const ACIMA = "M-400 -600 L 1600 -600 L 1600 526 " + ARCO;
 const ABAIXO = "M-400 2200 L 1600 2200 L 1600 526 " + ARCO;
 
-const PECAS = [
-  {
-    nome: "colar-500k-vestido.webp", w: 1000, h: 1500,
-    arte: "/arte/dorso.svg", foto: "/images/colar-500k.webp",
-    quadro: [171.6, 156.8, 580.8, 533.3],
-    camadas: [
-      { o: "arte" },
-      { o: "foto", recorte: [BUSTO, CORRENTE] },
-      { o: "foto", recorte: [PINGENTE] },
-    ],
-  },
-  {
-    nome: "pulseira-100k-vestida.webp", w: 970, h: 1465,
-    arte: "/arte/pulso.svg", foto: "/images/pulseira-100k.webp",
-    quadro: [64.9, 284, 760, 458.3],
-    camadas: [
-      { o: "arte", recorte: ABAIXO },
-      { o: "foto" },
-      { o: "arte", recorte: ACIMA },
-    ],
-  },
-];
 
 const log = (s) => (document.getElementById("log").textContent += s + "\n");
 
@@ -109,6 +78,33 @@ function carrega(src, w, h) {
 }
 
 (async () => {
+  /* A silhueta do corpo vem do desenho, entao PECAS so pode ser montado
+     aqui dentro: antes dela chegar nao ha com o que recortar a foto. */
+  const BUSTO = await silhuetaDe("/arte/dorso.svg", "silhueta");
+
+  const PECAS = [
+    {
+      nome: "colar-500k-vestido.webp", w: 1000, h: 1500,
+      arte: "/arte/dorso.svg", foto: "/images/colar-500k.webp",
+      quadro: [171.6, 156.8, 580.8, 533.3],
+      camadas: [
+        { o: "arte" },
+        { o: "foto", recorte: [BUSTO, CORRENTE] },
+        { o: "foto", recorte: [PINGENTE] },
+      ],
+    },
+    {
+      nome: "pulseira-100k-vestida.webp", w: 970, h: 1465,
+      arte: "/arte/pulso.svg", foto: "/images/pulseira-100k.webp",
+      quadro: [64.9, 284, 760, 458.3],
+      camadas: [
+        { o: "arte", recorte: ABAIXO },
+        { o: "foto" },
+        { o: "arte", recorte: ACIMA },
+      ],
+    },
+  ];
+
   for (const peca of PECAS) {
     const [arte, foto] = await Promise.all([
       carrega(peca.arte, peca.w, peca.h), carrega(peca.foto),

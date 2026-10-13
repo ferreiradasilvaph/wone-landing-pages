@@ -27,6 +27,19 @@
       mindinho, nessa ordem) e o polegar saindo para fora do contorno da
       palma, com o monte carnudo embaixo dele.
 
+    AS MEDIDAS, depois de uma passada so nelas. A palma estava em 374 de
+    largura para 400 de comprimento — a regra de ser mais comprida que larga
+    estava escrita aqui em cima e nao estava cumprida, e e exatamente o que
+    fazia a mao ler como mitene por mais que os dedos melhorassem. Agora sao
+    318 para 400, quatro quintos, e o antebraco afina de 402 no alto para 288
+    no punho.
+
+    Os dedos tambem nao bastava escalonar em comprimento: estavam todos com a
+    mesma largura e desciam em leque, abrindo para fora. Um garfo abre para
+    fora; uma mao em repouso fecha. Agora as bases sao 82, 82, 70 e 46 — o
+    mindinho pouco mais da metade do indicador — e cada ponta e puxada para o
+    centro da palma, mais quanto mais longe do meio o dedo estiver.
+
     O resto do braco segue o que ja estava: degrade atravessando a largura
     para dar o cilindro, silhueta em ampulheta, o processo estiloide da ulna
     saliente acima do aro, e a sombra que a pulseira joga no punho.
@@ -52,13 +65,13 @@
   -->
   <defs>
     <!--
-      O cilindro. Atravessa a largura (x 191 a 621 no sistema local, antes da
+      O cilindro. Atravessa a largura (x 205 a 607 no sistema local, antes da
       rotacao), nao a altura: e a secao que e redonda. A banda clara fica a um
       quarto da largura, que e onde ela cai num cilindro iluminado de cima e
       da esquerda; a aresta direita recebe o rebote quente da luz da marca.
     -->
     <linearGradient id="cilindro" gradientUnits="userSpaceOnUse"
-                    x1="191" y1="0" x2="621" y2="0">
+                    x1="205" y1="0" x2="607" y2="0">
       <stop offset="0" stop-color="#0B0B10"/>
       <stop offset="0.08" stop-color="#1F1F27"/>
       <stop offset="0.26" stop-color="#2C2C36"/>
@@ -106,59 +119,59 @@
       comissura escura e nao de um vao vazado.
     -->
     <path id="silhueta" d="
-      M 191 86
-      C 186 200 214 330 259 429
-      C 240 470 224 532 222 620
-      C 220 700 222 782 228 849
-      C 229 870 229 886 230 900
-      L 588 900
-      C 589 886 589 870 590 849
-      C 596 782 598 700 596 620
-      C 594 532 578 470 553 429
-      C 570 416 594 404 590 390
-      C 598 378 600 354 598 330
-      C 614 240 626 160 621 86 Z
+      M 205 86
+      C 200 200 222 330 262 429
+      C 246 470 236 532 238 620
+      C 238 700 242 782 248 849
+      C 249 870 249 886 250 900
+      L 568 900
+      C 569 886 569 870 570 849
+      C 576 782 580 700 580 620
+      C 582 532 570 470 550 429
+      C 566 416 588 404 584 390
+      C 592 378 594 354 592 330
+      C 606 240 612 160 607 86 Z
 
-      M 226 486
-      C 188 560 150 650 130 744
-      C 120 782 142 822 178 816
-      C 204 812 220 786 226 758
-      C 240 692 262 620 280 556 Z
+      M 240 486
+      C 204 560 168 650 148 744
+      C 139 782 160 822 194 816
+      C 218 812 233 786 239 758
+      C 252 692 272 620 289 556 Z
 
-      M 228 850
-      C 222 912 224 982 236 1048
-      C 244 1106 258 1142 278 1142
-      C 298 1142 310 1106 308 1048
-      C 312 982 314 912 316 850 Z
+      M 250 850
+      C 246 912 252 982 266 1048
+      C 275 1106 290 1142 308 1142
+      C 325 1142 334 1106 330 1048
+      C 332 982 332 912 332 850 Z
 
-      M 330 850
-      C 324 918 326 996 338 1072
-      C 346 1138 358 1184 378 1184
-      C 398 1184 410 1142 408 1072
-      C 412 996 414 918 420 850 Z
+      M 344 850
+      C 340 918 345 996 358 1072
+      C 367 1138 378 1184 396 1184
+      C 414 1184 422 1142 418 1072
+      C 420 996 422 918 426 850 Z
 
-      M 434 850
-      C 428 914 430 988 440 1054
-      C 447 1114 458 1154 470 1154
-      C 484 1154 496 1116 494 1054
-      C 502 988 506 914 514 850 Z
+      M 438 850
+      C 433 914 434 988 438 1054
+      C 443 1114 452 1154 462 1154
+      C 474 1154 483 1116 480 1054
+      C 487 988 496 914 508 850 Z
 
-      M 528 850
-      C 523 902 524 962 532 1014
-      C 538 1060 546 1084 554 1084
-      C 564 1084 574 1058 572 1014
-      C 578 962 582 902 590 850 Z"/>
+      M 520 850
+      C 516 902 514 962 516 1014
+      C 519 1060 525 1084 532 1084
+      C 541 1084 547 1058 545 1014
+      C 552 962 559 902 566 850 Z"/>
     <clipPath id="corpo"><use href="#silhueta"/></clipPath>
 
-    <path id="ladoD" d="M621 86 C 626 160 614 240 598 330
-      C 600 354 598 378 590 390 C 594 404 570 416 553 429
-      C 578 470 594 532 596 620 C 598 700 596 782 590 849
-      C 589 870 589 886 588 900"/>
-    <path id="ladoE" d="M191 86 C 186 200 214 330 259 429
-      C 240 470 224 532 222 620 C 220 700 222 782 228 849
-      C 229 870 229 886 230 900"/>
-    <path id="ladoPolegar" d="M226 486 C 188 560 150 650 130 744
-      C 120 782 142 822 178 816"/>
+    <path id="ladoD" d="M607 86 C 612 160 606 240 592 330
+      C 594 354 592 378 584 390 C 588 404 566 416 550 429
+      C 570 470 582 532 580 620 C 580 700 576 782 570 849
+      C 569 870 569 886 568 900"/>
+    <path id="ladoE" d="M205 86 C 200 200 222 330 262 429
+      C 246 470 236 532 238 620 C 238 700 242 782 248 849
+      C 249 870 249 886 250 900"/>
+    <path id="ladoPolegar" d="M240 486 C 204 560 168 650 148 744
+      C 139 782 160 822 194 816"/>
 
     <!--
       A borda de cada dedo. Sem ela os dedos nao se contam: o vao entre dois
@@ -166,16 +179,16 @@
       separa nada.
     -->
     <g id="dedosE" fill="none">
-      <path d="M228 850 C 222 912 224 982 236 1048 C 244 1106 258 1142 278 1142"/>
-      <path d="M330 850 C 324 918 326 996 338 1072 C 346 1138 358 1184 378 1184"/>
-      <path d="M434 850 C 428 914 430 988 440 1054 C 447 1114 458 1154 470 1154"/>
-      <path d="M528 850 C 523 902 524 962 532 1014 C 538 1060 546 1084 554 1084"/>
+      <path d="M250 850 C 246 912 252 982 266 1048 C 275 1106 290 1142 308 1142"/>
+      <path d="M344 850 C 340 918 345 996 358 1072 C 367 1138 378 1184 396 1184"/>
+      <path d="M438 850 C 433 914 434 988 438 1054 C 443 1114 452 1154 462 1154"/>
+      <path d="M520 850 C 516 902 514 962 516 1014 C 519 1060 525 1084 532 1084"/>
     </g>
     <g id="dedosD" fill="none">
-      <path d="M316 850 C 314 912 312 982 308 1048 C 310 1106 298 1142 278 1142"/>
-      <path d="M420 850 C 414 918 412 996 408 1072 C 410 1142 398 1184 378 1184"/>
-      <path d="M514 850 C 506 914 502 988 494 1054 C 496 1116 484 1154 470 1154"/>
-      <path d="M590 850 C 582 902 578 962 572 1014 C 574 1058 564 1084 554 1084"/>
+      <path d="M332 850 C 332 912 332 982 330 1048 C 334 1106 325 1142 308 1142"/>
+      <path d="M426 850 C 422 918 420 996 418 1072 C 422 1142 414 1184 396 1184"/>
+      <path d="M508 850 C 496 914 487 988 480 1054 C 483 1116 474 1154 462 1154"/>
+      <path d="M566 850 C 559 902 552 962 545 1014 C 547 1058 541 1084 532 1084"/>
     </g>
   </defs>
 
@@ -193,41 +206,41 @@
 
       <g clip-path="url(#corpo)" fill="none" stroke-linecap="round">
         <!-- o brilho da pele na banda de luz do antebraco -->
-        <path d="M284 130 C 274 280 292 380 300 450"
+        <path d="M292 130 C 282 280 296 380 302 450"
               stroke="#F2F2FA" stroke-opacity="0.06" stroke-width="52"/>
         <!-- a sombra que fecha o lado de dentro -->
-        <path d="M554 120 C 566 280 540 400 540 500"
+        <path d="M544 120 C 554 280 532 400 534 500"
               stroke="#000000" stroke-opacity="0.3" stroke-width="42"/>
         <!-- o sulco entre os dois grupos de tendoes do antebraco -->
         <path d="M406 150 C 406 240 406 330 406 420"
               stroke="#000000" stroke-opacity="0.1" stroke-width="34"/>
 
         <!-- o estiloide da ulna, pegando luz por cima e sombra por baixo -->
-        <path d="M570 376 C 586 384 592 394 588 404"
+        <path d="M564 376 C 580 384 586 394 582 404"
               stroke="#F2F2FA" stroke-opacity="0.1" stroke-width="15"/>
-        <path d="M566 414 C 578 412 586 406 590 398"
+        <path d="M560 414 C 572 412 580 406 584 398"
               stroke="#000000" stroke-opacity="0.22" stroke-width="12"/>
 
         <!-- os dois vincos do punho, insinuados e nao riscados -->
         <g stroke="#000000" stroke-opacity="0.13" stroke-width="11">
-          <path d="M262 334 C 318 354 494 354 548 334"/>
-          <path d="M256 374 C 314 394 500 394 554 374"/>
+          <path d="M265 334 C 320 354 492 354 545 334"/>
+          <path d="M259 374 C 316 394 497 394 551 374"/>
         </g>
         <!-- a sombra que a pulseira joga no punho -->
-        <path d="M252 404 C 312 432 492 432 552 404"
+        <path d="M255 404 C 314 432 490 432 549 404"
               stroke="#000000" stroke-opacity="0.4" stroke-width="54"/>
 
         <!-- ===================== O DORSO DA MAO =====================
              O volume primeiro: a luz corre pelo alto, a sombra fecha o lado
              de dentro e cada borda tem o seu monte carnudo. -->
-        <path d="M296 500 C 282 600 282 700 290 820"
+        <path d="M310 500 C 296 600 296 700 304 820"
               stroke="#F2F2FA" stroke-opacity="0.045" stroke-width="68"/>
-        <path d="M566 520 C 582 620 582 720 574 830"
+        <path d="M550 520 C 566 620 566 720 558 830"
               stroke="#000000" stroke-opacity="0.24" stroke-width="50"/>
         <!-- o monte do polegar e o do mindinho -->
-        <path d="M244 540 C 224 610 218 680 224 746"
+        <path d="M258 540 C 238 610 232 680 238 746"
               stroke="#F2F2FA" stroke-opacity="0.045" stroke-width="54"/>
-        <path d="M586 600 C 598 660 600 720 594 780"
+        <path d="M570 600 C 582 660 584 720 578 780"
               stroke="#F2F2FA" stroke-opacity="0.03" stroke-width="40"/>
         <!-- a veia que atravessa o dorso -->
         <path d="M452 540 C 436 480 452 460 436 416"
@@ -236,20 +249,20 @@
         <!-- Os tendoes extensores, do punho as juntas. Largos e quase
              apagados: finos e claros, viram quatro barras pousadas na mao. -->
         <g stroke="#F2F2FA" stroke-opacity="0.03" stroke-width="24">
-          <path d="M296 480 C 286 580 278 700 272 806"/>
-          <path d="M364 472 C 360 580 358 700 358 822"/>
-          <path d="M442 472 C 450 580 456 700 462 810"/>
-          <path d="M508 482 C 520 580 534 690 544 782"/>
+          <path d="M306 480 C 298 580 292 700 288 806"/>
+          <path d="M368 472 C 364 580 362 700 364 822"/>
+          <path d="M440 472 C 448 580 452 700 456 810"/>
+          <path d="M498 482 C 508 580 520 690 530 782"/>
         </g>
 
         <!-- As cabecas dos metacarpos: a parte mais clara da imagem, porque
              sao o que aponta para cima. Escalonadas — o medio mais baixo, o
              mindinho mais alto —, e e isso que faz a linha das juntas. -->
         <g fill="url(#realce)" stroke="none">
-          <ellipse cx="272" cy="840" rx="50" ry="34" opacity="0.14"/>
-          <ellipse cx="375" cy="858" rx="52" ry="36" opacity="0.15"/>
-          <ellipse cx="474" cy="844" rx="48" ry="34" opacity="0.14"/>
-          <ellipse cx="559" cy="814" rx="38" ry="26" opacity="0.12"/>
+          <ellipse cx="290" cy="840" rx="46" ry="33" opacity="0.14"/>
+          <ellipse cx="382" cy="858" rx="46" ry="34" opacity="0.15"/>
+          <ellipse cx="470" cy="844" rx="42" ry="32" opacity="0.14"/>
+          <ellipse cx="543" cy="814" rx="32" ry="24" opacity="0.12"/>
         </g>
 
         <!-- A sombra que cresce da junta ate a ponta. E ela que diz que os
@@ -259,65 +272,65 @@
 
         <!-- a ruga logo abaixo de cada junta -->
         <g stroke="#000000" stroke-opacity="0.2" stroke-width="12">
-          <path d="M242 874 C 256 884 288 884 302 874"/>
-          <path d="M344 892 C 358 902 392 902 406 892"/>
-          <path d="M444 878 C 458 888 490 888 504 878"/>
-          <path d="M536 848 C 548 856 570 856 582 848"/>
+          <path d="M264 874 C 278 884 310 884 324 874"/>
+          <path d="M356 892 C 370 902 404 902 418 892"/>
+          <path d="M438 878 C 452 888 482 888 496 878"/>
+          <path d="M524 848 C 534 856 554 856 564 848"/>
         </g>
 
         <!-- As comissuras: e por elas que o olho conta os dedos onde o vao
              ainda nao abriu. -->
         <g stroke="#000000" stroke-opacity="0.55" stroke-width="18">
-          <path d="M323 846 L 323 912"/>
-          <path d="M427 862 L 427 928"/>
-          <path d="M521 842 L 521 904"/>
+          <path d="M338 846 L 338 912"/>
+          <path d="M432 862 L 432 928"/>
+          <path d="M514 842 L 514 904"/>
         </g>
 
         <!-- A luz que sobra em cada dedo: so na primeira falange, que e a
              unica que ainda aponta um pouco para cima. -->
         <g stroke="#F2F2FA" stroke-opacity="0.05">
-          <path d="M252 880 C 247 934 249 988 254 1032" stroke-width="22"/>
-          <path d="M354 898 C 349 956 351 1014 356 1064" stroke-width="22"/>
-          <path d="M456 884 C 451 940 453 994 458 1040" stroke-width="20"/>
-          <path d="M546 854 C 541 900 543 946 548 986" stroke-width="16"/>
+          <path d="M270 880 C 266 934 270 988 276 1032" stroke-width="22"/>
+          <path d="M362 898 C 358 956 362 1014 368 1064" stroke-width="22"/>
+          <path d="M450 884 C 445 940 444 994 446 1040" stroke-width="20"/>
+          <path d="M532 854 C 528 900 528 946 530 986" stroke-width="16"/>
         </g>
         <!-- e a borda de dentro de cada um, que cai na sombra do vizinho -->
         <g stroke="#000000" stroke-opacity="0.3">
-          <path d="M308 886 C 306 952 304 1016 300 1070" stroke-width="14"/>
-          <path d="M412 904 C 410 976 408 1044 404 1110" stroke-width="14"/>
-          <path d="M506 890 C 500 954 496 1016 490 1078" stroke-width="12"/>
-          <path d="M582 860 C 576 918 572 970 568 1016" stroke-width="10"/>
+          <path d="M322 886 C 322 952 322 1016 320 1070" stroke-width="14"/>
+          <path d="M414 904 C 412 976 410 1044 406 1110" stroke-width="14"/>
+          <path d="M498 890 C 490 954 484 1016 478 1078" stroke-width="12"/>
+          <path d="M558 860 C 552 918 547 970 543 1016" stroke-width="10"/>
         </g>
 
         <!-- as rugas da articulacao do meio -->
         <g stroke="#000000" stroke-opacity="0.22" stroke-width="8">
-          <path d="M236 1034 C 254 1044 290 1044 308 1034"/>
-          <path d="M338 1058 C 356 1068 392 1068 408 1058"/>
-          <path d="M440 1040 C 456 1050 490 1050 494 1040"/>
-          <path d="M532 1000 C 544 1008 566 1008 572 1000"/>
+          <path d="M258 1034 C 276 1044 310 1044 328 1034"/>
+          <path d="M350 1058 C 368 1068 400 1068 416 1058"/>
+          <path d="M437 1040 C 450 1050 472 1050 482 1040"/>
+          <path d="M516 1000 C 526 1008 540 1008 548 1000"/>
         </g>
 
         <!-- As unhas, nas pontas que a dobra dos dedos deixa a vista. Sao a
              unica coisa clara la embaixo, e e por isso que funcionam. -->
         <g fill="url(#realce)" stroke="none">
-          <ellipse cx="278" cy="1116" rx="26" ry="19" opacity="0.2"/>
-          <ellipse cx="378" cy="1158" rx="27" ry="20" opacity="0.2"/>
-          <ellipse cx="470" cy="1128" rx="25" ry="18" opacity="0.19"/>
-          <ellipse cx="554" cy="1058" rx="20" ry="15" opacity="0.17"/>
+          <ellipse cx="308" cy="1116" rx="23" ry="18" opacity="0.2"/>
+          <ellipse cx="396" cy="1158" rx="23" ry="18" opacity="0.2"/>
+          <ellipse cx="462" cy="1128" rx="21" ry="16" opacity="0.19"/>
+          <ellipse cx="532" cy="1058" rx="17" ry="14" opacity="0.17"/>
         </g>
 
         <!-- o polegar: cilindro proprio, ruga da articulacao e unha -->
-        <path d="M210 580 C 182 650 160 724 152 776"
+        <path d="M226 580 C 198 650 178 724 170 776"
               stroke="#F2F2FA" stroke-opacity="0.055" stroke-width="30"/>
-        <path d="M256 584 C 230 656 208 726 200 772"
+        <path d="M270 584 C 244 656 224 726 216 772"
               stroke="#000000" stroke-opacity="0.3" stroke-width="22"/>
-        <path d="M162 700 C 176 712 194 716 208 712"
+        <path d="M180 700 C 194 712 212 716 226 712"
               stroke="#000000" stroke-opacity="0.2" stroke-width="8"/>
-        <ellipse cx="160" cy="788" rx="22" ry="17" fill="url(#realce)"
+        <ellipse cx="178" cy="788" rx="21" ry="16" fill="url(#realce)"
                  opacity="0.18" stroke="none"
-                 transform="rotate(-32 160 788)"/>
+                 transform="rotate(-32 178 788)"/>
         <!-- a membrana entre o polegar e o indicador -->
-        <path d="M240 524 C 258 548 268 580 270 612"
+        <path d="M254 524 C 272 548 282 580 285 612"
               stroke="#000000" stroke-opacity="0.3" stroke-width="18"/>
       </g>
 
