@@ -613,3 +613,9 @@ fundo branco... corrija
 [63] 2026-10-13
 ===============================================================================
 deixe as imagens do pulso e do dorso mais reais, mais proporcionais
+
+
+===============================================================================
+[64] 2026-10-13
+===============================================================================
+agora deixe o busto com bracos mais proporcional ao tamanho do colar

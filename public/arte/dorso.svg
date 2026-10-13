@@ -21,7 +21,7 @@
     um bloco macico de 880 de largura — a causa real das quatro versoes em
     que ele parecia um frasco.
 
-    Com o tronco liberado, ele voltou a ter largura de tronco (524, contra os
+    Com o tronco liberado, ele voltou a ter largura de tronco (548, contra os
     880 de antes) e os bracos couberam de fora dele.
 
     AS PROPORCOES, depois de uma passada inteira so nelas. O que havia antes
@@ -30,15 +30,22 @@
     como um cano e o tronco nao tinha cintura — a base era ate mais larga que
     o peito, que e o avesso de um corpo.
 
-    Agora o tronco faz o V: peito 524, cintura 404 na altura do cotovelo (0,77
-    do peito, que e silhueta masculina) e quadril 444 no corte. E o braco tem
-    os quatro calibres que um braco tem — biceps 164, cotovelo 112, barriga do
-    antebraco 140, punho 100. E o estreitamento do cotovelo que faz a diferenca:
+    Agora o tronco faz o V: peito 548, cintura 416 na altura do cotovelo (0,76
+    do peito, que e silhueta masculina) e quadril 452 no corte. E o braco tem
+    os quatro calibres que um braco tem — biceps 158, cotovelo 110, barriga do
+    antebraco 134, punho 100. E o estreitamento do cotovelo que faz a diferenca:
     sem ele, engrossar ou afinar o braco inteiro so troca um cano por outro.
 
     O teto de tudo isso e o ombro, que tem 932 e nao pode crescer: dois bracos,
-    o tronco e os dois vaos moram dentro dele. Engordar o braco pede roubar do
-    tronco ou fechar o vao, e e por isso que os numeros acima nao sao livres.
+    o tronco e os dois vaos moram dentro dele — 548 + 2x158 + 2x24 da os 932
+    exatos. Alargar o peito e, necessariamente, afinar o braco ou fechar o vao,
+    e nenhum dos dois e de graca: braco fino vira manga de camisa, e vao fechado
+    desfaz o motivo de o braco existir. Esta repartição e o meio-termo achado
+    depois de experimentar o peito em 568, que comia o vao ate sobrar um fio.
+
+    Ha ainda um piso no ombro: a borda externa do braco nao pode subir acima de
+    44 na altura do biceps, senao o braco fica mais largo ali do que o deltoide
+    em 470 e o ombro deixa de ter inclinacao. E ele que fixa o braco em 158.
 
     A ESCALA sai da propria foto. A corrente desce cerca de 12 cm do pescoco
     ate o fecho do pingente, e esse trecho mede 240 no arquivo: 20 por
@@ -61,14 +68,23 @@
     no cotovelo e o braquiorradial engrossando o antebraco logo abaixo; e no
     abdome a linha alba, duas intersecoes tendineas e a crista iliaca.
 
-    A foto entra no quadro x 171,6..752,4 / y 156,8..690,1 — 580,8 de
-    largura, 66% do tamanho original. O pingente da foto e grande demais
-    para o tronco: em escala cheia dava 1,67 vez a largura do peito, o que
-    nenhum pescoco sustentaria. Em 66% fica em 1,03 — do tamanho do peito,
-    que e o maximo que um pingente de verdade chega. A corrente encolhe
-    junto, entao a posicao do quadro e amarrada: a ponta esquerda dela tem
-    de cair exatamente sobre o contorno do pescoco, em (366, 170), senao ela
-    acaba no ar no meio do peito. Mexer na escala pede refazer essa conta.
+    A foto entra no quadro x 201,1..693,9 / y 158,8..611,3 — 492,8 de
+    largura, 56% do tamanho original. Em escala cheia o pingente dava 1,67
+    vez a largura do peito; em 66% ficou em 0,95, que ainda era um pingente
+    tao largo quanto o torax de quem o usa. Agora da 0,78 — grande, que e o
+    que a peca quer ser, e nao mais largo que o peito.
+
+    Dois tercos dessa correcao vieram do peito, que foi de 524 para 548, e o
+    resto da foto. Nao da para tirar tudo do corpo: o ombro nao cresce, e o
+    que o peito ganha sai do braco ou do vao.
+
+    A corrente encolhe junto com o pingente, entao a posicao do quadro nao e
+    livre: a ponta esquerda dela tem de cair exatamente sobre o contorno do
+    pescoco, em (366, 170), senao ela acaba no ar no meio do peito. A conta e
+    guardar onde esse ponto cai DENTRO da foto (u 0,3347 / v 0,0248) e repor o
+    quadro a partir dele na escala nova. A fronteira do recorte sai da mesma
+    conta — v 0,3773, que agora cai em y 330, onde a corrente acaba e o
+    pingente comeca. Mexer na escala pede refazer as duas.
 
     O `#silhueta` daqui e lido por compor.html, que recorta a foto por ele.
     Era uma copia colada la, com um aviso de manter as duas iguais; no
@@ -115,41 +131,41 @@
       C 366 140 364 180 364 225
       C 330 246 286 266 236 288
       C 150 318 36 388 34 470
-      C 42 556 50 640 55 700
-      C 62 790 70 850 72 900
-      C 80 980 86 1040 86 1090
-      C 80 1140 76 1170 76 1200
-      C 78 1260 84 1300 88 1330
-      C 94 1390 102 1432 104 1448
-      A 50 15 0 0 0 204 1448
-      C 206 1400 210 1370 212 1330
-      C 215 1290 216 1240 216 1200
-      C 210 1160 198 1130 198 1090
-      C 202 1020 206 960 208 900
-      C 212 820 216 760 219 700
-      C 222 640 226 570 230 520
-      C 234 600 238 660 238 700
-      C 246 800 254 880 258 950
-      C 276 1040 294 1100 298 1150
-      C 294 1230 284 1300 278 1330
-      A 222 38 0 0 0 722 1330
-      C 716 1300 706 1230 702 1150
-      C 706 1100 724 1040 742 950
-      C 746 880 754 800 762 700
-      C 762 660 766 600 770 500
-      C 774 570 778 640 781 700
-      C 784 760 788 820 792 900
-      C 794 960 798 1020 802 1090
-      C 802 1130 790 1160 784 1200
-      C 784 1240 785 1290 788 1330
-      C 790 1370 794 1400 796 1448
-      A 50 15 0 0 0 896 1448
-      C 898 1432 906 1390 912 1330
-      C 916 1300 922 1260 924 1200
-      C 924 1170 920 1140 914 1090
-      C 914 1040 920 980 928 900
-      C 930 850 938 790 945 700
-      C 950 640 958 556 966 470
+      C 36 560 40 640 44 700
+      C 52 790 58 850 62 900
+      C 68 980 76 1040 76 1090
+      C 72 1140 68 1170 68 1200
+      C 70 1260 74 1300 76 1330
+      C 82 1390 90 1432 92 1448
+      A 50 15 0 0 0 192 1448
+      C 194 1400 197 1370 198 1330
+      C 201 1290 202 1240 202 1200
+      C 196 1160 186 1130 186 1090
+      C 189 1020 192 960 194 900
+      C 197 820 200 760 202 700
+      C 208 640 215 590 222 560
+      C 223 620 225 660 226 700
+      C 232 800 241 880 248 950
+      C 264 1040 287 1100 292 1150
+      C 288 1230 280 1300 274 1330
+      A 226 38 0 0 0 726 1330
+      C 720 1300 712 1230 708 1150
+      C 713 1100 735 1040 752 950
+      C 759 880 769 800 774 700
+      C 775 660 776 600 778 540
+      C 785 590 792 640 798 700
+      C 800 760 803 820 806 900
+      C 808 960 811 1020 814 1090
+      C 814 1130 804 1160 798 1200
+      C 798 1240 800 1290 802 1330
+      C 804 1370 807 1400 808 1448
+      A 50 15 0 0 0 908 1448
+      C 910 1432 918 1390 924 1330
+      C 926 1300 930 1260 932 1200
+      C 932 1170 928 1140 924 1090
+      C 924 1040 930 980 938 900
+      C 942 850 950 790 956 700
+      C 960 640 963 560 966 470
       C 964 388 850 318 764 288
       C 714 266 670 246 636 225
       C 636 180 634 140 628 60
@@ -158,32 +174,32 @@
 
     <path id="ladoD" d="M628 60 C 634 140 636 180 636 225
       C 670 246 714 266 764 288 C 850 318 964 388 966 470
-      C 958 556 950 640 945 700 C 938 790 930 850 928 900
-      C 920 980 914 1040 914 1090 C 920 1140 924 1170 924 1200
-      C 922 1260 916 1300 912 1330 C 906 1390 898 1432 896 1448"/>
+      C 963 560 960 640 956 700 C 950 790 942 850 938 900
+      C 930 980 924 1040 924 1090 C 928 1140 932 1170 932 1200
+      C 930 1260 926 1300 924 1330 C 918 1390 910 1432 908 1448"/>
     <path id="ladoE" d="M372 60 C 366 140 364 180 364 225
       C 330 246 286 266 236 288 C 150 318 36 388 34 470
-      C 42 556 50 640 55 700 C 62 790 70 850 72 900
-      C 80 980 86 1040 86 1090 C 80 1140 76 1170 76 1200
-      C 78 1260 84 1300 88 1330 C 94 1390 102 1432 104 1448"/>
+      C 36 560 40 640 44 700 C 52 790 58 850 62 900
+      C 68 980 76 1040 76 1090 C 72 1140 68 1170 68 1200
+      C 70 1260 74 1300 76 1330 C 82 1390 90 1432 92 1448"/>
     <!-- as bordas de dentro: braco e tronco, de cada lado do vao -->
-    <path id="dentroE" d="M204 1448 C 206 1400 210 1370 212 1330
-      C 215 1290 216 1240 216 1200 C 210 1160 198 1130 198 1090
-      C 202 1020 206 960 208 900 C 212 820 216 760 219 700
-      C 222 640 226 570 230 520"/>
-    <path id="flancoE" d="M230 520 C 234 600 238 660 238 700
-      C 246 800 254 880 258 950 C 276 1040 294 1100 298 1150
-      C 294 1230 284 1300 278 1330"/>
-    <path id="dentroD" d="M770 500 C 774 570 778 640 781 700
-      C 784 760 788 820 792 900 C 794 960 798 1020 802 1090
-      C 802 1130 790 1160 784 1200 C 784 1240 785 1290 788 1330
-      C 790 1370 794 1400 796 1448"/>
-    <path id="flancoD" d="M722 1330 C 716 1300 706 1230 702 1150
-      C 706 1100 724 1040 742 950 C 746 880 754 800 762 700
-      C 762 660 766 600 770 500"/>
-    <path id="baseE" d="M104 1448 A 50 15 0 0 0 204 1448"/>
-    <path id="baseC" d="M278 1330 A 222 38 0 0 0 722 1330"/>
-    <path id="baseD" d="M796 1448 A 50 15 0 0 0 896 1448"/>
+    <path id="dentroE" d="M192 1448 C 194 1400 197 1370 198 1330
+      C 201 1290 202 1240 202 1200 C 196 1160 186 1130 186 1090
+      C 189 1020 192 960 194 900 C 197 820 200 760 202 700
+      C 208 640 215 590 222 560"/>
+    <path id="flancoE" d="M222 560 C 223 620 225 660 226 700
+      C 232 800 241 880 248 950 C 264 1040 287 1100 292 1150
+      C 288 1230 280 1300 274 1330"/>
+    <path id="dentroD" d="M778 540 C 785 590 792 640 798 700
+      C 800 760 803 820 806 900 C 808 960 811 1020 814 1090
+      C 814 1130 804 1160 798 1200 C 798 1240 800 1290 802 1330
+      C 804 1370 807 1400 808 1448"/>
+    <path id="flancoD" d="M726 1330 C 720 1300 712 1230 708 1150
+      C 713 1100 735 1040 752 950 C 759 880 769 800 774 700
+      C 775 660 776 600 778 540"/>
+    <path id="baseE" d="M92 1448 A 50 15 0 0 0 192 1448"/>
+    <path id="baseC" d="M274 1330 A 226 38 0 0 0 726 1330"/>
+    <path id="baseD" d="M808 1448 A 50 15 0 0 0 908 1448"/>
   </defs>
 
   <use href="#silhueta" fill="url(#cilindro)"/>
@@ -243,29 +259,29 @@
     <path d="M760 328 C 772 386 774 444 770 492"
           stroke="#000000" stroke-opacity="0.36" stroke-width="22"/>
     <!-- a insercao em V -->
-    <path d="M58 644 C 90 680 134 688 170 674"
+    <path d="M45 644 C 77 680 121 688 157 674"
           stroke="#000000" stroke-opacity="0.32" stroke-width="19"/>
-    <path d="M940 636 C 908 672 866 680 832 666"
+    <path d="M953 636 C 921 672 879 680 845 666"
           stroke="#000000" stroke-opacity="0.36" stroke-width="19"/>
-    <path d="M60 620 C 92 656 136 664 172 652"
+    <path d="M47 620 C 79 656 123 664 159 652"
           stroke="#F2F2FA" stroke-opacity="0.055" stroke-width="14"/>
 
     <!-- ===================== AXILA =====================
          O vinco fundo onde o braco larga o tronco. -->
-    <ellipse cx="236" cy="516" rx="48" ry="42" fill="url(#sombra)"
+    <ellipse cx="224" cy="556" rx="48" ry="42" fill="url(#sombra)"
              opacity="0.68" stroke="none"/>
-    <ellipse cx="764" cy="498" rx="46" ry="40" fill="url(#sombra)"
+    <ellipse cx="776" cy="536" rx="46" ry="40" fill="url(#sombra)"
              opacity="0.72" stroke="none"/>
 
     <!-- ===================== PEITORAL =====================
          O que conta e a borda de baixo, que e aresta e nao degrade. -->
-    <ellipse cx="368" cy="622" rx="118" ry="104" fill="url(#realce)"
+    <ellipse cx="362" cy="622" rx="124" ry="104" fill="url(#realce)"
              opacity="0.11" stroke="none"/>
-    <ellipse cx="636" cy="630" rx="112" ry="100" fill="url(#realce)"
+    <ellipse cx="642" cy="630" rx="117" ry="100" fill="url(#realce)"
              opacity="0.05" stroke="none"/>
-    <path d="M250 672 C 310 750 392 780 488 780"
+    <path d="M237 672 C 300 750 386 780 487 780"
           stroke="#000000" stroke-opacity="0.3" stroke-width="19"/>
-    <path d="M750 668 C 692 746 612 776 512 778"
+    <path d="M763 668 C 702 746 618 776 513 778"
           stroke="#000000" stroke-opacity="0.34" stroke-width="19"/>
     <path d="M500 290 L 500 840"
           stroke="#000000" stroke-opacity="0.14" stroke-width="32"/>
@@ -273,89 +289,89 @@
     <!-- ===================== SERRATIL =====================
          As digitacoes nas costelas, diagonais. -->
     <g stroke="#F2F2FA" stroke-opacity="0.045" stroke-width="15">
-      <path d="M262 796 C 288 818 314 830 338 836"/>
-      <path d="M266 848 C 292 872 318 884 340 890"/>
-      <path d="M274 898 C 298 922 322 934 344 940"/>
+      <path d="M242 796 C 270 818 298 830 324 836"/>
+      <path d="M246 848 C 274 872 303 884 326 890"/>
+      <path d="M255 898 C 281 922 308 934 330 940"/>
     </g>
     <g stroke="#F2F2FA" stroke-opacity="0.025" stroke-width="13">
-      <path d="M738 790 C 714 814 690 826 668 832"/>
-      <path d="M742 842 C 718 866 696 878 674 884"/>
+      <path d="M758 790 C 732 814 706 826 682 832"/>
+      <path d="M762 842 C 736 866 713 878 689 884"/>
     </g>
 
     <!-- ===================== BRACO ESQUERDO =====================
          Biceps por dentro pegando luz, triceps por fora na sombra, o
          olecrano claro no cotovelo e o braquiorradial engrossando o
          antebraco logo abaixo dele. -->
-    <path d="M118 700 C 112 800 112 900 124 1030"
+    <path d="M105 700 C 99 800 99 900 111 1030"
           stroke="#F2F2FA" stroke-opacity="0.095" stroke-width="46"/>
-    <path d="M72 720 C 70 820 76 920 90 1030"
+    <path d="M59 720 C 57 820 63 920 77 1030"
           stroke="#000000" stroke-opacity="0.22" stroke-width="20"/>
-    <path d="M208 700 C 206 800 200 900 196 1020"
+    <path d="M195 700 C 193 800 187 900 183 1020"
           stroke="#000000" stroke-opacity="0.4" stroke-width="34"/>
-    <ellipse cx="126" cy="800" rx="46" ry="86" fill="url(#realce)"
+    <ellipse cx="113" cy="800" rx="46" ry="86" fill="url(#realce)"
              opacity="0.11" stroke="none"/>
     <!-- o olecrano, agora no cotovelo de verdade: 1,9 cabeca abaixo da
          furcula, que e onde a largura do braco e minima -->
-    <ellipse cx="92" cy="1110" rx="34" ry="40" fill="url(#realce)"
+    <ellipse cx="79" cy="1110" rx="34" ry="40" fill="url(#realce)"
              opacity="0.15" stroke="none"/>
-    <path d="M84 1086 C 116 1104 158 1104 190 1094"
+    <path d="M71 1086 C 103 1104 145 1104 177 1094"
           stroke="#000000" stroke-opacity="0.22" stroke-width="16"/>
-    <path d="M126 1208 C 122 1290 128 1370 134 1428"
+    <path d="M113 1208 C 109 1290 115 1370 121 1428"
           stroke="#F2F2FA" stroke-opacity="0.08" stroke-width="38"/>
-    <path d="M200 1216 C 198 1300 194 1380 192 1430"
+    <path d="M187 1216 C 185 1300 181 1380 179 1430"
           stroke="#000000" stroke-opacity="0.36" stroke-width="24"/>
-    <ellipse cx="132" cy="1250" rx="40" ry="58" fill="url(#realce)"
+    <ellipse cx="119" cy="1250" rx="40" ry="58" fill="url(#realce)"
              opacity="0.07" stroke="none"/>
-    <path d="M112 1410 C 134 1422 170 1422 192 1412"
+    <path d="M99 1410 C 121 1422 157 1422 179 1412"
           stroke="#000000" stroke-opacity="0.2" stroke-width="12"/>
 
     <!-- ===================== BRACO DIREITO ===================== -->
-    <path d="M882 686 C 876 790 874 890 876 1030"
+    <path d="M895 686 C 889 790 887 890 889 1030"
           stroke="#F2F2FA" stroke-opacity="0.05" stroke-width="40"/>
-    <path d="M930 706 C 926 806 920 910 910 1030"
+    <path d="M943 706 C 939 806 933 910 923 1030"
           stroke="#000000" stroke-opacity="0.26" stroke-width="20"/>
-    <path d="M792 690 C 796 790 800 890 804 1020"
+    <path d="M805 690 C 809 790 813 890 817 1020"
           stroke="#000000" stroke-opacity="0.46" stroke-width="34"/>
-    <ellipse cx="874" cy="796" rx="40" ry="82" fill="url(#realce)"
+    <ellipse cx="887" cy="796" rx="40" ry="82" fill="url(#realce)"
              opacity="0.05" stroke="none"/>
-    <ellipse cx="908" cy="1110" rx="32" ry="40" fill="url(#realce)"
+    <ellipse cx="921" cy="1110" rx="32" ry="40" fill="url(#realce)"
              opacity="0.07" stroke="none"/>
-    <path d="M916 1086 C 886 1104 846 1104 812 1094"
+    <path d="M929 1086 C 899 1104 859 1104 825 1094"
           stroke="#000000" stroke-opacity="0.24" stroke-width="16"/>
-    <path d="M874 1208 C 870 1290 868 1370 866 1428"
+    <path d="M887 1208 C 883 1290 881 1370 879 1428"
           stroke="#F2F2FA" stroke-opacity="0.045" stroke-width="34"/>
-    <path d="M800 1216 C 804 1300 806 1380 808 1430"
+    <path d="M813 1216 C 817 1300 819 1380 821 1430"
           stroke="#000000" stroke-opacity="0.4" stroke-width="22"/>
-    <path d="M888 1410 C 866 1422 832 1422 808 1412"
+    <path d="M901 1410 C 879 1422 845 1422 821 1412"
           stroke="#000000" stroke-opacity="0.22" stroke-width="12"/>
 
     <!-- ===================== ABDOME E QUADRIL ===================== -->
     <path d="M492 880 C 488 1000 490 1130 494 1300"
           stroke="#F2F2FA" stroke-opacity="0.055" stroke-width="104"/>
-    <path d="M300 920 C 312 1030 324 1180 320 1300"
+    <path d="M291 920 C 303 1030 316 1180 311 1300"
           stroke="#000000" stroke-opacity="0.26" stroke-width="44"/>
-    <path d="M700 920 C 688 1030 676 1180 680 1300"
+    <path d="M709 920 C 697 1030 684 1180 689 1300"
           stroke="#000000" stroke-opacity="0.34" stroke-width="48"/>
     <path d="M500 870 L 500 1220"
           stroke="#000000" stroke-opacity="0.17" stroke-width="18"/>
-    <path d="M404 920 C 440 934 560 934 596 920"
+    <path d="M396 920 C 435 934 565 934 604 920"
           stroke="#000000" stroke-opacity="0.15" stroke-width="12"/>
-    <path d="M396 1020 C 436 1036 564 1036 604 1020"
+    <path d="M387 1020 C 431 1036 569 1036 613 1020"
           stroke="#000000" stroke-opacity="0.15" stroke-width="12"/>
     <ellipse cx="498" cy="1130" rx="20" ry="25" fill="url(#sombra)"
              opacity="0.44" stroke="none"/>
-    <path d="M318 1216 C 374 1258 434 1276 492 1280"
+    <path d="M310 1216 C 368 1258 431 1276 491 1280"
           stroke="#F2F2FA" stroke-opacity="0.055" stroke-width="16"/>
-    <path d="M682 1216 C 626 1258 566 1276 508 1280"
+    <path d="M690 1216 C 632 1258 569 1276 509 1280"
           stroke="#F2F2FA" stroke-opacity="0.035" stroke-width="16"/>
 
     <!-- os cortes de baixo sao vistos por baixo: nao se ve o vazio, ve-se a
          aresta, e a barriga de cada um fica na sombra -->
-    <ellipse cx="500" cy="1392" rx="222" ry="82" fill="#000000"
+    <ellipse cx="500" cy="1392" rx="226" ry="82" fill="#000000"
              opacity="0.5" stroke="none"/>
-    <ellipse cx="154" cy="1488" rx="50" ry="40" fill="#000000"
+    <ellipse cx="142" cy="1488" rx="50" ry="40" fill="#000000"
              opacity="0.45" stroke="none"/>
-    <ellipse cx="846" cy="1488" rx="50" ry="40" fill="#000000"
+    <ellipse cx="858" cy="1488" rx="50" ry="40" fill="#000000"
              opacity="0.5" stroke="none"/>
   </g>
 
