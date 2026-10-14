@@ -96,9 +96,13 @@ export function AwardsShowcase() {
     if (!near) return;
 
     awards.items.forEach((item) => {
-      /* A arte da placa e a foto da joia: as duas entram em cena na troca de
-         marco, então as duas precisam já estar no cache quando ela acontecer. */
-      [item.image, item.photo].forEach((src) => {
+      /* A arte impressa da placa e a foto da joia: as duas entram em cena na
+         troca de marco, então as duas precisam já estar no cache quando ela
+         acontecer. Quem é pré-carregado é o `print` — a arte recortada que
+         entra DENTRO do bloco de acrílico —, não o `image`: desde que a placa
+         virou geometria de verdade, a ilustração inteira do troféu só serve de
+         fallback 2D e não é pedida por esta cena. */
+      [item.print, item.photo].forEach((src) => {
         if (!src) return;
         const probe = new window.Image();
         /* O mesmo endereço carimbado que a cena 3D vai pedir: sem o carimbo,
@@ -243,7 +247,7 @@ export function AwardsShowcase() {
           {near ? (
             <AwardPlaque3D
               accent={item.accent}
-              image={item.image}
+              print={item.print}
               photo={item.photo}
               worn={item.photoWorn}
               /* `visible` é o que decide o `frameloop` lá dentro: `false` põe a
