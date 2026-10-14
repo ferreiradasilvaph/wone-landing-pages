@@ -133,6 +133,23 @@ html {
   -webkit-tap-highlight-color: transparent;
 }
 
+/* `scrollbar-gutter: stable` no `html` foi TENTADO aqui e REVERTIDO em 14/10,
+   e fica registrado para ninguém tentar de novo às cegas.
+
+   O motivo da tentativa: com a página pintando mais cedo (FCP do desktop
+   0,43 s → 0,35 s), apareceu um deslocamento intermitente de 0,0007 no
+   desktop, puramente horizontal — o lead do hero e quatro itens da faixa de
+   integrações com o MESMO y e a MESMA altura antes e depois. Isso tem a cara de
+   barra de rolagem aparecendo no meio do streaming do HTML: a lombada é
+   `max-w-7xl mx-auto`, e tirar ~7px de cada margem desloca tudo o que está
+   dentro dela.
+
+   O motivo da reversão: medido, não resolveu. Com a canaleta reservada o mesmo
+   0,0007108068 voltou na corrida seguinte, idêntico até à última casa. Linha de
+   CSS que não faz o que o comentário promete é pior do que linha nenhuma. O
+   deslocamento aparece em 2 de 3 corridas de desktop do `perf.mjs` e em 0 de 2
+   corridas avulsas de Lighthouse; no celular é 0,000 em todas as nove. */
+
 body {
   background: var(--background);
   color: var(--foreground);
@@ -488,6 +505,164 @@ code {
   to {
     transform: scaleX(1);
   }
+}
+
+/* --------------------------------------------------------------------------
+   O que era motion/react
+
+   Medido em 14/10: o import de `motion/react` em treze componentes
+   renderizados no servidor punha o pacote dele (42,2 kB transferidos /
+   126,6 kB crus) entre os 8 scripts que o navegador baixa ANTES da primeira
+   pintura, e o Lighthouse cobra esse download no FCP e no LCP do h1 — tirá-lo
+   do caminho crítico valeu FCP −0,42 s, LCP −0,21 s e +3 pontos (E-f1), e
+   +5 pontos somado ao logo (E-g). Nenhuma das travessias abaixo mudou de
+   forma, de duração ou de curva: são as mesmas que o motion escrevia, agora
+   em CSS, que o compositor toca sem passar pela thread principal.
+
+   O easing é o mesmo do site inteiro, `cubic-bezier(0.16, 1, 0.3, 1)`.
+
+   Movimento reduzido: a regra no fim do arquivo zera DURAÇÃO, não ATRASO —
+   então quem tem `animation-delay` (a escada de "Como funciona", as barras do
+   painel) não aplica animação nenhuma quando `reduced`, em vez de ficar
+   invisível durante o atraso. Está no código de cada componente.
+   -------------------------------------------------------------------------- */
+
+/* Menu móvel do header: era `AnimatePresence` com initial/animate/exit. */
+@keyframes header-menu-in {
+  from {
+    opacity: 0;
+    transform: translateY(-12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes header-menu-out {
+  from {
+    opacity: 1;
+    transform: none;
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-12px);
+  }
+}
+
+.header-menu-in {
+  animation: header-menu-in 0.25s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.header-menu-out {
+  animation: header-menu-out 0.25s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Cartão do PIX no telefone do hero. O primeiro NÃO anima (regra 1: nada do
+   hero anima na entrada) — quem decide é `tick > 0` no componente, porque o
+   primeiro cartão é sempre o do primeiro render. */
+@keyframes phone-pix-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes phone-pix-out {
+  from {
+    opacity: 1;
+    transform: none;
+  }
+  to {
+    opacity: 0;
+    transform: translateY(6px) scale(0.97);
+  }
+}
+
+.phone-pix-in {
+  animation: phone-pix-in 0.42s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.phone-pix-out {
+  animation: phone-pix-out 0.42s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Entrada em escada dos blocos de "Como funciona" (`StepEnter`). A distância
+   vem por `style`, porque muda por chamada. */
+@keyframes step-enter {
+  from {
+    opacity: 0;
+    transform: translateY(var(--step-enter-y, 6px));
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* O ponto que viaja no fio entre as duas telas (`EventWire`). Um por eixo: o
+   eixo muda de breakpoint, e keyframe não responde a media query. */
+@keyframes wire-travel-x {
+  from {
+    transform: translateX(var(--wire-from));
+  }
+  to {
+    transform: none;
+  }
+}
+
+@keyframes wire-travel-y {
+  from {
+    transform: translateY(var(--wire-from));
+  }
+  to {
+    transform: none;
+  }
+}
+
+/* A linha do gráfico de faturamento se desenhando. É exatamente o que o
+   motion fazia com `pathLength`: o atributo `pathLength="1"` normaliza o
+   comprimento do traço para 1, e o que cresce de 0 a 1 é o traço do
+   `stroke-dasharray` — não o `dashoffset`. */
+@keyframes chart-draw {
+  from {
+    stroke-dasharray: 0px 1px;
+  }
+  to {
+    stroke-dasharray: 1px 1px;
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Travessia entre as abas do painel de Análises. Só a entrada: com
+   `AnimatePresence mode="wait"` a vista velha saía em 0,35 s e a nova entrava
+   depois, somando 0,7 s para uma troca de aba; aqui a nova entra sobre o
+   lugar que a velha deixou, na mesma curva e na mesma duração. */
+@keyframes panel-swap {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.panel-swap {
+  animation: panel-swap 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 /* --------------------------------------------------------------------------

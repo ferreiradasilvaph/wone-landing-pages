@@ -1,7 +1,6 @@
 "use client";
 
 import type { CSSProperties } from "react";
-import { motion, type MotionValue } from "motion/react";
 
 /**
  * A barra de progresso do site, em n segmentos de 2px.
@@ -12,12 +11,17 @@ import { motion, type MotionValue } from "motion/react";
  * mostra duas informações de uma vez — quantos passos existem e quanto falta do
  * atual.
  *
- * O segmento ativo preenche de três maneiras, e a ordem importa:
- *  1. `progress` (um MotionValue): o palco dos 4 passos, em que quem manda é a
- *     rolagem, não um relógio;
- *  2. `durationMs`: o avanço automático, por animação CSS — ela roda fora da
+ * O segmento ativo preenche de duas maneiras:
+ *  1. `durationMs`: o avanço automático, por animação CSS — ela roda fora da
  *     thread principal e `paused` a congela onde está, em vez de voltar a zero;
- *  3. nenhum dos dois: o segmento fica cheio (lista navegada só por clique).
+ *  2. sem ele: o segmento fica cheio (lista navegada só por clique).
+ *
+ * Havia uma terceira, `progress`, um `MotionValue` que o palco 3D dos 4 passos
+ * alimentava com a rolagem. O palco foi substituído pela demo de duas telas em
+ * 14/10 e ninguém mais passava a prop — era o único `import` de `motion/react`
+ * que restava num componente usado por QUATRO seções, e portanto o que
+ * continuava puxando o pacote do motion (42,2 kB transferidos) para os scripts
+ * baixados antes da primeira pintura. Saiu o ramo morto, saiu o import.
  *
  * Com `tabLabels` os segmentos viram abas de verdade (`role="tab"`), com o
  * rótulo em cima; sem eles a fileira é decorativa e quem conta a história são
@@ -32,7 +36,6 @@ export function SegmentProgress({
   active,
   durationMs,
   paused,
-  progress,
   labelLeft,
   labelRight,
   onSelect,
@@ -43,7 +46,6 @@ export function SegmentProgress({
   active: number;
   durationMs?: number;
   paused?: boolean;
-  progress?: MotionValue<number>;
   labelLeft?: string;
   labelRight?: string;
   onSelect?: (index: number) => void;
@@ -53,10 +55,6 @@ export function SegmentProgress({
   const preenchimento = (indice: number) => {
     if (indice < active) return <span className="block h-full bg-brand" />;
     if (indice > active) return null;
-
-    if (progress) {
-      return <motion.span className="block h-full origin-left bg-brand" style={{ scaleX: progress }} />;
-    }
 
     if (durationMs) {
       return (

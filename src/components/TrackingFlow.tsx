@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { motion, useInView } from "motion/react";
+import { useOnScreen } from "@/lib/useOnScreen";
 import { MousePointerClick, Bot, QrCode, CheckCircle2, Target } from "lucide-react";
 import { useContent } from "@/i18n";
 import { Chip } from "./Chip";
@@ -15,8 +15,15 @@ const STEP_MS = 900;
  * Os nós acendem em sequência quando o bloco entra na tela, e o traço entre eles
  * se preenche junto — a ideia é o lead *ver* que o rastreio é uma cadeia, não
  * uma lista de logos. É a ÚNICA animação desta seção, e corre uma vez só: o
- * `once: true` do `useInView` não rearma quando a página volta a passar por
+ * `once: true` do `useOnScreen` não rearma quando a página volta a passar por
  * aqui.
+ *
+ * O traço era um `motion.span` e virou transição CSS de `height`, como os
+ * círculos e os rótulos ao lado, que já eram `transition-colors`. Era o único
+ * `import` de `motion/react` nesta seção, e com ele saindo daqui e dos outros
+ * doze componentes renderizados no servidor o pacote do motion (42,2 kB
+ * transferidos) deixa de entrar no grafo dos 8 scripts baixados antes da
+ * primeira pintura — medido em 14/10: FCP −0,42 s, LCP −0,21 s (E-f1).
  *
  * Os detalhes deixaram de ser frase corrida onde já eram outra coisa: os quatro
  * destinos do primeiro nó viraram etiquetas (é uma lista, e lista de nome é
@@ -25,7 +32,7 @@ const STEP_MS = 900;
  */
 export function TrackingFlow() {
   const ref = useRef<HTMLOListElement>(null);
-  const inView = useInView(ref, { once: true, amount: 0.4 });
+  const inView = useOnScreen(ref, { once: true, amount: 0.4 });
   const [reduced, setReduced] = useState(false);
   const [tabHidden, setTabHidden] = useState(false);
   const { payments } = useContent();
@@ -90,11 +97,9 @@ export function TrackingFlow() {
                 aria-hidden
                 className="absolute top-8 left-[0.9375rem] h-[calc(100%-1.5rem)] w-px bg-line"
               >
-                <motion.span
-                  className="block w-px bg-brand"
-                  initial={{ height: 0 }}
-                  animate={{ height: active ? "100%" : 0 }}
-                  transition={{ duration: reduced ? 0 : 0.6, ease: [0.16, 1, 0.3, 1] }}
+                <span
+                  className="block w-px bg-brand transition-[height] duration-[600ms] ease-[cubic-bezier(0.16,1,0.3,1)]"
+                  style={{ height: active ? "100%" : 0 }}
                 />
               </span>
             )}

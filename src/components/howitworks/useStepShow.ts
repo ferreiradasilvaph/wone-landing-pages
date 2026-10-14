@@ -8,7 +8,7 @@ import {
   type FocusEvent,
   type RefObject,
 } from "react";
-import { useInView } from "motion/react";
+import { useOnScreen } from "@/lib/useOnScreen";
 
 /** Os quatro passos: três de configuração e o desfecho. */
 export const STEP_COUNT = 4;
@@ -20,8 +20,12 @@ export const STEP_COUNT = 4;
  */
 export const STEP_MS = [6000, 6000, 6000, 7500] as const;
 
-/** O easing do site, o mesmo do telefone do hero e dos painéis de Segurança. */
-export const EASE = [0.16, 1, 0.3, 1] as const;
+/* O easing do site (`cubic-bezier(0.16, 1, 0.3, 1)`) deixou de morar aqui: os
+   dois únicos consumidores — `StepEnter` e `EventWire` — passaram as entradas
+   para `@keyframes` em `globals.css`, onde a curva é escrita em CSS. Era por
+   esses dois `import` de `motion/react` que o pacote do motion (42,2 kB
+   transferidos) entrava no grafo dos 8 scripts baixados antes da primeira
+   pintura; medido em 14/10, tirá-lo valeu FCP −0,42 s e LCP −0,21 s (E-f1). */
 
 export type StepShow = ReturnType<typeof useStepShow>;
 
@@ -65,7 +69,7 @@ export function useStepShow(blockRef: RefObject<HTMLDivElement | null>) {
      `blockRef` vem de fora (a seção o cria e o pendura no nó que recebe
      ponteiro e foco) porque devolver um ref neste objeto faria o lint do
      compilador ler TODA leitura de `show.algo` como leitura de ref no render. */
-  const onScreen = useInView(blockRef, { amount: 0.3 });
+  const onScreen = useOnScreen(blockRef, { amount: 0.3 });
 
   const paused = userPaused || hovering || focused || tabHidden || !onScreen;
   const playing = !reduced && !paused;

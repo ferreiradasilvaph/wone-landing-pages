@@ -1,8 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useInView } from "motion/react";
 import { useContent } from "@/i18n";
+import { useOnScreen } from "@/lib/useOnScreen";
 import { PauseButton } from "./PauseButton";
 import { SegmentProgress } from "./SegmentProgress";
 
@@ -62,7 +62,7 @@ export function SecurityCarousel() {
      viewport, e sem isto o de Segurança já corria enquanto o visitante ainda
      estava no hero, somando-se ao do carrossel de Recursos. */
   const blocoRef = useRef<HTMLDivElement>(null);
-  const onScreen = useInView(blocoRef, { amount: 0.3 });
+  const onScreen = useOnScreen(blocoRef, { amount: 0.3 });
 
   const paused = userPaused || hovering || focused || tabHidden || !onScreen;
   const playing = !reduced && !paused;

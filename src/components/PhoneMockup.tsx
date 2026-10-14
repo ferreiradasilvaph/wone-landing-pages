@@ -1,12 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { Check, Wifi, BatteryMedium, SignalHigh } from "lucide-react";
 import { useContent } from "@/i18n";
 import { WoneIcon } from "./WoneMark";
-
-const EASE = [0.16, 1, 0.3, 1] as const;
 
 /**
  * Ritmo do ciclo. Cada volta é uma venda: o PIX aparece com o valor, some, e a
@@ -20,6 +17,18 @@ const PIX_GAP_MS = 1100;
 const VISIBLE = 3;
 /** Altura de cada linha, em px — usada no deslocamento vertical. */
 const ROW_H = 48;
+/**
+ * Os degraus que a lista monta, de −1 a VISIBLE.
+ *
+ * Os dois das pontas não se veem e são o que permite trocar o
+ * `AnimatePresence` por transição CSS: o degrau −1 é a venda que o cartão do
+ * PIX ainda está anunciando (nasce 48px acima da caixa, invisível, e o
+ * `overflow-hidden` a corta), e o degrau VISIBLE é a que está saindo por
+ * baixo. Transição em CSS só anima o que já estava montado no valor anterior —
+ * montar a linha um degrau ANTES de ela entrar é o que dá à travessia um ponto
+ * de partida sem precisar de biblioteca.
+ */
+const SLOTS = Array.from({ length: VISIBLE + 2 }, (_, index) => index - 1);
 
 /* O dolar e a moeda principal do site: o produto cobra em varios paises e a
    vitrine fala para quem vende fora. O locale fica en-US para o separador de
@@ -46,10 +55,32 @@ const USD = new Intl.NumberFormat("en-US", {
  * que ele é um controle da página e não um botão desenhado dentro do mockup.
  * Pausado, o relógio não troca o cartão nem soma venda nenhuma; ao voltar, ele
  * retoma da venda em que parou — nada se perde e o total nunca anda para trás.
+ *
+ * ESTE ARQUIVO SAIU DO MOTION, e é o que mais importava: ele está na primeira
+ * dobra. Medido em 14/10, o import de `motion/react` aqui era um dos treze que
+ * punham o pacote do motion (42,2 kB transferidos / 126,6 kB crus) entre os 8
+ * scripts que o navegador baixa ANTES da primeira pintura — e o Lighthouse, que
+ * simula 4G, cobra esse download no FCP e no LCP do h1. Sem ele: FCP −0,42 s,
+ * LCP −0,21 s, +3 pontos (E-f1). As duas travessias viraram CSS com as mesmas
+ * durações e a mesma curva: `@keyframes phone-pix-in/out` no cartão e transição
+ * de `transform`/`opacity` nas linhas.
+ *
+ * `useReducedMotion` saiu junto, por `matchMedia` dentro de efeito. O valor
+ * nasce `false` nos dois lados e só muda depois da montagem, que é o que a
+ * regra 6 pede — e o que o hook do motion não fazia (ele devolve `null` no
+ * servidor e o valor real já no primeiro render do cliente).
  */
 export function PhoneMockup({ paused = false }: { paused?: boolean }) {
-  const reduced = useReducedMotion();
+  const [reduced, setReduced] = useState(false);
   const { phone, ui } = useContent();
+
+  useEffect(() => {
+    const query = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const sync = () => setReduced(query.matches);
+    sync();
+    query.addEventListener("change", sync);
+    return () => query.removeEventListener("change", sync);
+  }, []);
 
   // Quantas vendas já entraram na lista. `tick` também é o índice da próxima a
   // ser anunciada pelo cartão do PIX.
@@ -78,10 +109,10 @@ export function PhoneMockup({ paused = false }: { paused?: boolean }) {
    * (medido: 9 s com `reduce` ligado, zero linhas). Semear `tick` em 1 mostra
    * UMA venda na lista e o total que bate com ela, sem animação alguma.
    *
-   * Dentro de um efeito de propósito: `useReducedMotion` jamais decide o
-   * primeiro render (ele é `null` no servidor), então o HTML do servidor
-   * continua igual com e sem a preferência — é a regra 7, e é o que mantém a
-   * hidratação intacta.
+   * A preferência jamais decide o primeiro render: ela vem do `matchMedia`
+   * lido dentro de efeito, nasce `false` no servidor e no primeiro render do
+   * cliente, então o HTML sai igual com e sem ela — é a regra 6, e é o que
+   * mantém a hidratação intacta.
    *
    * O estado vai num timeout, e não direto no corpo do efeito, porque
    * `setState` síncrono aqui dispara renderização em cascata (e o lint reprova,
@@ -172,11 +203,15 @@ export function PhoneMockup({ paused = false }: { paused?: boolean }) {
   // diziam o contrário. Vazia, ela também mostra melhor o que a simulação
   // existe para mostrar: o cartão sai, a linha desce, o total sobe. A caixa tem
   // altura reservada (150px), então encher não mexe em nada (CLS 0).
-  const visible = Array.from({ length: VISIBLE }, (_, slot) => tick - 1 - slot)
-    .filter((position) => position >= 0)
-    .map((position) => {
+  //
+  // "Vazia" continua valendo para o que se vê: no primeiro render só existe a
+  // linha do degrau −1, 48px acima da caixa, cortada pelo `overflow-hidden` e
+  // com opacidade 0.
+  const visible = SLOTS.map((slot) => ({ slot, position: tick - 1 - slot }))
+    .filter(({ position }) => position >= 0)
+    .map(({ slot, position }) => {
       const index = position % transactions.length;
-      return { ...transactions[index], key: position };
+      return { ...transactions[index], key: position, slot };
     });
 
   return (
@@ -240,43 +275,45 @@ export function PhoneMockup({ paused = false }: { paused?: boolean }) {
               20 de respiro + 19 do valor + duas linhas de 13 (o estado e o
               nome do plano, que passaram a ocupar uma linha cada). */}
           <div className="mx-4 h-[72px]">
-            {/* `initial={false}`: o primeiro cartão nasce pintado, no HTML do
-                servidor, com e sem movimento reduzido (regra 1 — o hero não
-                anima na entrada). Só as trocas seguintes têm travessia. */}
-            <AnimatePresence initial={false} mode="wait">
-              {pixVisible && (
-                <motion.div
-                  key={tick}
-                  initial={{ opacity: 0, scale: 0.94, y: -6 }}
-                  animate={{ opacity: 1, scale: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: reduced ? 1 : 0.97, y: reduced ? 0 : 6 }}
-                  transition={{ duration: reduced ? 0 : 0.42, ease: EASE }}
-                  className="rounded-field flex items-center gap-2.5 bg-emerald-500/12 px-3 py-2.5"
-                >
-                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-500/20">
-                    <Check className="h-3.5 w-3.5 stroke-[3] text-emerald-400" />
-                  </span>
-                  <span className="min-w-0 leading-tight">
-                    <span className="tnum block text-base font-semibold text-emerald-400">
-                      +{USD.format(announced.value)}
-                    </span>
-                    {/* Estado e nome do plano em DUAS linhas. Na mesma linha,
-                        separados por "·", o `truncate` comia justamente o que o
-                        cartão existe para anunciar: a 412px saía "Pagamento
-                        aprovado · Plano Tri…". E o ponto-médio é para termos
-                        irmãos — aqui são um estado e um nome de produto. O nome
-                        da venda amarra o cartão à linha que desce em seguida: o
-                        lead vê o mesmo item nos dois. */}
-                    <span className="block truncate text-[11px] text-cream/60">
-                      {phone.approved}
-                    </span>
-                    <span className="block truncate text-[11px] text-cream/60">
-                      {announced.label}
-                    </span>
-                  </span>
-                </motion.div>
-              )}
-            </AnimatePresence>
+            {/* O cartão fica SEMPRE montado e a `key` é o `tick`: cada venda
+                nova é um nó novo, e é o que faz a animação de entrada recomeçar
+                — o mesmo efeito do `AnimatePresence mode="wait"` que havia
+                aqui, sem a biblioteca. Quando o cartão se recolhe (`pixVisible`
+                falso) o nó continua montado, com a animação de saída em
+                `animation-fill-mode: both`, até o `tick` avançar.
+
+                `tick > 0` é a tradução literal do `initial={false}`: o primeiro
+                cartão é, por construção, o do primeiro render (`tick` nasce 0),
+                e ele nasce PINTADO, no HTML do servidor, com e sem movimento
+                reduzido — regra 1, o hero não anima na entrada. */}
+            <div
+              key={tick}
+              className={`rounded-field flex items-center gap-2.5 bg-emerald-500/12 px-3 py-2.5 ${
+                pixVisible ? (tick > 0 ? "phone-pix-in" : "") : "phone-pix-out"
+              }`}
+            >
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-500/20">
+                <Check className="h-3.5 w-3.5 stroke-[3] text-emerald-400" />
+              </span>
+              <span className="min-w-0 leading-tight">
+                <span className="tnum block text-base font-semibold text-emerald-400">
+                  +{USD.format(announced.value)}
+                </span>
+                {/* Estado e nome do plano em DUAS linhas. Na mesma linha,
+                    separados por "·", o `truncate` comia justamente o que o
+                    cartão existe para anunciar: a 412px saía "Pagamento
+                    aprovado · Plano Tri…". E o ponto-médio é para termos
+                    irmãos — aqui são um estado e um nome de produto. O nome
+                    da venda amarra o cartão à linha que desce em seguida: o
+                    lead vê o mesmo item nos dois. */}
+                <span className="block truncate text-[11px] text-cream/60">
+                  {phone.approved}
+                </span>
+                <span className="block truncate text-[11px] text-cream/60">
+                  {announced.label}
+                </span>
+              </span>
+            </div>
           </div>
 
           {/* Total da simulação: sobe a cada entrega que desce na lista. O
@@ -297,31 +334,35 @@ export function PhoneMockup({ paused = false }: { paused?: boolean }) {
 
           {/* Entregas descendo: a mais nova nasce em cima e empurra as outras */}
           <div className="relative mt-3 h-[150px] overflow-hidden px-4 pb-6">
-            <AnimatePresence initial={false}>
-              {visible.map((item, slot) => (
-                <motion.div
-                  key={item.key}
-                  initial={{ opacity: 0, y: -ROW_H }}
-                  animate={{ opacity: 1, y: slot * ROW_H }}
-                  exit={{ opacity: 0, y: VISIBLE * ROW_H }}
-                  transition={{ duration: reduced ? 0 : 0.55, ease: EASE }}
-                  className="rounded-field absolute inset-x-4 top-0 flex items-center justify-between gap-2 bg-ink-850 px-3 py-2"
-                >
-                  <span className="min-w-0 leading-tight">
-                    <span className="block truncate text-[11px] font-medium text-cream">
-                      {item.label}
-                    </span>
-                    <span className="tnum block text-[11px] text-faint">
-                      {item.amount}
-                    </span>
+            {/* Cada linha é um degrau, e o degrau é só um `translateY` com
+                transição: quando o `tick` avança, todas descem 48px de uma vez
+                e a de cima entra no lugar da que saiu. Os degraus −1 e 3 ficam
+                em opacidade 0 — um acima da caixa, o outro no fim do curso —, o
+                que reproduz o `initial` e o `exit` que o `AnimatePresence`
+                escrevia. */}
+            {visible.map((item) => (
+              <div
+                key={item.key}
+                className="rounded-field absolute inset-x-4 top-0 flex items-center justify-between gap-2 bg-ink-850 px-3 py-2 transition-[transform,opacity] duration-[550ms] ease-[cubic-bezier(0.16,1,0.3,1)]"
+                style={{
+                  transform: `translateY(${item.slot * ROW_H}px)`,
+                  opacity: item.slot < 0 || item.slot >= VISIBLE ? 0 : 1,
+                }}
+              >
+                <span className="min-w-0 leading-tight">
+                  <span className="block truncate text-[11px] font-medium text-cream">
+                    {item.label}
                   </span>
-                  <span className="flex shrink-0 items-center gap-1 rounded-full bg-emerald-500/12 px-2 py-0.5 text-[11px] font-medium text-emerald-400">
-                    <Check className="h-2.5 w-2.5 stroke-[3]" />
-                    {phone.success}
+                  <span className="tnum block text-[11px] text-faint">
+                    {item.amount}
                   </span>
-                </motion.div>
-              ))}
-            </AnimatePresence>
+                </span>
+                <span className="flex shrink-0 items-center gap-1 rounded-full bg-emerald-500/12 px-2 py-0.5 text-[11px] font-medium text-emerald-400">
+                  <Check className="h-2.5 w-2.5 stroke-[3]" />
+                  {phone.success}
+                </span>
+              </div>
+            ))}
 
             {/* Desvanece a base, para a entrega que sai não cortar em linha reta */}
             <div className="pointer-events-none absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-ink-950 to-transparent" />

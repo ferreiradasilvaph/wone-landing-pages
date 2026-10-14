@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useId, useMemo, useState } from "react";
-import { AnimatePresence, motion } from "motion/react";
 import { useContent } from "@/i18n";
 import { HOURLY_REVENUE, FUNNEL_STEPS } from "@/data/content";
 
@@ -14,15 +13,25 @@ const USD = new Intl.NumberFormat("en-US", {
   maximumFractionDigits: 0,
 });
 
-const EASE = [0.16, 1, 0.3, 1] as const;
+/** A curva do site, escrita em CSS porque as entradas agora são `@keyframes`. */
+const EASE_CSS = "cubic-bezier(0.16, 1, 0.3, 1)";
 
-/* Quem decide se as barras e a linha do gráfico animam é o painel, uma vez só,
+/* As cinco entradas deste painel eram `motion`/`AnimatePresence` e viraram
+   animação CSS. O motivo é de carregamento: o `import` de `motion/react` aqui
+   era um dos treze em componentes renderizados no servidor, e juntos punham o
+   pacote dele (42,2 kB transferidos / 126,6 kB crus) entre os 8 scripts que o
+   navegador baixa ANTES da primeira pintura — o Lighthouse, que simula 4G,
+   cobra esse download no FCP e no LCP do h1. Medido em 14/10: FCP −0,42 s,
+   LCP −0,21 s, +3 pontos (E-f1).
+
+   Quem decide se as barras e a linha do gráfico animam é o painel, uma vez só,
    e o valor desce por prop. `useReducedMotion` do motion ficaria em cinco
    lugares aqui dentro e devolve valor diferente no servidor e no primeiro
-   render do cliente — hoje ele só alimenta `transition`, que não vira atributo
-   no DOM, então não quebrava a hidratação; a regra 6 é literal de propósito,
-   porque o dia em que um destes valores for para `style`/`initial` o erro
-   voltaria calado. */
+   render do cliente — e agora `reduced` DECIDE `style`, porque é ele que
+   remove a animação (a regra global de `globals.css` zera duração, não atraso:
+   com atraso e duração zero, as barras ficariam invisíveis durante o atraso).
+   Por isso ele continua vindo de `matchMedia` dentro de efeito, como a regra 6
+   exige. */
 type ViewProps = { reduced: boolean };
 
 // Geometria do gráfico de área, em unidades do viewBox. O eixo X é desenhado
@@ -141,14 +150,16 @@ function RevenueView({ reduced }: ViewProps) {
 
             {/* O preenchimento sob a linha é leitura de dado (a área do dia), não
                 decoração: é o único degradê que fica na página. */}
-            <motion.path
+            <path
               d={chart.area}
               fill={`url(#${gradientId})`}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: reduced ? 0 : 0.9, delay: reduced ? 0 : 0.3 }}
+              style={reduced ? undefined : { animation: "fade-in 0.9s linear 0.3s both" }}
             />
-            <motion.path
+            {/* `pathLength="1"` normaliza o comprimento do traço para 1, e o que
+                cresce de 0 a 1 é o traço do `stroke-dasharray`. É exatamente o
+                que o `motion` escrevia no DOM quando animava `pathLength` —
+                mesma técnica, mesmos valores, sem a biblioteca. */}
+            <path
               d={chart.line}
               fill="none"
               stroke="#FF7700"
@@ -156,9 +167,8 @@ function RevenueView({ reduced }: ViewProps) {
               strokeLinecap="round"
               strokeLinejoin="round"
               vectorEffect="non-scaling-stroke"
-              initial={{ pathLength: 0 }}
-              animate={{ pathLength: 1 }}
-              transition={{ duration: reduced ? 0 : 1.4, ease: EASE }}
+              pathLength={1}
+              style={reduced ? undefined : { animation: `chart-draw 1.4s ${EASE_CSS} both` }}
             />
 
             <line
@@ -237,19 +247,17 @@ function FunnelView({ reduced }: ViewProps) {
               {analytics.panel.funnelSteps[index]}
             </span>
             <span className="relative h-7 flex-1 overflow-hidden rounded-field bg-cream/5">
-              <motion.span
+              {/* `segment-fill` é o keyframe que a barra de progresso do site
+                  já usava: scaleX de 0 a 1, na GPU, sem relayout. */}
+              <span
                 className="absolute inset-y-0 left-0 rounded-field"
                 style={{
                   width: `${step.value}%`,
                   background: step.color,
                   transformOrigin: "left",
-                }}
-                initial={{ scaleX: 0 }}
-                animate={{ scaleX: 1 }}
-                transition={{
-                  duration: reduced ? 0 : 0.9,
-                  delay: reduced ? 0 : 0.12 * index,
-                  ease: EASE,
+                  animation: reduced
+                    ? undefined
+                    : `segment-fill 0.9s ${EASE_CSS} ${0.12 * index}s both`,
                 }}
               />
             </span>
@@ -302,15 +310,14 @@ function RatesView({ reduced }: ViewProps) {
           <span className="block h-2 overflow-hidden rounded-full bg-cream/5">
             {/* Laranja chapado: o degradê que a barra tinha é do mesmo tipo que
                 saiu dos botões e dos títulos (regra 8). */}
-            <motion.span
+            <span
               className="block h-full rounded-full bg-brand"
-              style={{ width: `${row.value}%`, transformOrigin: "left" }}
-              initial={{ scaleX: 0 }}
-              animate={{ scaleX: 1 }}
-              transition={{
-                duration: reduced ? 0 : 0.8,
-                delay: reduced ? 0 : index * 0.1,
-                ease: EASE,
+              style={{
+                width: `${row.value}%`,
+                transformOrigin: "left",
+                animation: reduced
+                  ? undefined
+                  : `segment-fill 0.8s ${EASE_CSS} ${index * 0.1}s both`,
               }}
             />
           </span>
@@ -416,6 +423,15 @@ export function DashboardPreview() {
   /* O `id` é o mesmo nos dois idiomas, então trocar de idioma não perde a aba
      escolhida. */
   const [activeId, setActiveId] = useState(analytics.views[0].id);
+  /* `trocou` é o que o `initial={false}` do `AnimatePresence` dava: a primeira
+     vista nasce PINTADA, e só as trocas seguintes atravessam (regra 1 em
+     espírito — nada da página anima só por aparecer). Como a troca só acontece
+     por ação do visitante, basta registrar que houve uma. */
+  const [trocou, setTrocou] = useState(false);
+  const trocarAba = (id: typeof activeId) => {
+    setTrocou(true);
+    setActiveId(id);
+  };
   const view = analytics.views.find((v) => v.id === activeId) ?? analytics.views[0];
   const View = VIEWS[view.id] ?? RevenueView;
 
@@ -443,7 +459,7 @@ export function DashboardPreview() {
                  parada de tabulação (eram cinco) e quem ouve "aba 2 de 5"
                  anda nela com as setas, como no tablist de Segurança. */
               tabIndex={isActive ? 0 : -1}
-              onClick={() => setActiveId(entry.id)}
+              onClick={() => trocarAba(entry.id)}
               onKeyDown={(event) => {
                 const views = analytics.views;
                 const last = views.length - 1;
@@ -458,7 +474,7 @@ export function DashboardPreview() {
                 if (event.key === "End") next = last;
                 if (next === null) return;
                 event.preventDefault();
-                setActiveId(views[next].id);
+                trocarAba(views[next].id);
                 /* O foco segue a seleção: sem isto a próxima seta sairia do
                    botão que acabou de perder o `tabIndex`. */
                 const alvo = document.getElementById(`analytics-tab-${views[next].id}`);
@@ -497,24 +513,18 @@ export function DashboardPreview() {
            tudo o que vem depois. */
         className="min-h-[22.5rem] pt-5 sm:min-h-[21rem]"
       >
-        {/* `initial={false}`: a primeira vista nasce pintada. Só as trocas
-            seguintes atravessam o crossfade (regra 1 em espírito: nada da
-            página anima só por aparecer). */}
-        <AnimatePresence mode="wait" initial={false}>
-          <motion.div
-            key={view.id}
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: reduced ? 0 : -8 }}
-            transition={{ duration: reduced ? 0 : 0.35, ease: EASE }}
-          >
-            <p className="text-[13px] text-faint">{analytics.sampleNote}</p>
+        {/* A `key` é a vista: trocar de aba monta um nó novo, e é isso que faz a
+            entrada recomeçar — o mesmo efeito do `AnimatePresence mode="wait"`
+            que havia aqui. O que a saída fazia (0,35 s desvanecendo a vista
+            velha ANTES de a nova entrar, somando 0,7 s por clique) a nova
+            entrada faz sozinha, sobre o lugar que a velha deixou. */}
+        <div key={view.id} className={trocou ? "panel-swap" : undefined}>
+          <p className="text-[13px] text-faint">{analytics.sampleNote}</p>
 
-            <div className="mt-4">
-              <View reduced={reduced} />
-            </div>
-          </motion.div>
-        </AnimatePresence>
+          <div className="mt-4">
+            <View reduced={reduced} />
+          </div>
+        </div>
       </div>
     </div>
   );

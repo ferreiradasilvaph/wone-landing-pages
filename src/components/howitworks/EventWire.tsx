@@ -1,7 +1,7 @@
 "use client";
 
-import { motion } from "motion/react";
-import { EASE, STEP_COUNT } from "./useStepShow";
+import type { CSSProperties } from "react";
+import { STEP_COUNT } from "./useStepShow";
 
 /* Quanto o ponto viaja. O trilho horizontal é a coluna de 72px da grade e o
    grupo (rastro de 24 + ponto de 8) mede 32 → 40px de curso. O vertical tem
@@ -29,17 +29,29 @@ const WIRE_DELAY_BACK = 0.42;
  * Em REPOUSO o ponto fica na ponta de CHEGADA, então a direção se lê com a
  * seção parada — o teste do "congelado no passo 01". É também o que mantém o
  * primeiro render sem transform de entrada: a posição final vem do alinhamento
- * do flex (`justify-end`/`justify-start`), e o motion só anima o deslocamento
- * até zero.
+ * do flex (`justify-end`/`justify-start`), e a animação só traz o deslocamento
+ * de volta a zero.
  *
  * O espelhamento do grupo no passo 04 é feito pela ORDEM dos dois elementos no
- * DOM, não por `scale-[-1]`: o motion escreve o `transform` do deslocamento, e
- * uma classe de escala no mesmo nó seria sobrescrita.
+ * DOM, não por `scale-[-1]`: o keyframe escreve o `transform` do deslocamento,
+ * e uma classe de escala no mesmo nó seria sobrescrita.
  *
  * Duas instâncias vivem na demo, uma por eixo (`lg:hidden` e `hidden lg:flex`),
- * porque o eixo do movimento muda de breakpoint e nenhum valor de motion
- * responde a media query. A escondida sai do layout por `display: none` — num
- * grid, item com `display: none` não ocupa trilha.
+ * porque o eixo do movimento muda de breakpoint e nem valor de motion nem
+ * keyframe respondem a media query. A escondida sai do layout por
+ * `display: none` — num grid, item com `display: none` não ocupa trilha.
+ *
+ * Era um `motion.span` e virou `@keyframes wire-travel-x/y`, com a mesma
+ * distância, o mesmo atraso, a mesma duração e a mesma curva. O motivo é de
+ * carregamento: o `import` de `motion/react` aqui (e em mais doze componentes
+ * renderizados no servidor) punha o pacote dele, 42,2 kB transferidos, entre os
+ * 8 scripts que o navegador baixa ANTES da primeira pintura — medido em 14/10,
+ * tirá-lo valeu FCP −0,42 s e LCP −0,21 s (E-f1). A `key={step}` continua
+ * sendo o que recomeça o percurso: nó novo, animação nova.
+ *
+ * `reduced` desliga a animação em vez de zerar a duração: a regra global de
+ * `globals.css` zera `animation-duration`, não `animation-delay`, e com os 0,42
+ * s de atraso do passo 04 o ponto ficaria fora de lugar durante o atraso.
  */
 export function EventWire({
   axis,
@@ -59,11 +71,14 @@ export function EventWire({
   const travel = TRAVEL[axis];
   const from = back ? travel : -travel;
 
-  const transition = {
-    duration: reduced ? 0 : WIRE_DURATION,
-    delay: reduced ? 0 : back ? WIRE_DELAY_BACK : WIRE_DELAY_FORWARD,
-    ease: EASE,
-  };
+  const delay = back ? WIRE_DELAY_BACK : WIRE_DELAY_FORWARD;
+  const travessia: CSSProperties | undefined =
+    animated && !reduced
+      ? ({
+          "--wire-from": `${from}px`,
+          animation: `wire-travel-${axis} ${WIRE_DURATION}s cubic-bezier(0.16, 1, 0.3, 1) ${delay}s both`,
+        } as CSSProperties)
+      : undefined;
 
   const trail =
     axis === "x" ? (
@@ -80,11 +95,9 @@ export function EventWire({
             centrado no trilho sem estourar a faixa. */}
         <div className="relative h-2 w-full">
           <span className="absolute inset-x-0 top-[3px] h-0.5 bg-cream/12" />
-          <motion.span
+          <span
             key={step}
-            initial={animated ? { x: from } : false}
-            animate={{ x: 0 }}
-            transition={transition}
+            style={travessia}
             className={`absolute top-[3px] flex h-0.5 items-center ${
               back ? "left-0" : "right-0"
             }`}
@@ -100,7 +113,7 @@ export function EventWire({
                 {dot}
               </>
             )}
-          </motion.span>
+          </span>
         </div>
       </div>
     );
@@ -110,11 +123,9 @@ export function EventWire({
     <div className={`flex shrink-0 justify-center${className ? ` ${className}` : ""}`}>
       <div className="relative h-8 w-2">
         <span className="absolute inset-y-0 left-[3px] w-0.5 bg-cream/12" />
-        <motion.span
+        <span
           key={step}
-          initial={animated ? { y: from } : false}
-          animate={{ y: 0 }}
-          transition={transition}
+          style={travessia}
           className={`absolute left-[3px] flex w-0.5 flex-col items-center ${
             back ? "top-0" : "bottom-0"
           }`}
@@ -130,7 +141,7 @@ export function EventWire({
               {dot}
             </>
           )}
-        </motion.span>
+        </span>
       </div>
     </div>
   );

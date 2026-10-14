@@ -1,12 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { AnimatePresence, motion } from "motion/react";
 import { Menu, X } from "lucide-react";
 import { useContent } from "@/i18n";
 import { CtaButton } from "./CtaButton";
 import { WoneIcon } from "./WoneMark";
 import { LanguageToggle } from "./LanguageToggle";
+
+/** Quanto dura a travessia do menu móvel, em ms — o mesmo número do CSS. */
+const MENU_MS = 250;
 
 /**
  * Header fixo de 64px: transparente sobre o hero, sólido depois de 24px de
@@ -19,12 +21,36 @@ import { LanguageToggle } from "./LanguageToggle";
  * A pílula `layoutId` do item ativo também saiu. O estado do nav é só cor —
  * creme para a seção à vista, muted para as outras —, que é o que a referência
  * faz e o que evita um segundo laranja ao lado do CTA.
+ *
+ * O MENU MÓVEL SAIU DO MOTION. Era um `AnimatePresence`, e este arquivo está na
+ * primeira dobra: medido em 14/10, o import de `motion/react` aqui era um dos
+ * treze que punham o pacote do motion (42,2 kB transferidos) entre os 8 scripts
+ * baixados ANTES da primeira pintura, e o Lighthouse cobra esse download no FCP
+ * e no LCP do h1 (FCP −0,42 s sem ele, experimento E-f1).
+ *
+ * O que o `AnimatePresence` fazia e um `&&` não faz é a SAÍDA: o painel precisa
+ * continuar montado enquanto se desfaz. Daí o estado ter três valores em vez de
+ * um booleano — `fechando` é o quarto de segundo em que o menu já não está
+ * aberto e ainda está na tela. É o mesmo desenho, a mesma duração e a mesma
+ * curva; quem as escreve agora é `@keyframes header-menu-in/out`.
  */
 export function SiteHeader() {
   const [scrolled, setScrolled] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
+  const [menu, setMenu] = useState<"fechado" | "aberto" | "fechando">("fechado");
   const [activeSection, setActiveSection] = useState("");
   const { nav, hero } = useContent();
+
+  const menuOpen = menu === "aberto";
+  const fecharMenu = () => setMenu((atual) => (atual === "aberto" ? "fechando" : atual));
+
+  /* Desmonta o painel quando a animação de saída termina. Com movimento
+     reduzido a regra global zera a DURAÇÃO da animação, então o painel some na
+     hora e este temporizador só retira da árvore o que já está invisível. */
+  useEffect(() => {
+    if (menu !== "fechando") return;
+    const id = window.setTimeout(() => setMenu("fechado"), MENU_MS);
+    return () => window.clearTimeout(id);
+  }, [menu]);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 24);
@@ -133,7 +159,7 @@ export function SiteHeader() {
 
             <button
               type="button"
-              onClick={() => setMenuOpen((open) => !open)}
+              onClick={() => setMenu((atual) => (atual === "aberto" ? "fechando" : "aberto"))}
               aria-expanded={menuOpen}
               aria-label={menuOpen ? "Fechar menu" : "Abrir menu"}
               className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-field bg-ink-800 text-cream transition-colors hover:bg-ink-750 md:hidden"
@@ -144,43 +170,39 @@ export function SiteHeader() {
         </div>
       </div>
 
-      <AnimatePresence>
-        {menuOpen && (
-          <motion.div
-            initial={{ opacity: 0, y: -12 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -12 }}
-            transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
-            className="border-b border-line bg-ink-950 md:hidden"
-          >
-            <nav className="mx-auto flex max-w-7xl flex-col gap-1 px-4 py-4 sm:px-6">
-              {nav.map((link) => (
-                <a
-                  key={link.href}
-                  href={link.href}
-                  onClick={() => setMenuOpen(false)}
-                  className="rounded-field px-3 py-3 text-base text-cream/80 transition-colors hover:bg-ink-800 hover:text-cream"
-                >
-                  {link.label}
-                </a>
-              ))}
-              <CtaButton
-                href="#fila-de-espera"
-                size="bar"
-                onClick={() => setMenuOpen(false)}
-                className="mt-2"
+      {menu !== "fechado" && (
+        <div
+          className={`border-b border-line bg-ink-950 md:hidden ${
+            menuOpen ? "header-menu-in" : "header-menu-out"
+          }`}
+        >
+          <nav className="mx-auto flex max-w-7xl flex-col gap-1 px-4 py-4 sm:px-6">
+            {nav.map((link) => (
+              <a
+                key={link.href}
+                href={link.href}
+                onClick={fecharMenu}
+                className="rounded-field px-3 py-3 text-base text-cream/80 transition-colors hover:bg-ink-800 hover:text-cream"
               >
-                {hero.ctaPrimary}
-              </CtaButton>
+                {link.label}
+              </a>
+            ))}
+            <CtaButton
+              href="#fila-de-espera"
+              size="bar"
+              onClick={fecharMenu}
+              className="mt-2"
+            >
+              {hero.ctaPrimary}
+            </CtaButton>
 
-              {/* O lugar do idioma abaixo de `sm`, onde há largura para ele. */}
-              <div className="mt-4 px-3 sm:hidden">
-                <LanguageToggle />
-              </div>
-            </nav>
-          </motion.div>
-        )}
-      </AnimatePresence>
+            {/* O lugar do idioma abaixo de `sm`, onde há largura para ele. */}
+            <div className="mt-4 px-3 sm:hidden">
+              <LanguageToggle />
+            </div>
+          </nav>
+        </div>
+      )}
     </header>
   );
 }

@@ -1,7 +1,5 @@
 "use client";
 
-import { useId } from "react";
-import { motion } from "motion/react";
 import { useLanguage, type Locale } from "@/i18n";
 
 const OPTIONS: { code: Locale; label: string }[] = [
@@ -10,49 +8,50 @@ const OPTIONS: { code: Locale; label: string }[] = [
 ];
 
 /**
- * Alternador de idioma. A pílula ativa desliza entre as duas opções com
- * `layoutId`, o mesmo recurso usado no menu do header.
+ * Alternador de idioma. A pílula ativa desliza entre as duas opções.
  *
  * A pílula é CREME, não laranja: no header ela fica encostada no botão laranja
  * do CTA, e dois laranjas vizinhos disputam a mesma atenção — o laranja da
  * página é da ação, não do estado de um controle.
  *
- * A pílula já ficou invisível por duas causas somadas, e as duas estão
- * corrigidas aqui — se uma voltar, o rótulo ativo some de novo:
+ * ELA SAIU DO MOTION. Era um `motion.span` com `layoutId` dentro do botão
+ * ativo; agora é UM `<span>` absoluto no grupo, deslocado por
+ * `transform: translateX()` com transição CSS. O motivo é de carregamento: este
+ * componente está na primeira dobra (header) e no rodapé, e o import de
+ * `motion/react` aqui era um dos treze que punham o pacote do motion entre os
+ * scripts baixados antes da primeira pintura (medido em 14/10: FCP −0,42 s sem
+ * ele). O desenho é o mesmo e o DOM ficou com um nó a menos.
  *
- * 1. Empilhamento (a causa que realmente apagava a pílula). A pílula era um
- *    `absolute inset-0 -z-10` dentro de um `<button class="relative">`. Um
- *    elemento só `relative`, com `z-index: auto` e `isolation: auto`, NÃO cria
- *    contexto de empilhamento: o `-z-10` então não é resolvido dentro do botão,
- *    e sim no contexto mais próximo que existe de verdade — o `<header>` fixo
- *    (`z-[70] transform-gpu`, e transform cria contexto) ou a raiz, no caso do
- *    rodapé. Resultado: a pílula era pintada ATRÁS do `bg-ink-800` do próprio
- *    grupo e nunca aparecia. O rótulo ativo ficava `text-ink-950` (#050506)
- *    sobre ink-800 (#15151c) — contraste medido 1,12:1, ou seja preto sobre
- *    preto, e a página lia como se EN estivesse sempre ativo. Com a pílula
- *    pintada o mesmo rótulo dá 18,4:1 sobre o creme.
- * 2. `layoutId` compartilhado (o que o comentário do commit b0c20d4 culpava —
- *    causa real, mas secundária). O toggle aparece no header e no rodapé; com
- *    o mesmo `layoutId` literal nas duas instâncias o motion trata as pílulas
- *    como um único elemento e uma "voa" para a outra, deixando um dos rótulos
- *    ativos preto sobre preto. Daí o `useId` por instância abaixo.
+ * A troca resolveu de uma vez as duas causas históricas de a pílula ficar
+ * invisível, e as duas valem a pena ficar registradas porque eram sutis:
  *
- * A correção do empilhamento é dupla de propósito, porque cada metade cobre um
- * jeito diferente de a regressão voltar:
- * - `isolate` no botão (`isolation: isolate`) garante que ele seja um contexto
- *   de empilhamento próprio, sem depender de nenhum ancestral;
- * - o rótulo virou um `<span class="relative">`. A pílula já vinha antes dele
- *   no DOM, mas um nó de texto cru é conteúdo em fluxo, que o navegador pinta
- *   ANTES dos descendentes posicionados — era por isso que a pílula cobria o
- *   texto e alguém precisou do `-z-10` para empurrá-la. Posicionando o rótulo,
- *   os dois entram na mesma camada e a ordem de pintura passa a ser pílula →
- *   rótulo por ordem de documento, sem z-index nenhum. Essa metade continua
- *   valendo mesmo que alguém remova o `isolate` depois.
- * Descartado (sem medir no navegador, só pela ordem de pintura acima): trocar
- * o `-z-10` por `z-0` e parar aí. Tira a pílula de trás do grupo, mas mantém o
- * rótulo em fluxo, então a pílula volta a cobrir o texto — o rótulo some de
- * outra maneira. Ordem do DOM é mais barata de ler do que z-index calibrado
- * entre irmãos.
+ * 1. Empilhamento. A pílula era um `absolute inset-0 -z-10` dentro de um
+ *    `<button class="relative">`. Um elemento só `relative`, com `z-index:
+ *    auto`, NÃO cria contexto de empilhamento: o `-z-10` era resolvido no
+ *    contexto mais próximo que existe de verdade — o `<header>` fixo
+ *    (`z-[70] transform-gpu`) ou a raiz, no rodapé —, e a pílula era pintada
+ *    ATRÁS do `bg-ink-800` do próprio grupo. O rótulo ativo ficava
+ *    `text-ink-950` sobre ink-800: contraste 1,12:1, preto sobre preto, e a
+ *    página lia como se EN estivesse sempre ativo.
+ * 2. `layoutId` compartilhado. O toggle aparece no header e no rodapé; com o
+ *    mesmo `layoutId` literal nas duas instâncias o motion tratava as pílulas
+ *    como um elemento só e uma "voava" para a outra.
+ *
+ * Agora a pílula é irmã dos botões e vem ANTES deles no DOM, dentro do mesmo
+ * contexto: a ordem de pintura é pílula → rótulos por ordem de documento, sem
+ * z-index nenhum. E, não havendo elemento compartilhado, não há `layoutId`
+ * para colidir — o `useId` por instância deixou de ser necessário.
+ *
+ * A geometria é medida, não estimada: `p-0.5` (2px) + dois botões de `min-w-11`
+ * (44px) = os 92px que o header reserva para este controle. Daí a pílula ter
+ * `w-11` e o deslocamento ser `translateX(100%)` — exatamente a largura de um
+ * botão. "PT" e "EN" têm 2 caracteres a 13px/600 (~19px de texto + 20px de
+ * `px-2.5` = 39px), então é o `min-w` que manda nos dois, e os dois medem
+ * igual: a pílula não tem como desalinhar.
+ *
+ * No PRIMEIRO render o idioma é sempre "pt" (`getServerSnapshot`), então a
+ * pílula nasce em `translateX(0)` e a transição não dispara — nada anima na
+ * entrada (regra 1).
  */
 export function LanguageToggle({
   label = "Idioma / Language",
@@ -62,14 +61,23 @@ export function LanguageToggle({
   className?: string;
 }) {
   const { locale, setLocale } = useLanguage();
-  const pillId = useId();
+  const activeIndex = Math.max(
+    0,
+    OPTIONS.findIndex((option) => option.code === locale),
+  );
 
   return (
     <div
       role="group"
       aria-label={label}
-      className={`inline-flex h-8 items-center rounded-full bg-ink-800 p-0.5 ${className}`}
+      className={`relative inline-flex h-8 items-center rounded-full bg-ink-800 p-0.5 ${className}`}
     >
+      <span
+        aria-hidden
+        className="pointer-events-none absolute top-0.5 left-0.5 h-7 w-11 rounded-full bg-cream transition-transform duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]"
+        style={{ transform: `translateX(${activeIndex * 100}%)` }}
+      />
+
       {OPTIONS.map((option) => {
         const isActive = locale === option.code;
         return (
@@ -86,18 +94,11 @@ export function LanguageToggle({
                por pseudo-elemento, porque os dois botões são vizinhos colados —
                uma folga horizontal invisível de 8px cairia por cima do vizinho
                e, estando depois no DOM, o EN roubaria a borda direita do PT. */
-            className={`relative isolate flex h-7 min-w-11 cursor-pointer items-center justify-center rounded-full px-2.5 text-[13px] font-semibold transition-colors before:absolute before:-inset-y-2 before:inset-x-0 before:content-[''] ${
+            className={`relative flex h-7 min-w-11 cursor-pointer items-center justify-center rounded-full px-2.5 text-[13px] font-semibold transition-colors before:absolute before:-inset-y-2 before:inset-x-0 before:content-[''] ${
               isActive ? "text-ink-950" : "text-muted hover:text-cream"
             }`}
           >
-            {isActive && (
-              <motion.span
-                layoutId={`lang-pill-${pillId}`}
-                className="absolute inset-0 rounded-full bg-cream"
-                transition={{ type: "spring", stiffness: 380, damping: 32 }}
-              />
-            )}
-            <span className="relative">{option.label}</span>
+            {option.label}
           </button>
         );
       })}

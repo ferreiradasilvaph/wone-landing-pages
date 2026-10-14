@@ -2,8 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
-import { useInView } from "motion/react";
 import { useContent } from "@/i18n";
+import { useOnScreen } from "@/lib/useOnScreen";
 import { arte } from "@/lib/arte";
 import { SegmentProgress } from "./SegmentProgress";
 import { PauseButton } from "./PauseButton";
@@ -84,9 +84,9 @@ export function AwardsShowcase() {
   // ~960KB do three para o carregamento inicial. Montar o canvas apenas quando
   // a seção se aproxima é o que de fato tira esse peso da primeira visita.
   const stageRef = useRef<HTMLDivElement>(null);
-  const near = useInView(stageRef, { once: true, margin: "600px" });
+  const near = useOnScreen(stageRef, { once: true, margin: "600px" });
   /* Este não é `once`: fora da tela, a placa para de girar. */
-  const onScreen = useInView(stageRef, { amount: 0.2 });
+  const onScreen = useOnScreen(stageRef, { amount: 0.2 });
 
   /* Com a seção à vista, as artes das outras placas já vão para o cache do
      navegador. Assim a troca de prêmio não espera rede nenhuma — é o que, junto

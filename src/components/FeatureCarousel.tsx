@@ -2,8 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ArrowLeft, ArrowRight, Check } from "lucide-react";
-import { useInView } from "motion/react";
 import { useContent } from "@/i18n";
+import { useOnScreen } from "@/lib/useOnScreen";
 import { Chip } from "./Chip";
 import { SegmentProgress } from "./SegmentProgress";
 import { PauseButton } from "./PauseButton";
@@ -212,7 +212,7 @@ export function FeatureCarousel({
   /* Relógio só à vista: fora da tela o carrossel andaria para ninguém, e o
      portão de performance conta um relógio por viewport. */
   const stageRef = useRef<HTMLDivElement>(null);
-  const onScreen = useInView(stageRef, { amount: 0.4 });
+  const onScreen = useOnScreen(stageRef, { amount: 0.4 });
 
   /* O dedo não tem "hover": no celular o rodízio seguia andando por baixo do
      gesto, e o toque parecia ignorado. Enquanto a mão está no palco, o palco é
@@ -412,9 +412,31 @@ export function FeatureCarousel({
                     deixavam 179px de vazio ACIMA do h3 (medido a 1440), que
                     lia como mockup faltando; centrado, o vazio é respiro
                     simétrico, e nos cards com moldura o texto segue logo
-                    abaixo dela. */}
+                    abaixo dela.
+
+                    `max-lg:sr-only` no lugar de `hidden lg:block`, e é aqui que
+                    a acessibilidade fecha em 100: a única auditoria que falhava
+                    era `button-name`, em 4 nós, exatamente estes (medido em
+                    14/10). Conteúdo em `display: none` não nomeia nada, então a
+                    412px os botões fora do centro ficavam sem nome acessível —
+                    e o `aria-label` do `<div>` em volta não serve, ele é o
+                    rótulo do `role="group"`, não do botão.
+
+                    `sr-only` tira o texto da tela do mesmo jeito (posição
+                    absoluta, 1px, recortado) e o mantém na árvore de
+                    acessibilidade, que é o que dá nome ao botão. Em `lg` não
+                    entra variante nenhuma, então `my-auto block pt-4` fica
+                    intacto — era o risco de usar `lg:not-sr-only`, que zera
+                    `padding` e `margin` e desmontaria o respiro do card.
+
+                    Pôr `aria-label={item.title}` no botão também fecharia o
+                    `button-name`, e foi medido: cria `label-content-name-
+                    mismatch` (peso 0, mas defeito real). O nome passava a ser
+                    só "Order bump" enquanto o card diz "Order bump · Já está
+                    pagando? ..." — quem usa comando de voz fala o que vê e não
+                    acerta o alvo. */}
                 <span
-                  className={`my-auto block pt-4 ${isCenter ? "" : "hidden lg:block"}`}
+                  className={`my-auto block pt-4 ${isCenter ? "" : "max-lg:sr-only"}`}
                 >
                   <span className="t-h3 block text-cream">{item.title}</span>
                   <span className="mt-2 block text-[15px] leading-[1.45] text-muted">
