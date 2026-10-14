@@ -647,3 +647,10 @@ Analise a estrutura das secoes, hierarquia e tom do texto antes de planejar.
 Mantenha as cores predominantes ja existentes (wone).
 
 e pode seguir as etapas
+
+
+===============================================================================
+[68] 2026-10-14
+===============================================================================
+chat, refaca sendo mais criativo a secao "como funciona". ao meu ver esta
+confuso. refaca a logica e me entregue algo incrivel

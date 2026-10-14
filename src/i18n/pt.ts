@@ -308,65 +308,117 @@ export const pt = {
      * A única tese da página (66/700, três linhas de ≤ 8em). As linhas são
      * separadas porque cada uma ganha a sua cor: creme, creme e laranja — sobre
      * preto, um terceiro degrau em `--faint` leria como desabilitado.
+     *
+     * As linhas trocaram em 14/10, no refazimento da seção. A tese antiga
+     * ("Cole o token. / Monte o funil. / A Wone entrega.") enumerava DOIS dos
+     * três passos de configuração e deixava o gateway de fora: era a primeira
+     * de três enumerações competindo no mesmo bloco — tese de 3 linhas, dois
+     * caminhos, quatro passos —, e foi o que o dono chamou de confuso. Agora as
+     * três linhas são os dois lados da venda (você · o cliente · a Wone), e a
+     * enumeração dos passos existe UMA vez, no trilho de abas.
      */
-    thesis: ["Cole o token.", "Monte o funil.", "A Wone entrega."],
-    lead: "Bot, funil, gateway, venda. Você configura uma vez; a Wone mantém o bot no ar e a operação roda sozinha. Role para ver os quatro passos.",
+    thesis: ["Você liga tudo.", "O cliente paga.", "A Wone entrega."],
+    /* Diz a lógica do produto numa frase — três conexões que se fazem uma vez,
+       uma venda que acontece para sempre — e termina ensinando o controle, que
+       é o que o visitante precisa saber para usar a demo ao lado. */
+    lead: "Bot, funil e gateway: três conexões que você faz uma vez. Depois, a cada venda, tudo acontece sem você. Escolha um passo e veja os dois lados — o seu painel e o chat do cliente.",
+    /**
+     * Os quatro passos, agora as quatro abas do trilho.
+     *
+     * `icon` saiu com o palco 3D: o avião de papel, os blocos e a maquininha
+     * eram objetos abstratos que não explicavam nada — metade do diagnóstico de
+     * 14/10. Os três primeiros são configuração ("você faz uma vez") e o quarto
+     * é o desfecho ("depois, a cada venda"); quem marca a dobra 3+1 são as
+     * etiquetas de `demo.groups`, não mais quatro passos espaçados em 36vh.
+     *
+     * A descrição tem de caber em duas linhas de 13px na largura do trilho (é
+     * `line-clamp-2` com altura reservada, para a troca de passo não mover um
+     * pixel): o teto medido é ~80 caracteres.
+     */
     steps: [
       {
         step: "01",
-        icon: "telegram",
         title: "Conecte seu bot",
-        description:
-          "Cole o token do @BotFather e pronto. A Wone cuida de manter o bot no ar.",
+        description: "Cole o token do @BotFather. A Wone mantém o bot no ar.",
       },
       {
         step: "02",
-        icon: "funnel",
         title: "Monte seu funil",
-        description:
-          "Preencha o funil pronto em abas ou desenhe o seu no editor visual.",
+        /* "28 blocos, 4 de IA" veio de `paths[1].text`, que deixou de existir:
+           o fato continua na seção, agora no passo a que ele pertence. */
+        description: "Funil pronto em abas ou editor com 28 blocos, 4 de IA. Na mesma conta.",
       },
       {
         step: "03",
-        icon: "gateway",
         title: "Conecte seu gateway",
-        description: "Use a sua conta na processadora. O dinheiro cai direto nela.",
+        description: "Sua conta na processadora. Configure um reserva: se um cair, o outro assume.",
       },
       {
         step: "04",
-        icon: "money",
-        title: "Venda e acompanhe",
-        description:
-          "O cliente paga, recebe o acesso na hora e você acompanha tudo no painel.",
+        title: "A venda acontece",
+        /* "Sem você." é o ponto da seção inteira: o passo 04 é o único que não
+           pede nada de quem vende, e é por isso que a demo o desenha invertido
+           (o chat primeiro, e o fio voltando para o painel). */
+        description: "O cliente paga, recebe o convite de uso único e entra no canal. Sem você.",
       },
     ],
 
     /**
-     * Os dois produtos. Eram uma seção inteira de cards ("Dois caminhos") e
-     * viraram os dois bullets com régua desta coluna: os mesmos fatos, sem a
-     * pílula "Completo" e sem os dois botões que repetiam o CTA.
+     * Os dois produtos. Eram uma seção inteira de cards ("Dois caminhos"),
+     * viraram dois bullets com régua desta coluna e agora são só os NOMES: as
+     * duas abas do painel no passo 02.
+     *
+     * `text` saiu porque a lista era a terceira enumeração do bloco, e nenhum
+     * fato se perdeu — "28 blocos, 4 de IA" está em `steps[1].description`, e
+     * boas-vindas, planos, order bump, upsell, downsell, packs e renovação já
+     * são a seção Recursos, item por item. O que sobra aqui é o que o passo 02
+     * precisa dizer sem uma palavra: os dois caminhos na mesma conta.
      */
-    paths: [
-      {
-        name: "Wone Estático",
-        text: "Funil pronto em abas: boas-vindas, planos, order bump, upsell, downsell, packs e renovação. Você preenche, a Wone executa.",
-      },
-      {
-        name: "Wone Fluxos",
-        text: "Editor visual com 28 blocos, 4 de IA; simulador e modo de teste no painel; métricas por bloco para ver onde o lead para.",
-      },
-    ],
+    paths: [{ name: "Wone Estático" }, { name: "Wone Fluxos" }],
 
     /** Link de texto que fecha a coluna (ação de menos peso, sem seta). */
     listLink: "Entrar na lista",
 
     /**
-     * Legendas do palco 3D. `{n}` é trocado pelo passo à vista; o chip de
-     * estado acompanha a cena (laranja-âmbar até o passo 4, verde no fim).
+     * Rótulos da demo "os dois lados da mesma venda", que substituiu o palco 3D
+     * (`stage` saiu inteiro: `stage.states` só existia para o chip que flutuava
+     * sobre a cena, e nenhum WebGL mora mais nesta seção).
+     *
+     * São SÓ rótulos. Todo valor que aparece nas duas telas vem de outro bloco
+     * deste dicionário — o token do @BotFather, os nós de
+     * `highlights.demos.blocks.flow`, o nome do produto de
+     * `highlights.demos.checkout`, os gateways e a linha de extrato de
+     * `analytics.panel`, a hora de `highlights.demos.delivery` — e nada é
+     * cunhado aqui (regra 4).
+     *
+     * O VALOR da venda é um só na demo, `phone.transactions[0].amount`: a bolha
+     * de oferta, o cartão de aprovado e a linha do extrato mostram o mesmo
+     * texto. Puxar `checkout.prices[0]` para a bolha punha "R$ 197,00" e
+     * "$197.00" na mesma moldura, a seis segundos de distância, para o mesmo
+     * plano — a moeda de cada país é assunto da seção Pagamentos, não desta.
      */
-    stage: {
+    demo: {
+      /** `{n}` é o passo escolhido. */
       counter: "{n} de 4",
-      states: { waiting: "PIX · aguardando", confirmed: "PIX · confirmado" },
+      /* A dobra 3+1 em duas palavras. É o enxerto que faz a seção se ler
+         PARADA: sem tocar em nada, o visitante já sabe o que é trabalho dele e
+         o que acontece sem ele. */
+      groups: { setup: "Você faz uma vez", runtime: "Depois, a cada venda" },
+      /** Cabeçalho das duas telas da demo. */
+      sides: { panel: "Seu painel", chat: "O chat do cliente" },
+      /** Região viva: a ilustração é `aria-hidden`, quem narra é esta frase. */
+      announce: "Passo {n} de 4: {title}",
+      tokenLabel: "Token do bot",
+      botOnline: "Bot no ar",
+      connected: "Bot conectado",
+      funnelNote: "Os dois na mesma conta.",
+      gatewayMain: "Principal",
+      gatewayBackup: "Em espera",
+      /* A régua do passo 04, dentro do chat: é a fronteira entre o que você
+         configurou e o que a Wone faz sozinha. */
+      hand: "Daqui em diante é o seu cliente.",
+      inviteSent: "Convite enviado",
+      statement: "Entrou no seu extrato",
     },
   },
 

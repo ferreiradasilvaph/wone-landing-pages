@@ -253,54 +253,58 @@ export const en: Content = {
 
   howItWorks: {
     kicker: "How it works",
-    thesis: ["Paste the token.", "Build the funnel.", "Wone delivers."],
-    lead: "Bot, funnel, gateway, sale. You set it up once; Wone keeps the bot online and the operation runs on its own. Scroll to watch the four steps.",
+    /* A tese são os dois lados da venda — você, o cliente, a Wone —, não mais
+       dois dos três passos de configuração. O porquê está em `pt.ts`. */
+    thesis: ["You wire it up.", "The buyer pays.", "Wone delivers."],
+    lead: "Bot, funnel and gateway: three connections you make once. After that, every sale happens without you. Pick a step and watch both sides — your dashboard and the customer's chat.",
+    /* Sem `icon`: o palco 3D saiu. As descrições têm de caber em duas linhas de
+       13px na largura do trilho — o teto medido é ~80 caracteres, e o inglês é
+       o idioma que chega mais perto dele. */
     steps: [
       {
         step: "01",
-        icon: "telegram",
         title: "Connect your bot",
-        description:
-          "Paste the token from @BotFather and you're done. Wone keeps the bot online.",
+        description: "Paste the token from @BotFather. Wone keeps the bot online.",
       },
       {
         step: "02",
-        icon: "funnel",
         title: "Build your funnel",
-        description:
-          "Fill in the ready-made funnel in tabs, or design your own in the visual editor.",
+        description: "A ready funnel in tabs or an editor with 28 blocks, 4 of them AI. Same account.",
       },
       {
         step: "03",
-        icon: "gateway",
         title: "Connect your gateway",
-        description: "Use your own processor account. The money lands straight in it.",
+        description: "Your own processor account. Add a backup: if one goes down, the other takes over.",
       },
       {
         step: "04",
-        icon: "money",
-        title: "Sell and follow along",
-        description:
-          "The customer pays, gets access immediately, and you follow everything from the dashboard.",
+        title: "The sale happens",
+        description: "The customer pays, gets the single-use invite and joins the channel. Without you.",
       },
     ],
 
-    paths: [
-      {
-        name: "Wone Static",
-        text: "A ready funnel in tabs: welcome, plans, order bump, upsell, downsell, packs and renewal. You fill it in, Wone runs it.",
-      },
-      {
-        name: "Wone Flows",
-        text: "A visual editor with 28 blocks, 4 of them AI; simulator and test mode in the dashboard; per-block metrics to see where leads drop.",
-      },
-    ],
+    /* Só os nomes: são as duas abas do painel no passo 02 (ver `pt.ts`). */
+    paths: [{ name: "Wone Static" }, { name: "Wone Flows" }],
 
     listLink: "Join the list",
 
-    stage: {
+    /* Rótulos da demo dos dois lados. Nenhum valor é cunhado aqui, e o valor da
+       venda é um só nas duas telas (`phone.transactions[0].amount`) — ver
+       `pt.ts`. */
+    demo: {
       counter: "{n} of 4",
-      states: { waiting: "PIX · pending", confirmed: "PIX · confirmed" },
+      groups: { setup: "You do this once", runtime: "Then, on every sale" },
+      sides: { panel: "Your dashboard", chat: "The customer's chat" },
+      announce: "Step {n} of 4: {title}",
+      tokenLabel: "Bot token",
+      botOnline: "Bot online",
+      connected: "Bot connected",
+      funnelNote: "Both in the same account.",
+      gatewayMain: "Primary",
+      gatewayBackup: "On standby",
+      hand: "From here on, it's your customer.",
+      inviteSent: "Invite sent",
+      statement: "In your statement",
     },
   },
 
