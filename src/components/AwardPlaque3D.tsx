@@ -129,6 +129,10 @@ const ITEM_SOLO: (typeof ITEM_SPOTS)[number] = {
  * câmera, e o que se aproxima cresce: 0.7 já dá 11% a mais de tamanho
  * aparente, que é o suficiente para ler como passagem por cima sem que a
  * peça encoste nas bordas do canvas.
+ *
+ * `parada` + `passo` é o ciclo da cena, e o `CICLO_MS` da `AwardsShowcase`
+ * (5,8 s) é a cópia dele: é assim que a troca de marco cai no instante em que
+ * a travessia termina. Mexeu aqui, mexa lá.
  */
 const TROCA = { parada: 4.2, passo: 1.6, frente: 0.7, fundo: 1.5 };
 
@@ -573,6 +577,42 @@ function Plaque({
 }
 
 /**
+ * O compasso da cena, dito para fora.
+ *
+ * Não desenha nada e não toca em nada: só avisa, a cada volta inteira de
+ * `TROCA` (parada + travessia), que uma travessia acabou de terminar — é o
+ * instante em que as duas peças estão paradas nos postos. A vitrine usa isto
+ * para trocar de marco, em vez de manter um `setTimeout` próprio de 5,8 s: dois
+ * relógios contando o mesmo tempo a partir de instantes diferentes (um na
+ * hidratação, outro no primeiro quadro, depois do download do three) saem de
+ * fase, e a troca pegava a placa no meio do caminho.
+ *
+ * A volta 0 chega no primeiro quadro e serve de "a cena começou": é o que
+ * acerta o relógio da rail lá fora.
+ *
+ * Fora da tela o `frameloop` é `demand` e não há quadro nenhum — então não há
+ * aviso, e a vitrine não anda sozinha escondida. Pelo mesmo caminho, com
+ * movimento reduzido ela não anda nunca.
+ */
+function Metronome({ onCycle }: { onCycle?: (volta: number) => void }) {
+  const volta = useRef(-1);
+  const aviso = useRef(onCycle);
+
+  useEffect(() => {
+    aviso.current = onCycle;
+  }, [onCycle]);
+
+  useFrame((state) => {
+    const atual = Math.floor(state.clock.elapsedTime / (TROCA.parada + TROCA.passo));
+    if (atual === volta.current) return;
+    volta.current = atual;
+    aviso.current?.(atual);
+  });
+
+  return null;
+}
+
+/**
  * Canvas da placa. Importado por `next/dynamic` com `ssr: false` no carrossel,
  * e montado só quando a seção se aproxima.
  */
@@ -582,6 +622,7 @@ export default function AwardPlaque3D({
   photo,
   worn = false,
   visible = true,
+  onCycle,
 }: {
   accent: string;
   image?: string;
@@ -590,8 +631,14 @@ export default function AwardPlaque3D({
   photo?: string;
   /** A joia aparece vestida: uma vez só, dividindo o quadro com a placa. */
   worn?: boolean;
-  /** `false` quando a seção saiu da tela: o laço de render para junto. */
+  /**
+   * `false` quando a seção saiu da tela — ou quando o visitante pausou a
+   * vitrine: nos dois casos o laço de render para, a cena congela no quadro em
+   * que está e não manda mais aviso. Quem desenha não muda.
+   */
   visible?: boolean;
+  /** Fim de cada travessia (veja `Metronome`); a volta 0 é o primeiro quadro. */
+  onCycle?: (volta: number) => void;
 }) {
   const reduced = useReducedMotion();
 
@@ -611,7 +658,7 @@ export default function AwardPlaque3D({
       dpr={dpr}
       camera={{ position: [0, 0, 7.3], fov: 38 }}
       gl={{ antialias: true, alpha: true }}
-      // Fora da tela, desenha um quadro e para.
+      // Fora da tela — ou em pausa —, desenha um quadro e para.
       frameloop={reduced || !visible ? "demand" : "always"}
       style={{ background: "transparent" }}
     >
@@ -638,6 +685,8 @@ export default function AwardPlaque3D({
         spin={!reduced}
         reduced={!!reduced}
       />
+
+      <Metronome onCycle={onCycle} />
     </Canvas>
   );
 }

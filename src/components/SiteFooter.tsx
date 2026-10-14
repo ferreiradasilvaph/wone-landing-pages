@@ -10,8 +10,22 @@ import { WoneIcon } from "./WoneMark";
    usada em lugar nenhum da página. */
 const MARCA = "#FF7700";
 
-/** Link de rodapé: 14px, e no celular o `py-3` leva o alvo aos 44px. */
+/**
+ * Link de rodapé: 14px.
+ *
+ * O passo é 44px no celular (o `py-3` do alvo de toque, sem gap na lista) e 30
+ * no desktop (`py-0` mais o `gap-2.5` da coluna). Antes os dois se somavam —
+ * `py-3` E `gap-4` —, e o passo saía em 61px: a coluna Produto sozinha media
+ * 358px num rodapé de 1.178.
+ */
 const LINK = "py-3 text-sm text-muted transition-colors hover:text-cream md:py-0";
+
+/** Cabeçalho de coluna: 16px abaixo dele no desktop, 8 no celular (o `py-3`
+    do primeiro link já dá o resto). */
+const COLUNA = "t-label mb-2 md:mb-4";
+
+/** A lista de links: duas colunas no celular, uma no desktop. */
+const LISTA = "grid grid-cols-2 gap-x-4 md:flex md:flex-col md:gap-2.5";
 
 /**
  * Rodapé: marca e idioma à esquerda, três colunas de rótulos à direita, régua e
@@ -21,6 +35,13 @@ const LINK = "py-3 text-sm text-muted transition-colors hover:text-cream md:py-0
  * fundo (ink-850 → ink-950), como entre todas as seções da página. A marca
  * d'água de 22vw que ficava aqui saiu — era o maior texto do site, e não dizia
  * nada.
+ *
+ * As nove integrações vêm em DUAS colunas, e a coluna delas é a mais larga da
+ * grade (1.6fr). Em fila única elas eram o que fazia o rodapé: nove nomes a
+ * 30px de passo são 290px, contra os 206 da coluna Produto, e no celular a
+ * mesma fila punha o rodapé em 1.178px. Nenhuma coluna da Dotfy passa de seis
+ * itens; esta é a única da Wone que passa, e dobrada ela volta à altura das
+ * outras (cinco linhas).
  *
  * A coluna Empresa é um conjunto de slots: cada endereço que o dono ainda não
  * forneceu é string vazia e não renderiza. Quando NENHUM está preenchido a
@@ -61,10 +82,10 @@ export function SiteFooter() {
     <footer className="bg-ink-950 pt-16 pb-8">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div
-          className={`grid gap-10 ${
+          className={`grid gap-8 md:gap-10 ${
             empresa.length > 0
-              ? "md:grid-cols-[1.4fr_1fr_1fr_1fr]"
-              : "md:grid-cols-[1.4fr_1fr_1fr]"
+              ? "md:grid-cols-[1.4fr_1fr_1.6fr_1fr]"
+              : "md:grid-cols-[1.4fr_1fr_1.6fr]"
           }`}
         >
           <div>
@@ -79,49 +100,65 @@ export function SiteFooter() {
             </div>
           </div>
 
-          <nav aria-label={footer.columns.product} className="flex flex-col gap-4">
-            <p className="t-label">{footer.columns.product}</p>
-            {nav.map((link) => (
-              <a key={link.href} href={link.href} className={LINK}>
-                {link.label}
-              </a>
-            ))}
-            <TextLink href="#fila-de-espera">{footer.listLink}</TextLink>
+          <nav aria-label={footer.columns.product}>
+            <p className={COLUNA}>{footer.columns.product}</p>
+            <div className={LISTA}>
+              {nav.map((link) => (
+                <a key={link.href} href={link.href} className={LINK}>
+                  {link.label}
+                </a>
+              ))}
+              {/* O laranja fecha a coluna: é a mesma ação do botão do header,
+                  no peso de link (regra 3). O `py-3` o põe no passo dos outros
+                  — sem ele o alvo de toque ficaria em 20px. */}
+              <TextLink href="#fila-de-espera" className="py-3 md:py-0">
+                {footer.listLink}
+              </TextLink>
+            </div>
           </nav>
 
-          <div className="flex flex-col gap-4">
-            <p className="t-label">{footer.columns.integrations}</p>
-            {integrations.items.map((item) => (
-              <span key={item.name} className="flex items-center gap-2 text-sm text-muted">
-                <IntegrationMark
-                  icon={item.icon}
-                  name={item.name}
-                  color={MARCA}
-                  className="h-4 w-4"
-                />
-                {item.name}
-              </span>
-            ))}
+          <div>
+            <p className={COLUNA}>{footer.columns.integrations}</p>
+            {/* Nomes, não links: o passo de 30px vale aqui também nos dois
+                tamanhos, porque não há nada para tocar. No celular as duas
+                colunas dividem a largura; no desktop elas encolhem até o nome
+                mais longo ("TikTok Ads"), senão os 454px da coluna abriam 224
+                de vão entre "PIX" e "Cartão" e a lista lia como duas. */}
+            <div className="grid grid-cols-2 gap-x-4 gap-y-2.5 md:grid-cols-[auto_auto] md:justify-start md:gap-x-10">
+              {integrations.items.map((item) => (
+                <span key={item.name} className="flex items-center gap-2 text-sm text-muted">
+                  <IntegrationMark
+                    icon={item.icon}
+                    name={item.name}
+                    color={MARCA}
+                    className="h-4 w-4 shrink-0"
+                  />
+                  {item.name}
+                </span>
+              ))}
+            </div>
           </div>
 
           {empresa.length > 0 && (
-            <nav aria-label={footer.columns.company} className="flex flex-col gap-4">
-              <p className="t-label">{footer.columns.company}</p>
-              {empresa.map((item) => (
-                <a
-                  key={item.key}
-                  href={item.href}
-                  {...(item.external ? { target: "_blank", rel: "noreferrer" } : null)}
-                  className={LINK}
-                >
-                  {item.label}
-                </a>
-              ))}
+            <nav aria-label={footer.columns.company}>
+              <p className={COLUNA}>{footer.columns.company}</p>
+              <div className={LISTA}>
+                {empresa.map((item) => (
+                  <a
+                    key={item.key}
+                    href={item.href}
+                    {...(item.external ? { target: "_blank", rel: "noreferrer" } : null)}
+                    className={LINK}
+                  >
+                    {item.label}
+                  </a>
+                ))}
+              </div>
             </nav>
           )}
         </div>
 
-        <div className="mt-14 border-t border-line pt-6">
+        <div className="mt-10 border-t border-line pt-6">
           <div className="flex flex-col gap-3 text-[13px] text-faint sm:flex-row sm:justify-between">
             <p>
               {footer.legalEntity && (

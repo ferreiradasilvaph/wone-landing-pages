@@ -33,7 +33,12 @@ export function FaqAccordion() {
                 type="button"
                 onClick={() => setOpenIndex(isOpen ? null : index)}
                 aria-expanded={isOpen}
-                aria-controls={panelId}
+                /* `aria-controls` só com a resposta aberta: o painel é
+                   desmontado pelo `AnimatePresence` ao fechar, e com a primeira
+                   pergunta aberta os outros seis botões apontavam para um id
+                   que não existe no DOM. Quem segue a referência no leitor de
+                   tela não achava alvo nenhum. */
+                {...(isOpen ? { "aria-controls": panelId } : null)}
                 className="flex w-full cursor-pointer items-center justify-between gap-5 py-5 text-left"
               >
                 <span

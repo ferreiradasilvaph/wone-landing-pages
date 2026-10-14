@@ -9,9 +9,8 @@ import {
 } from "@/lib/waitlist-errors";
 import { CtaButton } from "./CtaButton";
 import { TextLink } from "./TextLink";
-import { TEXT_LINK } from "./cta";
 
-type Status = "idle" | "loading" | "success" | "error";
+type Status = "idle" | "loading" | "error";
 
 /**
  * Destino para onde o visitante é levado depois de entrar na lista.
@@ -24,8 +23,11 @@ type Status = "idle" | "loading" | "success" | "error";
  * Telegram. O botão funcionava, a frase dizia que a aba tinha aberto, e o
  * visitante terminava o funil numa tela genérica sem nada denunciar o problema.
  * Sem a variável, a tela de sucesso agora não promete Telegram nenhum.
+ *
+ * Exportada porque o sucesso mora na seção, na coluna da esquerda: é lá que
+ * ficam a frase sobre a aba e o botão, e os dois dependem desta variável.
  */
-const TELEGRAM_URL = process.env.NEXT_PUBLIC_TELEGRAM_URL?.trim() || null;
+export const TELEGRAM_URL = process.env.NEXT_PUBLIC_TELEGRAM_URL?.trim() || null;
 
 /**
  * Campo de formulário é o caso em que a borda fica: ela é o que diz onde se
@@ -44,7 +46,24 @@ const FIELD_BASE =
 
 const LABEL = "text-[13px] font-medium text-muted";
 
-export function WaitlistForm() {
+/**
+ * O formulário da lista de espera. Só os campos: a confirmação é da seção, que
+ * troca a coluna do título por ela quando `onSuccess` chega — o fecho da página
+ * passa a dizer "Você está na fila." no corpo de um H2, e não num parágrafo ao
+ * lado do próprio formulário que acabou de sumir.
+ *
+ * `telegramOpened` é o que a seção precisa saber para escolher entre "abrimos o
+ * Telegram em outra aba" e "abra pelo botão": quem viu o `window.open` ser
+ * barrado é este componente.
+ */
+export function WaitlistForm({
+  onSuccess,
+  autoFocus,
+}: {
+  onSuccess: (info: { telegramOpened: boolean }) => void;
+  /** Vindo de "Cadastrar outro contato": o cursor volta ao primeiro campo. */
+  autoFocus?: boolean;
+}) {
   const { form, cta } = useContent();
   const [status, setStatus] = useState<Status>("idle");
 
@@ -57,10 +76,6 @@ export function WaitlistForm() {
      protocolo, não envelhece com a troca. */
   const [errorCode, setErrorCode] = useState<unknown>(null);
   const [fieldCodes, setFieldCodes] = useState<Record<string, unknown>>({});
-
-  /* `window.open` devolveu nada: a aba do Telegram foi barrada. Só a tela de
-     sucesso olha para isto, para não afirmar o que não aconteceu. */
-  const [popupBlocked, setPopupBlocked] = useState(false);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -138,15 +153,17 @@ export function WaitlistForm() {
       }
 
       element.reset();
-      setStatus("success");
+      setStatus("idle");
 
-      if (TELEGRAM_URL) {
+      if (!TELEGRAM_URL) {
+        onSuccess({ telegramOpened: false });
+      } else {
         /* Leva para o Telegram sem tirar a landing da frente, e guarda o
            retorno: `null` é o bloqueador de pop-up tendo barrado a aba. A
            chamada vem depois de um `await`, então já perdeu a "ativação pelo
-           usuário" que os navegadores exigem e alguns bloqueadores barram — a
-           tela de sucesso usa este `null` para trocar a frase, e o botão fica
-           lá dos dois jeitos, que é a rede de segurança.
+           usuário" que os navegadores exigem e alguns bloqueadores barram — é
+           este `null` que a seção recebe para trocar a frase do sucesso, e o
+           botão fica lá dos dois jeitos, que é a rede de segurança.
 
            Sem `noopener,noreferrer` de propósito: pela especificação,
            `window.open` com `noopener` SEMPRE devolve `null`, então com eles no
@@ -158,7 +175,7 @@ export function WaitlistForm() {
         if (opened) {
           opened.opener = null;
         }
-        setPopupBlocked(opened === null);
+        onSuccess({ telegramOpened: opened !== null });
       }
     } catch {
       /* O `fetch` nem chegou a ter resposta: não há código do servidor para
@@ -167,44 +184,6 @@ export function WaitlistForm() {
       setStatus("error");
     }
   };
-
-  if (status === "success") {
-    /* A confirmação ocupa o lugar do formulário, sem card, sem ícone e à
-       esquerda como o resto da página. E5 a move para a coluna do texto, onde
-       o título dela passa a ser o H2 da seção. */
-    return (
-      <div role="status">
-        <p className="t-h3 text-cream">{form.successTitle}</p>
-
-        {/* Sem `NEXT_PUBLIC_TELEGRAM_URL` no build não existe para onde mandar
-            ninguém: nem botão, nem frase prometendo uma aba — só a confirmação
-            e a nota. Era aqui que o fallback `https://t.me/` entregava a home
-            do Telegram como se fosse o canal. A variável precisa estar
-            definida na hora do `next build` (não basta no container); o README
-            explica por quê e como. */}
-        {TELEGRAM_URL && (
-          <p className="mt-3 text-[15px] leading-relaxed text-muted">
-            {popupBlocked ? form.successBodyManual : form.successBody}
-          </p>
-        )}
-
-        <p className="mt-3 text-[13px] leading-relaxed text-faint">{form.successNote}</p>
-
-        <div className="mt-6 flex flex-wrap items-center gap-6">
-          {TELEGRAM_URL && <CtaButton href={TELEGRAM_URL}>{form.openTelegram}</CtaButton>}
-
-          {/* "Cadastrar outro contato" é ação, não destino: leva o formulário de
-              volta ao início e não navega para lugar nenhum. Daí ser um
-              `<button>` vestido com a classe do link de texto, e não um `<a>`
-              com `href="#"` — o leitor de tela anunciaria um link que não leva
-              a nada. */}
-          <button type="button" onClick={() => setStatus("idle")} className={TEXT_LINK}>
-            {form.again}
-          </button>
-        </div>
-      </div>
-    );
-  }
 
   const isLoading = status === "loading";
 
@@ -232,6 +211,9 @@ export function WaitlistForm() {
           name="name"
           type="text"
           autoComplete="name"
+          /* Só quando o visitante pediu outro cadastro: na primeira montagem
+             isto roubaria a rolagem da página para o meio do formulário. */
+          autoFocus={autoFocus}
           required
           aria-required
           maxLength={120}
@@ -299,35 +281,42 @@ export function WaitlistForm() {
         </select>
       </div>
 
-      <div className="flex flex-col gap-1.5">
-        <label htmlFor="waitlist-telegram" className={LABEL}>
-          {form.telegram} <span className="text-faint">{form.optional}</span>
-        </label>
-        <input
-          id="waitlist-telegram"
-          name="telegram"
-          type="text"
-          maxLength={120}
-          disabled={isLoading}
-          placeholder={form.telegramPlaceholder}
-          className={`${FIELD_BASE} border-line-strong`}
-        />
-      </div>
+      {/* Os dois opcionais dividem uma linha a partir de `sm`: são o par de
+          contato, lêem-se juntos e, empilhados, custavam 88px numa seção que
+          fechava em 828 contra um alvo de 800. No celular continuam um embaixo
+          do outro, porque lado a lado o campo fica estreito demais para um
+          telefone com DDI. */}
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor="waitlist-telegram" className={LABEL}>
+            {form.telegram} <span className="text-faint">{form.optional}</span>
+          </label>
+          <input
+            id="waitlist-telegram"
+            name="telegram"
+            type="text"
+            maxLength={120}
+            disabled={isLoading}
+            placeholder={form.telegramPlaceholder}
+            className={`${FIELD_BASE} border-line-strong`}
+          />
+        </div>
 
-      <div className="flex flex-col gap-1.5">
-        <label htmlFor="waitlist-phone" className={LABEL}>
-          {form.phone} <span className="text-faint">{form.optional}</span>
-        </label>
-        <input
-          id="waitlist-phone"
-          name="phone"
-          type="tel"
-          autoComplete="tel"
-          maxLength={120}
-          disabled={isLoading}
-          placeholder={form.phonePlaceholder}
-          className={`${FIELD_BASE} border-line-strong`}
-        />
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor="waitlist-phone" className={LABEL}>
+            {form.phone} <span className="text-faint">{form.optional}</span>
+          </label>
+          <input
+            id="waitlist-phone"
+            name="phone"
+            type="tel"
+            autoComplete="tel"
+            maxLength={120}
+            disabled={isLoading}
+            placeholder={form.phonePlaceholder}
+            className={`${FIELD_BASE} border-line-strong`}
+          />
+        </div>
       </div>
 
       {/* Par de fecho: o botão e, ao lado, o link de texto. O ícone `Send` e o
