@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { motion, useInView, useReducedMotion } from "motion/react";
+import { motion, useInView } from "motion/react";
 import { MousePointerClick, Bot, QrCode, CheckCircle2, Target } from "lucide-react";
 import { useContent } from "@/i18n";
+import { Chip } from "./Chip";
 
 const STEP_ICONS = [MousePointerClick, Bot, QrCode, CheckCircle2, Target];
 const STEP_MS = 900;
@@ -11,31 +12,60 @@ const STEP_MS = 900;
 /**
  * Caminho do dado, do clique no anúncio até o pixel de volta.
  *
- * Os nós acendem em sequência quando a seção entra na tela, e o traço entre
- * eles se preenche junto — a ideia é o lead *ver* que o rastreio é uma cadeia,
- * não uma lista de logos.
+ * Os nós acendem em sequência quando o bloco entra na tela, e o traço entre eles
+ * se preenche junto — a ideia é o lead *ver* que o rastreio é uma cadeia, não
+ * uma lista de logos. É a ÚNICA animação desta seção, e corre uma vez só: o
+ * `once: true` do `useInView` não rearma quando a página volta a passar por
+ * aqui.
+ *
+ * Os detalhes deixaram de ser frase corrida onde já eram outra coisa: os quatro
+ * destinos do primeiro nó viraram etiquetas (é uma lista, e lista de nome é
+ * chip), e o parâmetro de UTM e o comando do bot viraram `<code>` — valor de
+ * máquina é mono, e mono no site existe só dentro de `<code>` (regra 2).
  */
 export function TrackingFlow() {
   const ref = useRef<HTMLOListElement>(null);
   const inView = useInView(ref, { once: true, amount: 0.4 });
-  const reduced = useReducedMotion();
+  const [reduced, setReduced] = useState(false);
+  const [tabHidden, setTabHidden] = useState(false);
   const { payments } = useContent();
   const steps = payments.tracking.flow;
 
   const [animated, setAnimated] = useState(0);
 
+  /* `useReducedMotion` do motion devolve o valor certo já no primeiro render do
+     cliente e `false` no do servidor — o que faria este bloco nascer diferente
+     dos dois lados. O listener começa igual nos dois e só muda depois da
+     montagem (regra 6). */
   useEffect(() => {
-    if (!inView || reduced) return;
+    const query = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const sync = () => setReduced(query.matches);
+    sync();
+    query.addEventListener("change", sync);
+    return () => query.removeEventListener("change", sync);
+  }, []);
 
-    let current = 0;
-    const id = window.setInterval(() => {
-      current += 1;
-      setAnimated(current);
-      if (current >= steps.length) window.clearInterval(id);
-    }, STEP_MS);
+  /* Aba em segundo plano não gasta a sequência escondida: o relógio para e
+     retoma de onde estava quando a aba volta (portão: 0 relógios com a aba
+     oculta). */
+  useEffect(() => {
+    const onVisibility = () => setTabHidden(document.visibilityState === "hidden");
+    onVisibility();
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => document.removeEventListener("visibilitychange", onVisibility);
+  }, []);
 
-    return () => window.clearInterval(id);
-  }, [inView, reduced, steps.length]);
+  /* Um passo por vez, com `setTimeout` reagendado a cada nó em vez de um
+     `setInterval` que corre até o fim: assim a condição de parada é a mesma
+     linha que decide se o relógio existe, e a aba que vai para segundo plano no
+     meio da sequência retoma do nó onde parou, sem relógio aberto enquanto
+     esteve escondida. Acesa até o último nó, nenhum relógio é reaberto. */
+  useEffect(() => {
+    if (!inView || reduced || tabHidden || animated >= steps.length) return;
+
+    const id = window.setTimeout(() => setAnimated((atual) => atual + 1), STEP_MS);
+    return () => window.clearTimeout(id);
+  }, [inView, reduced, tabHidden, animated, steps.length]);
 
   // Sem movimento, todos já aparecem acesos — derivado, não via setState num
   // efeito, que dispararia renderização em cascata.
@@ -49,12 +79,16 @@ export function TrackingFlow() {
         const isLast = index === steps.length - 1;
 
         return (
-          <li key={step.label} className="relative flex gap-4 pb-5 last:pb-0">
+          /* `pb-3` e o nó de 32px: cinco nós com chip e `<code>` somavam 341px
+             nesta coluna, e era ela que mandava na altura do bloco 2 de
+             Pagamentos (medido a 1440). O que encolheu é o respiro e o círculo
+             decorativo — nenhum texto desceu de 13px. */
+          <li key={step.label} className="relative flex gap-4 pb-3 last:pb-0">
             {/* Trilho entre os nós */}
             {!isLast && (
               <span
                 aria-hidden
-                className="absolute top-10 left-[1.1875rem] h-[calc(100%-1.5rem)] w-px bg-line"
+                className="absolute top-8 left-[0.9375rem] h-[calc(100%-1.5rem)] w-px bg-line"
               >
                 <motion.span
                   className="block w-px bg-brand"
@@ -66,7 +100,7 @@ export function TrackingFlow() {
             )}
 
             <span
-              className={`relative z-10 flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-colors duration-500 ${
+              className={`relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-colors duration-500 ${
                 active ? "bg-brand text-ink-950" : "bg-ink-800 text-faint"
               }`}
             >
@@ -81,7 +115,17 @@ export function TrackingFlow() {
               >
                 {step.label}
               </p>
-              <p className="mt-0.5 text-[13px] text-faint">{step.detail}</p>
+
+              {step.detail ? <p className="mt-0.5 text-[13px] text-faint">{step.detail}</p> : null}
+
+              {step.chips.length || step.code ? (
+                <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                  {step.chips.map((chip) => (
+                    <Chip key={chip}>{chip}</Chip>
+                  ))}
+                  {step.code ? <code>{step.code}</code> : null}
+                </div>
+              ) : null}
             </div>
           </li>
         );

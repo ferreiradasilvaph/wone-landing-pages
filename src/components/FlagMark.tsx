@@ -7,15 +7,15 @@ import { useId } from "react";
  *
  * Substituem os emoji 🇧🇷🇦🇷🇲🇽🇨🇴, que o Windows não renderiza — lá eles saem
  * como as duas letras do código regional. Em SVG o desenho é o mesmo em
- * qualquer sistema, escala sem perder nitidez e aceita o brilho que varre a
- * superfície quando o país está em destaque.
+ * qualquer sistema e escala sem perder nitidez.
  *
  * São versões simplificadas: as faixas e os símbolos centrais que identificam
  * cada bandeira, sem os detalhes heráldicos que sumiriam neste tamanho.
  *
- * A bandeira é estática. O brilho que varria a do país em destaque saiu com os
- * outros relógios decorativos: o que marca a escolha é o tom do fundo da linha,
- * nunca um contorno ou um reflexo (regra 8).
+ * A bandeira é estática e não tem estado: a prop `active`, que acendia um
+ * brilho varrendo a do país em destaque, saiu com os outros relógios
+ * decorativos, e com ela o último lugar onde a escolha se marcava por reflexo —
+ * o que marca a escolha é o tom do fundo da linha (regra 8).
  */
 
 function Brasil() {
@@ -82,12 +82,6 @@ export function FlagMark({
   code: string;
   /** Padrão 36×24, a medida da tabela de Pagamentos. */
   className?: string;
-  /**
-   * Não faz mais nada: a bandeira não tem estado. Continua aceita enquanto o
-   * quadro de Pagamentos ainda a passa — tirar a prop de lá é uma linha, e o
-   * arquivo é de outro agente nesta etapa.
-   */
-  active?: boolean;
 }) {
   const clipId = useId();
   const Flag = FLAGS[code];
@@ -104,7 +98,8 @@ export function FlagMark({
         </clipPath>
         <g clipPath={`url(#${clipId})`}>
           <Flag />
-          {/* Dobra do tecido: um degradê diagonal que dá volume à bandeira */}
+          {/* Dobra do tecido: duas camadas chapadas, uma clara em cima e uma
+              escura embaixo, que dão volume sem um único degradê */}
           <path d="M0 0 L60 0 L60 14 L0 30 Z" fill="#fff" fillOpacity="0.1" />
           <path d="M0 42 L60 42 L60 30 L0 16 Z" fill="#000" fillOpacity="0.12" />
         </g>

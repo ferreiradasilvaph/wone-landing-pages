@@ -397,18 +397,34 @@ code {
 
 /* Palco do carrossel de Recursos.
 
-   O card tem a proporcao de um post de Instagram (1080x1350 = 4:5), e a largura
-   e o espacamento vem de `clamp()`: no desktop cabem o do meio e quatro
-   vizinhos, no tablet tres, e no celular o do meio com as beiradas dos vizinhos
-   aparecendo. Nenhum JavaScript mede a tela para decidir isso — o que define e
-   o `overflow-hidden` do palco cortando quem nao cabe.
+   No desktop cabem o do meio e quatro vizinhos, no tablet tres, e no celular o
+   do meio inteiro com as beiradas dos vizinhos aparecendo. Nenhum JavaScript
+   mede a tela para decidir isso — o que define e o `overflow-hidden` do palco
+   cortando quem nao cabe.
 
-   A altura do palco acompanha a largura do card pela mesma conta (x1.25), mais
-   um respiro para o card do meio nao encostar nas bordas. */
+   A altura deixou de ser `largura x 1,25` (a proporcao de post de Instagram do
+   primeiro desenho) e virou medida propria: desde que o card ganhou o
+   mini-mockup no topo, quem manda na altura e o conteudo — moldura (45%) + h3 +
+   tres linhas de 15px —, e a conta por proporcao dava 320px no desktop, onde
+   296 bastam. Os 24px que sobraram sao parte do que a secao precisava devolver
+   para caber na altura alvo com o indice de dez itens ao lado do titulo.
+
+   Os 18.5rem sao o PISO, nao uma folga: medidos os dez cards nos dois idiomas a
+   1440 (card de 16rem, 216px de texto util), o bloco de texto mais alto da 120px
+   (ingles, "Assinatura e renovacao") e a moldura de 45% da 115 — com os 40 do
+   respiro e os 16 entre moldura e titulo, 291 de 296. Baixar o palco para 15/16rem
+   com moldura de 8rem, como a revisao sugeriu, cortaria o card central em ate
+   48px. Quem quiser a secao mais curta tem de encurtar a copy ou o indice, nao o
+   palco.
+
+   Tres degraus em media query, nao `clamp()`: a largura do card no celular nao
+   e uma interpolacao da do desktop (la ele e mais estreito de proposito, para
+   caber mais vizinho no palco; aqui ele ocupa o gutter quase inteiro). */
 .feature-stage {
-  --card-w: clamp(13rem, 44vw, 16rem);
-  --card-gap: clamp(8rem, 23vw, 14.5rem);
-  height: calc(var(--card-w) * 1.25);
+  --card-w: 17rem;
+  --card-h: 17.5rem;
+  --card-gap: 10rem;
+  height: var(--card-h);
 
   /* A perspectiva e o que transforma a fileira em carrossel de verdade: os
      cards das laterais giram no proprio eixo e passam a ser vistos de lado, em
@@ -418,9 +434,30 @@ code {
   perspective-origin: 50% 42%;
 }
 
+@media (min-width: 640px) {
+  .feature-stage {
+    --card-w: 16rem;
+    --card-h: 18.5rem;
+    --card-gap: 12.5rem;
+  }
+}
+
+/* A partir de lg o vizinho mostra o texto, e aí o espacamento precisa ser maior
+   que o card: com 14rem o card do meio cobria 28px de cada vizinho (medido a
+   1440: central em x 587..843, vizinho esquerdo terminando em 615) e lia-se
+   "ntrega automatica" por baixo dele. Com 16rem as caixas so se tocavam (587 e
+   843 exatos); 16.5rem deixa 8px de ar entre o card do meio e o vizinho — o
+   giro em Y e a perspectiva encolhem a caixa projetada do vizinho, por isso a
+   folga nao e a diferenca nominal. */
+@media (min-width: 1024px) {
+  .feature-stage {
+    --card-gap: 16.5rem;
+  }
+}
+
 .feature-slot {
   width: var(--card-w);
-  height: calc(var(--card-w) * 1.25);
+  height: var(--card-h);
 }
 
 /* Não existe mais classe de superfície de cartão.

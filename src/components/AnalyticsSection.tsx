@@ -31,7 +31,8 @@ export function AnalyticsSection() {
         lead={analytics.lead}
       />
 
-      {/* Cabeçalho → demo: 56px no desktop, 40 no celular (a régua da espec). */}
+      {/* Do cabeçalho até a demo: 56px no desktop, 40 no celular (a régua da
+          espec, igual em todas as seções). */}
       <div className="mt-10 lg:mt-14">
         <DashboardPreview />
       </div>

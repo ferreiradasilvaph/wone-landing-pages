@@ -1,33 +1,32 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { AnimatePresence, motion } from "motion/react";
-import {
-  KeyRound,
-  CopySlash,
-  Network,
-  Vault,
-  ShieldCheck,
-  type LucideIcon,
-} from "lucide-react";
+import { useInView } from "motion/react";
 import { useContent } from "@/i18n";
 import { PauseButton } from "./PauseButton";
 import { SegmentProgress } from "./SegmentProgress";
-
-const ICONS: Record<string, LucideIcon> = { KeyRound, CopySlash, Network, Vault };
-const EASE = [0.16, 1, 0.3, 1] as const;
 
 /** Intervalo do avanço automático. O mesmo valor alimenta a barra de progresso. */
 const AUTOPLAY_MS = 5000;
 
 /**
- * Segurança: os quatro itens como lista de seleção à esquerda e o detalhe do
- * item escolhido à direita.
+ * Segurança: os quatro itens como LINHAS DE TABELA à esquerda e o detalhe do
+ * item escolhido no card à direita.
+ *
+ * Eram quatro cards com ícone, um debaixo do outro, e ocupavam 440px para dizer
+ * oito linhas de texto. A forma de tabela da referência — termo de um lado,
+ * complemento do outro, régua fina entre as linhas — diz o mesmo em 56px por
+ * linha, e deixa os quatro termos legíveis de uma olhada, que é o que uma lista
+ * de garantias precisa. O ícone Lucide saiu de cada linha (quatro ícones
+ * decorativos competindo com quatro termos curtos) e não voltou no card: o
+ * título já nomeia o assunto.
  *
  * Esta é a seção invertida da página — fundo ink-800 —, então cada superfície
- * sobe um degrau: o item é ink-750 e o escolhido, ink-700. É tom, não contorno:
- * medido, `--faint` dá 5,2:1 sobre o ink-700 e 5,4:1 sobre o ink-750, acima do
- * 4,5:1 do portão, então não foi preciso somar borda ao item ativo.
+ * sobe um degrau: o card é ink-750 e a linha escolhida, ink-700. É tom, não
+ * contorno: medido no navegador (WCAG 2.1, cor composta com o alfa sobre o
+ * fundo), `--muted` dá 8,29:1 e `--faint` 5,21:1 sobre o ink-700 — acima do
+ * 4,5:1 do portão, então não foi preciso somar `border-line-strong` à linha
+ * ativa, que era o plano B da espec.
  *
  * O avanço automático ficou, porque atende o pedido de a seção "andar sozinha"
  * sem reintroduzir rolagem: o que avança é a seleção, não a posição. Pausa com
@@ -41,11 +40,7 @@ const AUTOPLAY_MS = 5000;
  *
  * Quanto falta do intervalo é a régua de 4 segmentos sob o card, não mais um
  * fio laranja de 3px colado na borda do item ativo: contorno em item
- * selecionado é o que a regra 8 proíbe, e a seleção já se lê pelo tom (ink-700
- * sobre ink-750).
- *
- * E4 troca os quatro itens pelas linhas-tabela (termo + complemento); aqui a
- * mecânica é a de hoje.
+ * selecionado é o que a regra 8 proíbe, e a seleção já se lê pelo tom.
  */
 export function SecurityCarousel() {
   const { security, ui } = useContent();
@@ -63,7 +58,13 @@ export function SecurityCarousel() {
      outros, para o primeiro render do cliente ser igual ao do servidor. */
   const [userPaused, setUserPaused] = useState(false);
 
-  const paused = userPaused || hovering || focused || tabHidden;
+  /* Fora da tela o relógio para: o portão de performance conta UM relógio por
+     viewport, e sem isto o de Segurança já corria enquanto o visitante ainda
+     estava no hero, somando-se ao do carrossel de Recursos. */
+  const blocoRef = useRef<HTMLDivElement>(null);
+  const onScreen = useInView(blocoRef, { amount: 0.3 });
+
+  const paused = userPaused || hovering || focused || tabHidden || !onScreen;
   const playing = !reduced && !paused;
 
   /* Quanto falta do intervalo atual. */
@@ -133,11 +134,11 @@ export function SecurityCarousel() {
   }, []);
 
   const item = items[active];
-  const ActiveIcon = ICONS[item.icon] ?? ShieldCheck;
 
   return (
     <div
-      className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[1fr_1.1fr] lg:gap-10"
+      ref={blocoRef}
+      className="grid items-start gap-8 lg:grid-cols-12 lg:gap-x-8"
       onMouseEnter={() => setHovering(true)}
       onMouseLeave={() => setHovering(false)}
       onFocus={() => setFocused(true)}
@@ -149,16 +150,19 @@ export function SecurityCarousel() {
         }
       }}
     >
-      {/* Os quatro, sempre visíveis. Lista de opções que controla o painel ao
-          lado: `tablist` é o papel correto, e as setas do teclado andam nela. */}
+      {/* As quatro linhas, sempre visíveis. Lista de opções que controla o card
+          ao lado: `tablist` é o papel correto, e as setas do teclado andam nela.
+
+          O `-mx-3` é o que mantém o termo alinhado com o kicker e o H2 acima
+          (a moldura da página é a mesma em todas as seções) enquanto o tom da
+          linha ativa ainda respira 12px para cada lado do texto. */}
       <div
         role="tablist"
         aria-orientation="vertical"
         aria-label={security.title}
-        className="flex flex-col gap-2.5"
+        className="-mx-3 lg:col-span-6"
       >
         {items.map((entry, index) => {
-          const Icon = ICONS[entry.icon] ?? ShieldCheck;
           const isActive = index === active;
 
           return (
@@ -186,76 +190,82 @@ export function SecurityCarousel() {
                 event.preventDefault();
                 select(next);
               }}
-              className={`group relative flex cursor-pointer items-start gap-3.5 overflow-hidden rounded-card p-4 text-left transition-colors duration-300 sm:p-5 ${
-                isActive ? "bg-ink-700" : "bg-ink-750"
+              /* Celular: termo em cima, complemento embaixo (≈72px). Desktop: os
+                 dois na mesma linha, com o termo numa coluna fixa de 9rem —
+                 é o alinhamento que faz quatro linhas lerem como tabela. */
+              className={`block w-full cursor-pointer border-b border-line px-3 py-4 text-left transition-colors duration-300 lg:grid lg:grid-cols-[9rem_1fr] lg:items-baseline lg:gap-4 ${
+                isActive ? "rounded-field bg-ink-700" : ""
               }`}
             >
-              <span
-                className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center transition-colors duration-300 ${
-                  isActive ? "text-brand" : "text-faint group-hover:text-brand"
-                }`}
-              >
-                <Icon className="h-5 w-5" />
+              <span className="block text-[15px] leading-snug font-semibold text-cream">
+                {entry.term}
               </span>
-
-              {/* Termo e complemento, a forma de linha de tabela da referência:
-                  o rótulo curto carrega o item, a frase em minúscula o explica
-                  sem repetir o título que já está no card ao lado. */}
-              <span className="min-w-0">
-                <span
-                  className={`block text-[15px] leading-snug font-semibold transition-colors duration-300 ${
-                    isActive ? "text-cream" : "text-cream/80"
-                  }`}
-                >
-                  {entry.term}
-                </span>
-                <span className="mt-1 block text-[15px] leading-relaxed text-muted">
-                  {entry.summary}
-                </span>
+              <span className="mt-1 block text-[15px] leading-snug text-muted lg:mt-0">
+                {entry.summary}
               </span>
             </button>
           );
         })}
       </div>
 
-      <div className="min-w-0">
-        {/* Painel do item escolhido.
+      <div className="min-w-0 lg:col-span-6 lg:col-start-7">
+        {/* Card do item escolhido.
 
-            `aria-live` fica em "off" enquanto a seleção anda sozinha: anunciar
-            cada troca automática encheria o leitor de tela de interrupções que
-            o usuário não pediu. Pausado, a troca partiu de um clique ou do
-            teclado, e aí o anúncio é esperado. */}
+            Os QUATRO detalhes ficam no mesmo quadro da grade (todos em
+            `col-start-1 row-start-1`), e só a opacidade distingue o escolhido.
+            Assim a altura do card é sempre a do detalhe mais alto NA LARGURA
+            ATUAL, em qualquer idioma, e o relógio de 5 s troca de item sem
+            mover um pixel do que vem depois — o portão é "CLS 0" e aqui ele era
+            furado sem interação nenhuma: medido a 412, o detalhe do 2FA em
+            inglês pede 184px e o do Cofre 159, e a seção pulava 25px sozinha
+            (3 entradas de `layout-shift`, CLS 0,0027 em 12 s parado).
+
+            Um `min-h` por breakpoint — o caminho do DashboardPreview — não
+            resolveria este caso sem cinco degraus: medindo os 8 textos (4
+            itens x 2 idiomas) por largura de conteúdo, a altura necessária é
+            210px a 280 de largura (celular de 360), 184 a 332 (412), 159 a 416
+            e 135 só a partir de 500 — e a coluna de 6 colunas volta aos 159
+            entre 1024 e ~1220. A grade empilhada acerta os seis casos sem
+            número mágico.
+
+            O crossfade de 350ms é CSS, não motion: o bloco global de
+            `prefers-reduced-motion` já zera `transition-duration`, então quem
+            pediu menos movimento recebe a troca seca sem este componente
+            precisar decidir nada no render (regra 6). */}
         <div
           role="tabpanel"
           id="security-panel"
           aria-labelledby={`security-tab-${active}`}
-          aria-live={paused ? "polite" : "off"}
-          aria-atomic="true"
-          className="rounded-card bg-ink-750 p-6"
+          className="grid rounded-card bg-ink-750 p-6"
         >
-          <AnimatePresence mode="wait" initial={false}>
-            <motion.div
-              key={item.title}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.35, ease: EASE }}
+          {items.map((entry, index) => (
+            <div
+              key={entry.title}
+              aria-hidden={index !== active}
+              className={`col-start-1 row-start-1 transition-[opacity,transform] duration-[350ms] ease-[cubic-bezier(0.16,1,0.3,1)] ${
+                index === active ? "opacity-100" : "pointer-events-none translate-y-2 opacity-0"
+              }`}
             >
-              {/* O ícone sem os três anéis concêntricos que o cercavam, e tudo
-                  à esquerda: nada centrado na página. */}
-              <span className="flex h-8 w-8 items-center justify-center text-brand">
-                <ActiveIcon className="h-6 w-6" />
-              </span>
-
-              <h3 className="t-h3 mt-5 text-cream">{item.title}</h3>
-              <p className="mt-3 text-[15px] leading-relaxed text-muted">{item.detail}</p>
-            </motion.div>
-          </AnimatePresence>
+              <h3 className="t-h3 text-cream">{entry.title}</h3>
+              <p className="mt-3 text-[15px] leading-relaxed text-muted">{entry.detail}</p>
+            </div>
+          ))}
         </div>
 
+        {/* O anúncio para leitor de tela, que antes vinha do `aria-live` no
+            card: com os quatro detalhes sempre no DOM, nenhuma mutação
+            acontece na troca e a região viva nunca dispararia. Em "off"
+            enquanto a seleção anda sozinha — anunciar cada troca automática
+            encheria o leitor de interrupções que ninguém pediu; pausado, a
+            troca partiu de um clique ou do teclado e o anúncio é esperado. É o
+            mesmo arranjo do carrossel de Recursos. */}
+        <p className="sr-only" aria-live={paused ? "polite" : "off"} aria-atomic="true">
+          {item.title}. {item.detail}
+        </p>
+
         {/* Onde a seleção está e quanto falta para ela andar, mais o controle de
-            parar. A régua fica FORA do card porque ela fala dos quatro itens da
-            esquerda, não do detalhe de um só. */}
+            parar. A régua fica FORA do card porque ela fala das quatro linhas da
+            esquerda, não do detalhe de uma só. */}
         <div className="mt-6 flex items-end gap-5">
           <SegmentProgress
             className="min-w-0 flex-1"

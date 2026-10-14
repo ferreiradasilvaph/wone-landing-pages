@@ -1,7 +1,7 @@
 "use client";
 
-import { useId, useMemo, useState } from "react";
-import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { useEffect, useId, useMemo, useState } from "react";
+import { AnimatePresence, motion } from "motion/react";
 import { useContent } from "@/i18n";
 import { HOURLY_REVENUE, FUNNEL_STEPS } from "@/data/content";
 
@@ -15,6 +15,15 @@ const USD = new Intl.NumberFormat("en-US", {
 });
 
 const EASE = [0.16, 1, 0.3, 1] as const;
+
+/* Quem decide se as barras e a linha do gráfico animam é o painel, uma vez só,
+   e o valor desce por prop. `useReducedMotion` do motion ficaria em cinco
+   lugares aqui dentro e devolve valor diferente no servidor e no primeiro
+   render do cliente — hoje ele só alimenta `transition`, que não vira atributo
+   no DOM, então não quebrava a hidratação; a regra 6 é literal de propósito,
+   porque o dia em que um destes valores for para `style`/`initial` o erro
+   voltaria calado. */
+type ViewProps = { reduced: boolean };
 
 // Geometria do gráfico de área, em unidades do viewBox. O eixo X é desenhado
 // em HTML logo abaixo, então o viewBox cobre só a área de plotagem.
@@ -38,9 +47,8 @@ function buildPath(values: number[]) {
 }
 
 /** Gráfico de faturamento por hora. Uma série só, então sem legenda. */
-function RevenueView() {
+function RevenueView({ reduced }: ViewProps) {
   const gradientId = useId();
-  const reduced = useReducedMotion();
   const { analytics } = useContent();
   const [hovered, setHovered] = useState<number | null>(null);
 
@@ -82,86 +90,114 @@ function RevenueView() {
       </div>
 
       <div className="relative mt-4">
-        <svg viewBox={`0 0 ${W} ${PLOT_H}`} className="h-auto w-full" aria-hidden>
-          <defs>
-            <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#FF7700" stopOpacity="0.38" />
-              <stop offset="100%" stopColor="#FF7700" stopOpacity="0" />
-            </linearGradient>
-          </defs>
+        {/* Altura FIXA e `preserveAspectRatio="none"`.
 
-          {[0.25, 0.5, 0.75].map((fraction) => (
+            Com `h-auto`, o gráfico herdava a proporção do viewBox e crescia com
+            a largura: a 1440 ele chegava a 328px de altura — quase o dobro dos
+            180 do desenho — e sozinho respondia por 150px do excesso da seção.
+            Esticar o viewBox resolveria no desktop e esmagaria o gráfico no
+            celular, então a escala horizontal passou a ser livre e as linhas
+            ganharam `vector-effect: non-scaling-stroke`, que mantém o traço em
+            2px (e as réguas em 1) em qualquer largura. O ponto do valor ativo
+            saiu do SVG e virou HTML posicionado por porcentagem: círculo é a
+            única forma que a escala livre deformaria. */}
+        <div className="relative h-40 sm:h-44">
+          <svg
+            viewBox={`0 0 ${W} ${PLOT_H}`}
+            preserveAspectRatio="none"
+            className="h-full w-full"
+            aria-hidden
+          >
+            <defs>
+              <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#FF7700" stopOpacity="0.38" />
+                <stop offset="100%" stopColor="#FF7700" stopOpacity="0" />
+              </linearGradient>
+            </defs>
+
+            {[0.25, 0.5, 0.75].map((fraction) => (
+              <line
+                key={fraction}
+                x1="0"
+                x2={W}
+                y1={PLOT_H * fraction}
+                y2={PLOT_H * fraction}
+                stroke="#FFFFE3"
+                strokeOpacity="0.07"
+                strokeWidth="1"
+                vectorEffect="non-scaling-stroke"
+              />
+            ))}
             <line
-              key={fraction}
               x1="0"
               x2={W}
-              y1={PLOT_H * fraction}
-              y2={PLOT_H * fraction}
+              y1={PLOT_H}
+              y2={PLOT_H}
               stroke="#FFFFE3"
-              strokeOpacity="0.07"
+              strokeOpacity="0.14"
               strokeWidth="1"
+              vectorEffect="non-scaling-stroke"
             />
-          ))}
-          <line
-            x1="0"
-            x2={W}
-            y1={PLOT_H}
-            y2={PLOT_H}
-            stroke="#FFFFE3"
-            strokeOpacity="0.14"
-            strokeWidth="1"
-          />
 
-          <motion.path
-            d={chart.area}
-            fill={`url(#${gradientId})`}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: reduced ? 0 : 0.9, delay: reduced ? 0 : 0.3 }}
-          />
-          <motion.path
-            d={chart.line}
-            fill="none"
-            stroke="#FF7700"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            initial={{ pathLength: 0 }}
-            animate={{ pathLength: 1 }}
-            transition={{ duration: reduced ? 0 : 1.4, ease: EASE }}
-          />
-
-          <line
-            x1={activePoint.x}
-            x2={activePoint.x}
-            y1={activePoint.y}
-            y2={PLOT_H}
-            stroke="#FF7700"
-            strokeOpacity="0.35"
-            strokeWidth="1"
-          />
-          <circle
-            cx={activePoint.x}
-            cy={activePoint.y}
-            r="5.5"
-            fill="#FF7700"
-            stroke="#15151c"
-            strokeWidth="2"
-          />
-
-          {HOURLY_REVENUE.map((_, index) => (
-            <rect
-              key={index}
-              x={(index - 0.5) * (W / (HOURLY_REVENUE.length - 1))}
-              y="0"
-              width={W / (HOURLY_REVENUE.length - 1)}
-              height={PLOT_H}
-              fill="transparent"
-              onMouseEnter={() => setHovered(index)}
-              onMouseLeave={() => setHovered(null)}
+            {/* O preenchimento sob a linha é leitura de dado (a área do dia), não
+                decoração: é o único degradê que fica na página. */}
+            <motion.path
+              d={chart.area}
+              fill={`url(#${gradientId})`}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: reduced ? 0 : 0.9, delay: reduced ? 0 : 0.3 }}
             />
-          ))}
-        </svg>
+            <motion.path
+              d={chart.line}
+              fill="none"
+              stroke="#FF7700"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              vectorEffect="non-scaling-stroke"
+              initial={{ pathLength: 0 }}
+              animate={{ pathLength: 1 }}
+              transition={{ duration: reduced ? 0 : 1.4, ease: EASE }}
+            />
+
+            <line
+              x1={activePoint.x}
+              x2={activePoint.x}
+              y1={activePoint.y}
+              y2={PLOT_H}
+              stroke="#FF7700"
+              strokeOpacity="0.35"
+              strokeWidth="1"
+              vectorEffect="non-scaling-stroke"
+            />
+
+            {HOURLY_REVENUE.map((_, index) => (
+              <rect
+                key={index}
+                x={(index - 0.5) * (W / (HOURLY_REVENUE.length - 1))}
+                y="0"
+                width={W / (HOURLY_REVENUE.length - 1)}
+                height={PLOT_H}
+                fill="transparent"
+                onMouseEnter={() => setHovered(index)}
+                onMouseLeave={() => setHovered(null)}
+              />
+            ))}
+          </svg>
+
+          {/* O ponto do valor ativo, em HTML sobre o gráfico: dentro do SVG com
+              escala livre ele sairia oval. Mora na caixa do gráfico, não na da
+              seção inteira, para a porcentagem bater com a plotagem. */}
+          <span
+            aria-hidden
+            className="pointer-events-none absolute h-[11px] w-[11px] -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-ink-800 bg-brand"
+            style={{
+              left: `${(activePoint.x / W) * 100}%`,
+              top: `${(activePoint.y / PLOT_H) * 100}%`,
+            }}
+          />
+        </div>
 
         {/* Eixo X em HTML: dentro do SVG a fonte encolheria com o viewBox */}
         <div className="relative mt-2 h-4">
@@ -189,8 +225,7 @@ function RevenueView() {
 }
 
 /** Funil de 100 leads. Categorias ordenadas, rampa de um só tom. */
-function FunnelView() {
-  const reduced = useReducedMotion();
+function FunnelView({ reduced }: ViewProps) {
   const { analytics } = useContent();
 
   return (
@@ -253,8 +288,7 @@ function LtvView() {
 }
 
 /** Taxas do funil, em barras horizontais sobre a mesma escala de 0 a 100. */
-function RatesView() {
-  const reduced = useReducedMotion();
+function RatesView({ reduced }: ViewProps) {
   const { analytics } = useContent();
 
   return (
@@ -327,7 +361,9 @@ function StatementView() {
   );
 }
 
-const VIEWS: Record<string, () => React.ReactElement> = {
+/* LTV e Extrato não animam nada (são tabela), e por isso ignoram a prop — o
+   tipo é um só para o painel poder escolher a vista por `id`. */
+const VIEWS: Record<string, React.ComponentType<ViewProps>> = {
   faturamento: RevenueView,
   funil: FunnelView,
   ltv: LtvView,
@@ -346,14 +382,36 @@ const VIEWS: Record<string, () => React.ReactElement> = {
  * entra como legenda entre as abas e o painel, onde serve de explicação sem
  * disputar espaço.
  *
+ * Cada vista dizia o que é três vezes: no rótulo da aba, na legenda e num h3
+ * com subtítulo dentro do painel ("Faturamento" / "Faturamento por dia e por
+ * hora…" / "Faturamento por hora"). Ficaram as duas primeiras, que são
+ * navegação e explicação; o par h3 + subtítulo saiu, e com ele 46px de altura
+ * em toda troca de aba.
+ *
  * Todos os números são amostra ilustrativa, não dado de cliente — daí a
  * etiqueta "Simulação" no cabeçalho (no lugar da pílula "Tempo real", que
- * afirmava o contrário) e o subtítulo da vista sempre visível. A altura mínima
- * do painel mantém o CLS em zero ao trocar entre uma tabela e um gráfico.
+ * afirmava o contrário) e o aviso dentro do painel, agora nas cinco vistas e
+ * não só nas que mostravam número grande.
+ *
+ * A altura mínima do painel é a da vista mais alta (o extrato, medido em 310px
+ * a 1440 e 412): é o que mantém o CLS em zero ao trocar entre uma tabela e um
+ * gráfico.
  */
 export function DashboardPreview() {
   const { analytics } = useContent();
-  const reduced = useReducedMotion();
+  const [reduced, setReduced] = useState(false);
+
+  /* Nasce `false` nos dois lados (servidor e primeiro render do cliente) e só
+     muda depois da montagem: é o arranjo de `FeatureCarousel` e
+     `SecurityCarousel`, e o que a regra 6 pede — nenhum valor de
+     `prefers-reduced-motion` decide o primeiro render. */
+  useEffect(() => {
+    const query = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const sync = () => setReduced(query.matches);
+    sync();
+    query.addEventListener("change", sync);
+    return () => query.removeEventListener("change", sync);
+  }, []);
 
   /* O `id` é o mesmo nos dois idiomas, então trocar de idioma não perde a aba
      escolhida. */
@@ -370,7 +428,7 @@ export function DashboardPreview() {
         aria-label={analytics.kicker}
         className="flex snap-x gap-1 overflow-x-auto"
       >
-        {analytics.views.map((entry) => {
+        {analytics.views.map((entry, index) => {
           const isActive = entry.id === activeId;
 
           return (
@@ -378,8 +436,34 @@ export function DashboardPreview() {
               key={entry.id}
               type="button"
               role="tab"
+              id={`analytics-tab-${entry.id}`}
               aria-selected={isActive}
+              aria-controls="analytics-panel"
+              /* Roving tabindex + setas, o padrão de `tablist`: a fileira é UMA
+                 parada de tabulação (eram cinco) e quem ouve "aba 2 de 5"
+                 anda nela com as setas, como no tablist de Segurança. */
+              tabIndex={isActive ? 0 : -1}
               onClick={() => setActiveId(entry.id)}
+              onKeyDown={(event) => {
+                const views = analytics.views;
+                const last = views.length - 1;
+                let next: number | null = null;
+                if (event.key === "ArrowRight" || event.key === "ArrowDown") {
+                  next = index === last ? 0 : index + 1;
+                }
+                if (event.key === "ArrowLeft" || event.key === "ArrowUp") {
+                  next = index === 0 ? last : index - 1;
+                }
+                if (event.key === "Home") next = 0;
+                if (event.key === "End") next = last;
+                if (next === null) return;
+                event.preventDefault();
+                setActiveId(views[next].id);
+                /* O foco segue a seleção: sem isto a próxima seta sairia do
+                   botão que acabou de perder o `tabIndex`. */
+                const alvo = document.getElementById(`analytics-tab-${views[next].id}`);
+                alvo?.focus();
+              }}
               /* h-11: os 44px do portão de acessibilidade sem precisar de
                  padding extra. */
               className={`h-11 shrink-0 snap-start rounded-field px-4 text-[15px] font-medium transition-colors ${
@@ -393,11 +477,26 @@ export function DashboardPreview() {
       </div>
 
       <div className="mt-4 flex items-start justify-between gap-4 border-t border-line pt-4">
-        <p className="max-w-[46ch] text-[13px] leading-snug text-muted">{view.label}</p>
+        {/* A legenda da aba ativa varia de uma a três linhas conforme o texto e
+            a largura, e cada troca de aba mexia 17px no que vinha depois. A
+            altura reservada é a da legenda mais longa medida: três linhas a 412
+            e duas a 1440 (português, que é o pior caso nos dois). */}
+        <p className="min-h-[3.4rem] max-w-[46ch] text-[13px] leading-snug text-muted sm:min-h-[2.35rem]">
+          {view.label}
+        </p>
         <span className="t-label shrink-0">{analytics.simulationLabel}</span>
       </div>
 
-      <div className="min-h-[21rem] pt-6">
+      <div
+        role="tabpanel"
+        id="analytics-panel"
+        aria-labelledby={`analytics-tab-${view.id}`}
+        /* A altura da vista mais alta (Faturamento), medida com o mínimo
+           desligado: 357px a 412 e 332 a 1440. É o que mantém o CLS em zero na
+           troca de aba — abaixo disso o painel encolhe no crossfade e empurra
+           tudo o que vem depois. */
+        className="min-h-[22.5rem] pt-5 sm:min-h-[21rem]"
+      >
         {/* `initial={false}`: a primeira vista nasce pintada. Só as trocas
             seguintes atravessam o crossfade (regra 1 em espírito: nada da
             página anima só por aparecer). */}
@@ -409,11 +508,10 @@ export function DashboardPreview() {
             exit={{ opacity: 0, y: reduced ? 0 : -8 }}
             transition={{ duration: reduced ? 0 : 0.35, ease: EASE }}
           >
-            <h3 className="t-h3 text-cream">{view.panelTitle}</h3>
-            <p className="mt-1 text-[13px] text-faint">{view.panelSubtitle}</p>
+            <p className="text-[13px] text-faint">{analytics.sampleNote}</p>
 
-            <div className="mt-5">
-              <View />
+            <div className="mt-4">
+              <View reduced={reduced} />
             </div>
           </motion.div>
         </AnimatePresence>
