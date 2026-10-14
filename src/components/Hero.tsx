@@ -6,7 +6,7 @@ import { useContent } from "@/i18n";
 import { useOnScreen } from "@/lib/useOnScreen";
 import { CtaButton } from "./CtaButton";
 import { chipDe, metodoDe, precoDe } from "./hero/paises";
-import { LatamMap } from "./hero/LatamMap";
+import { HeroGlobe } from "./hero/HeroGlobe";
 import { StageStatus } from "./hero/StageStatus";
 import { IntegrationBand } from "./IntegrationBand";
 import { PauseButton } from "./PauseButton";
@@ -19,7 +19,7 @@ import { TextLink } from "./TextLink";
  * `país = Math.floor(passo / 3) % 4` e `batida = passo % 3`: um passo é uma
  * batida do chat, três batidas são uma venda, quatro vendas são a volta pelos
  * quatro países. UM contador para as duas coisas que se movem (o telefone e o
- * ponto aceso no mapa) é o que garante que elas nunca discordem.
+ * ponto aceso no globo) é o que garante que elas nunca discordem.
  */
 const PASSO_INICIAL = 2;
 /**
@@ -37,13 +37,15 @@ const DURACOES = [1600, 1200, 2200];
 const PRIMEIRA_ESPERA = 2600;
 
 /**
- * Abertura da página: o texto nas colunas 1–6 e, nas 7–12, o PALCO — o mapa
- * pontilhado da América Latina sangrando até a borda da tela, com o telefone em
- * pé na frente dele.
+ * Abertura da página: o texto nas colunas 1–6 e, nas 7–12, o PALCO — o globo
+ * pontilhado sangrando até a borda da tela, com o telefone em pé na frente
+ * dele.
  *
  * É o pedido do dono de 14/10, literal: "melhore a imagem do celular, e coloque
  * junto a página principal, uma prévia do checkout internacional (mostrando um
- * mapa sul americano, como o da página da Dotfy que pedi pra você se basear)".
+ * mapa sul americano, como o da página da Dotfy que pedi pra você se basear)" —
+ * e, no fim do dia, "no lugar do mini mapa, um globo terrestre criado a partir
+ * da linguagem do globo da demo de 4 países, mais atraente".
  * Os quatro países da Wone são os únicos pontos acesos, cada um com a cidade e
  * o chip de método · valor na moeda local; o telefone mostra a venda do país
  * que está aceso. Nenhum valor é novo: tudo vem de `payments.table.countries` e
@@ -79,7 +81,7 @@ export function Hero() {
   const precos = highlights.demos.checkout.prices;
 
   /**
-   * Um passo só para o telefone e para o mapa. Nasce em 2 — a última batida do
+   * Um passo só para o telefone e para o globo. Nasce em 2 — a última batida do
    * Brasil — no servidor E no primeiro render do cliente: o HTML sai com a
    * oferta, o "pagamento aprovado" e o convite já pintados, e o ponto de São
    * Paulo aceso. Nada em `opacity: 0`, nada animando, nada esperando o React.
@@ -190,7 +192,7 @@ export function Hero() {
 
   /**
    * O palco inteiro em uma frase, montado das MESMAS arrays que desenham os
-   * pings — nunca uma cópia à parte, que divergiria. O mapa e os pings são
+   * pings — nunca uma cópia à parte, que divergiria. O globo e os pinos são
    * `aria-hidden` (são ilustração), e os pontos não são focáveis: não há nada a
    * escolher, o conteúdo todo está aqui.
    */
@@ -289,9 +291,20 @@ export function Hero() {
                 564 = 560 do aparelho + 4 de respiro; 656 = 620 + 17 do rótulo
                 do palco + 19 de vão até a moldura, que é quando o rótulo
                 aparece. No celular não há altura cravada — quem a dá é o
-                telefone em fluxo, e o mapa fica atrás dele. */}
+                telefone em fluxo, e o globo fica atrás dele. */}
             <div className="relative lg:h-[564px] xl:h-[656px]">
-              <LatamMap pins={pins} activeIndex={ativo} animated={animado} />
+              {/* O GLOBO. Entrou em 14/10 no lugar do mini mapa pontilhado,
+                  a pedido do dono: "no lugar do mini mapa, um globo terrestre
+                  criado a partir da linguagem do globo da demo de 4 países,
+                  mais atraente". Os quatro freios do relógio daqui de cima
+                  também param o laço de desenho dele — um relógio só, e nenhum
+                  quadro desenhado para ninguém. */}
+              <HeroGlobe
+                pins={pins}
+                activeIndex={ativo}
+                animated={animado}
+                running={!paused && !reduced && !tabHidden && naTela}
+              />
 
               {/* "CHECKOUT INTERNACIONAL · SIMULAÇÃO": a ficção se declara no
                   palco, como se declara dentro do aparelho. Só a partir de `xl`

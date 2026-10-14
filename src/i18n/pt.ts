@@ -93,7 +93,7 @@ export const pt = {
         { code: "COP", city: "Bogotá" },
       ],
       /** Abre o resumo; o resto da frase é montado dos quatro países. */
-      srIntro: "Mapa da América Latina com o checkout simulado em quatro países:",
+      srIntro: "Globo com o checkout simulado em quatro países:",
     },
   },
 

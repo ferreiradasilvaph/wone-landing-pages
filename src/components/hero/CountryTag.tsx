@@ -1,13 +1,18 @@
 import { Chip } from "../Chip";
 
 /**
- * Um país no mapa do palco do hero: o ponto, o anel que acende e o rótulo
+ * Um país no globo do palco do hero: o ponto, o anel que acende e o rótulo
  * (cidade + método · valor local).
  *
  * O nó é um ALFINETE de tamanho zero (`h-0 w-0`) posicionado em porcentagem da
- * caixa do mapa — a caixa tem a mesma razão do `viewBox`, então porcentagem da
- * caixa é porcentagem do `viewBox`, e o alfinete cai sobre a coordenada certa
- * em qualquer largura de tela, sem uma linha de JavaScript medindo nada.
+ * caixa do globo — a projeção ortográfica em repouso é conta fechada
+ * (`globeMath.REPOUSO`), então a porcentagem vale em qualquer raio e o alfinete
+ * já sai do SERVIDOR sobre a coordenada certa, sem JavaScript medindo nada.
+ *
+ * Quando o globo passa a balançar, o laço do `HeroGlobe` escreve no `transform`
+ * deste nó o DESLOCAMENTO a partir dessa posição de repouso — em t = 0 ele é
+ * (0,0), e é por isso que o pino não salta quando o laço assume. `transform` é
+ * composto: nenhum quadro passa por layout.
  *
  * O ponto é centrado por MARGEM negativa, não por `translate`: o keyframe do
  * anel anima `transform`, e qualquer `translate` de centralização no mesmo
@@ -26,13 +31,14 @@ export function CountryTag({
   side,
   active,
   animated,
+  pinRef,
 }: {
   /** Código da moeda — serve de `key` do anel, para ele remontar por ativação. */
   code: string;
   city: string;
   /** "PIX · R$ 197,00", montado em `paises.ts`. */
   chip: string;
-  /** Posição do ponto, em % da caixa do mapa. */
+  /** Posição de repouso do ponto, em % da caixa do globo. */
   left: string;
   top: string;
   /** Lado em que o rótulo abre. México e Colômbia à direita; Brasil e Argentina à esquerda. */
@@ -40,9 +46,11 @@ export function CountryTag({
   active: boolean;
   /** `true` só depois de o relógio começar a andar e sem movimento reduzido. */
   animated: boolean;
+  /** O laço do globo pega este nó para escrever o `transform` de cada quadro. */
+  pinRef?: (el: HTMLSpanElement | null) => void;
 }) {
   return (
-    <span className="absolute h-0 w-0" style={{ left, top }}>
+    <span ref={pinRef} className="absolute h-0 w-0" style={{ left, top }}>
       {/* O ponto. Ativo: 8px em laranja cheio; em repouso: 6px a 50%. A
           transição é de cor e tamanho — nada de escala, que brigaria com o
           anel. */}
@@ -61,13 +69,12 @@ export function CountryTag({
         />
       ) : null}
 
-      {/* Rótulo. Some abaixo de 1420px, e não mais abaixo de `xl` (1280): com o
-          telefone de 620 o mapa passou a 620×606, e a faixa que vai do ponto do
-          México (23,2% do frame) ao de São Paulo (81,5%) mede 354px. De 1280 a
-          1419 sobram menos de 354 entre a moldura do aparelho e a borda da
-          janela, e o rótulo do México nasceria metade atrás do telefone — pior
-          que não existir. Nessa faixa quem nomeia o país é o `StageStatus`,
-          exatamente como já acontecia a 1024 e no celular.
+      {/* Rótulo. Some abaixo de 1420px, e não abaixo de `xl` (1280): o globo de
+          600px põe o pino mais a oeste (México) a 23px da moldura do aparelho a
+          1440, e abaixo dessa largura o corredor entre o telefone e a borda da
+          janela encurta até o rótulo do México nascer metade atrás do aparelho
+          — pior que não existir. Nessa faixa quem nomeia o país é o
+          `StageStatus`, exatamente como já acontecia a 1024 e no celular.
           1420 e não 1440: media query mede a viewport SEM a barra de rolagem,
           e uma janela de 1440 no Windows reporta 1430. */}
       <span

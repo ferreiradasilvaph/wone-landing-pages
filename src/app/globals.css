@@ -617,6 +617,55 @@ code {
   animation: hero-ping 1.15s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
+/* O GLOBO DO PALCO DO HERO (`HeroGlobe`).
+
+   Oceano e atmosfera são CSS, e não canvas, por dois motivos: custam zero por
+   quadro e estão pintados no HTML DO SERVIDOR — o planeta existe antes de o
+   JavaScript montar a nuvem de pontos, então a entrada dos pontos não é uma
+   aparição, é um pouso. O degradê fora de centro (36% 28%) é a mesma luz de
+   cima-esquerda que o laço usa para iluminar cada ponto. */
+.globe-sea {
+  border-radius: 50%;
+  background: radial-gradient(circle at 36% 28%, var(--ink-900) 0%, var(--ink-950) 72%);
+}
+
+/* O fio de atmosfera: um anel INTERNO de 1,5px, sem blur. Um halo desfocado
+   aqui viraria mancha cinza sobre o preto da página (mesma razão de o site ter
+   uma sombra só), e `box-shadow` com blur grande em elemento de 600px é das
+   coisas mais caras que o compositor faz. */
+.globe-air {
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1.5px rgba(255, 255, 227, 0.12);
+}
+
+/* O arco do país ativo até o aparelho: traça em 900ms, espera e some. `path`
+   com `pathLength="1"` para o comprimento do traço não depender da geometria,
+   que muda a cada país. Montar é animar — o nó tem `key` do país, então ele dá
+   UMA volta por ativação e nunca entra em laço. */
+@keyframes globe-arc {
+  0% {
+    stroke-dashoffset: 1;
+    opacity: 0.9;
+  }
+  38% {
+    stroke-dashoffset: 0;
+    opacity: 0.9;
+  }
+  82% {
+    stroke-dashoffset: 0;
+    opacity: 0.9;
+  }
+  100% {
+    stroke-dashoffset: 0;
+    opacity: 0;
+  }
+}
+
+.globe-arc {
+  stroke-dasharray: 1;
+  animation: globe-arc 2.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
 /* Entrada em escada dos blocos de "Como funciona" (`StepEnter`). A distância
    vem por `style`, porque muda por chamada. */
 @keyframes step-enter {

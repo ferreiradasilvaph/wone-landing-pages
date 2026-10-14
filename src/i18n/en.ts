@@ -61,7 +61,7 @@ export const en: Content = {
         { code: "MXN", city: "Mexico City" },
         { code: "COP", city: "Bogotá" },
       ],
-      srIntro: "Map of Latin America with the simulated checkout in four countries:",
+      srIntro: "Globe with the simulated checkout in four countries:",
     },
   },
 
