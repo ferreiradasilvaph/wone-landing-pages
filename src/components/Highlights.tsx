@@ -1,13 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import dynamic from "next/dynamic";
 import { useContent, useLanguage } from "@/i18n";
 import { Section } from "./Section";
 import { SectionHead } from "./SectionHead";
-
-const EASE = [0.16, 1, 0.3, 1] as const;
 
 /* --------------------------------------------------------------------------
    Demos sob demanda
@@ -25,15 +22,21 @@ const EASE = [0.16, 1, 0.3, 1] as const;
    O caminho do `import()` precisa ser literal — nem variável, nem template —
    ou o bundler não liga o chunk à chamada.
 
-   `minH` é a altura REAL de cada demo, medida no navegador com o painel já
-   montado (celular 390: painel de 348; desktop 1440: painel de 696). Ela fica
-   na caixa do corpo do painel para o esqueleto ocupar exatamente o espaço que a
-   demo vai ocupar: é o que mantém o CLS em zero quando o chunk chega, e o que
-   impede o salto ao trocar de aba. Mexer numa demo é mexer nestes números.
+   `minH` é a altura NUA de cada demo — a caixa dela, sem o respiro do painel —,
+   medida no navegador com a demo montada. Ela fica no invólucro INTERNO do
+   corpo do painel, e não na caixa que leva o `p-4 sm:p-6`: com
+   `box-sizing: border-box` o `min-height` dali incluiria o padding, e a caixa
+   ficava 48px (desktop) ou ~32px (celular) mais curta com o esqueleto do que
+   com a demo — o salto do chunk chegando valia 0,00578 de CLS a 412, medido na
+   entrega, que é a única que monta sem clique. Agora o esqueleto ocupa o espaço
+   exato da demo e nada se move, nem na troca de aba.
 
-   Medidas (celular/desktop, o maior entre português e inglês): entrega 508/319,
-   blocos 886/396, confirmação 605/363, checkout 700/368 — o inglês quebra linha
-   noutro lugar e é ele quem manda na entrega.
+   Medidas de 14/10 (celular 412 / desktop 1440), com `min-height: 0` aplicado à
+   caixa para ler a altura NATURAL da demo montada, nos dois idiomas — e os dois
+   deram o mesmo número: entrega 296/204, blocos 818/350, confirmação 585/332,
+   checkout 647/320. Em px, e não em rem, porque é px o que a régua mede e o que
+   o texto das demos usa (`text-[13px]`): em rem seria dividir tudo por 16 a
+   cada medição, sem ganho nenhum.
    O editor de fluxos troca de desenho em 768px (o `matchMedia` dele), e não em
    640 como as outras três: por isso o `md:` no lugar do `sm:`.
    -------------------------------------------------------------------------- */
@@ -45,10 +48,20 @@ const DemoSkeleton = () => (
   <div aria-hidden className="rounded-field flex-1 bg-ink-900" />
 );
 
+/* `heavy` é a demo que abre um contexto WebGL (o guindaste e o globo). Ela é a
+   única que desmonta ao sair de vista: a regra dura do projeto diz que o número
+   de contextos WebGL vivos não aumenta, e manter as quatro montadas levava o
+   teto de 1 para 2 (medido: 0 canvas sem clique, 1 abrindo a aba 3, 2 abrindo
+   também a 4, e os dois ficavam vivos para sempre). Esconder o canvas o põe em
+   `frameloop="demand"` e em 0 chamadas GL — mas o contexto continua alocado, e
+   é o contexto que a regra conta. As outras duas ficam montadas: é o que
+   preserva o funil que o lead montou no editor e poupa a remontagem da demo
+   mais pesada da página. */
 const DEMOS = [
   {
     key: "delivery",
-    minH: "min-h-[32rem] sm:min-h-[20rem]",
+    heavy: false,
+    minH: "min-h-[296px] sm:min-h-[204px]",
     Component: dynamic(
       () => import("./demos/DeliveryDemo").then((mod) => mod.DeliveryDemo),
       { ssr: false, loading: DemoSkeleton },
@@ -56,7 +69,8 @@ const DEMOS = [
   },
   {
     key: "blocks",
-    minH: "min-h-[56rem] md:min-h-[25rem]",
+    heavy: false,
+    minH: "min-h-[818px] md:min-h-[350px]",
     Component: dynamic(
       () => import("./demos/FlowEditorDemo").then((mod) => mod.FlowEditorDemo),
       { ssr: false, loading: DemoSkeleton },
@@ -64,7 +78,8 @@ const DEMOS = [
   },
   {
     key: "confirmation",
-    minH: "min-h-[38rem] sm:min-h-[23rem]",
+    heavy: true,
+    minH: "min-h-[585px] sm:min-h-[332px]",
     Component: dynamic(
       () => import("./demos/ConfirmationDemo").then((mod) => mod.ConfirmationDemo),
       { ssr: false, loading: DemoSkeleton },
@@ -72,7 +87,8 @@ const DEMOS = [
   },
   {
     key: "checkout",
-    minH: "min-h-[44rem] sm:min-h-[23.5rem]",
+    heavy: true,
+    minH: "min-h-[647px] sm:min-h-[320px]",
     Component: dynamic(
       () => import("./demos/CheckoutDemo").then((mod) => mod.CheckoutDemo),
       { ssr: false, loading: DemoSkeleton },
@@ -131,15 +147,33 @@ function useNearViewport<T extends Element>(ref: React.RefObject<T | null>) {
 export function Highlights() {
   const { highlights } = useContent();
   const { locale } = useLanguage();
-  const reduced = useReducedMotion();
   const items = highlights.items;
 
   const [active, setActive] = useState(0);
+  /**
+   * As abas já abertas, na ordem em que foram abertas. Demo montada FICA
+   * montada: trocar de aba só troca qual delas está visível.
+   *
+   * Antes a troca desmontava a anterior, e com ela ia embora tudo o que o lead
+   * tinha feito — o funil montado no editor —, além de pagar de novo o custo de
+   * montar (o editor de fluxos é a demo mais pesada da página). Escondida, a
+   * demo fica em `display:none`: não desenha e não é anunciada por leitor de
+   * tela.
+   *
+   * As duas demos 3D são a exceção (`heavy` em DEMOS): elas desmontam ao sair
+   * de vista, porque um contexto WebGL escondido continua alocado e a regra
+   * dura conta contextos, não quadros. Perdem o estado (a via desligada, o país
+   * escolhido) na volta; o chunk já está em cache, então remontar é barato.
+   */
+  const [opened, setOpened] = useState<readonly number[]>([0]);
   const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const panelRef = useRef<HTMLDivElement>(null);
   const nearPanel = useNearViewport(panelRef);
 
-  const select = useCallback((index: number) => setActive(index), []);
+  const select = useCallback((index: number) => {
+    setActive(index);
+    setOpened((lista) => (lista.includes(index) ? lista : [...lista, index]));
+  }, []);
 
   /** Setas movem o foco; Enter e Espaço confirmam a aba focada. */
   const onKeyDown = (event: React.KeyboardEvent, index: number) => {
@@ -164,7 +198,6 @@ export function Highlights() {
   };
 
   const demo = DEMOS[active] ?? DEMOS[0];
-  const Demo = demo.Component;
   const copy = highlights.demos[demo.key];
 
   /* As quatro figuras são inteiras hoje, mas o separador decimal continua
@@ -234,7 +267,16 @@ export function Highlights() {
 
   /* O painel: um degrau acima do fundo da seção (ink-800 sobre ink-850), na
      largura da coluna. A largura por demo e a transição de `max-width` saíram
-     — a moldura mudava de tamanho a cada clique e levava a página junto. */
+     — a moldura mudava de tamanho a cada clique e levava a página junto.
+
+     Ele fica alinhado ao ALTO da coluna, na linha do kicker (variante B), e por
+     isso sobra preto embaixo: medido a 1440×900, painel 1027–1369 contra a
+     coluna de texto que vai até 1571 — 202px na aba padrão, 58 em blocos, 85 em
+     confirmação e 90 em checkout. Fica assim de propósito: a espec reserva esse
+     pedaço para a fileira de chips dos 28 blocos ("até lá, nada"), e centrar o
+     painel (`self-center`) o desprenderia da linha do kicker, que é a régua da
+     variante. Não é o buraco do hero: ali o vão ficava entre dois blocos
+     visíveis; aqui é a margem da seção, sem nenhuma borda que a denuncie. */
   const painel = (
     <div
       ref={panelRef}
@@ -253,25 +295,34 @@ export function Highlights() {
         <span className="t-label shrink-0">{highlights.simulationLabel}</span>
       </div>
 
-      <div className={`flex flex-col p-4 sm:p-6 ${demo.minH}`}>
-        {nearPanel ? (
-          /* `initial={false}`: a primeira demo nasce pintada, e só a TROCA de
-             aba — que é gesto de quem está lendo — tem travessia. */
-          <AnimatePresence initial={false} mode="wait">
-            <motion.div
-              key={active}
-              className="flex flex-1 flex-col"
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              transition={{ duration: reduced ? 0 : 0.35, ease: EASE }}
-            >
-              <Demo />
-            </motion.div>
-          </AnimatePresence>
-        ) : (
-          <DemoSkeleton />
-        )}
+      {/* O respiro fica NESTA caixa e a altura mínima na de dentro: o
+          `min-height` de uma caixa `border-box` engole o próprio padding, e com
+          os dois juntos o esqueleto media 48px menos que a demo (32 no
+          celular). A travessia em `opacity` que havia aqui saiu junto com a
+          remontagem: trocar de aba é trocar de `display`, e animar isso só
+          atrasaria o que o lead pediu para ver. */}
+      <div className="flex flex-col p-4 sm:p-6">
+        <div className={`flex flex-1 flex-col ${demo.minH}`}>
+          {nearPanel ? (
+            DEMOS.map((item, index) => {
+              if (!opened.includes(index)) return null;
+              /* Demo 3D escondida desmonta: ver `heavy` em DEMOS. */
+              if (item.heavy && index !== active) return null;
+              const Demo = item.Component;
+
+              return (
+                <div
+                  key={item.key}
+                  className={index === active ? "flex flex-1 flex-col" : "hidden"}
+                >
+                  <Demo />
+                </div>
+              );
+            })
+          ) : (
+            <DemoSkeleton />
+          )}
+        </div>
       </div>
     </div>
   );

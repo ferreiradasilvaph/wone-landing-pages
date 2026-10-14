@@ -56,6 +56,42 @@ export function PhoneMockup({ paused = false }: { paused?: boolean }) {
   const [tick, setTick] = useState(0);
   // `true` enquanto o cartão do PIX está na tela, anunciando a venda seguinte.
   const [pixVisible, setPixVisible] = useState(true);
+  // Aba em segundo plano: o relógio para. `setTimeout` continua disparando em
+  // aba oculta (o navegador só o estrangula para 1×/s), então sem isto o
+  // visitante que volta de outra aba encontra o total somado às cegas — e o
+  // portão pede zero relógio rodando com a aba escondida. O estado nasce
+  // `false` e só é lido dentro do efeito: o primeiro render é igual nos dois
+  // casos, no servidor e no cliente.
+  const [tabHidden, setTabHidden] = useState(false);
+
+  useEffect(() => {
+    const sync = () => setTabHidden(document.hidden);
+    sync();
+    document.addEventListener("visibilitychange", sync);
+    return () => document.removeEventListener("visibilitychange", sync);
+  }, []);
+
+  /**
+   * Movimento reduzido: o relógio abaixo não vai rodar nunca, e a lista nasce
+   * vazia — quem pede menos movimento ficava com um aparelho em branco na
+   * primeira dobra, "RECEBIDO NESTA SIMULAÇÃO $0.00" sobre 150px de nada
+   * (medido: 9 s com `reduce` ligado, zero linhas). Semear `tick` em 1 mostra
+   * UMA venda na lista e o total que bate com ela, sem animação alguma.
+   *
+   * Dentro de um efeito de propósito: `useReducedMotion` jamais decide o
+   * primeiro render (ele é `null` no servidor), então o HTML do servidor
+   * continua igual com e sem a preferência — é a regra 7, e é o que mantém a
+   * hidratação intacta.
+   *
+   * O estado vai num timeout, e não direto no corpo do efeito, porque
+   * `setState` síncrono aqui dispara renderização em cascata (e o lint reprova,
+   * com razão) — o mesmo caminho que o `useNearViewport` de `Highlights` usa.
+   */
+  useEffect(() => {
+    if (!reduced) return;
+    const id = window.setTimeout(() => setTick((value) => (value === 0 ? 1 : value)), 0);
+    return () => window.clearTimeout(id);
+  }, [reduced]);
 
   const transactions = phone.transactions;
 
@@ -98,7 +134,7 @@ export function PhoneMockup({ paused = false }: { paused?: boolean }) {
    * sem efeito colateral — nada de somar o acumulado aqui dentro.
    */
   useEffect(() => {
-    if (reduced || paused) return;
+    if (reduced || paused || tabHidden) return;
 
     let cancelled = false;
     let timer: number;
@@ -120,7 +156,7 @@ export function PhoneMockup({ paused = false }: { paused?: boolean }) {
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [reduced, paused]);
+  }, [reduced, paused, tabHidden]);
 
   /** Venda que o cartão do PIX está anunciando agora. */
   const announced = transactions[tick % transactions.length];
@@ -129,12 +165,19 @@ export function PhoneMockup({ paused = false }: { paused?: boolean }) {
   // quando `tick` avança, cada item mantém a sua chave e escorrega um degrau
   // para baixo, enquanto a nova entra por cima. `tick - 1` porque a venda de
   // índice `tick` ainda está sendo anunciada pelo cartão do PIX.
-  const visible = Array.from({ length: VISIBLE }, (_, slot) => {
-    const position = tick - 1 - slot;
-    const index = ((position % transactions.length) + transactions.length) %
-      transactions.length;
-    return { ...transactions[index], key: position };
-  });
+  //
+  // A lista começa VAZIA (posições negativas ficam de fora): o aparelho abria
+  // com três entregas já feitas e, logo acima delas, "recebido nesta simulação
+  // $0.00" — o total só conta o que o visitante viu descer, e as três linhas
+  // diziam o contrário. Vazia, ela também mostra melhor o que a simulação
+  // existe para mostrar: o cartão sai, a linha desce, o total sobe. A caixa tem
+  // altura reservada (150px), então encher não mexe em nada (CLS 0).
+  const visible = Array.from({ length: VISIBLE }, (_, slot) => tick - 1 - slot)
+    .filter((position) => position >= 0)
+    .map((position) => {
+      const index = position % transactions.length;
+      return { ...transactions[index], key: position };
+    });
 
   return (
     <div role="img" aria-label={phone.ariaLabel} className="relative mx-auto w-fit">

@@ -68,6 +68,14 @@ const CONTROLE =
 const CONTROLE_TEXTO = `${CONTROLE} px-4`;
 const CONTROLE_ICONE = `${CONTROLE} w-9`;
 
+/* O mesmo alvo de 44px para as peças de 36: o botão "Rodar" (pílula `object` do
+   kit, que vem com 36 e não expande o alvo), as sete abas de categoria e os
+   blocos da paleta. 4px em cima e embaixo, sem mexer no desenho nem no layout.
+   Repetido nas três demos com botão porque `cta.ts` é kit e não se toca nesta
+   rodada — ver o comentário em DeliveryDemo.tsx. */
+const ALVO_44 =
+  "relative before:absolute before:inset-x-0 before:-inset-y-1 before:content-['']";
+
 /** Até onde o funil cresce, para o canvas não virar um tapete. */
 const MAX_NODES = 8;
 /** Quanto cada nó fica aceso quando o funil roda. */
@@ -401,6 +409,7 @@ export function FlowEditorDemo() {
             size="object"
             onClick={() => setPulse(0)}
             disabled={slots.length === 0 || running}
+            className={ALVO_44}
           >
             <Play className="h-3.5 w-3.5" aria-hidden />
             {builder.run}
@@ -432,7 +441,14 @@ export function FlowEditorDemo() {
       <div className="mt-3">
         {/* Canvas: a malha de pontos é o que faz ler como área de edição */}
         {/* O canvas é mockup dentro de card: fundo ink-950 com moldura de 1px e
-            r-12, a única exceção de card dentro de card da página. */}
+            r-12, a única exceção de card dentro de card da página.
+
+            O `radial-gradient` abaixo é a única `background-image` com a palavra
+            "gradient" em toda a seção, e ele NÃO é degradê: as duas paradas
+            caem no mesmo 1px, então o ponto tem borda dura e não existe rampa
+            de cor nenhuma. É o único jeito que o CSS tem de desenhar um padrão
+            de pontos sem imagem; o que a regra proíbe é a lavagem de cor sobre
+            malha, que foi o que saiu com a `.grid-mesh`. */}
         <div
           className="rounded-field relative overflow-x-auto border border-line bg-ink-950 p-1"
           style={{
@@ -685,7 +701,10 @@ export function FlowEditorDemo() {
           Agora a categoria é um filtro: a fileira de cima escolhe, e só os
           blocos dela aparecem. Os 28 continuam todos alcançáveis — em dois
           cliques em vez de um — e a paleta caiu para uma linha. */}
-      <div className="mt-6 flex flex-wrap items-center gap-x-2 gap-y-1.5">
+      {/* `gap-y-2` (8px), e não 6: o alvo de cada aba cresce 4px para cima e
+          para baixo, e com 6px de respiro os alvos de duas fileiras vizinhas se
+          sobreporiam — clique roubado. */}
+      <div className="mt-6 flex flex-wrap items-center gap-x-2 gap-y-2">
         <span className="t-label mr-1">{builder.palette}</span>
         {demo.categories.map((category, categoryIndex) => {
           const meta = CATEGORY_META[categoryIndex] ?? CATEGORY_META[0];
@@ -698,7 +717,7 @@ export function FlowEditorDemo() {
               type="button"
               aria-pressed={isOpen}
               onClick={() => setOpenCategory(categoryIndex)}
-              className={`rounded-field flex h-9 cursor-pointer items-center gap-1.5 px-3 text-[13px] font-semibold transition-colors duration-200 ${
+              className={`rounded-field flex h-9 cursor-pointer items-center gap-1.5 px-3 text-[13px] font-semibold transition-colors duration-200 ${ALVO_44} ${
                 isOpen ? "bg-ink-700 text-cream" : "text-faint hover:bg-ink-750"
               }`}
             >
@@ -713,13 +732,13 @@ export function FlowEditorDemo() {
         })}
       </div>
 
-      <ul className="mt-2.5 flex min-h-9 flex-wrap gap-1.5">
+      <ul className="mt-2.5 flex min-h-9 flex-wrap gap-x-1.5 gap-y-2">
         {(demo.categories[openCategory]?.items ?? []).map((item, itemIndex) => (
           <li key={item.name}>
             <button
               type="button"
               onClick={() => add(openCategory, itemIndex, full)}
-              className="rounded-field flex h-9 cursor-pointer items-center bg-ink-750 px-3 text-[13px] text-muted transition-colors duration-200 hover:bg-ink-700 hover:text-cream"
+              className={`rounded-field flex h-9 cursor-pointer items-center bg-ink-750 px-3 text-[13px] text-muted transition-colors duration-200 hover:bg-ink-700 hover:text-cream ${ALVO_44}`}
             >
               {item.name}
             </button>
@@ -829,9 +848,16 @@ function NodeCard({
             event.stopPropagation();
             onRemove();
           }}
-          /* 28px, e não os 44 do portão: o alvo mora DENTRO do nó de 150×52, e
-             alargá-lo faria o clique de selecionar virar clique de apagar. */
-          className="flex h-7 w-7 shrink-0 cursor-pointer items-center justify-center rounded-full opacity-0 transition-opacity group-hover/node:opacity-60 hover:opacity-100 focus-visible:opacity-100"
+          /* O desenho continua de 28px — ele mora DENTRO do nó de 150×52 —, mas
+             o ALVO vai aos 44 do portão pelo pseudo-elemento: 8px acima e
+             abaixo, 16px à esquerda e 6px à direita (onde o `overflow-hidden`
+             do nó corta, então pedir mais seria pedir ao vento). Resultado
+             medido: 50×44. Sim, a faixa à direita do nó apaga em vez de
+             selecionar — é o que o "x" visível ali anuncia, e sobram ~100px de
+             nó para o clique de selecionar.
+             `pointer-coarse:opacity-60`: sem hover, o "x" nunca aparecia no
+             celular, e um alvo invisível de 44px era pior do que um de 28. */
+          className="relative flex h-7 w-7 shrink-0 cursor-pointer items-center justify-center rounded-full opacity-0 transition-opacity group-hover/node:opacity-60 hover:opacity-100 focus-visible:opacity-100 pointer-coarse:opacity-60 before:absolute before:-inset-y-2 before:-left-4 before:-right-1.5 before:content-['']"
         >
           <X className="h-3 w-3" />
         </button>

@@ -10,6 +10,13 @@ import { useContent } from "@/i18n";
 
 const EASE = [0.16, 1, 0.3, 1] as const;
 
+/* Alvo de toque do botão `object`: 36px de pílula + 4px de pseudo-elemento em
+   cima e embaixo = os 44 do portão, sem mudar o desenho. Repetido nas três
+   demos com botão porque `cta.ts` é kit e não se toca nesta rodada — ver o
+   comentário em DeliveryDemo.tsx. */
+const ALVO_44 =
+  "relative before:absolute before:inset-x-0 before:-inset-y-1 before:content-['']";
+
 /* O globo num chunk próprio: o three só é baixado por quem abre esta aba. */
 const GlobeScene = dynamic(() => import("./GlobeScene"), {
   ssr: false,
@@ -156,7 +163,7 @@ export function CheckoutDemo() {
           {/* Botão de produto: o `object` do CtaButton, a mesma pílula de
               "Rodar" e "Simular de novo". Desabilitado de propósito — é o
               checkout do cliente, não uma ação desta página. */}
-          <CtaButton size="object" disabled className="mt-4 w-full">
+          <CtaButton size="object" disabled className={`mt-4 w-full ${ALVO_44}`}>
             {country.symbol} {price.display}
           </CtaButton>
 

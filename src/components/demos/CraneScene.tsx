@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import {
   ContactShadows,
@@ -357,27 +357,70 @@ function Rig({ down, hot, phase, reduced }: SceneProps) {
 }
 
 /**
+ * `true` enquanto a caixa da cena está de fato na tela.
+ *
+ * Uma aba de demo escondida fica em `display:none` — a demo continua montada
+ * para não perder o que o visitante fez nela —, e um elemento assim não
+ * intersecta nada: o observador devolve `false` e o laço de renderização para.
+ * O mesmo vale para quem rolou a página para longe da seção.
+ */
+function useOnScreen(ref: React.RefObject<HTMLDivElement | null>) {
+  const [onScreen, setOnScreen] = useState(false);
+
+  useEffect(() => {
+    const node = ref.current;
+    if (!node) return;
+
+    // Navegador sem IntersectionObserver: deixa a cena correndo, que é o
+    // comportamento antigo. O estado vai num timeout para não disparar
+    // renderização em cascata dentro do efeito.
+    if (typeof IntersectionObserver === "undefined") {
+      const id = window.setTimeout(() => setOnScreen(true), 0);
+      return () => window.clearTimeout(id);
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => setOnScreen(entries.some((entry) => entry.isIntersecting)),
+      { rootMargin: "100px 0px" },
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [ref]);
+
+  return onScreen;
+}
+
+/**
  * Canvas da cena. Montado só quando a demo das três vias aparece — o
  * `ConfirmationDemo` o carrega com `next/dynamic`, então o three não entra no
  * pacote de quem nunca abre esta aba.
+ *
+ * Fora da tela (aba trocada, página rolada) o laço cai para `demand`: o
+ * contexto WebGL continua vivo — remontá-lo a cada volta custa mais do que
+ * mantê-lo — mas não desenha quadro nenhum.
  */
 export default function CraneScene(props: SceneProps) {
   const dpr = useMemo<[number, number]>(() => [1, 1.5], []);
+  const box = useRef<HTMLDivElement>(null);
+  const onScreen = useOnScreen(box);
 
   return (
-    <Canvas
-      dpr={dpr}
-      camera={{ position: [0, 0.05, 6.3], fov: 37 }}
-      gl={{ antialias: true, alpha: true }}
-      style={{ background: "transparent" }}
-    >
-      <ambientLight intensity={0.55} />
-      <directionalLight position={[3.5, 5, 4]} intensity={2.3} />
-      {/* Contraluz laranja: separa a caixa do preto sem acender a cena toda */}
-      <directionalLight position={[-4, 1.5, -2.5]} intensity={1.1} color={BRAND} />
-      <pointLight position={[0, 0.2, 2.6]} intensity={6} distance={8} color="#FFD9B5" />
+    <div ref={box} className="h-full w-full">
+      <Canvas
+        frameloop={onScreen ? "always" : "demand"}
+        dpr={dpr}
+        camera={{ position: [0, 0.05, 6.3], fov: 37 }}
+        gl={{ antialias: true, alpha: true }}
+        style={{ background: "transparent" }}
+      >
+        <ambientLight intensity={0.55} />
+        <directionalLight position={[3.5, 5, 4]} intensity={2.3} />
+        {/* Contraluz laranja: separa a caixa do preto sem acender a cena toda */}
+        <directionalLight position={[-4, 1.5, -2.5]} intensity={1.1} color={BRAND} />
+        <pointLight position={[0, 0.2, 2.6]} intensity={6} distance={8} color="#FFD9B5" />
 
-      <Rig {...props} />
-    </Canvas>
+        <Rig {...props} />
+      </Canvas>
+    </div>
   );
 }

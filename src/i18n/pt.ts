@@ -66,9 +66,10 @@ export const pt = {
       { value: "3 vias", label: "Webhook, reconciliação e botão no chat até a entrega" },
       { value: "28 blocos", label: "Editor visual de funil, 4 deles de IA" },
     ],
-
-    /** Rótulos do PauseButton que controla o relógio do telefone. */
-    pause: { pause: "pausar", play: "retomar" },
+    /* Os rótulos do PauseButton que comanda o relógio do telefone NÃO moram
+       aqui: são `ui.pause` e `ui.play`, criados para os controles repetidos da
+       página (o carrossel de Recursos e o de Segurança já os usam). Duas cópias
+       do mesmo "pausar" acabariam divergindo na revisão de copy. */
   },
 
   /**
@@ -103,6 +104,10 @@ export const pt = {
     lead: "Do pagamento ao acesso, na mesma conta: PIX ou cartão, três vias de confirmação, convite de uso único no chat. Clique num número para ver cada parte rodar.",
     /** Etiqueta de ficção no cabeçalho do painel das demos (regra 4). */
     simulationLabel: "Simulação",
+    /* A grade de spec 2×2 lê quatro campos: `value`, `decimals`, `suffix` e
+       `title`. `icon` e `description` saíram — eram dos quatro cards com ícone
+       Lucide que a E1 removeu, e nenhum componente os lia mais (chave morta).
+       As descrições estão no histórico (commit 1dc6ce0) se voltarem a servir. */
     items: [
       {
         /* "1,2 s" não vive aqui: a grade fica FORA do painel rotulado
@@ -110,40 +115,28 @@ export const pt = {
            página (regra 4). O 1,2 s continua no título da demo, que mora dentro
            do painel. A figura desta célula é o convite de uso único por
            pagamento, que é fato do produto. */
-        icon: "Zap",
         value: 1,
         decimals: 0,
         suffix: "",
         title: "Convite por pagamento",
-        description:
-          "Do PIX confirmado ao convite no chat. O cliente paga de madrugada e entra no canal na hora, sem você tocar em nada.",
       },
       {
-        icon: "Boxes",
         value: 28,
         decimals: 0,
         suffix: "",
         title: "Blocos no editor",
-        description:
-          "Condições, esperas, etiquetas e integrações para desenhar qualquer funil. Quatro deles são de IA, para conversar e qualificar leads.",
       },
       {
-        icon: "ShieldCheck",
         value: 3,
         decimals: 0,
         suffix: "",
         title: "Vias de confirmação",
-        description:
-          "Webhook, reconciliação automática e o botão “Verificar pagamento” no chat. Se uma falhar, as outras duas garantem a entrega.",
       },
       {
-        icon: "Globe",
         value: 4,
         decimals: 0,
         suffix: "",
         title: "Países, moeda local",
-        description:
-          "Brasil, Argentina, México e Colômbia. O cliente vê o preço na moeda dele e paga pelo método que já usa.",
       },
     ],
 
@@ -158,15 +151,20 @@ export const pt = {
       delivery: {
         title: "Do PIX ao acesso em 1,2 s",
         subtitle: "Simulação de um pagamento às 03:14, com ninguém da equipe acordado.",
-        clock: "03:14",
-        clockNote: "Ninguém da sua equipe está acordado",
+        /* `clock` e `clockNote` saíram: o relógio dentro da demo repetia, com
+           outras palavras, a hora e a frase que já estão no subtítulo acima. */
         replay: "Simular de novo",
         done: "Acesso liberado",
+        /* `at` é a HORA da simulação, não a duração do passo: o carimbo trazia
+           "1,2 s" de volta a 60px do título, e a espec dá ao título o único
+           lugar desse número. Os quatro eventos caem dentro do mesmo segundo do
+           relógio — é isso que o log mostra, e a duração quem mede é o
+           cronômetro à direita. A hora é a mesma do subtítulo (03:14). */
         steps: [
-          { label: "PIX confirmado", detail: "A processadora avisa a Wone" },
-          { label: "Webhook recebido", detail: "Pagamento conferido e validado" },
-          { label: "Link único gerado", detail: "Convite de uso único para o canal" },
-          { label: "Convite enviado", detail: "O cliente recebe no chat" },
+          { at: "03:14:00", label: "PIX confirmado", detail: "A processadora avisa a Wone" },
+          { at: "03:14:00", label: "Webhook recebido", detail: "Pagamento conferido e validado" },
+          { at: "03:14:00", label: "Link único gerado", detail: "Convite de uso único para o canal" },
+          { at: "03:14:01", label: "Convite enviado", detail: "O cliente recebe no chat" },
         ],
       },
 
@@ -380,61 +378,78 @@ export const pt = {
     prev: "Recurso anterior",
     next: "Próximo recurso",
     /**
+     * Rótulos dos mini-mockups que abrem os cards. São SÓ rótulos: todo número
+     * que aparece dentro da moldura vem de `phone.transactions`, a mesma lista
+     * de vendas do telefone do hero. Nenhum valor é cunhado aqui (regra 4), e
+     * por isso quatro cards têm mockup e os outros seis só título e texto.
+     */
+    mockup: {
+      bump: "Adicionar ao pedido",
+      preview: "Prévia",
+      /* Sem prazo em dias: "renova em 12 dias" era invenção, e o lembrete é o
+         fato que o produto garante. */
+      reminder: "Lembrete enviado",
+    },
+    /**
      * Mesmos dez recursos e mesmos fatos de antes; a descrição passa à cadência
      * pergunta-resposta onde a pergunta é a dúvida real de quem vende ("Venceu?
      * Lembrete antes…"). Onde não havia pergunta honesta a fazer, a frase ficou
      * afirmativa: forçar a fórmula nos dez viraria tique.
+     *
+     * `id` é o mesmo nos dois idiomas e é o que liga o card ao seu mini-mockup
+     * (era `icon`, o nome do ícone Lucide que o card mostrava antes de a forma
+     * Operação substituí-lo pela moldura com dado de verdade).
      */
     items: [
       {
+        id: "bump",
         title: "Order bump",
         description: "O cliente já está pagando? O adicional entra no mesmo PIX, no checkout.",
-        icon: "ShoppingBag",
       },
       {
+        id: "upsell",
         title: "Upsell e downsell",
         description: "Comprou? Vem a oferta maior. Desistiu? Vem a menor.",
-        icon: "TrendingUp",
       },
       {
+        id: "packs",
         title: "Packs",
         description: "Venda conteúdo avulso. O cliente vê a prévia antes de comprar.",
-        icon: "Boxes",
       },
       {
+        id: "plans",
         title: "Planos flexíveis",
         description: "Mensal, trimestral, semestral, anual ou vitalício.",
-        icon: "Calendar",
       },
       {
+        id: "subscription",
         title: "Assinatura e renovação",
         description: "Venceu? Lembrete antes e remoção automática depois.",
-        icon: "RefreshCw",
       },
       {
+        id: "openPix",
         title: "PIX livre",
         description: "Quanto o cliente quer pagar? Ele escolhe dentro da faixa que você definir.",
-        icon: "Sliders",
       },
       {
+        id: "testMode",
         title: "Modo de teste",
         description: "Quer conferir antes? Percorra o funil no Telegram sem cobrança real.",
-        icon: "TestTube",
       },
       {
+        id: "remarketing",
         title: "Remarketing",
         description: "Campanhas segmentadas, com teste A/B e agendamento.",
-        icon: "Megaphone",
       },
       {
+        id: "delivery",
         title: "Entrega automática",
         description: "Pagou? O convite de uso único sai na hora, para canal ou grupo.",
-        icon: "Zap",
       },
       {
+        id: "ai",
         title: "IA no funil",
         description: "Quatro blocos de IA conversam, classificam e qualificam seus leads.",
-        icon: "Bot",
       },
     ],
   },
@@ -527,17 +542,20 @@ export const pt = {
     tracking: {
       title: "Rastreio",
       lead: "Do clique no anúncio à venda confirmada, servidor a servidor. Meta, TikTok, Kwai e X.",
+      /**
+       * Cada nó do caminho do dado. Três campos, e os dois últimos podem vir
+       * vazios: `chips` são os destinos nominais (viram etiqueta, não frase) e
+       * `code` é o valor de máquina do passo — o parâmetro de UTM que o link
+       * carrega e o comando que abre a conversa. Só entra em `code` o que é
+       * literal e verificável; nome de evento de pixel não está aqui porque
+       * nenhum foi confirmado pelo dono.
+       */
       flow: [
-        { label: "Clique no anúncio", detail: "Meta, TikTok, Kwai ou X" },
-        { label: "Start no bot", detail: "UTM e código de venda guardados" },
-        { label: "PIX gerado", detail: "Evento enviado servidor a servidor" },
-        { label: "Venda confirmada", detail: "Conversão atribuída à campanha" },
-        { label: "Página de entrega", detail: "Pixel melhora a qualidade dos dados" },
-      ],
-      benefits: [
-        "Meta, TikTok, Kwai, X, UTMify e Otimizey integrados, com envio servidor a servidor.",
-        "Links rastreáveis com análise de cliques, filtro de robôs e mapa de acessos.",
-        "Códigos de venda para medir cada campanha e criativo.",
+        { label: "Clique no anúncio", detail: "", chips: ["Meta", "TikTok", "Kwai", "X"], code: "utm_source" },
+        { label: "Start no bot", detail: "UTM e código de venda guardados", chips: [], code: "/start" },
+        { label: "PIX gerado", detail: "Evento enviado servidor a servidor", chips: [], code: "" },
+        { label: "Venda confirmada", detail: "Conversão atribuída à campanha", chips: [], code: "" },
+        { label: "Página de entrega", detail: "Pixel melhora a qualidade dos dados", chips: [], code: "" },
       ],
     },
   },
@@ -549,48 +567,46 @@ export const pt = {
        ilustrativa, e dizer as duas coisas na mesma seção era contradição. */
     lead: "Faturamento por hora, funil, LTV, taxas e extrato, num painel só. Clique numa aba para ver cada um; a amostra é ilustrativa.",
     simulationLabel: "Simulação",
+    /**
+     * O aviso que acompanha TODAS as cinco vistas, não só as três que tinham
+     * número grande: quem chega pela aba LTV precisa da mesma informação que
+     * quem chega pela de Faturamento. Uma chave só, porque é uma frase só —
+     * cinco subtítulos quase iguais era o que havia antes.
+     */
+    sampleNote: "Amostra ilustrativa. Nenhum dado de cliente.",
+    /**
+     * `short` é o rótulo da aba (cabeçalho de tabela) e `label` é a legenda
+     * longa da aba ativa, entre as abas e o painel. O `icon` saiu com os ícones
+     * das abas, e `panelTitle`/`panelSubtitle` saíram porque diziam, numa
+     * terceira redação, o que a aba e a legenda já dizem.
+     */
     views: [
       {
         id: "faturamento",
-        icon: "BarChart3",
         label: "Faturamento por dia e por hora, para descobrir seu melhor horário de venda",
         short: "Faturamento",
-        panelTitle: "Faturamento por hora",
-        panelSubtitle: "Amostra ilustrativa de um dia de operação",
       },
       {
         id: "funil",
-        icon: "Filter",
         /* Sem "completo": adjetivo de marketing fora das descrições. */
         label: "Cada passo do funil: start, PIX gerado e pagamento",
         short: "Funil",
-        panelTitle: "Funil de 100 leads",
-        panelSubtitle: "Do start no bot até a compra concluída",
       },
       {
         id: "ltv",
-        icon: "Users",
-        label: "LTV e tempo médio até a compra",
+        label: "LTV e tempo médio até a compra, ao longo da assinatura",
         short: "LTV",
-        panelTitle: "Valor por cliente",
-        panelSubtitle: "Quanto cada membro deixa ao longo da assinatura",
       },
       {
         id: "taxas",
-        icon: "Percent",
         label:
           "Taxas de upsell, downsell, order bump e recuperação, com os números por trás de cada uma",
         short: "Taxas",
-        panelTitle: "Taxas do funil",
-        panelSubtitle: "Onde cada real a mais é ganho",
       },
       {
         id: "extrato",
-        icon: "Receipt",
         label: "Extrato de transações por período, fluxo e gateway",
         short: "Extrato",
-        panelTitle: "Extrato de transações",
-        panelSubtitle: "Por período, fluxo e gateway",
       },
     ],
     panel: {
@@ -637,7 +653,6 @@ export const pt = {
     title: "O conteúdo não sai do canal. As chaves não saem do cofre.",
     items: [
       {
-        icon: "KeyRound",
         term: "2FA",
         summary: "código que só existe no seu aparelho",
         title: "Verificação em duas etapas (2FA)",
@@ -645,7 +660,6 @@ export const pt = {
           "Além da senha, o painel pede um código que só existe no seu aparelho. Mesmo que alguém descubra sua senha, não entra.",
       },
       {
-        icon: "CopySlash",
         term: "Anti-clone",
         summary: "o lead não encaminha, não salva, não copia",
         title: "Anti-clone de conteúdo",
@@ -653,7 +667,6 @@ export const pt = {
           "O conteúdo do canal fica travado contra encaminhamento e cópia. Quem pagou consome; quem não pagou não recebe de graça.",
       },
       {
-        icon: "Network",
         term: "Contas isoladas",
         summary: "nenhum dado cruza com outro produtor",
         title: "Contas isoladas",
@@ -661,7 +674,6 @@ export const pt = {
           "Cada conta roda em seu próprio espaço. Nenhum dado seu cruza com o de outro produtor da plataforma.",
       },
       {
-        icon: "Vault",
         term: "Cofre",
         summary: "tokens e chaves cifrados em repouso",
         title: "Cofre de segredos",
@@ -812,7 +824,9 @@ export const pt = {
     submit: "Lista de espera",
     sending: "Enviando…",
     disclaimer: "Acesso por convite. Sem spam.",
-    successTitle: "Tudo certo, você está na fila.",
+    /* O título do sucesso é `cta.success.title`: ele virou o H2 da seção, na
+       coluna da esquerda, e um segundo título aqui diria a mesma coisa duas
+       vezes. */
     successBody: "Abrimos o Telegram em outra aba. Se não apareceu, use o botão.",
     /**
      * A mesma tela quando o `window.open` devolveu `null` — bloqueador de

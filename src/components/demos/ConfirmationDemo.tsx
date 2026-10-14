@@ -3,14 +3,9 @@
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import dynamic from "next/dynamic";
-import {
-  AlertTriangle,
-  CreditCard,
-  Webhook,
-  RefreshCw,
-  MousePointerClick,
-} from "lucide-react";
+import { AlertTriangle, Webhook, RefreshCw, MousePointerClick } from "lucide-react";
 import { useContent } from "@/i18n";
+import { Chip } from "../Chip";
 import type { CranePhase } from "./CraneScene";
 
 const EASE = [0.16, 1, 0.3, 1] as const;
@@ -118,9 +113,15 @@ export function ConfirmationDemo() {
       <div className="grid grid-cols-1 items-center gap-6 sm:grid-cols-[15rem_minmax(0,1fr)] sm:gap-7">
         {/* O guindaste */}
         <div className="mx-auto w-[15rem] max-w-full">
-          <p className="flex items-center justify-center gap-2 text-[13px] font-semibold text-cream">
-            <CreditCard className="h-4 w-4 shrink-0 text-brand" />
-            {demo.payment}
+          {/* Os dois extremos da corrente são ESTADOS, e estado de produto sai
+              pelo `Chip` (item (e) da etapa): o gancho em cima é o pagamento
+              feito, a caixa embaixo é a entrega. Eram um `<p>` creme e um `<p>`
+              esmeralda escritos à mão, com a altura e o ponto do `ok`
+              reinventados aqui. O ícone do cartão saiu com eles: o ponto do
+              `tone="ok"` já marca o estado, e o desenho ao lado já diz que
+              aquilo é o pagamento. */}
+          <p className="flex justify-center">
+            <Chip tone="ok">{demo.payment}</Chip>
           </p>
 
           <div className="h-[17rem] w-full">
@@ -136,9 +137,9 @@ export function ConfirmationDemo() {
             initial={false}
             animate={{ opacity: hanging ? 1 : 0 }}
             transition={{ duration: reduced ? 0 : 0.3, ease: EASE }}
-            className="mx-auto mt-1 w-fit text-[13px] font-semibold text-emerald-400"
+            className="mx-auto mt-1 flex w-fit"
           >
-            {demo.delivered}
+            <Chip tone="ok">{demo.delivered}</Chip>
           </motion.p>
         </div>
 
@@ -175,8 +176,19 @@ export function ConfirmationDemo() {
                   >
                     {path.name}
                   </span>
-                  <span className="block text-[13px] text-faint">
-                    {isDown ? demo.offline : path.detail}
+                  {/* A segunda linha troca o complemento da via por um chip de
+                      estado quando ela cai. A caixa tem a altura do chip (28px)
+                      desde o primeiro quadro, com texto ou com chip: sem isso a
+                      linha crescia 12px ao desligar a via e a demo inteira
+                      pulava sob o cursor. `min-h`, e não `h`: a 412 o
+                      complemento da via sai em duas linhas, e uma altura
+                      cravada o cortaria. */}
+                  <span className="flex min-h-7 items-center">
+                    {isDown ? (
+                      <Chip tone="warn">{demo.offline}</Chip>
+                    ) : (
+                      <span className="text-[13px] text-faint">{path.detail}</span>
+                    )}
                   </span>
                 </span>
 

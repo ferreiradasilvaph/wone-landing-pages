@@ -49,8 +49,7 @@ export const en: Content = {
       },
       { value: "28 blocks", label: "Visual funnel editor, 4 of them AI" },
     ],
-
-    pause: { pause: "pause", play: "play" },
+    /* `pause`/`play` do telefone: veja `pt.ts` — são `ui.pause` e `ui.play`. */
   },
 
   integrations: {
@@ -73,44 +72,34 @@ export const en: Content = {
     title: "The customer pays. Wone checks. The invite lands.",
     lead: "From payment to access, in the same account: PIX or card, three confirmation paths, a single-use invite in chat. Click a number to watch each part run.",
     simulationLabel: "Simulation",
+    /* `icon` e `description` saíram dos quatro: chave morta desde que a E1
+       trocou os cards com ícone pela grade de spec. Veja `pt.ts`. */
     items: [
       {
         /* Veja `pt.ts`: o 1,2 s sai da grade e fica no título da demo, dentro
            do painel rotulado "Simulation". */
-        icon: "Zap",
         value: 1,
         decimals: 0,
         suffix: "",
         title: "One invite per payment",
-        description:
-          "From confirmed PIX to the invite in chat. Your customer pays at 3am and joins the channel right away, with no action from you.",
       },
       {
-        icon: "Boxes",
         value: 28,
         decimals: 0,
         suffix: "",
         title: "Editor blocks",
-        description:
-          "Conditions, waits, tags and integrations to design any funnel. Four of them are AI blocks, to chat with and qualify leads.",
       },
       {
-        icon: "ShieldCheck",
         value: 3,
         decimals: 0,
         suffix: "",
         title: "Confirmation paths",
-        description:
-          "Webhook, automatic reconciliation and a “Check payment” button in chat. If one fails, the other two still deliver.",
       },
       {
-        icon: "Globe",
         value: 4,
         decimals: 0,
         suffix: "",
         title: "Countries, local currency",
-        description:
-          "Brazil, Argentina, Mexico and Colombia. Customers see the price in their own currency and pay the way they already do.",
       },
     ],
 
@@ -118,15 +107,15 @@ export const en: Content = {
       delivery: {
         title: "From PIX to access in 1.2 s",
         subtitle: "A simulation of a payment at 3:14 am, with nobody on your team awake.",
-        clock: "03:14",
-        clockNote: "Nobody on your team is awake",
         replay: "Run it again",
         done: "Access granted",
+        /* `at` é a hora do relógio, não a duração — veja `pt.ts`. Sem o "am" do
+           subtítulo: o sufixo não cabe na coluna de 60px do log. */
         steps: [
-          { label: "PIX confirmed", detail: "The processor notifies Wone" },
-          { label: "Webhook received", detail: "Payment checked and validated" },
-          { label: "Single-use link created", detail: "A one-time invite to the channel" },
-          { label: "Invite sent", detail: "The customer gets it in chat" },
+          { at: "3:14:00", label: "PIX confirmed", detail: "The processor notifies Wone" },
+          { at: "3:14:00", label: "Webhook received", detail: "Payment checked and validated" },
+          { at: "3:14:00", label: "Single-use link created", detail: "A one-time invite to the channel" },
+          { at: "3:14:01", label: "Invite sent", detail: "The customer gets it in chat" },
         ],
       },
 
@@ -321,56 +310,62 @@ export const en: Content = {
     lead: "Plans from monthly to lifetime, packs with a preview, open PIX and a test mode with no real charges. Ten features, one at a time; use the arrows.",
     prev: "Previous feature",
     next: "Next feature",
+    /* Só rótulo: os valores dos mini-mockups vêm de `phone.transactions`. */
+    mockup: {
+      bump: "Add to order",
+      preview: "Preview",
+      reminder: "Reminder sent",
+    },
     items: [
       {
+        id: "bump",
         title: "Order bump",
         description: "Already paying? The add-on goes on the same PIX, at checkout.",
-        icon: "ShoppingBag",
       },
       {
+        id: "upsell",
         title: "Upsell and downsell",
         description: "Bought? A bigger offer follows. Dropped off? A smaller one does.",
-        icon: "TrendingUp",
       },
       {
+        id: "packs",
         title: "Packs",
         description: "Sell standalone content. The customer sees a preview before buying.",
-        icon: "Boxes",
       },
       {
+        id: "plans",
         title: "Flexible plans",
         description: "Monthly, quarterly, six-month, annual or lifetime.",
-        icon: "Calendar",
       },
       {
+        id: "subscription",
         title: "Subscription and renewal",
         description: "Expired? A reminder before, automatic removal after.",
-        icon: "RefreshCw",
       },
       {
+        id: "openPix",
         title: "Open PIX",
         description: "How much will they pay? They pick the amount within the range you set.",
-        icon: "Sliders",
       },
       {
+        id: "testMode",
         title: "Test mode",
         description: "Want to check first? Walk the funnel on Telegram with no real charge.",
-        icon: "TestTube",
       },
       {
+        id: "remarketing",
         title: "Remarketing",
         description: "Segmented campaigns, with A/B testing and scheduling.",
-        icon: "Megaphone",
       },
       {
+        id: "delivery",
         title: "Automatic delivery",
         description: "Paid? The single-use invite goes out at once, to channel or group.",
-        icon: "Zap",
       },
       {
+        id: "ai",
         title: "AI in the funnel",
         description: "Four AI blocks talk to, classify and qualify your leads.",
-        icon: "Bot",
       },
     ],
   },
@@ -448,17 +443,13 @@ export const en: Content = {
     tracking: {
       title: "Tracking",
       lead: "From the ad click to the confirmed sale, server to server. Meta, TikTok, Kwai and X.",
+      /** Três campos por nó — veja `pt.ts`. */
       flow: [
-        { label: "Ad click", detail: "Meta, TikTok, Kwai or X" },
-        { label: "Bot start", detail: "UTM and sale code stored" },
-        { label: "PIX generated", detail: "Event sent server to server" },
-        { label: "Sale confirmed", detail: "Conversion attributed to the campaign" },
-        { label: "Delivery page", detail: "Pixel improves data quality" },
-      ],
-      benefits: [
-        "Meta, TikTok, Kwai, X, UTMify and Otimizey integrated, sending server to server.",
-        "Trackable links with click analysis, bot filtering and an access map.",
-        "Sale codes to measure every campaign and creative.",
+        { label: "Ad click", detail: "", chips: ["Meta", "TikTok", "Kwai", "X"], code: "utm_source" },
+        { label: "Bot start", detail: "UTM and sale code stored", chips: [], code: "/start" },
+        { label: "PIX generated", detail: "Event sent server to server", chips: [], code: "" },
+        { label: "Sale confirmed", detail: "Conversion attributed to the campaign", chips: [], code: "" },
+        { label: "Delivery page", detail: "Pixel improves data quality", chips: [], code: "" },
       ],
     },
   },
@@ -468,47 +459,34 @@ export const en: Content = {
     title: "Which hour sells most. Where leads drop.",
     lead: "Revenue by hour, funnel, LTV, rates and statement, in one dashboard. Click a tab to see each one; the sample is illustrative.",
     simulationLabel: "Simulation",
+    /** O aviso das cinco vistas, numa chave só — veja `pt.ts`. */
+    sampleNote: "Illustrative sample. No customer data.",
     views: [
       {
         id: "faturamento",
-        icon: "BarChart3",
         label: "Revenue by day and by hour, to find your best selling window",
         short: "Revenue",
-        panelTitle: "Revenue by hour",
-        panelSubtitle: "Illustrative sample of one day of operation",
       },
       {
         id: "funil",
-        icon: "Filter",
         /* Sem "full": veja `pt.ts`. */
         label: "Every funnel step: start, PIX generated and payment",
         short: "Funnel",
-        panelTitle: "Funnel of 100 leads",
-        panelSubtitle: "From bot start to completed purchase",
       },
       {
         id: "ltv",
-        icon: "Users",
-        label: "LTV and average time to purchase",
+        label: "LTV and average time to purchase, over the subscription",
         short: "LTV",
-        panelTitle: "Value per customer",
-        panelSubtitle: "What each member leaves over the subscription",
       },
       {
         id: "taxas",
-        icon: "Percent",
         label: "Upsell, downsell, order bump and recovery rates, with the numbers behind each",
         short: "Rates",
-        panelTitle: "Funnel rates",
-        panelSubtitle: "Where the extra revenue is earned",
       },
       {
         id: "extrato",
-        icon: "Receipt",
         label: "Transaction statement by period, flow and gateway",
         short: "Statement",
-        panelTitle: "Transaction statement",
-        panelSubtitle: "By period, flow and gateway",
       },
     ],
     panel: {
@@ -543,7 +521,6 @@ export const en: Content = {
     title: "Content stays in the channel. Keys stay in the vault.",
     items: [
       {
-        icon: "KeyRound",
         term: "2FA",
         summary: "a code that only exists on your device",
         title: "Two-factor authentication (2FA)",
@@ -551,7 +528,6 @@ export const en: Content = {
           "Beyond the password, the dashboard asks for a code that only exists on your device. Even if someone learns your password, they can't get in.",
       },
       {
-        icon: "CopySlash",
         term: "Anti-cloning",
         summary: "leads can't forward, save or copy",
         title: "Content anti-cloning",
@@ -559,7 +535,6 @@ export const en: Content = {
           "Channel content is locked against forwarding and copying. Those who paid consume it; those who didn't don't get it for free.",
       },
       {
-        icon: "Network",
         term: "Isolated accounts",
         summary: "no data crosses with another producer",
         title: "Isolated accounts",
@@ -567,7 +542,6 @@ export const en: Content = {
           "Every account runs in its own space. None of your data ever crosses with another producer's on the platform.",
       },
       {
-        icon: "Vault",
         term: "Vault",
         summary: "tokens and keys encrypted at rest",
         title: "Secret vault",
@@ -714,7 +688,7 @@ export const en: Content = {
     submit: "Join the waitlist",
     sending: "Sending…",
     disclaimer: "Invite-only. No spam.",
-    successTitle: "All set — you're in the queue.",
+    /* O título do sucesso saiu daqui: é `cta.success.title`. Veja `pt.ts`. */
     successBody: "We opened Telegram in another tab. If it didn't appear, use the button.",
     /** Quando o `window.open` foi barrado; veja `pt.ts`. */
     successBodyManual: "Open Telegram using the button below.",

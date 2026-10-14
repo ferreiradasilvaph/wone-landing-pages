@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import {
   AdditiveBlending,
@@ -387,23 +387,66 @@ function Globe({ codes, active, reduced }: GlobeProps) {
 }
 
 /**
+ * `true` enquanto a caixa do globo está de fato na tela.
+ *
+ * Uma aba de demo escondida fica em `display:none` — a demo continua montada
+ * para não perder o país que o visitante escolheu —, e um elemento assim não
+ * intersecta nada: o observador devolve `false` e o laço de renderização para.
+ * O mesmo vale para quem rolou a página para longe da seção.
+ */
+function useOnScreen(ref: React.RefObject<HTMLDivElement | null>) {
+  const [onScreen, setOnScreen] = useState(false);
+
+  useEffect(() => {
+    const node = ref.current;
+    if (!node) return;
+
+    // Navegador sem IntersectionObserver: deixa a cena correndo, que é o
+    // comportamento antigo. O estado vai num timeout para não disparar
+    // renderização em cascata dentro do efeito.
+    if (typeof IntersectionObserver === "undefined") {
+      const id = window.setTimeout(() => setOnScreen(true), 0);
+      return () => window.clearTimeout(id);
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => setOnScreen(entries.some((entry) => entry.isIntersecting)),
+      { rootMargin: "100px 0px" },
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [ref]);
+
+  return onScreen;
+}
+
+/**
  * Canvas do globo. Carregado por `next/dynamic` dentro do `CheckoutDemo`, então
  * o three só vem para quem abre esta aba.
+ *
+ * Fora da tela (aba trocada, página rolada) o laço cai para `demand`: o
+ * contexto WebGL continua vivo — remontá-lo a cada volta custa mais do que
+ * mantê-lo — mas não desenha quadro nenhum.
  */
 export default function GlobeScene(props: GlobeProps) {
   const dpr = useMemo<[number, number]>(() => [1, 1.5], []);
+  const box = useRef<HTMLDivElement>(null);
+  const onScreen = useOnScreen(box);
 
   return (
-    <Canvas
-      dpr={dpr}
-      camera={{ position: [0, 0, 3.6], fov: 36 }}
-      gl={{ antialias: true, alpha: true }}
-      style={{ background: "transparent" }}
-    >
-      <ambientLight intensity={0.45} />
-      <directionalLight position={[2.4, 1.6, 2.6]} intensity={2.1} />
-      <directionalLight position={[-3, -1, -2]} intensity={0.7} color={BRAND} />
-      <Globe {...props} />
-    </Canvas>
+    <div ref={box} className="h-full w-full">
+      <Canvas
+        frameloop={onScreen ? "always" : "demand"}
+        dpr={dpr}
+        camera={{ position: [0, 0, 3.6], fov: 36 }}
+        gl={{ antialias: true, alpha: true }}
+        style={{ background: "transparent" }}
+      >
+        <ambientLight intensity={0.45} />
+        <directionalLight position={[2.4, 1.6, 2.6]} intensity={2.1} />
+        <directionalLight position={[-3, -1, -2]} intensity={0.7} color={BRAND} />
+        <Globe {...props} />
+      </Canvas>
+    </div>
   );
 }
