@@ -114,7 +114,9 @@
   /* Mono do sistema: a Geist Mono custava 22,9 kB de woff2 e um preload no
      caminho critico para servir eyebrow e numeros tabulares. A pilha abaixo
      resolve os dois em qualquer SO, e `tabular-nums` nao depende da familia. */
-  --font-mono: ui-monospace, "SF Mono", "Cascadia Mono", "Segoe UI Mono", "Roboto Mono", Menlo, Consolas, monospace;
+  --font-mono:
+    ui-monospace, "SF Mono", "Cascadia Mono", "Segoe UI Mono", "Roboto Mono",
+    Menlo, Consolas, monospace;
 
   /* Nenhuma animação em utilitário `animate-*`. As quatro que moravam aqui
      saíram com as peças que as usavam: `marquee` (a faixa de integrações passou
@@ -626,7 +628,11 @@ code {
    cima-esquerda que o laço usa para iluminar cada ponto. */
 .globe-sea {
   border-radius: 50%;
-  background: radial-gradient(circle at 36% 28%, var(--ink-900) 0%, var(--ink-950) 72%);
+  background: radial-gradient(
+    circle at 36% 28%,
+    var(--ink-900) 0%,
+    var(--ink-950) 72%
+  );
 }
 
 /* O fio de atmosfera: um anel INTERNO de 1,5px, sem blur. Um halo desfocado
@@ -635,7 +641,21 @@ code {
    coisas mais caras que o compositor faz. */
 .globe-air {
   border-radius: 50%;
-  box-shadow: inset 0 0 0 1.5px rgba(255, 255, 227, 0.12);
+  /* Laranja a 22%, e não creme a 12%: desde 14/10 a terra firme toda é do
+     laranja da marca, e o fio da atmosfera é a borda desse planeta — em creme
+     ele desenhava um aro cinza em volta de uma bola laranja. */
+  box-shadow: inset 0 0 0 1.5px rgba(255, 119, 0, 0.22);
+}
+
+/* A marca da Wone ao fundo do planeta (`HeroGlobe`), entre o oceano e os
+   pontos. Máscara e não `<img>`: o arquivo da marca é laranja chapado, e o que
+   se quer aqui é o creme a 6% — a máscara aproveita só o alfa do PNG e deixa a
+   cor com o CSS. O arquivo já está no cache: é o mesmo logotipo do cabeçalho. */
+.globe-mark {
+  background: var(--cream);
+  opacity: 0.06;
+  -webkit-mask: url("/images/logo-icon.png") center / contain no-repeat;
+  mask: url("/images/logo-icon.png") center / contain no-repeat;
 }
 
 /* O arco do país ativo até o aparelho: traça em 900ms, espera e some. `path`

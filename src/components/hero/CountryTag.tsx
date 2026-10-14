@@ -51,12 +51,19 @@ export function CountryTag({
 }) {
   return (
     <span ref={pinRef} className="absolute h-0 w-0" style={{ left, top }}>
-      {/* O ponto. Ativo: 8px em laranja cheio; em repouso: 6px a 50%. A
-          transição é de cor e tamanho — nada de escala, que brigaria com o
-          anel. */}
+      {/* O ponto. Desde 14/10 ele é CREME com anel laranja, e não laranja
+          chapado: a terra firme do globo passou a ser toda do laranja da marca,
+          e um pino laranja sobre um planeta laranja não é um pino. O creme é a
+          mesma cor dos quatro países acesos no canvas — o pino é a continuação
+          do brilho deles, e o anel laranja é o que o costura ao planeta.
+          Ativo: 8px de creme cheio com 2px de anel; em repouso: 6px a 60% com
+          1px. A transição é de cor, tamanho e anel — nada de escala, que
+          brigaria com o `hero-ping`. */}
       <span
-        className={`absolute top-1/2 left-1/2 rounded-full bg-brand transition-[background-color,width,height] duration-300 ${
-          active ? "-mt-1 -ml-1 h-2 w-2" : "-mt-[3px] -ml-[3px] h-1.5 w-1.5 bg-brand/50"
+        className={`absolute top-1/2 left-1/2 rounded-full bg-cream transition-[background-color,width,height,box-shadow] duration-300 ${
+          active
+            ? "-mt-1 -ml-1 h-2 w-2 ring-2 ring-brand"
+            : "-mt-[3px] -ml-[3px] h-1.5 w-1.5 bg-cream/60 ring-1 ring-brand/60"
         }`}
       />
 

@@ -186,7 +186,9 @@ export function Hero() {
   const pais = paises[ativo];
   const pins = paises.map((item) => ({
     code: item.code,
-    city: hero.stage.cities.find((cidade) => cidade.code === item.code)?.city ?? item.name,
+    city:
+      hero.stage.cities.find((cidade) => cidade.code === item.code)?.city ??
+      item.name,
     chip: chipDe(item, precos),
   }));
 
@@ -197,7 +199,10 @@ export function Hero() {
    * escolher, o conteúdo todo está aqui.
    */
   const resumo = `${hero.stage.srIntro} ${paises
-    .map((item) => `${item.name}: ${metodoDe(item)}, ${item.symbol} ${precoDe(precos, item.code)}`)
+    .map(
+      (item) =>
+        `${item.name}: ${metodoDe(item)}, ${item.symbol} ${precoDe(precos, item.code)}`,
+    )
     .join("; ")}.`;
 
   return (
@@ -228,7 +233,17 @@ export function Hero() {
               inteira subia 41px — CLS 0,097 a cada volta pela Argentina,
               justamente no elemento de LCP. Com `min-w-0` quem manda é a
               trilha, e quem cede é o chip (ele tem `truncate`). */}
-          <div className="min-w-0 lg:col-span-6">
+          {/* A INVERSÃO de 14/10, pedido literal do dono: "inverta de lugar o
+              texto venda pelo Telegram no automático com o globo terrestre".
+              Quem inverte é a `order`, não a ordem do DOM: o `<h1>` é o
+              elemento de LCP da página e tem de continuar sendo o PRIMEIRO
+              conteúdo do documento — no celular (onde ele é o LCP medido) não
+              existe `order` nenhuma, e a ordem fica a de sempre: texto, depois
+              o aparelho. A partir de `lg` o palco vai para as colunas 1–6 e o
+              texto para as 7–12. A caixa do `<h1>` não muda: `max-w-[34rem]`
+              dentro das mesmas seis colunas de 592px, as mesmas três linhas,
+              alinhado à esquerda da coluna dele. */}
+          <div className="min-w-0 lg:order-2 lg:col-span-6">
             {/* O mesmo `.t-kicker` de toda seção, com o traço de 24×1. Abaixo de
                 `sm` a cobertura dos quatro países não cabe numa linha de 13px, e
                 a versão curta entra no lugar. */}
@@ -241,7 +256,8 @@ export function Hero() {
                 linhas e empurrava "no" para junto de "automático", quebrando o
                 h1 em "Venda pelo / Telegram / no automático". */}
             <h1 className="t-display mt-6 max-w-[34rem] text-cream">
-              {hero.titleStart} <span className="text-brand">{hero.titleAccent}</span>
+              {hero.titleStart}{" "}
+              <span className="text-brand">{hero.titleAccent}</span>
             </h1>
 
             {/* O lead vem fatiado do dicionário: os trechos em objeto são os dois
@@ -277,7 +293,7 @@ export function Hero() {
             </div>
           </div>
 
-          <div className="min-w-0 lg:col-span-6">
+          <div className="min-w-0 lg:order-1 lg:col-span-6">
             {/* O PALCO. A altura é a do APARELHO, em pixels cravados — não mais
                 um `clamp` de `100svh`.
                 O dono pediu, em 14/10, "aumente o celular em tamanho (altura) e
@@ -310,8 +326,13 @@ export function Hero() {
                   palco, como se declara dentro do aparelho. Só a partir de `xl`
                   — a 1024 o telefone ocupa quase todo o palco e não sobra linha
                   livre acima dele (lá a palavra "Simulação" continua visível no
-                  cabeçalho do chat). */}
-              <p className="t-label absolute top-0 left-0 hidden xl:block">
+                  cabeçalho do chat).
+                  Desde a inversão ele fica no canto DIREITO, do lado do
+                  aparelho — à esquerda ele cairia em cima do globo. Medido a
+                  1440: o rótulo ocupa x 296–592 e y 0–20 do palco, e o disco
+                  (centro 98,336 e R 300) só começa em y 111 nessa faixa de x —
+                  90px de folga entre a linha e a borda do planeta. */}
+              <p className="t-label absolute top-0 right-0 hidden xl:block">
                 {hero.stage.label} · {ui.simulation}
               </p>
 
@@ -321,8 +342,14 @@ export function Hero() {
               {/* `relative` no celular, e não estático: a camada do mapa é
                   absoluta, e elemento posicionado pinta acima de conteúdo em
                   fluxo — sem isto o mapa cobriria a tela do aparelho. A partir
-                  de `lg` o telefone encosta na base do palco, à esquerda. */}
-              <div className="relative flex justify-center lg:absolute lg:bottom-0 lg:left-0 lg:justify-start">
+                  de `lg` o telefone encosta na base do palco, à DIREITA desde a
+                  inversão de 14/10: é o lado oposto ao sangramento do globo, e é
+                  o que mantém os quatro pinos fora da moldura: medido a 1024 —
+                  o pior caso, onde o palco tem 459px e a moldura 268 —, o pino
+                  mais a leste (São Paulo) cai em x 195 e a moldura começa em
+                  223, 22px depois da borda direita do ponto. Os outros três
+                  ficam em 151, 101 e 14. */}
+              <div className="relative flex justify-center lg:absolute lg:right-0 lg:bottom-0 lg:justify-end">
                 <PhoneMockup index={ativo} beat={batida} started={animado} />
               </div>
             </div>
@@ -332,7 +359,11 @@ export function Hero() {
                 "pausar"/"retomar" é texto de controle repetido (o carrossel de
                 Recursos e o de Segurança usam os mesmos). */}
             <div className="mt-3 flex items-center justify-between gap-3 min-[1420px]:justify-end">
-              <StageStatus code={pais.code} name={pais.name} chip={chipDe(pais, precos)} />
+              <StageStatus
+                code={pais.code}
+                name={pais.name}
+                chip={chipDe(pais, precos)}
+              />
               <PauseButton
                 pressed={paused}
                 onToggle={() => setPaused((valor) => !valor)}
@@ -349,8 +380,13 @@ export function Hero() {
             cliente cabe na primeira tela do celular (~80px), e some. */}
         <div className="mt-auto hidden grid-cols-3 gap-x-8 pt-10 pb-10 lg:grid">
           {hero.benefits.map((benefit) => (
-            <p key={benefit.value} className="max-w-[18rem] text-[13px] leading-5">
-              <span className="block font-semibold text-cream">{benefit.value}</span>
+            <p
+              key={benefit.value}
+              className="max-w-[18rem] text-[13px] leading-5"
+            >
+              <span className="block font-semibold text-cream">
+                {benefit.value}
+              </span>
               <span className="mt-0.5 block text-muted">{benefit.label}</span>
             </p>
           ))}
@@ -359,7 +395,10 @@ export function Hero() {
 
       {/* Irmã do container, não filha: a faixa atravessa a tela inteira. */}
       <div className="mt-16 lg:mt-0">
-        <IntegrationBand title={integrations.title} items={integrations.items} />
+        <IntegrationBand
+          title={integrations.title}
+          items={integrations.items}
+        />
       </div>
     </section>
   );

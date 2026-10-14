@@ -39,16 +39,49 @@ import {
 
    Os 5.102 pontos de `globeDots.ts` são montados UMA vez em `Float32Array`
    (~0,4 ms, dentro de efeito) e redesenhados a 30 fps. O desenho não faz 2.000
-   chamadas de `fill`: os pontos caem em 9 baldes (6 níveis de luz em creme + 3
-   de tingimento laranja), e cada balde é um `beginPath` com N arcos e UM
-   `fill`. No celular o globo fica atrás do aparelho, não tem pino nem rótulo e
+   chamadas de `fill`: os pontos caem em 10 baldes (6 níveis de terra laranja +
+   1 de costa + 3 dos quatro países em creme), e cada balde é um `beginPath` com
+   N arcos e UM `fill`. No celular o globo fica atrás do aparelho, não tem pino nem rótulo e
    nada visível muda com o país ativo — então ele é pintado UMA vez e nunca
    mais, zero `requestAnimationFrame`.
    -------------------------------------------------------------------------- */
 
 const TAU = Math.PI * 2;
-const CREME = "#ffffe3";
 const LARANJA = "#ff7700";
+
+/* --------------------------------------------------------------------------
+   A PALETA: UM PLANETA DE WONE
+
+   Pedido do dono de 14/10: "deixe o globo terrestre com a cara da Wone (...)
+   deixe claro que a plataforma possui dominação global no seu nicho". A cara é
+   a INVERSÃO da paleta anterior: a terra firme inteira — todo continente, não
+   só os quatro países — é pintada no laranja da marca, e o creme, que antes era
+   o chão, passa a ser o destaque dos quatro países onde a Wone cobra. Nenhum
+   dado novo entra na tela: quem diz onde a Wone opera continuam sendo os quatro
+   pinos e os quatro chips, que vêm de `payments.table.countries`. A dominação
+   é o que a imagem AFIRMA, não um número inventado.
+
+   A rampa da terra vai do braseiro (#8A3F0A, lado da sombra) ao laranja cheio
+   da marca (#FF7700, lado do sol) em seis passos. Quem escolhe o passo é o
+   mesmo alfa de antes — e isso não é economia de código, é o efeito: o alfa já
+   é `0,06 + 0,28·luz` caindo até o limbo, então o ponto escuro é escuro E
+   braseiro, o ponto aceso é opaco E laranja, e os dois somem juntos na borda.
+   -------------------------------------------------------------------------- */
+
+/** Braseiro → laranja da marca, em seis passos de luz. */
+const TERRA = [
+  "#8a3f0a",
+  "#a14a08",
+  "#b95506",
+  "#d06104",
+  "#e86c02",
+  "#ff7700",
+];
+/** A costa, só no lado iluminado: laranja claro. */
+const COSTA = "#ffb070";
+/** Os quatro países: creme quente na borda, creme puro no núcleo. */
+const PAIS_BORDA = "#ffe2b8";
+const PAIS_NUCLEO = "#ffffe3";
 
 /**
  * A guarda do laço, em ms. 27 e não 33: num monitor de 60 Hz os quadros chegam
@@ -63,8 +96,19 @@ const PASSO_MS = 27;
 const NUCLEO = 500 / 6371;
 const BORDA = 1100 / 6371;
 
-/** Alfa de cada balde: 6 níveis de creme (até 0,46) e 3 de laranja. */
-const ALFA = [0.038, 0.115, 0.192, 0.268, 0.345, 0.422, 0.2, 0.42, 0.72];
+/**
+ * Alfa e cor de cada balde: 6 níveis de terra (braseiro → laranja), 1 de costa
+ * e 3 dos países em creme. São dez `fill` por quadro, não um por ponto.
+ *
+ * O laranja pede mais alfa que o creme pedia para a mesma presença: a 0,42 o
+ * creme sobre o preto dá um cinza de luminância ~0,42, e o #FF7700 dá ~0,25 —
+ * daí a rampa subir até 0,52 no ponto mais aceso. Os países sobem até 0,86
+ * porque é deles que o olho precisa sair com a informação.
+ */
+const ALFA = [0.05, 0.14, 0.23, 0.32, 0.42, 0.52, 0.42, 0.26, 0.5, 0.86];
+const COR = [...TERRA, COSTA, PAIS_BORDA, PAIS_BORDA, PAIS_NUCLEO];
+/** Quantos baldes o laço percorre. */
+const BALDES = ALFA.length;
 
 type Nuvem = {
   /** Vetores na base da projeção, prontos para girar. */
@@ -213,7 +257,8 @@ export function HeroGlobe({
   useEffect(() => {
     const lg = window.matchMedia("(min-width: 1024px)");
     const xl = window.matchMedia("(min-width: 1280px)");
-    const sync = () => setModo(!lg.matches ? "celular" : xl.matches ? "laco" : "parado");
+    const sync = () =>
+      setModo(!lg.matches ? "celular" : xl.matches ? "laco" : "parado");
     sync();
     lg.addEventListener("change", sync);
     xl.addEventListener("change", sync);
@@ -308,8 +353,8 @@ export function HeroGlobe({
           else ctx!.moveTo(sx, sv);
           caneta = true;
         }
-        ctx!.globalAlpha = (forte ? 0.085 : 0.05) * g.ganho;
-        ctx!.strokeStyle = CREME;
+        ctx!.globalAlpha = (forte ? 0.09 : 0.06) * g.ganho;
+        ctx!.strokeStyle = LARANJA;
         ctx!.lineWidth = 1;
         ctx!.stroke();
       };
@@ -317,14 +362,61 @@ export function HeroGlobe({
       for (let m = -2; m <= 3; m += 1) {
         const lon = -72 + m * 30;
         const pontos: [number, number][] = [];
-        for (let s = 0; s <= 48; s += 1) pontos.push([-80 + (160 * s) / 48, lon]);
+        for (let s = 0; s <= 48; s += 1)
+          pontos.push([-80 + (160 * s) / 48, lon]);
         linha(pontos, false);
       }
       for (const lat of [0, 30, -30]) {
         const pontos: [number, number][] = [];
-        for (let s = 0; s <= 48; s += 1) pontos.push([lat, -72 - 90 + (180 * s) / 48]);
+        for (let s = 0; s <= 48; s += 1)
+          pontos.push([lat, -72 - 90 + (180 * s) / 48]);
         linha(pontos, lat === 0);
       }
+    }
+
+    /**
+     * A REDE: as quatro pernas que ligam as capitais onde a Wone cobra.
+     *
+     * É ESTÁTICA — quem viaja é o arco do pino até o aparelho, e dois
+     * movimentos no mesmo gesto brigariam. Cada perna é o grande-círculo entre
+     * duas capitais, erguido 3,5% do raio no meio do caminho e nada nas pontas,
+     * o que a solta do chão sem desgrudar do pino. Os pontos já nascem na base
+     * da projeção (`rede()`, uma vez); aqui só se gira, projeta e traça — um
+     * `stroke` para as quatro.
+     */
+    function malha(cy: number, sy: number, cp: number, sp: number) {
+      const g = geo.current!;
+      const R = g.raio;
+      const pts = rede();
+      const n = REDE_PASSOS + 1;
+
+      ctx!.beginPath();
+      for (let p = 0; p < REDE_PERNAS.length; p += 1) {
+        let caneta = false;
+        for (let s = 0; s < n; s += 1) {
+          const i = (p * n + s) * 3;
+          const x = pts[i];
+          const y = pts[i + 1];
+          const z = pts[i + 2];
+          const x1 = cy * x + sy * z;
+          const z1 = -sy * x + cy * z;
+          const y2 = cp * y - sp * z1;
+          const z2 = sp * y + cp * z1;
+          if (z2 <= 0) {
+            caneta = false;
+            continue;
+          }
+          const sx = R + x1 * R;
+          const sv = R - y2 * R;
+          if (caneta) ctx!.lineTo(sx, sv);
+          else ctx!.moveTo(sx, sv);
+          caneta = true;
+        }
+      }
+      ctx!.globalAlpha = 0.14 * g.ganho;
+      ctx!.strokeStyle = LARANJA;
+      ctx!.lineWidth = 1;
+      ctx!.stroke();
     }
 
     function desenha(yaw: number, pitch: number) {
@@ -358,27 +450,34 @@ export function HeroGlobe({
         const t = dados.tingimento[i];
         let balde: number;
         if (t > 0.02) {
+          /* Os quatro países: creme, e o da vez com meio passo a mais. */
           const s = t * (dados.pais[i] === atual ? 1.6 : 1);
-          balde = 6 + (s >= 1.2 ? 2 : s >= 0.6 ? 1 : 0);
+          balde = 7 + (s >= 1.2 ? 2 : s >= 0.6 ? 1 : 0);
         } else {
           /* Queda do alfa até o limbo: é o que evita a linha dura na borda. */
           const u = z2 >= 0.18 ? 1 : z2 / 0.18;
-          const alfa = (0.06 + 0.28 * lit + dados.ac[i]) * (u * u * (3 - 2 * u));
+          const alfa =
+            (0.06 + 0.28 * lit + dados.ac[i]) * (u * u * (3 - 2 * u));
           balde = (alfa * 13.04) | 0;
           if (balde > 5) balde = 5;
+          /* A costa só vira laranja claro onde há luz: um fio claro no lado da
+             sombra desenharia um litoral que o sol não está mostrando. */
+          if (dados.ac[i] > 0 && balde >= 4) balde = 6;
         }
 
         trab.x[n] = R + x1 * R;
         trab.y[n] = R - y2 * R;
-        trab.r[n] = dados.rb[i] * (0.72 + 0.4 * lit);
+        /* Os países ganham 18% de raio além do alfa: é o que faz os quatro
+           acesos ficarem legíveis contra uma terra que agora é toda laranja. */
+        trab.r[n] = dados.rb[i] * (0.72 + 0.4 * lit) * (balde >= 7 ? 1.18 : 1);
         trab.b[n] = balde;
         usados |= 1 << balde;
         n += 1;
       }
 
-      /* Um `beginPath` + um `fill` por balde: 9 chamadas de pintura por quadro,
-         não uma por ponto. */
-      for (let b = 0; b < 9; b += 1) {
+      /* Um `beginPath` + um `fill` por balde: dez chamadas de pintura por
+         quadro, não uma por ponto. */
+      for (let b = 0; b < BALDES; b += 1) {
         if (!(usados & (1 << b))) continue;
         ctx!.beginPath();
         for (let k = 0; k < n; k += 1) {
@@ -388,9 +487,13 @@ export function HeroGlobe({
           ctx!.arc(trab.x[k], trab.y[k], r, 0, TAU);
         }
         ctx!.globalAlpha = ALFA[b] * g.ganho;
-        ctx!.fillStyle = b < 6 ? CREME : LARANJA;
+        ctx!.fillStyle = COR[b];
         ctx!.fill();
       }
+
+      /* A rede POR CIMA da terra: embaixo de 5.102 pontos de laranja ela
+         desaparece, e ligar as quatro capitais é o que a imagem tem a dizer. */
+      malha(cy, sy, cp, sp);
       ctx!.globalAlpha = 1;
 
       /* Os pinos: `transform` com o DESLOCAMENTO a partir da posição de
@@ -507,18 +610,21 @@ export function HeroGlobe({
     const R = g.raio;
     const px = g.esquerda + R + x1 * R;
     const py = g.topo + R - y2 * R;
-    /* Meio da borda direita do aparelho: 300 de largura e 620 de altura
-       encostados na base do palco, que é a medida de `xl` — o único tamanho em
-       que o arco aparece. */
+    /* Meio da borda ESQUERDA do aparelho — o lado por onde o globo chega desde
+       a inversão de 14/10. 300 de largura e 620 de altura encostados na base
+       DIREITA do palco, que é a medida de `xl`, o único tamanho em que o arco
+       aparece: o destino é `largura − 300` (292 a 1440), não mais o 300 fixo da
+       borda direita de um aparelho que ficava à esquerda. */
     const altura = box.parentElement?.clientHeight ?? 656;
-    const tx = 300;
+    const largura = box.parentElement?.clientWidth ?? 592;
+    const tx = largura - 300;
     const ty = altura - 310;
     const qx = (px + tx) / 2;
     const qy = (py + ty) / 2 - 70;
 
     setArco({
       code: pins[activeIndex]?.code ?? "",
-      d: `M${px.toFixed(1)} ${py.toFixed(1)}Q${qx.toFixed(1)} ${qy.toFixed(1)} ${tx} ${ty}`,
+      d: `M${px.toFixed(1)} ${py.toFixed(1)}Q${qx.toFixed(1)} ${qy.toFixed(1)} ${tx.toFixed(1)} ${ty.toFixed(1)}`,
     });
   }, [activeIndex, pins]);
 
@@ -526,19 +632,37 @@ export function HeroGlobe({
     <div aria-hidden className="pointer-events-none absolute inset-0">
       {/* A CAIXA DO GLOBO: tamanho CRAVADO por breakpoint, sempre absoluta —
           CLS zero por construção, porque nada aqui participa do fluxo.
-          A 1440 ela sangra 90px pela borda direita da janela (quem corta é o
-          `overflow-x-clip` da seção), que é a mordida que a referência tem.
+          Em 14/10 o dono pediu para "inverter de lugar o texto (...) com o globo
+          terrestre": o palco passou para as colunas 1–6 e a caixa ESPELHOU —
+          agora ela sangra pela borda ESQUERDA da janela (202px além do palco,
+          que a 1440 dão 95px além da janela; quem corta é o `overflow-x-clip`
+          da seção), com o aparelho encostado na base direita do palco. É a
+          mesma mordida da referência, do outro lado.
           No celular ela fica centrada ATRÁS do aparelho: lá os quatro pinos
           cairiam todos dentro dos 268px da moldura, então eles não existem e
           quem nomeia o país é a `StageStatus`. */}
       <div
         ref={caixa}
-        className="absolute top-1/2 left-1/2 -mt-[210px] -ml-[210px] h-[420px] w-[420px] lg:top-[64px] lg:right-[-140px] lg:left-auto lg:mt-0 lg:ml-0 lg:h-[440px] lg:w-[440px] xl:top-[36px] xl:right-[-202px] xl:h-[600px] xl:w-[600px]"
+        className="absolute top-1/2 left-1/2 -mt-[210px] -ml-[210px] h-[420px] w-[420px] lg:top-[64px] lg:left-[-140px] lg:mt-0 lg:ml-0 lg:h-[440px] lg:w-[440px] xl:top-[36px] xl:left-[-202px] xl:h-[600px] xl:w-[600px]"
       >
         {/* Oceano e atmosfera: CSS, pintados no servidor. É o que faz o planeta
             existir antes de o JavaScript montar a nuvem. */}
         <span className="globe-sea absolute inset-0 block" />
         <span className="globe-air absolute inset-0 block" />
+
+        {/* A MARCA ao fundo do planeta: o ícone da Wone, 46% do diâmetro, creme
+            a 6%, ENTRE o oceano e os pontos — pintada pelo servidor, como o
+            oceano. É o que termina de dar a cara: o planeta é da Wone, e isso
+            se lê antes de qualquer rótulo.
+            É MÁSCARA, não `<img>`: o PNG da marca é laranja chapado, e
+            `filter: brightness(0) invert(1)` devolvia um branco frio que, a 6%
+            sobre o preto, ficava CINZA ao lado de uma terra toda laranja. A
+            máscara usa só o alfa do arquivo e pinta o creme da marca por baixo
+            — a cor é exata e não depende de conta de filtro. O arquivo é o
+            MESMO que o cabeçalho já pede na primeira dobra, então o navegador
+            não faz pedido novo. A caixa é absoluta e tem proporção cravada:
+            CLS 0. */}
+        <span className="globe-mark absolute top-1/2 left-1/2 block aspect-[642/400] w-[46%] -translate-x-1/2 -translate-y-1/2" />
 
         {/* A terra firme. Vazio e transparente até o primeiro quadro. */}
         <canvas ref={tela} className="absolute inset-0 h-full w-full" />
@@ -602,6 +726,60 @@ function alvo(code: string): [number, number, number] {
   return v;
 }
 
+/* ------------------------------------------------------------------ a rede */
+
+/**
+ * As quatro pernas da rede, em anel: México → Colômbia → Brasil → Argentina →
+ * México. São os MESMOS quatro países dos pinos — a rede não acrescenta
+ * mercado nenhum, ela mostra que os quatro estão ligados.
+ */
+const REDE_PERNAS: [string, string][] = [
+  ["MXN", "COP"],
+  ["COP", "BRL"],
+  ["BRL", "ARS"],
+  ["ARS", "MXN"],
+];
+
+/** Pontos por perna. 22 dá a curva lisa a R 300 sem virar polilinha visível. */
+const REDE_PASSOS = 22;
+
+let REDE: Float32Array | null = null;
+
+/**
+ * Os pontos das quatro pernas na base da projeção, montados UMA vez (4×23
+ * vetores): interpolação esférica entre as duas capitais — o grande-círculo,
+ * não a reta da tela — com uma elevação de 3,5% do raio no meio do caminho e
+ * zero nas pontas, que é o que ergue a perna do chão sem desgrudá-la do pino.
+ */
+function rede(): Float32Array {
+  if (REDE) return REDE;
+  const n = REDE_PASSOS + 1;
+  const out = new Float32Array(REDE_PERNAS.length * n * 3);
+  let k = 0;
+  for (const [de, para] of REDE_PERNAS) {
+    const a = alvo(de);
+    const b = alvo(para);
+    const d = Math.min(
+      1,
+      Math.max(-1, a[0] * b[0] + a[1] * b[1] + a[2] * b[2]),
+    );
+    const omega = Math.acos(d);
+    const so = Math.sin(omega);
+    for (let s = 0; s < n; s += 1) {
+      const t = s / REDE_PASSOS;
+      const wa = so < 1e-6 ? 1 - t : Math.sin((1 - t) * omega) / so;
+      const wb = so < 1e-6 ? t : Math.sin(t * omega) / so;
+      const sobe = 1 + 0.035 * Math.sin(Math.PI * t);
+      out[k] = (a[0] * wa + b[0] * wb) * sobe;
+      out[k + 1] = (a[1] * wa + b[1] * wb) * sobe;
+      out[k + 2] = (a[2] * wa + b[2] * wb) * sobe;
+      k += 3;
+    }
+  }
+  REDE = out;
+  return out;
+}
+
 /**
  * Média móvel do custo de desenho, exposta em `window.__globo` para a medição
  * no navegador (custo por quadro e contagem de quadros, que é como se prova que
@@ -612,7 +790,12 @@ function medidor(ms: number) {
   const w = window as typeof window & {
     __globo?: { quadros: number; soma: number; media: number; passo: number };
   };
-  const m = (w.__globo ??= { quadros: 0, soma: 0, media: 0, passo: GLOBE_STEP });
+  const m = (w.__globo ??= {
+    quadros: 0,
+    soma: 0,
+    media: 0,
+    passo: GLOBE_STEP,
+  });
   m.quadros += 1;
   m.soma += ms;
   m.media = m.soma / m.quadros;
