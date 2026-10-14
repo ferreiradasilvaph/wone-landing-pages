@@ -690,3 +690,17 @@ chat, as imagens das placas tem de ser 3d e transparentes, e melhore a
 qualidade das placas. diminui o tamanho do pulso. o pulso esta passando por
 dentro da imagem do podio. corrija tudo em uma velocidade mais acelerada.
 sinto que esta demorando demais para os agents trabalharem. trabalhe
+
+
+===============================================================================
+[73] 2026-10-14
+===============================================================================
+afaste um pouco (talvez um margin-padding) a placa do podio onde ela esta. faca
+o mesmo para a imagem do pulso, em relacao ao podio.
+
+
+===============================================================================
+[74] 2026-10-14
+===============================================================================
+inverta de lugar o texto "venda pelo telegram no automatico" com o globo
+terrestre.

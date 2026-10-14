@@ -635,20 +635,17 @@ const PODIO = { y: -1.72, altura: 0.3, topo: 1.15, base: 1.3 };
 const PODIO_TOPO = PODIO.y + PODIO.altura / 2;
 
 /**
- * Quanto o bloco afunda no pódio.
+ * Quanto o bloco fica ACIMA do pódio.
  *
- * O bloco tem 2,9 de altura centrado na origem, então a base dele cai em −1,45
- * e o topo do pódio está em −1,57: encostados, sem se tocar. Assim o acrílico
- * não tinha NADA atrás de si — a transparência existia e não aparecia, porque
- * através do vidro só se via o mesmo fundo escuro que já estava em volta.
- *
- * Encaixado 0,2, o aro de cima do pódio — que é a parte iluminada dele — passa
- * POR TRÁS da moldura de cristal e sai de lá torto, cortado na linha onde entra
- * no vidro. É a leitura mais barata e mais honesta de "isto é um sólido
- * transparente apoiado numa base", e é também como a peça de verdade é montada:
- * o bloco entra num rasgo da base, não fica equilibrado em cima dela.
+ * O bloco tem 2,9 de altura centrado na origem (base em −1,45) e o topo do
+ * pódio está em −1,57. Numa versão anterior ele afundava 0,2 na base, para o
+ * aro iluminado passar por trás do cristal; o dono pediu em 14/10 o contrário
+ * — "afaste um pouco (talvez um margin-padding) a placa do pódio" —, então o
+ * grupo sobe: valor negativo aqui levanta o bloco, e a base dele fica a 0,26
+ * do topo do pódio (0,12 de vão mais os 0,14 da subida). O aro continua
+ * visível por baixo da aresta, agora inteiro.
  */
-const ENCAIXE = 0.2;
+const ENCAIXE = -0.14;
 
 /**
  * O quadro da joia vestida, por fotografia.
@@ -667,15 +664,18 @@ const ENCAIXE = 0.2;
  * Em 0,73 a foto mede 1,74 × 2,63 e cabe ao lado do bloco (2,06 de largura) com
  * folga. O `y` vem da conta, não do olho:
  *
- *   PODIO_TOPO (−1,57) + FOLGA (0,12) + metade da altura (1,314) + o flutuar
- *   (FLOAT.sobe, 0,085) = −0,051
+ *   PODIO_TOPO (−1,57) + FOLGA (0,34) + metade da altura (1,314) + o flutuar
+ *   (FLOAT.sobe, 0,085) = 0,169
+ *
+ * A folga era 0,12; o dono pediu em 14/10 mais ar entre o pulso e o pódio,
+ * o mesmo vão que a placa ganhou.
  *
  * — a parcela do flutuar porque a peça sobe e desce no ar, e a base não pode
  * encostar no pódio nem no ponto mais baixo do movimento.
  */
 const VESTIDA_ESCALA: Record<string, number> = { "pulseira-100k-vestida": 0.73 };
 /** Quanto a base da foto fica acima do topo do pódio, no mínimo. */
-const FOLGA_PODIO = 0.12;
+const FOLGA_PODIO = 0.34;
 
 /** Meia espessura entre as duas faces de uma foto. */
 const FOTO_PELE = 0.005;
