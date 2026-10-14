@@ -3,7 +3,7 @@
 import { useContent } from "@/i18n";
 import { Section } from "@/components/Section";
 import { SectionHead } from "@/components/SectionHead";
-import { StepsTimeline } from "@/components/StepsTimeline";
+import { StepsStage } from "@/components/StepsStage";
 import { TextLink } from "@/components/TextLink";
 
 /**
@@ -29,8 +29,10 @@ export function HowItWorksSection() {
            de três: a terceira é a que sai em laranja. */
         titleLines={[tese[0], tese[1], tese[2]]}
         lead={howItWorks.lead}
-        /* Provisório: a E3 troca o `StepsTimeline` pelo palco 3D dos 4 passos. */
-        aside={<StepsTimeline />}
+        /* O momento ousado da página: a caixa presa ao alto com a cena 3D e o
+           "log" dos quatro passos rolando ao lado. No celular ele vem depois
+           dos dois caminhos e do link, que é a ordem em que a coluna é lida. */
+        aside={<StepsStage />}
       >
         {/* A mesma forma da lista "termo — complemento" da Lista de espera: a
             régua é do conjunto (`divide-y` no pai), não de cada item. */}
@@ -44,8 +46,18 @@ export function HowItWorksSection() {
             ))}
           </dl>
 
-          <div className="mt-6">
-            <TextLink href="#fila-de-espera">{howItWorks.listLink}</TextLink>
+          {/* `min-h-11` vai no próprio `<a>`: o link de texto mede a altura da
+              linha (23px medidos a 1440 e a 412), abaixo dos 44px de alvo de
+              toque. A altura tem de entrar no elemento que recebe o toque, não
+              num `<span>` em volta. O `mt-3` no lugar do `mt-6` devolve ao
+              conjunto o respiro que o link passou a ter por dentro (12 + ~10 =
+              os 24px da régua). É remendo local: a altura certa é em `TEXT_LINK`
+              (`src/components/cta.ts`), que valeria também para o hero e o
+              rodapé — mas o kit está fechado nesta rodada. */}
+          <div className="mt-3">
+            <TextLink href="#fila-de-espera" className="min-h-11">
+              {howItWorks.listLink}
+            </TextLink>
           </div>
         </div>
       </SectionHead>
