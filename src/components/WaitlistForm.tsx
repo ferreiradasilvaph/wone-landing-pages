@@ -1,14 +1,15 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { ArrowRight, CheckCircle2, Loader2, Send } from "lucide-react";
 import { useContent } from "@/i18n";
 import {
   EMAIL_PATTERN,
   waitlistMessage,
   type WaitlistFieldErrors,
 } from "@/lib/waitlist-errors";
-import { CTA } from "./cta";
+import { CtaButton } from "./CtaButton";
+import { TextLink } from "./TextLink";
+import { TEXT_LINK } from "./cta";
 
 type Status = "idle" | "loading" | "success" | "error";
 
@@ -30,15 +31,21 @@ const TELEGRAM_URL = process.env.NEXT_PUBLIC_TELEGRAM_URL?.trim() || null;
  * Campo de formulário é o caso em que a borda fica: ela é o que diz onde se
  * pode escrever. Fica fraca (`--line-strong`, 10% de creme) e laranja no foco.
  *
+ * O fundo saiu: o formulário está direto sobre o fundo da seção, sem card por
+ * baixo, então um campo mais escuro que o fundo desenhava uma caixa dentro de
+ * nada. Sem fundo, o que delimita é a borda.
+ *
  * O `outline-none` aqui não cega quem navega por teclado: o `:focus-visible`
  * global do `globals.css` continua desenhando o anel da marca. O que saiu foi o
  * `focus:ring-2` — era um segundo contorno em cima do primeiro.
  */
 const FIELD_BASE =
-  "w-full rounded-xl border bg-ink-950/70 px-4 py-3 text-sm text-cream placeholder:text-faint outline-none transition-colors focus:border-brand";
+  "w-full rounded-field border bg-transparent px-4 py-3 text-[15px] text-cream placeholder:text-faint outline-none transition-colors focus:border-brand";
+
+const LABEL = "text-[13px] font-medium text-muted";
 
 export function WaitlistForm() {
-  const { form } = useContent();
+  const { form, cta } = useContent();
   const [status, setStatus] = useState<Status>("idle");
 
   /* O estado guarda o CÓDIGO do erro, não a frase.
@@ -162,15 +169,12 @@ export function WaitlistForm() {
   };
 
   if (status === "success") {
+    /* A confirmação ocupa o lugar do formulário, sem card, sem ícone e à
+       esquerda como o resto da página. E5 a move para a coluna do texto, onde
+       o título dela passa a ser o H2 da seção. */
     return (
-      <div
-        role="status"
-        className="mx-auto flex max-w-md flex-col items-center gap-3 rounded-2xl bg-brand/10 p-6 text-center sm:p-8"
-      >
-        <CheckCircle2 className="h-8 w-8 text-brand" />
-        <p className="font-display text-lg font-semibold text-cream">
-          {form.successTitle}
-        </p>
+      <div role="status">
+        <p className="t-h3 text-cream">{form.successTitle}</p>
 
         {/* Sem `NEXT_PUBLIC_TELEGRAM_URL` no build não existe para onde mandar
             ninguém: nem botão, nem frase prometendo uma aba — só a confirmação
@@ -179,32 +183,25 @@ export function WaitlistForm() {
             definida na hora do `next build` (não basta no container); o README
             explica por quê e como. */}
         {TELEGRAM_URL && (
-          <>
-            <p className="text-sm leading-relaxed text-muted">
-              {popupBlocked ? form.successBodyManual : form.successBody}
-            </p>
-
-            <a
-              href={TELEGRAM_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={`${CTA} mt-2 inline-flex`}
-            >
-              <Send className="h-4 w-4" />
-              {form.openTelegram}
-            </a>
-          </>
+          <p className="mt-3 text-[15px] leading-relaxed text-muted">
+            {popupBlocked ? form.successBodyManual : form.successBody}
+          </p>
         )}
 
-        <p className="text-xs leading-relaxed text-faint">{form.successNote}</p>
+        <p className="mt-3 text-[13px] leading-relaxed text-faint">{form.successNote}</p>
 
-        <button
-          type="button"
-          onClick={() => setStatus("idle")}
-          className="cursor-pointer text-xs font-medium text-muted underline underline-offset-4 transition-colors hover:text-cream"
-        >
-          {form.again}
-        </button>
+        <div className="mt-6 flex flex-wrap items-center gap-6">
+          {TELEGRAM_URL && <CtaButton href={TELEGRAM_URL}>{form.openTelegram}</CtaButton>}
+
+          {/* "Cadastrar outro contato" é ação, não destino: leva o formulário de
+              volta ao início e não navega para lugar nenhum. Daí ser um
+              `<button>` vestido com a classe do link de texto, e não um `<a>`
+              com `href="#"` — o leitor de tela anunciaria um link que não leva
+              a nada. */}
+          <button type="button" onClick={() => setStatus("idle")} className={TEXT_LINK}>
+            {form.again}
+          </button>
+        </div>
       </div>
     );
   }
@@ -221,13 +218,9 @@ export function WaitlistForm() {
     : null;
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      noValidate
-      className="mx-auto flex max-w-md flex-col gap-4 text-left"
-    >
+    <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4 text-left">
       <div className="flex flex-col gap-1.5">
-        <label htmlFor="waitlist-name" className="text-xs font-medium text-muted">
+        <label htmlFor="waitlist-name" className={LABEL}>
           {form.name}
         </label>
         {/* `aria-required` ao lado do `required` (aqui e no e-mail): com o
@@ -251,14 +244,14 @@ export function WaitlistForm() {
           }`}
         />
         {nameError && (
-          <p id="waitlist-name-error" className="text-xs text-red-400">
+          <p id="waitlist-name-error" className="text-[13px] text-red-400">
             {nameError}
           </p>
         )}
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <label htmlFor="waitlist-email" className="text-xs font-medium text-muted">
+        <label htmlFor="waitlist-email" className={LABEL}>
           {form.email}
         </label>
         <input
@@ -278,14 +271,14 @@ export function WaitlistForm() {
           }`}
         />
         {emailError && (
-          <p id="waitlist-email-error" className="text-xs text-red-400">
+          <p id="waitlist-email-error" className="text-[13px] text-red-400">
             {emailError}
           </p>
         )}
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <label htmlFor="waitlist-nationality" className="text-xs font-medium text-muted">
+        <label htmlFor="waitlist-nationality" className={LABEL}>
           {form.nationality}
         </label>
         {/* As opções vêm do dicionário porque os rótulos são traduzidos; os
@@ -296,7 +289,7 @@ export function WaitlistForm() {
           name="nationality"
           defaultValue="BR"
           disabled={isLoading}
-          className={`${FIELD_BASE} border-line-strong cursor-pointer`}
+          className={`${FIELD_BASE} cursor-pointer border-line-strong`}
         >
           {form.countries.map((country) => (
             <option key={country.code} value={country.code} className="bg-ink-900">
@@ -307,7 +300,7 @@ export function WaitlistForm() {
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <label htmlFor="waitlist-telegram" className="text-xs font-medium text-muted">
+        <label htmlFor="waitlist-telegram" className={LABEL}>
           {form.telegram} <span className="text-faint">{form.optional}</span>
         </label>
         <input
@@ -322,7 +315,7 @@ export function WaitlistForm() {
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <label htmlFor="waitlist-phone" className="text-xs font-medium text-muted">
+        <label htmlFor="waitlist-phone" className={LABEL}>
           {form.phone} <span className="text-faint">{form.optional}</span>
         </label>
         <input
@@ -337,32 +330,26 @@ export function WaitlistForm() {
         />
       </div>
 
-      <button
-        type="submit"
-        disabled={isLoading}
-        className={`${CTA} mt-1 inline-flex cursor-pointer disabled:cursor-not-allowed disabled:opacity-60`}
-      >
-        {isLoading ? (
-          <>
-            <Loader2 className="h-4 w-4 animate-spin" />
-            {form.sending}
-          </>
-        ) : (
-          <>
-            {form.submit}
-            <ArrowRight className="h-4 w-4 stroke-[2.5]" />
-          </>
-        )}
-      </button>
+      {/* Par de fecho: o botão e, ao lado, o link de texto. O ícone `Send` e o
+          `Loader2` girando saíram — enviando, o que informa é o rótulo
+          ("Enviando…"), e a seta do botão é a do `CtaButton`. */}
+      <div className="mt-2 flex flex-wrap items-center gap-6">
+        <CtaButton type="submit" loading={isLoading}>
+          {isLoading ? form.sending : form.submit}
+        </CtaButton>
 
-      <p
-        aria-live="polite"
-        className="min-h-4 text-center text-xs font-medium text-red-400"
-      >
+        {TELEGRAM_URL && (
+          <TextLink href={TELEGRAM_URL} external>
+            {cta.telegramLink}
+          </TextLink>
+        )}
+      </div>
+
+      <p aria-live="polite" className="min-h-4 text-[13px] font-medium text-red-400">
         {status === "error" ? waitlistMessage(form.errors, errorCode) : ""}
       </p>
 
-      <p className="text-center text-xs text-faint">{form.disclaimer}</p>
+      <p className="text-[13px] text-faint">{form.disclaimer}</p>
     </form>
   );
 }

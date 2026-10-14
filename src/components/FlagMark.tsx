@@ -12,6 +12,10 @@ import { useId } from "react";
  *
  * São versões simplificadas: as faixas e os símbolos centrais que identificam
  * cada bandeira, sem os detalhes heráldicos que sumiriam neste tamanho.
+ *
+ * A bandeira é estática. O brilho que varria a do país em destaque saiu com os
+ * outros relógios decorativos: o que marca a escolha é o tom do fundo da linha,
+ * nunca um contorno ou um reflexo (regra 8).
  */
 
 function Brasil() {
@@ -73,12 +77,16 @@ const FLAGS: Record<string, () => React.ReactElement> = {
 export function FlagMark({
   code,
   className = "h-6 w-9",
-  active = false,
 }: {
   /** Código da moeda: BRL, ARS, MXN ou COP. */
   code: string;
+  /** Padrão 36×24, a medida da tabela de Pagamentos. */
   className?: string;
-  /** Em destaque, a bandeira ganha o brilho que varre a superfície. */
+  /**
+   * Não faz mais nada: a bandeira não tem estado. Continua aceita enquanto o
+   * quadro de Pagamentos ainda a passa — tirar a prop de lá é uma linha, e o
+   * arquivo é de outro agente nesta etapa.
+   */
   active?: boolean;
 }) {
   const clipId = useId();
@@ -101,11 +109,6 @@ export function FlagMark({
           <path d="M0 42 L60 42 L60 30 L0 16 Z" fill="#000" fillOpacity="0.12" />
         </g>
       </svg>
-
-      {/* Brilho que atravessa quando o país está ativo */}
-      {active && (
-        <span className="animate-flag-shine pointer-events-none absolute inset-y-0 -left-full w-full -skew-x-12 bg-gradient-to-r from-transparent via-white/55 to-transparent" />
-      )}
     </span>
   );
 }

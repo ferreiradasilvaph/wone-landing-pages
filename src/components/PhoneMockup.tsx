@@ -37,14 +37,19 @@ const USD = new Intl.NumberFormat("en-US", {
  *
  * As entregas descem — a mais recente nasce no topo e empurra as anteriores
  * para baixo, como numa central de notificações de verdade — e cada uma soma o
- * próprio valor ao "recebido no mês", ligando a venda ao caixa.
+ * próprio valor ao "recebido nesta simulação", ligando a venda ao caixa.
  *
  * Para leitores de tela é uma ilustração única (`role="img"` com um resumo), e
  * o interior fica escondido — solto, viraria uma enxurrada de números.
+ *
+ * `paused` vem de fora: o "pausar" fica sob o aparelho, no hero, porque é lá
+ * que ele é um controle da página e não um botão desenhado dentro do mockup.
+ * Pausado, o relógio não troca o cartão nem soma venda nenhuma; ao voltar, ele
+ * retoma da venda em que parou — nada se perde e o total nunca anda para trás.
  */
-export function PhoneMockup() {
+export function PhoneMockup({ paused = false }: { paused?: boolean }) {
   const reduced = useReducedMotion();
-  const { phone } = useContent();
+  const { phone, ui } = useContent();
 
   // Quantas vendas já entraram na lista. `tick` também é o índice da próxima a
   // ser anunciada pelo cartão do PIX.
@@ -61,7 +66,9 @@ export function PhoneMockup() {
   );
 
   /**
-   * Acumulado do mês: o valor de partida mais cada venda que já desceu na lista.
+   * Recebido nesta simulação: a soma das vendas que já desceram na lista, a
+   * partir de `phone.monthStart`, hoje zero — o total conta só o que o visitante
+   * viu acontecer, e nenhum faturamento que ninguém mediu.
    *
    * É derivado de `tick`, e não guardado num estado próprio: assim o número
    * grande não tem como divergir das notificações — ele é, por construção, a
@@ -91,7 +98,7 @@ export function PhoneMockup() {
    * sem efeito colateral — nada de somar o acumulado aqui dentro.
    */
   useEffect(() => {
-    if (reduced) return;
+    if (reduced || paused) return;
 
     let cancelled = false;
     let timer: number;
@@ -113,7 +120,7 @@ export function PhoneMockup() {
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [reduced]);
+  }, [reduced, paused]);
 
   /** Venda que o cartão do PIX está anunciando agora. */
   const announced = transactions[tick % transactions.length];
@@ -131,23 +138,15 @@ export function PhoneMockup() {
 
   return (
     <div role="img" aria-label={phone.ariaLabel} className="relative mx-auto w-fit">
-      {/* Único fundo do bloco: um halo laranja que respira. A centralização fica
-          no pai e a animação no filho — `breathe` anima `transform` e apagaria
-          o `-translate-*` se estivesse no mesmo elemento.
+      {/* O halo laranja que respirava atrás do aparelho saiu: era o maior blur
+          da primeira dobra, e o preto chapado é o fundo que a página escolheu.
+          O que separa o telefone do fundo agora é a sombra da moldura. */}
 
-          Fica bem fraco de propósito: só separa o aparelho do preto do fundo. O
-          halo forte de antes era o maior glow da primeira dobra. */}
+      {/* Moldura — a única borda e a única sombra do site (--shadow-device) */}
       <div
         aria-hidden
-        className="pointer-events-none absolute top-1/2 left-1/2 -z-10 hidden h-[22rem] w-[22rem] -translate-x-1/2 -translate-y-1/2 sm:block"
-      >
-        <div className="animate-breathe h-full w-full rounded-full bg-brand/10 blur-[90px]" />
-      </div>
-
-      {/* Moldura — a única borda visível do bloco */}
-      <div
-        aria-hidden
-        className="relative w-[268px] rounded-[2.6rem] border border-line-strong bg-gradient-to-b from-ink-750 via-ink-850 to-ink-900 p-[3px] shadow-[0_40px_80px_-20px_rgba(0,0,0,0.9)] sm:w-[300px]"
+        className="rounded-device relative w-[268px] border border-line-strong bg-gradient-to-b from-ink-750 via-ink-850 to-ink-900 p-[3px] sm:w-[300px]"
+        style={{ boxShadow: "var(--shadow-device)" }}
       >
         <div className="relative overflow-hidden rounded-[2.35rem] bg-ink-950">
           {/* Barra de status */}
@@ -164,47 +163,44 @@ export function PhoneMockup() {
 
           {/* Cabeçalho do chat */}
           <div className="mt-2 flex items-center gap-2.5 border-b border-line px-5 pb-3">
-            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-brand/15">
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand/15">
               <WoneIcon className="h-3.5 w-auto" />
             </span>
-            <span className="leading-tight">
-              <span className="block text-sm font-semibold text-cream">
+            <span className="min-w-0 leading-tight">
+              <span className="block truncate text-sm font-semibold text-cream">
                 {phone.botName}
               </span>
-              <span className="flex items-center gap-1 text-[10px] text-emerald-400">
+              <span className="flex items-center gap-1 text-[11px] text-emerald-400">
                 <span className="h-1 w-1 rounded-full bg-emerald-400" />
                 {phone.online}
               </span>
             </span>
+            {/* A ficção se declara dentro do próprio objeto (regra 4): a tela é
+                uma simulação, e quem olha lê isso no mesmo lugar em que lê o
+                nome do bot. */}
+            <span className="t-label ml-auto shrink-0">{ui.simulation}</span>
           </div>
 
-          {/* Anéis + logo */}
-          <div className="relative flex h-[122px] items-center justify-center">
-            {[126, 98, 70].map((size, index) => (
-              <span
-                key={size}
-                className="absolute rounded-full border border-brand"
-                style={{ height: size, width: size, opacity: 0.22 - index * 0.05 }}
-              />
-            ))}
-
-            {[0, 1.6].map((delay) => (
-              <span
-                key={delay}
-                className="animate-pulse-ring absolute h-[70px] w-[70px] rounded-full border border-brand/50"
-                style={{ animationDelay: `${delay}s` }}
-              />
-            ))}
-
-            <span className="relative flex h-14 w-14 items-center justify-center rounded-full bg-brand/10 shadow-[0_0_28px_rgba(255,119,0,0.45)]">
-              <WoneIcon className="h-6 w-auto" />
+          {/* Marca, no bloco de 40px. Os três anéis fixos e os dois que pulsavam
+              saíram: eram o relógio decorativo da primeira dobra, e o aparelho
+              já tem movimento onde ele significa alguma coisa — a venda que
+              entra. Sem eles o telefone encolhe ~70px, que é o que faz o cartão
+              do PIX caber na primeira tela do celular. */}
+          <div className="flex h-12 items-center justify-center sm:h-14">
+            <span className="flex h-10 w-10 items-center justify-center rounded-full bg-brand/10">
+              <WoneIcon className="h-5 w-auto" />
             </span>
           </div>
 
           {/* Confirmação do PIX: aparece e some com valores diferentes. A altura
-              é reservada para a lista abaixo não subir quando ele sai. */}
-          <div className="mx-4 h-[58px]">
-            <AnimatePresence mode="wait">
+              é reservada para a lista abaixo não subir quando ele sai — 72px =
+              20 de respiro + 19 do valor + duas linhas de 13 (o estado e o
+              nome do plano, que passaram a ocupar uma linha cada). */}
+          <div className="mx-4 h-[72px]">
+            {/* `initial={false}`: o primeiro cartão nasce pintado, no HTML do
+                servidor, com e sem movimento reduzido (regra 1 — o hero não
+                anima na entrada). Só as trocas seguintes têm travessia. */}
+            <AnimatePresence initial={false} mode="wait">
               {pixVisible && (
                 <motion.div
                   key={tick}
@@ -212,19 +208,27 @@ export function PhoneMockup() {
                   animate={{ opacity: 1, scale: 1, y: 0 }}
                   exit={{ opacity: 0, scale: reduced ? 1 : 0.97, y: reduced ? 0 : 6 }}
                   transition={{ duration: reduced ? 0 : 0.42, ease: EASE }}
-                  className="flex items-center gap-2.5 rounded-xl bg-emerald-500/12 px-3 py-2.5 shadow-[0_0_24px_rgba(16,185,129,0.18)]"
+                  className="rounded-field flex items-center gap-2.5 bg-emerald-500/12 px-3 py-2.5"
                 >
                   <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-500/20">
                     <Check className="h-3.5 w-3.5 stroke-[3] text-emerald-400" />
                   </span>
                   <span className="min-w-0 leading-tight">
-                    <span className="tnum block text-base font-bold text-emerald-400">
+                    <span className="tnum block text-base font-semibold text-emerald-400">
                       +{USD.format(announced.value)}
                     </span>
-                    {/* O nome da venda aqui é o que amarra o cartão à linha que
-                        desce em seguida: o lead vê o mesmo item nos dois. */}
-                    <span className="block truncate text-[10px] text-cream/60">
-                      {phone.approved} · {announced.label}
+                    {/* Estado e nome do plano em DUAS linhas. Na mesma linha,
+                        separados por "·", o `truncate` comia justamente o que o
+                        cartão existe para anunciar: a 412px saía "Pagamento
+                        aprovado · Plano Tri…". E o ponto-médio é para termos
+                        irmãos — aqui são um estado e um nome de produto. O nome
+                        da venda amarra o cartão à linha que desce em seguida: o
+                        lead vê o mesmo item nos dois. */}
+                    <span className="block truncate text-[11px] text-cream/60">
+                      {phone.approved}
+                    </span>
+                    <span className="block truncate text-[11px] text-cream/60">
+                      {announced.label}
                     </span>
                   </span>
                 </motion.div>
@@ -232,18 +236,20 @@ export function PhoneMockup() {
             </AnimatePresence>
           </div>
 
-          {/* Acumulado do mês: sobe a cada entrega que desce na lista */}
+          {/* Total da simulação: sobe a cada entrega que desce na lista. O
+              número trocava com um fade a cada venda — na primeira dobra isso
+              era uma entrada animada a mais, e o que o visitante precisa ver é
+              o valor mudando, não o valor aparecendo. */}
           <div className="px-5 pt-3">
-            <span className="t-eyebrow text-faint">{phone.received}</span>
-            <motion.p
-              key={total}
-              initial={{ opacity: 0.55 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: reduced ? 0 : 0.5 }}
-              className="tnum mt-0.5 text-xl font-bold text-cream"
-            >
+            {/* A `.t-label` da página tem 13px, e esta linha é a mais longa do
+                aparelho: aqui ela vai na escala de dentro do telefone (11px é o
+                piso do portão), com a mesma forma de rótulo de máquina. */}
+            <span className="text-[11px] font-medium tracking-[0.08em] text-faint uppercase">
+              {phone.received}
+            </span>
+            <p className="tnum mt-0.5 text-xl font-semibold text-cream">
               {USD.format(total)}
-            </motion.p>
+            </p>
           </div>
 
           {/* Entregas descendo: a mais nova nasce em cima e empurra as outras */}
@@ -256,17 +262,17 @@ export function PhoneMockup() {
                   animate={{ opacity: 1, y: slot * ROW_H }}
                   exit={{ opacity: 0, y: VISIBLE * ROW_H }}
                   transition={{ duration: reduced ? 0 : 0.55, ease: EASE }}
-                  className="absolute inset-x-4 top-0 flex items-center justify-between gap-2 rounded-lg bg-ink-850 px-3 py-2"
+                  className="rounded-field absolute inset-x-4 top-0 flex items-center justify-between gap-2 bg-ink-850 px-3 py-2"
                 >
                   <span className="min-w-0 leading-tight">
                     <span className="block truncate text-[11px] font-medium text-cream">
                       {item.label}
                     </span>
-                    <span className="tnum block text-[10px] text-faint">
+                    <span className="tnum block text-[11px] text-faint">
                       {item.amount}
                     </span>
                   </span>
-                  <span className="flex shrink-0 items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[9px] font-semibold text-emerald-400">
+                  <span className="flex shrink-0 items-center gap-1 rounded-full bg-emerald-500/12 px-2 py-0.5 text-[11px] font-medium text-emerald-400">
                     <Check className="h-2.5 w-2.5 stroke-[3]" />
                     {phone.success}
                   </span>

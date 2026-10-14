@@ -58,20 +58,24 @@ function RevenueView() {
     <>
       <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-2">
         <div className="flex flex-wrap items-baseline gap-x-3">
-          <span className="text-3xl font-semibold tracking-tight text-cream sm:text-4xl">
+          {/* Figura de spec: 32px/600 tnum creme + unidade na mesma linha. É o
+              degrau da escala entre o título do painel e o corpo. */}
+          <span className="tnum text-[2rem] leading-none font-semibold text-cream">
             {USD.format(total)}
           </span>
-          <span className="text-sm text-muted">{analytics.panel.accumulated}</span>
+          <span className="text-[15px] text-muted">{analytics.panel.accumulated}</span>
         </div>
 
-        <div className="rounded-lg bg-ink-800 px-3 py-1.5 text-right">
-          <span className="t-eyebrow block text-faint">
-            {String(activeIndex).padStart(2, "0")}h
-            {activeIndex === peakIndex && hovered === null
-              ? ` · ${analytics.panel.peak}`
-              : ""}
+        <div className="rounded-field bg-ink-750 px-3 py-1.5 text-right">
+          {/* A hora é valor de máquina: vai em `<code>`, não num utilitário de
+              família. A palavra "pico" ao lado é rótulo, e rótulo é `.t-label`. */}
+          <span className="block">
+            <code>{String(activeIndex).padStart(2, "0")}h</code>
+            {activeIndex === peakIndex && hovered === null ? (
+              <span className="t-label ml-1.5">{analytics.panel.peak}</span>
+            ) : null}
           </span>
-          <span className="tnum text-sm font-semibold text-cream">
+          <span className="tnum text-[15px] font-semibold text-cream">
             {USD.format(HOURLY_REVENUE[activeIndex])}
           </span>
         </div>
@@ -141,7 +145,7 @@ function RevenueView() {
             cy={activePoint.y}
             r="5.5"
             fill="#FF7700"
-            stroke="#0f0f14"
+            stroke="#15151c"
             strokeWidth="2"
           />
 
@@ -164,9 +168,9 @@ function RevenueView() {
           {[0, 6, 12, 18, 23].map((hour) => {
             const pct = (hour / 23) * 100;
             return (
-              <span
+              <code
                 key={hour}
-                className="t-eyebrow absolute top-0 text-faint"
+                className="absolute top-0"
                 style={{
                   left: hour === 23 ? undefined : `${pct}%`,
                   right: hour === 23 ? 0 : undefined,
@@ -175,7 +179,7 @@ function RevenueView() {
                 }}
               >
                 {String(hour).padStart(2, "0")}h
-              </span>
+              </code>
             );
           })}
         </div>
@@ -194,12 +198,12 @@ function FunnelView() {
       <ul className="space-y-3">
         {FUNNEL_STEPS.map((step, index) => (
           <li key={step.value} className="flex items-center gap-3">
-            <span className="w-32 shrink-0 text-xs text-muted sm:w-40">
+            <span className="w-32 shrink-0 text-[13px] text-muted sm:w-40">
               {analytics.panel.funnelSteps[index]}
             </span>
-            <span className="relative h-7 flex-1 overflow-hidden rounded-md bg-cream/5">
+            <span className="relative h-7 flex-1 overflow-hidden rounded-field bg-cream/5">
               <motion.span
-                className="absolute inset-y-0 left-0 rounded-md"
+                className="absolute inset-y-0 left-0 rounded-field"
                 style={{
                   width: `${step.value}%`,
                   background: step.color,
@@ -214,21 +218,19 @@ function FunnelView() {
                 }}
               />
             </span>
-            <span className="tnum w-10 shrink-0 text-right text-sm font-semibold text-cream">
+            <span className="tnum w-10 shrink-0 text-right text-[15px] font-semibold text-cream">
               {step.value}
             </span>
           </li>
         ))}
       </ul>
 
-      <p className="mt-5 flex items-start gap-2 rounded-xl bg-brand/8 px-3 py-2.5 text-xs leading-relaxed text-cream/75">
-        <span aria-hidden className="mt-0.5 shrink-0 text-brand">
-          ↻
-        </span>
-        <span>
-          <strong className="font-semibold text-cream">24</strong>{" "}
-          {analytics.panel.funnelNote}
-        </span>
+      {/* A nota era uma caixa laranja a 8% com um "↻" no lugar de ícone: o
+          laranja tem lugares fixos na página e nota de painel não é um deles,
+          e caractere nunca faz o papel de ícone. Ficou texto. */}
+      <p className="mt-5 text-[13px] leading-relaxed text-muted">
+        <strong className="font-semibold text-cream">24</strong>{" "}
+        {analytics.panel.funnelNote}
       </p>
     </div>
   );
@@ -242,7 +244,7 @@ function LtvView() {
     <dl className="divide-y divide-line pt-2">
       {analytics.panel.ltvRows.map((row) => (
         <div key={row.label} className="flex items-baseline justify-between gap-4 py-4">
-          <dt className="text-sm text-muted">{row.label}</dt>
+          <dt className="text-[15px] text-muted">{row.label}</dt>
           <dd className="tnum text-xl font-semibold text-cream">{row.value}</dd>
         </div>
       ))}
@@ -260,12 +262,14 @@ function RatesView() {
       {analytics.panel.rateRows.map((row, index) => (
         <li key={row.label}>
           <div className="mb-1.5 flex items-baseline justify-between">
-            <span className="text-sm text-muted">{row.label}</span>
-            <span className="tnum text-sm font-semibold text-cream">{row.value}%</span>
+            <span className="text-[15px] text-muted">{row.label}</span>
+            <span className="tnum text-[15px] font-semibold text-cream">{row.value}%</span>
           </div>
           <span className="block h-2 overflow-hidden rounded-full bg-cream/5">
+            {/* Laranja chapado: o degradê que a barra tinha é do mesmo tipo que
+                saiu dos botões e dos títulos (regra 8). */}
             <motion.span
-              className="block h-full rounded-full bg-gradient-to-r from-brand-soft to-brand"
+              className="block h-full rounded-full bg-brand"
               style={{ width: `${row.value}%`, transformOrigin: "left" }}
               initial={{ scaleX: 0 }}
               animate={{ scaleX: 1 }}
@@ -294,9 +298,7 @@ function StatementView() {
             {analytics.panel.statementHeaders.map((header, index) => (
               <th
                 key={header}
-                className={`t-eyebrow pb-2 font-medium text-faint ${
-                  index === 3 ? "text-right" : ""
-                }`}
+                className={`t-label pb-2 font-medium ${index === 3 ? "text-right" : ""}`}
               >
                 {header}
               </th>
@@ -305,12 +307,17 @@ function StatementView() {
         </thead>
         <tbody className="divide-y divide-line">
           {analytics.panel.statementRows.map((row) => (
+            /* Hora e valor em `<code>`: são os "valores de extrato" da regra da
+               mono. O verde que o valor tinha saiu — emerald é estado de
+               produto ("Pago", "Sucesso"), não cor de dinheiro. */
             <tr key={`${row.time}-${row.flow}`}>
-              <td className="tnum py-3 text-xs text-faint">{row.time}</td>
-              <td className="py-3 text-xs font-medium text-cream">{row.flow}</td>
-              <td className="py-3 text-xs text-muted">{row.gateway}</td>
-              <td className="tnum py-3 text-right text-xs font-semibold text-emerald-400">
-                {row.value}
+              <td className="py-3">
+                <code>{row.time}</code>
+              </td>
+              <td className="py-3 text-[15px] font-medium text-cream">{row.flow}</td>
+              <td className="py-3 text-[13px] text-muted">{row.gateway}</td>
+              <td className="py-3 text-right">
+                <code>{row.value}</code>
               </td>
             </tr>
           ))}
@@ -329,54 +336,87 @@ const VIEWS: Record<string, () => React.ReactElement> = {
 };
 
 /**
- * Painel que troca de conteúdo conforme a métrica escolhida ao lado.
+ * O painel de Análises, em largura total, com as cinco vistas atrás de um
+ * cabeçalho de tabela.
  *
- * Todos os números são amostra ilustrativa, não dados de cliente. A altura
- * mínima evita que a seção inteira pule ao trocar entre uma tabela e um
- * gráfico.
+ * As abas moraram numa lista de botões ao lado do painel, com ícone e frase
+ * inteira cada; agora são a primeira linha do próprio painel, com o rótulo
+ * curto (`view.short`) — é a forma de cabeçalho de tabela da referência, e põe
+ * o controle dentro do objeto que ele controla. A frase longa da aba escolhida
+ * entra como legenda entre as abas e o painel, onde serve de explicação sem
+ * disputar espaço.
+ *
+ * Todos os números são amostra ilustrativa, não dado de cliente — daí a
+ * etiqueta "Simulação" no cabeçalho (no lugar da pílula "Tempo real", que
+ * afirmava o contrário) e o subtítulo da vista sempre visível. A altura mínima
+ * do painel mantém o CLS em zero ao trocar entre uma tabela e um gráfico.
  */
-export function DashboardPreview({ viewId }: { viewId: string }) {
+export function DashboardPreview() {
   const { analytics } = useContent();
   const reduced = useReducedMotion();
 
-  const view = analytics.views.find((v) => v.id === viewId) ?? analytics.views[0];
+  /* O `id` é o mesmo nos dois idiomas, então trocar de idioma não perde a aba
+     escolhida. */
+  const [activeId, setActiveId] = useState(analytics.views[0].id);
+  const view = analytics.views.find((v) => v.id === activeId) ?? analytics.views[0];
   const View = VIEWS[view.id] ?? RevenueView;
 
   return (
-    <div className="surface relative overflow-hidden rounded-3xl p-5 shadow-2xl sm:p-7">
+    <div className="rounded-card bg-ink-800 p-5 sm:p-7">
+      {/* As cinco abas. No celular a fileira rola na horizontal dentro do
+          respiro do card, com encaixe — nenhuma aba fica cortada pela metade. */}
       <div
-        aria-hidden
-        className="pointer-events-none absolute -top-24 right-0 hidden h-56 w-56 rounded-full bg-brand/15 blur-[90px] sm:block"
-      />
+        role="tablist"
+        aria-label={analytics.kicker}
+        className="flex snap-x gap-1 overflow-x-auto"
+      >
+        {analytics.views.map((entry) => {
+          const isActive = entry.id === activeId;
 
-      <div className="relative">
-        <div className="flex items-start justify-between gap-4 border-b border-line pb-4">
-          <div className="min-w-0">
-            <h3 className="font-display text-lg font-semibold text-cream">
-              {view.panelTitle}
-            </h3>
-            <p className="mt-0.5 text-xs text-faint">{view.panelSubtitle}</p>
-          </div>
-          {/* Diz que o painel atualiza sozinho, então fica. Sem borda e sem o
-              ponto pulsante na frente: só o texto sobre um fundo sutil. */}
-          <span className="inline-flex shrink-0 items-center rounded-full bg-emerald-500/10 px-2.5 py-1 text-[11px] font-medium text-emerald-400">
-            {analytics.panel.live}
-          </span>
-        </div>
-
-        <div className="min-h-[19rem] pt-5">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={view.id}
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: reduced ? 0 : -12 }}
-              transition={{ duration: reduced ? 0 : 0.35, ease: EASE }}
+          return (
+            <button
+              key={entry.id}
+              type="button"
+              role="tab"
+              aria-selected={isActive}
+              onClick={() => setActiveId(entry.id)}
+              /* h-11: os 44px do portão de acessibilidade sem precisar de
+                 padding extra. */
+              className={`h-11 shrink-0 snap-start rounded-field px-4 text-[15px] font-medium transition-colors ${
+                isActive ? "bg-ink-750 text-cream" : "text-muted hover:text-cream"
+              }`}
             >
+              {entry.short}
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="mt-4 flex items-start justify-between gap-4 border-t border-line pt-4">
+        <p className="max-w-[46ch] text-[13px] leading-snug text-muted">{view.label}</p>
+        <span className="t-label shrink-0">{analytics.simulationLabel}</span>
+      </div>
+
+      <div className="min-h-[21rem] pt-6">
+        {/* `initial={false}`: a primeira vista nasce pintada. Só as trocas
+            seguintes atravessam o crossfade (regra 1 em espírito: nada da
+            página anima só por aparecer). */}
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.div
+            key={view.id}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: reduced ? 0 : -8 }}
+            transition={{ duration: reduced ? 0 : 0.35, ease: EASE }}
+          >
+            <h3 className="t-h3 text-cream">{view.panelTitle}</h3>
+            <p className="mt-1 text-[13px] text-faint">{view.panelSubtitle}</p>
+
+            <div className="mt-5">
               <View />
-            </motion.div>
-          </AnimatePresence>
-        </div>
+            </div>
+          </motion.div>
+        </AnimatePresence>
       </div>
     </div>
   );

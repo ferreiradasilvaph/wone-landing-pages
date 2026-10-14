@@ -1,30 +1,30 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { AnimatePresence, motion, useScroll, useSpring } from "motion/react";
+import { AnimatePresence, motion } from "motion/react";
 import { Menu, X } from "lucide-react";
 import { useContent } from "@/i18n";
-import { CTA_BAR } from "./cta";
+import { CtaButton } from "./CtaButton";
 import { WoneIcon } from "./WoneMark";
 import { LanguageToggle } from "./LanguageToggle";
 
 /**
- * Header fixo que muda de peso conforme a página rola: transparente no topo do
- * hero, sólido e com fio de luz depois. Acompanha a seção visível e traz o
- * menu móvel que faltava nas larguras abaixo de `md`.
+ * Header fixo de 64px: transparente sobre o hero, sólido depois de 24px de
+ * rolagem. Acompanha a seção visível e traz o menu móvel.
+ *
+ * A barra de progresso de leitura saiu: era o único elemento da página, fora do
+ * palco 3D, acoplado à rolagem, e pagava um `useSpring` por quadro para
+ * desenhar um fio de 1px que ninguém lê.
+ *
+ * A pílula `layoutId` do item ativo também saiu. O estado do nav é só cor —
+ * creme para a seção à vista, muted para as outras —, que é o que a referência
+ * faz e o que evita um segundo laranja ao lado do CTA.
  */
 export function SiteHeader() {
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [activeId, setActiveId] = useState<string>("");
+  const [activeSection, setActiveSection] = useState("");
   const { nav, hero } = useContent();
-
-  const { scrollYProgress } = useScroll();
-  const progress = useSpring(scrollYProgress, {
-    stiffness: 140,
-    damping: 28,
-    restDelta: 0.001,
-  });
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 24);
@@ -33,12 +33,15 @@ export function SiteHeader() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  // Marca no menu a seção que está ocupando a faixa central da tela.
+  /* Observa `[data-section]`, não o `href` do link. O id de âncora passou a
+     viver no BLOCO DO TÍTULO (com `scroll-mt-24`, para a rolagem parar abaixo
+     do header), que é um pedaço pequeno no alto da seção: observá-lo marcaria o
+     item ativo só nos primeiros pixels de cada seção. `data-section` fica na
+     `<section>` inteira, que é o que o leitor realmente está vendo. */
   useEffect(() => {
-    const sections = nav.map((link) =>
-      document.querySelector<HTMLElement>(link.href),
-    ).filter((el): el is HTMLElement => el !== null);
-
+    const sections = Array.from(
+      document.querySelectorAll<HTMLElement>("[data-section]"),
+    );
     if (sections.length === 0) return;
 
     const observer = new IntersectionObserver(
@@ -46,14 +49,16 @@ export function SiteHeader() {
         const visible = entries
           .filter((entry) => entry.isIntersecting)
           .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
-        if (visible) setActiveId(`#${visible.target.id}`);
+        if (visible) {
+          setActiveSection(visible.target.getAttribute("data-section") ?? "");
+        }
       },
       { rootMargin: "-45% 0px -50% 0px", threshold: [0, 0.25, 0.5, 1] },
     );
 
     sections.forEach((section) => observer.observe(section));
     return () => observer.disconnect();
-  }, [nav]);
+  }, []);
 
   // Trava a rolagem do fundo enquanto o menu móvel está aberto.
   useEffect(() => {
@@ -73,81 +78,70 @@ export function SiteHeader() {
       <div
         className={`transition-colors duration-500 ${
           scrolled
-            ? "border-b border-line bg-ink-950 sm:bg-ink-950/80 sm:backdrop-blur-xl"
+            ? "border-b border-line bg-ink-950"
             : "border-b border-transparent bg-transparent"
         }`}
       >
-        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-6 px-5 sm:px-6">
+        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-6 px-4 sm:px-6 lg:px-8">
+          {/* `h-11`: o alvo de toque é o link inteiro, não o desenho da marca —
+              a 412px ele media 28×45 e ficava abaixo dos 44px do portão. */}
           <a
             href="#topo"
             aria-label="Wone, ir para o topo"
-            className="shrink-0 transition-opacity hover:opacity-80"
+            className="flex h-11 shrink-0 items-center transition-opacity hover:opacity-80"
           >
             <WoneIcon className="h-7 w-auto sm:h-8" />
           </a>
 
-          <nav className="hidden items-center gap-1 md:flex">
+          <nav className="hidden items-center gap-6 md:flex">
             {nav.map((link) => {
-              const isActive = activeId === link.href;
+              const isActive = activeSection === link.href.slice(1);
               return (
-                /* `isolate` + pílula antes do rótulo no DOM, o mesmo arranjo
-                   explicado por extenso em LanguageToggle.tsx. Aqui a pílula
-                   era `absolute inset-0 -z-10` dentro de um `<a>` só
-                   `relative`, que não cria contexto de empilhamento: o z
-                   negativo caía no contexto do `<header>` (fixed + transform)
-                   e a pílula só não desaparecia por acidente, porque a partir
-                   de `sm` o `backdrop-blur-xl` da barra rolada cria um
-                   contexto intermediário que a segurava. Sem blur (ou se o
-                   blur sair daqui), ela ia para trás do `bg-ink-950` da barra
-                   e o item ativo ficava igual aos inativos. */
                 <a
                   key={link.href}
                   href={link.href}
-                  className={`relative isolate rounded-full px-3.5 py-1.5 text-sm transition-colors ${
+                  /* `aria-current` só existe quando é verdade: o atributo com
+                     valor "false" é anunciado por alguns leitores como se
+                     houvesse estado ali. */
+                  {...(isActive ? { "aria-current": true as const } : null)}
+                  className={`text-[15px] font-medium transition-colors ${
                     isActive ? "text-cream" : "text-muted hover:text-cream"
                   }`}
                 >
-                  {isActive && (
-                    <motion.span
-                      layoutId="nav-pill"
-                      className="absolute inset-0 rounded-full bg-brand/14"
-                      transition={{ type: "spring", stiffness: 380, damping: 32 }}
-                    />
-                  )}
-                  <span className="relative">{link.label}</span>
+                  {link.label}
                 </a>
               );
             })}
           </nav>
 
           <div className="flex items-center gap-2">
-            <LanguageToggle />
+            {/* Abaixo de `sm` a pílula PT/EN desce para o menu móvel, e não por
+                gosto: medido a 412px, logo (45) + toggle (92) + CTA (169, e 179
+                em inglês) + hambúrguer (44) passam dos 370px de conteúdo, e o
+                rótulo do botão quebrava em duas linhas dentro da barra de 64px.
+                Entre esconder o CTA (que a espec manda ficar) e mover o idioma,
+                move-se o idioma: ele continua a um toque no menu e no rodapé. */}
+            <div className="hidden sm:block">
+              <LanguageToggle />
+            </div>
 
-            <a
-              href="#fila-de-espera"
-              className={`${CTA_BAR} hidden sm:inline-flex`}
-            >
+            {/* Visível em todos os tamanhos: o mesmo rótulo do hero e do submit,
+                três vezes na página, é o que fixa qual é a ação do site. */}
+            <CtaButton href="#fila-de-espera" size="bar" className="shrink-0 whitespace-nowrap">
               {hero.ctaPrimary}
-            </a>
+            </CtaButton>
 
             <button
               type="button"
               onClick={() => setMenuOpen((open) => !open)}
               aria-expanded={menuOpen}
               aria-label={menuOpen ? "Fechar menu" : "Abrir menu"}
-              className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-ink-800 text-cream transition-colors hover:bg-ink-750 md:hidden"
+              className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-field bg-ink-800 text-cream transition-colors hover:bg-ink-750 md:hidden"
             >
               {menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </button>
           </div>
         </div>
-
-        {/* Progresso de leitura, colado na base do header */}
-        <motion.div
-          aria-hidden
-          style={{ scaleX: progress }}
-          className="h-px origin-left bg-gradient-to-r from-brand via-brand-soft to-brand"
-        />
       </div>
 
       <AnimatePresence>
@@ -159,24 +153,30 @@ export function SiteHeader() {
             transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
             className="border-b border-line bg-ink-950 md:hidden"
           >
-            <nav className="mx-auto flex max-w-7xl flex-col gap-1 px-5 py-4">
+            <nav className="mx-auto flex max-w-7xl flex-col gap-1 px-4 py-4 sm:px-6">
               {nav.map((link) => (
                 <a
                   key={link.href}
                   href={link.href}
                   onClick={() => setMenuOpen(false)}
-                  className="rounded-xl px-3 py-3 text-base text-cream/80 transition-colors hover:bg-brand/10 hover:text-cream"
+                  className="rounded-field px-3 py-3 text-base text-cream/80 transition-colors hover:bg-ink-800 hover:text-cream"
                 >
                   {link.label}
                 </a>
               ))}
-              <a
+              <CtaButton
                 href="#fila-de-espera"
+                size="bar"
                 onClick={() => setMenuOpen(false)}
-                className={`${CTA_BAR} mt-2 flex`}
+                className="mt-2"
               >
                 {hero.ctaPrimary}
-              </a>
+              </CtaButton>
+
+              {/* O lugar do idioma abaixo de `sm`, onde há largura para ele. */}
+              <div className="mt-4 px-3 sm:hidden">
+                <LanguageToggle />
+              </div>
             </nav>
           </motion.div>
         )}

@@ -21,7 +21,7 @@ const PATH_ICONS = [Webhook, RefreshCw, MousePointerClick];
 const CraneScene = dynamic(() => import("./CraneScene"), {
   ssr: false,
   loading: () => (
-    <div aria-hidden className="h-[17rem] animate-pulse rounded-2xl bg-ink-900/40" />
+    <div aria-hidden className="rounded-field h-[17rem] bg-ink-900" />
   ),
 });
 
@@ -118,7 +118,7 @@ export function ConfirmationDemo() {
       <div className="grid grid-cols-1 items-center gap-6 sm:grid-cols-[15rem_minmax(0,1fr)] sm:gap-7">
         {/* O guindaste */}
         <div className="mx-auto w-[15rem] max-w-full">
-          <p className="flex items-center justify-center gap-2 text-xs font-semibold text-cream">
+          <p className="flex items-center justify-center gap-2 text-[13px] font-semibold text-cream">
             <CreditCard className="h-4 w-4 shrink-0 text-brand" />
             {demo.payment}
           </p>
@@ -136,7 +136,7 @@ export function ConfirmationDemo() {
             initial={false}
             animate={{ opacity: hanging ? 1 : 0 }}
             transition={{ duration: reduced ? 0 : 0.3, ease: EASE }}
-            className="mt-1 text-center text-xs font-semibold text-emerald-400"
+            className="mx-auto mt-1 w-fit text-[13px] font-semibold text-emerald-400"
           >
             {demo.delivered}
           </motion.p>
@@ -155,7 +155,7 @@ export function ConfirmationDemo() {
                 onMouseLeave={() =>
                   setHot((current) => (current === index ? null : current))
                 }
-                className={`flex items-center gap-3 rounded-xl px-3.5 py-2.5 transition-colors duration-300 ${
+                className={`rounded-field flex items-center gap-3 px-3.5 py-2.5 transition-colors duration-300 ${
                   isDown ? "bg-red-500/10" : "bg-brand/8"
                 }`}
               >
@@ -175,7 +175,7 @@ export function ConfirmationDemo() {
                   >
                     {path.name}
                   </span>
-                  <span className="block text-xs text-faint">
+                  <span className="block text-[13px] text-faint">
                     {isDown ? demo.offline : path.detail}
                   </span>
                 </span>
@@ -194,7 +194,11 @@ export function ConfirmationDemo() {
                   onFocus={() => setHot(index)}
                   onBlur={() => setHot((current) => (current === index ? null : current))}
                   onClick={() => toggle(index)}
-                  className={`relative h-6 w-11 shrink-0 cursor-pointer rounded-full transition-colors duration-300 ${
+                  // O interruptor tem 24px de altura para caber na linha; o
+                  // alvo de toque chega aos 44px do portão pelo pseudo-elemento
+                  // em volta, que não ocupa espaço no layout (mesma solução do
+                  // PauseButton).
+                  className={`relative h-6 w-11 shrink-0 cursor-pointer rounded-full transition-colors duration-300 before:absolute before:-inset-[10px] before:content-[''] ${
                     isDown ? "bg-ink-750" : "bg-brand/35"
                   }`}
                 >
@@ -227,13 +231,13 @@ export function ConfirmationDemo() {
             transition={{ duration: reduced ? 0 : 0.3, ease: EASE }}
             className="overflow-hidden"
           >
-            <div className="mt-4 flex items-start gap-3 rounded-xl bg-amber-500/12 px-4 py-3">
+            <div className="rounded-field mt-4 flex items-start gap-3 bg-amber-500/12 px-4 py-3">
               <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-400" />
               <span className="leading-relaxed">
                 <span className="block text-sm font-semibold text-amber-300">
                   {demo.allDownTitle}
                 </span>
-                <span className="mt-1 block text-xs text-cream/70">{demo.allDown}</span>
+                <span className="mt-1 block text-[13px] text-cream/70">{demo.allDown}</span>
               </span>
             </div>
           </motion.div>

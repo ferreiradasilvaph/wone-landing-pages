@@ -13,6 +13,10 @@ const OPTIONS: { code: Locale; label: string }[] = [
  * Alternador de idioma. A pílula ativa desliza entre as duas opções com
  * `layoutId`, o mesmo recurso usado no menu do header.
  *
+ * A pílula é CREME, não laranja: no header ela fica encostada no botão laranja
+ * do CTA, e dois laranjas vizinhos disputam a mesma atenção — o laranja da
+ * página é da ação, não do estado de um controle.
+ *
  * A pílula já ficou invisível por duas causas somadas, e as duas estão
  * corrigidas aqui — se uma voltar, o rótulo ativo some de novo:
  *
@@ -22,12 +26,11 @@ const OPTIONS: { code: Locale; label: string }[] = [
  *    contexto de empilhamento: o `-z-10` então não é resolvido dentro do botão,
  *    e sim no contexto mais próximo que existe de verdade — o `<header>` fixo
  *    (`z-[70] transform-gpu`, e transform cria contexto) ou a raiz, no caso do
- *    rodapé, que também é só `relative overflow-hidden`. Resultado: a pílula
- *    laranja era pintada ATRÁS do `bg-ink-800` do próprio grupo e nunca
- *    aparecia. O rótulo ativo ficava `text-ink-950` (#050506) sobre ink-800
- *    (#15151c) — contraste medido 1,12:1, ou seja preto sobre preto, e a página
- *    lia como se EN estivesse sempre ativo. Com a pílula pintada o mesmo
- *    rótulo dá 7,66:1 sobre o laranja da marca.
+ *    rodapé. Resultado: a pílula era pintada ATRÁS do `bg-ink-800` do próprio
+ *    grupo e nunca aparecia. O rótulo ativo ficava `text-ink-950` (#050506)
+ *    sobre ink-800 (#15151c) — contraste medido 1,12:1, ou seja preto sobre
+ *    preto, e a página lia como se EN estivesse sempre ativo. Com a pílula
+ *    pintada o mesmo rótulo dá 18,4:1 sobre o creme.
  * 2. `layoutId` compartilhado (o que o comentário do commit b0c20d4 culpava —
  *    causa real, mas secundária). O toggle aparece no header e no rodapé; com
  *    o mesmo `layoutId` literal nas duas instâncias o motion trata as pílulas
@@ -51,15 +54,21 @@ const OPTIONS: { code: Locale; label: string }[] = [
  * outra maneira. Ordem do DOM é mais barata de ler do que z-index calibrado
  * entre irmãos.
  */
-export function LanguageToggle({ className = "" }: { className?: string }) {
+export function LanguageToggle({
+  label = "Idioma / Language",
+  className = "",
+}: {
+  label?: string;
+  className?: string;
+}) {
   const { locale, setLocale } = useLanguage();
   const pillId = useId();
 
   return (
     <div
       role="group"
-      aria-label="Idioma / Language"
-      className={`inline-flex items-center rounded-full bg-ink-800 p-0.5 ${className}`}
+      aria-label={label}
+      className={`inline-flex h-8 items-center rounded-full bg-ink-800 p-0.5 ${className}`}
     >
       {OPTIONS.map((option) => {
         const isActive = locale === option.code;
@@ -70,15 +79,21 @@ export function LanguageToggle({ className = "" }: { className?: string }) {
             onClick={() => setLocale(option.code)}
             aria-pressed={isActive}
             /* O estado é só tom: pílula + cor do rótulo, sem borda — borda aqui
-               mexeria na altura do grupo a cada troca de idioma. */
-            className={`relative isolate cursor-pointer rounded-full px-2.5 py-1 font-mono text-[11px] font-semibold transition-colors ${
+               mexeria na altura do grupo a cada troca de idioma.
+               O alvo de toque chega aos 44px em dois eixos separados, e por
+               motivos diferentes: na ALTURA por pseudo-elemento, que estica o
+               alvo sem engordar o grupo de 32px; na LARGURA por `min-w`, e não
+               por pseudo-elemento, porque os dois botões são vizinhos colados —
+               uma folga horizontal invisível de 8px cairia por cima do vizinho
+               e, estando depois no DOM, o EN roubaria a borda direita do PT. */
+            className={`relative isolate flex h-7 min-w-11 cursor-pointer items-center justify-center rounded-full px-2.5 text-[13px] font-semibold transition-colors before:absolute before:-inset-y-2 before:inset-x-0 before:content-[''] ${
               isActive ? "text-ink-950" : "text-muted hover:text-cream"
             }`}
           >
             {isActive && (
               <motion.span
                 layoutId={`lang-pill-${pillId}`}
-                className="absolute inset-0 rounded-full bg-brand"
+                className="absolute inset-0 rounded-full bg-cream"
                 transition={{ type: "spring", stiffness: 380, damping: 32 }}
               />
             )}

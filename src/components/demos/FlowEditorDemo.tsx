@@ -17,6 +17,8 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { useContent } from "@/i18n";
+import { Chip } from "../Chip";
+import { CtaButton } from "../CtaButton";
 
 const EASE = [0.16, 1, 0.3, 1] as const;
 
@@ -56,6 +58,16 @@ const CATEGORY_META: { icon: LucideIcon; color: string }[] = [
   { icon: Sparkles, color: "#E879F9" }, // Inteligência artificial
 ];
 
+/* Controle de apoio do editor (exemplo, limpar): mesma altura da pílula
+   `object` do CtaButton, em tom neutro — dois laranjas na mesma barra e o botão
+   que importa deixa de importar. O `before` é só o alvo de toque de 44px. */
+const CONTROLE =
+  "relative inline-flex h-9 cursor-pointer items-center justify-center gap-1.5 rounded-full bg-ink-750 text-[13px] font-semibold text-muted transition-colors before:absolute before:-inset-[4px] before:content-[''] hover:bg-ink-700 hover:text-cream disabled:cursor-default disabled:opacity-40";
+/* Em px separado: `w-9 px-0` sobre um `px-4` dependeria da ordem em que o
+   Tailwind imprime as duas regras, e o ícone saía esmagado. */
+const CONTROLE_TEXTO = `${CONTROLE} px-4`;
+const CONTROLE_ICONE = `${CONTROLE} w-9`;
+
 /** Até onde o funil cresce, para o canvas não virar um tapete. */
 const MAX_NODES = 8;
 /** Quanto cada nó fica aceso quando o funil roda. */
@@ -63,7 +75,9 @@ const PULSE_MS = 520;
 
 /* Geometria do canvas, em px. Nó de largura fixa é o que torna a posição de
    cada porta aritmética — sem medir o DOM, sem ResizeObserver. */
-const NODE_W = 150;
+/* 176 e não 150: com o texto do nó no piso de 13px, a descrição cabia em três
+   palavras e todo bloco terminava em reticência. */
+const NODE_W = 176;
 const NODE_H = 52;
 const COL_W = NODE_W + 34;
 const ROW_H = NODE_H + 24;
@@ -171,7 +185,9 @@ function buildGraph(
             : labels.a
           : undefined,
         lx: x1 + 8,
-        ly: y1 - 15,
+        /* -22 e não -15: o rótulo subiu para 13px (o piso do portão de
+           acessibilidade) e, no lugar antigo, encostava na aresta. */
+        ly: y1 - 22,
         step: index,
       });
     }
@@ -361,39 +377,40 @@ export function FlowEditorDemo() {
       {/* Barra do editor. Título e subtítulo vivem no cabeçalho do painel,
           em `Highlights`, iguais para as quatro demos. */}
       <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
-        <span className="flex items-center gap-2">
-          <span className="t-eyebrow text-faint">{builder.canvas}</span>
-          <span className="tnum font-mono text-[10px] text-faint">
+        <span className="flex flex-wrap items-center gap-2">
+          <span className="t-label">{builder.canvas}</span>
+          {/* Quantos blocos de quantos: número humano, então Geist com `tnum`
+              (a mono do site vive só dentro de `<code>`). */}
+          <span className="tnum text-[13px] text-faint">
             {slots.length}/{MAX_NODES}
           </span>
-          {full && (
-            <span className="rounded-full bg-ink-800 px-1.5 py-0.5 font-mono text-[9px] text-faint">
-              {builder.full}
-            </span>
-          )}
+          {full && <Chip>{builder.full}</Chip>}
           {running && (
-            <span role="status" className="font-mono text-[10px] text-brand">
+            <span role="status" className="text-[13px] font-medium text-brand">
               {builder.running}
             </span>
           )}
         </span>
 
+        {/* "Rodar" é o botão de produto da demo: a pílula `object`, a mesma de
+            "Simular de novo" e "Pagar com PIX". Os dois ao lado são controles
+            de apoio e não podem ser um segundo laranja (regra 3) — ficam na
+            pílula neutra, com o alvo de 44px pelo pseudo-elemento em volta. */}
         <span className="flex items-center gap-1.5">
-          <button
-            type="button"
+          <CtaButton
+            size="object"
             onClick={() => setPulse(0)}
             disabled={slots.length === 0 || running}
-            className="flex cursor-pointer items-center gap-1.5 rounded-lg bg-brand/15 px-2.5 py-1.5 text-[11px] font-semibold text-brand transition-colors hover:bg-brand/25 disabled:cursor-default disabled:opacity-40"
           >
-            <Play className="h-3 w-3" />
+            <Play className="h-3.5 w-3.5" aria-hidden />
             {builder.run}
-          </button>
+          </CtaButton>
           <button
             type="button"
             onClick={loadExample}
-            className="flex cursor-pointer items-center gap-1.5 rounded-lg bg-ink-800 px-2.5 py-1.5 text-[11px] font-semibold text-muted transition-colors hover:bg-ink-750 hover:text-cream"
+            className={CONTROLE_TEXTO}
           >
-            <RotateCcw className="h-3 w-3" />
+            <RotateCcw className="h-3.5 w-3.5" aria-hidden />
             {builder.example}
           </button>
           <button
@@ -405,17 +422,19 @@ export function FlowEditorDemo() {
             }}
             disabled={slots.length === 0}
             aria-label={builder.clear}
-            className="flex cursor-pointer items-center justify-center rounded-lg bg-ink-800 p-1.5 text-muted transition-colors hover:bg-ink-750 hover:text-cream disabled:cursor-default disabled:opacity-40"
+            className={CONTROLE_ICONE}
           >
-            <Trash2 className="h-3 w-3" />
+            <Trash2 className="h-3.5 w-3.5" aria-hidden />
           </button>
         </span>
       </div>
 
       <div className="mt-3">
         {/* Canvas: a malha de pontos é o que faz ler como área de edição */}
+        {/* O canvas é mockup dentro de card: fundo ink-950 com moldura de 1px e
+            r-12, a única exceção de card dentro de card da página. */}
         <div
-          className="relative overflow-x-auto rounded-2xl bg-ink-900/60 p-1"
+          className="rounded-field relative overflow-x-auto border border-line bg-ink-950 p-1"
           style={{
             backgroundImage:
               "radial-gradient(circle, rgba(255,255,227,0.07) 1px, transparent 1px)",
@@ -423,7 +442,7 @@ export function FlowEditorDemo() {
           }}
         >
           {slots.length === 0 ? (
-            <p className="py-14 text-center text-xs text-faint">{builder.empty}</p>
+            <p className="mx-auto w-fit py-14 text-[13px] text-faint">{builder.empty}</p>
           ) : wide ? (
             <div
               className="relative"
@@ -515,7 +534,7 @@ export function FlowEditorDemo() {
                   <span
                     key={`l${edge.key}`}
                     aria-hidden
-                    className="pointer-events-none absolute rounded bg-ink-950/85 px-1 font-mono text-[9px] text-faint"
+                    className="pointer-events-none absolute rounded-full bg-ink-950 px-1.5 text-[13px] text-faint"
                     style={{ left: edge.lx, top: edge.ly }}
                   >
                     {edge.label}
@@ -592,7 +611,7 @@ export function FlowEditorDemo() {
 
             E a faixa é o lugar onde o clique na paleta aparece: um bloco por
             vez, trocando pelo escolhido, que foi o que o designer pediu. */}
-        <div className="mt-3 overflow-hidden rounded-2xl bg-ink-900/60 px-3.5 py-2.5">
+        <div className="rounded-field mt-3 overflow-hidden bg-ink-750 px-3.5 py-2.5">
           <AnimatePresence mode="wait">
             {spot && spotEntry && spotMeta ? (
               <motion.div
@@ -603,9 +622,7 @@ export function FlowEditorDemo() {
                 transition={{ duration: reduced ? 0 : 0.22, ease: EASE }}
                 className="flex flex-wrap items-center gap-x-3 gap-y-1.5"
               >
-                <span className="t-eyebrow shrink-0 text-faint">
-                  {builder.properties}
-                </span>
+                <span className="t-label shrink-0">{builder.properties}</span>
 
                 <spotMeta.icon
                   className="h-4 w-4 shrink-0"
@@ -615,17 +632,17 @@ export function FlowEditorDemo() {
                   {spotEntry.name}
                 </span>
                 <span
-                  className="t-eyebrow shrink-0 text-[10px]"
+                  className="t-label shrink-0"
                   style={{ color: spotMeta.color }}
                 >
                   {demo.categories[spot.category]?.name}
                 </span>
 
-                <span className="min-w-0 flex-1 truncate text-[11px] text-muted">
+                <span className="min-w-0 flex-1 truncate text-[13px] text-muted">
                   {spotEntry.detail}
                 </span>
 
-                <span className="flex shrink-0 gap-x-3 font-mono text-[10px] text-faint">
+                <span className="flex shrink-0 gap-x-3 text-[13px] text-faint">
                   <span>
                     {builder.fields.inputs}{" "}
                     <span className="tnum text-muted">{spotInputs}</span>
@@ -651,10 +668,8 @@ export function FlowEditorDemo() {
                 transition={{ duration: reduced ? 0 : 0.2 }}
                 className="flex flex-wrap items-center gap-x-3 gap-y-1"
               >
-                <span className="t-eyebrow shrink-0 text-faint">
-                  {builder.properties}
-                </span>
-                <span className="text-[11px] text-faint">{builder.noSelection}</span>
+                <span className="t-label shrink-0">{builder.properties}</span>
+                <span className="text-[13px] text-faint">{builder.noSelection}</span>
               </motion.div>
             )}
           </AnimatePresence>
@@ -671,7 +686,7 @@ export function FlowEditorDemo() {
           blocos dela aparecem. Os 28 continuam todos alcançáveis — em dois
           cliques em vez de um — e a paleta caiu para uma linha. */}
       <div className="mt-6 flex flex-wrap items-center gap-x-2 gap-y-1.5">
-        <span className="t-eyebrow mr-1 text-faint">{builder.palette}</span>
+        <span className="t-label mr-1">{builder.palette}</span>
         {demo.categories.map((category, categoryIndex) => {
           const meta = CATEGORY_META[categoryIndex] ?? CATEGORY_META[0];
           const Icon = meta.icon;
@@ -683,18 +698,16 @@ export function FlowEditorDemo() {
               type="button"
               aria-pressed={isOpen}
               onClick={() => setOpenCategory(categoryIndex)}
-              className={`flex cursor-pointer items-center gap-1.5 rounded-lg px-2 py-1 text-[11px] font-semibold transition-colors duration-200 ${
-                isOpen ? "bg-ink-750 text-cream" : "text-faint hover:bg-ink-800"
+              className={`rounded-field flex h-9 cursor-pointer items-center gap-1.5 px-3 text-[13px] font-semibold transition-colors duration-200 ${
+                isOpen ? "bg-ink-700 text-cream" : "text-faint hover:bg-ink-750"
               }`}
             >
               <Icon
-                className="h-3 w-3 shrink-0"
+                className="h-3.5 w-3.5 shrink-0"
                 style={{ color: isOpen ? meta.color : undefined }}
               />
               {category.name}
-              <span className="tnum font-mono text-[9px] opacity-60">
-                {category.items.length}
-              </span>
+              <span className="tnum opacity-60">{category.items.length}</span>
             </button>
           );
         })}
@@ -706,7 +719,7 @@ export function FlowEditorDemo() {
             <button
               type="button"
               onClick={() => add(openCategory, itemIndex, full)}
-              className="cursor-pointer rounded-lg bg-ink-800 px-2.5 py-1.5 text-xs text-muted transition-colors duration-200 hover:bg-ink-750 hover:text-cream"
+              className="rounded-field flex h-9 cursor-pointer items-center bg-ink-750 px-3 text-[13px] text-muted transition-colors duration-200 hover:bg-ink-700 hover:text-cream"
             >
               {item.name}
             </button>
@@ -768,11 +781,11 @@ function NodeCard({
             }
           : undefined
       }
-      className={`group/node relative flex h-full w-full items-center gap-2.5 overflow-hidden rounded-xl pr-1.5 pl-4 transition-colors duration-200 ${
+      className={`rounded-field group/node relative flex h-full w-full items-center gap-2.5 overflow-hidden pr-1.5 pl-4 transition-colors duration-200 ${
         lit
           ? "bg-brand"
           : selected
-            ? "bg-ink-750 text-cream"
+            ? "bg-ink-700 text-cream"
             : "bg-ink-800 text-cream/85"
       } ${onSelect ? "cursor-pointer" : ""}`}
       style={lit ? { color: ON_BRAND } : undefined}
@@ -802,8 +815,8 @@ function NodeCard({
       />
 
       <span className="min-w-0 flex-1 py-2 leading-tight">
-        <span className="block truncate text-xs font-semibold">{name}</span>
-        <span className={`block truncate text-[10px] ${lit ? "" : "text-faint"}`}>
+        <span className="block truncate text-[13px] font-semibold">{name}</span>
+        <span className={`block truncate text-[13px] ${lit ? "" : "text-faint"}`}>
           {branchHint ?? detail}
         </span>
       </span>
@@ -816,7 +829,9 @@ function NodeCard({
             event.stopPropagation();
             onRemove();
           }}
-          className="shrink-0 cursor-pointer rounded p-1 opacity-0 transition-opacity group-hover/node:opacity-60 hover:opacity-100 focus-visible:opacity-100"
+          /* 28px, e não os 44 do portão: o alvo mora DENTRO do nó de 150×52, e
+             alargá-lo faria o clique de selecionar virar clique de apagar. */
+          className="flex h-7 w-7 shrink-0 cursor-pointer items-center justify-center rounded-full opacity-0 transition-opacity group-hover/node:opacity-60 hover:opacity-100 focus-visible:opacity-100"
         >
           <X className="h-3 w-3" />
         </button>

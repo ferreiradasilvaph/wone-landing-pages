@@ -1,47 +1,36 @@
-import { CreditCard, Infinity as InfinityIcon } from "lucide-react";
+import { CreditCard } from "lucide-react";
 
 /**
- * Marca de cada integração, para a faixa de integrações mostrar o símbolo em vez
- * do nome escrito.
+ * O glifo de cada integração, para a faixa mostrar o símbolo junto do nome.
  *
- * Por que desenhado aqui: o `lucide-react` não traz ícone de marca (foram
- * retirados da biblioteca por questão de marca registrada) e o projeto não tem
- * nenhum SVG de logo em `public/`. O mesmo caminho que o `FlagMark` já segue
- * para as bandeiras.
+ * São marcas de TERCEIROS em uso nominativo: a Wone integra com elas, e o
+ * símbolo identifica o serviço de que a página está falando. Não são "ícones
+ * CC0" nem logos licenciados pela Wone — os desenhos abaixo são reproduções
+ * simplificadas das formas públicas de cada marca, inline (sem arquivo em
+ * `public/`) e no laranja único da Wone, como o resto da faixa. Se algum
+ * detentor pedir, o `case` sai daqui e a marca passa a aparecer só pelo nome.
  *
- * Três níveis de fidelidade, e vale saber qual é qual:
+ * Por que desenhados aqui: o `lucide-react` tirou os ícones de marca da
+ * biblioteca justamente por questão de marca registrada, então não há de onde
+ * importar. O mesmo caminho que o `FlagMark` já segue para as bandeiras.
  *
- *  1. Desenhado a partir da forma real — `telegram` (avião de papel), `x` (o X),
- *     `pix` (o losango de quatro setas). São silhuetas simplificadas, não os
- *     arquivos oficiais.
- *  2. Ícone genérico que o contexto resolve — `card` (cartão) e, para a Meta, o
- *     laço do infinito. Lê como a marca ao lado do rótulo do serviço, sem
- *     reproduzir o logo.
- *  3. Monograma — `utmify`, `otimizey`. Não tenho a forma dessas marcas, e
- *     inventar um logo para empresa real seria pior do que não ter: ficaria um
- *     símbolo falso colado num nome verdadeiro. A inicial na cor da marca é
- *     claramente um marcador, não um logo.
- *  4. Símbolo do serviço, não da marca — `tiktok` e `kwai`. A nota musical e o
- *     "K" num quadrado foram reprovados, e com razão: eram logo de mentira. As
- *     duas entram na faixa como integrações de RASTREIO, então o símbolo conta
- *     isso — o evento saindo do anúncio — com a geometria de cada plataforma.
- *     Ver os `case` lá embaixo.
- *
- * Quando os SVG oficiais estiverem disponíveis, é só substituir cada `case` —
- * a assinatura do componente não muda.
+ * Quem não tem glifo devolve `null` e entra na faixa só pelo nome escrito.
+ * Inventar um símbolo para empresa real é pior do que não ter: fica um logo
+ * falso colado num nome verdadeiro. Os `case` vazios lá embaixo são o ponto de
+ * entrada dos SVG oficiais que o dono vai mandar.
  */
 export function IntegrationMark({
   icon,
-  name,
   className = "h-4 w-4",
   color,
 }: {
   icon: string;
+  /** Fica na API porque é o nome que a faixa escreve ao lado do glifo. */
   name: string;
   className?: string;
   color: string;
 }) {
-  const common = {
+  const comum = {
     className,
     style: { color },
     "aria-hidden": true as const,
@@ -49,93 +38,73 @@ export function IntegrationMark({
 
   switch (icon) {
     case "pix":
-      /* Quatro pontas de seta em losango, aproximando o símbolo do PIX. */
+      /* Quatro setas apontando para fora, em diamante: a construção do símbolo
+         do PIX — os quatro quadrantes com o entalhe em V na base. */
       return (
-        <svg {...common} viewBox="0 0 24 24" fill="currentColor">
-          <path d="M12 1.6 6.3 7.3h3.1L12 4.7l2.6 2.6h3.1z" />
-          <path d="M22.4 12l-5.7-5.7v3.1l2.6 2.6-2.6 2.6v3.1z" />
-          <path d="M12 22.4l-5.7-5.7h3.1l2.6 2.6 2.6-2.6h3.1z" />
-          <path d="M1.6 12l5.7-5.7v3.1L4.7 12l2.6 2.6v3.1z" />
+        <svg {...comum} viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 1.5 7.15 6.35l3.2 3.2L12 7.4l1.65 2.15 3.2-3.2z" />
+          <path d="M22.5 12l-4.85-4.85-3.2 3.2L16.6 12l-2.15 1.65 3.2 3.2z" />
+          <path d="M12 22.5l-4.85-4.85 3.2-3.2L12 16.6l1.65-2.15 3.2 3.2z" />
+          <path d="M1.5 12l4.85-4.85 3.2 3.2L7.4 12l2.15 1.65-3.2 3.2z" />
         </svg>
       );
 
     case "card":
-      return <CreditCard {...common} />;
+      /* Cartão não é marca: é o meio de pagamento, e o ícone genérico do lucide
+         diz isso melhor do que a bandeira de uma administradora só. */
+      return <CreditCard {...comum} />;
 
     case "telegram":
-      /* Avião de papel. `evenodd` garante que a dobra da asa seja recortada em
-         vez de preenchida — com a regra padrão o resultado dependeria do sentido
-         em que o subpath foi desenhado. */
+      /* O avião de papel, com a dobra da asa recortada na base — é a dobra que
+         distingue a marca de um avião de papel qualquer. */
       return (
-        <svg {...common} viewBox="0 0 24 24" fill="currentColor" fillRule="evenodd">
-          <path d="M22.3 2.6 2.1 10.5c-.7.3-.7 1.3 0 1.5l4.8 1.6 1.7 5.6c.2.7 1.1.8 1.5.2l2.3-3 4.6 3.4c.5.4 1.3.1 1.4-.6l3.6-15.3c.2-.7-.5-1.3-1.2-1zm-3.7 3.9-8.8 7.2a1 1 0 0 0-.3.6l-.3 2.6-1-3.4z" />
+        <svg {...comum} viewBox="0 0 24 24" fill="currentColor">
+          <path d="M23.91 3.79 20.3 20.84c-.25 1.21-.98 1.5-2 .94l-5.5-4.07-2.66 2.57c-.3.3-.55.56-1.1.56l.39-5.59 10.17-9.18c.44-.39-.1-.61-.68-.23L6.38 12.73.95 11.03c-1.18-.35-1.2-1.16.26-1.72l21.16-8.16c.98-.36 1.84.24 1.54 2.64z" />
         </svg>
       );
 
     case "meta":
-      return <InfinityIcon {...common} />;
-
-    case "tiktok":
-      /* Anúncio vertical com eco: o quadro 9:16 do vídeo curto, a linha deslocada
-         à esquerda (o descasamento de cor que é a assinatura visual do TikTok,
-         traduzido para um tom só) e o ponto cheio no meio, que é o pixel de
-         conversão. Não é o logo: é o que a integração faz. */
+      /* O laço do infinito. É o único glifo em traço e não em preenchimento: a
+         marca é uma fita de espessura variável, e um contorno preenchido feito
+         à mão ficaria irregular no tamanho em que a faixa usa (16px). */
       return (
         <svg
-          {...common}
+          {...comum}
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"
-          strokeWidth="1.8"
+          strokeWidth="2"
           strokeLinecap="round"
           strokeLinejoin="round"
         >
-          <rect x="9" y="3" width="9.5" height="18" rx="2.6" />
-          <path d="M5.5 7.5v9" />
-          <circle cx="13.75" cy="12" r="1.7" fill="currentColor" stroke="none" />
+          <path d="M17.6 6.4c-2.4 0-4 2.1-5.6 5.6-1.6 3.5-3.2 5.6-5.6 5.6-2.3 0-4-2.3-4-5.6s1.7-5.6 4-5.6c2.4 0 4 2.1 5.6 5.6 1.6 3.5 3.2 5.6 5.6 5.6 2.3 0 4-2.3 4-5.6s-1.7-5.6-4-5.6z" />
         </svg>
       );
 
-    case "kwai":
-      /* Vídeo que transmite: o play do vídeo curto e, saindo dele, duas ondas —
-         o evento indo embora para a plataforma. Mesma família do TikTok (as
-         duas são rastreio de vídeo curto) com silhueta diferente, para não
-         virarem o mesmo símbolo na faixa. */
+    case "tiktok":
+      /* A nota musical da marca: o gancho da colcheia saindo do corpo redondo. */
       return (
-        <svg
-          {...common}
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.8"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <path d="M5 6.4a1 1 0 0 1 1.5-.86l7.2 4.46a1 1 0 0 1 0 1.7l-7.2 4.46A1 1 0 0 1 5 15.3z" fill="currentColor" stroke="none" />
-          <path d="M16.8 8.6a4.6 4.6 0 0 1 0 6.8" />
-          <path d="M19.9 5.8a9.4 9.4 0 0 1 0 12.4" />
+        <svg {...comum} viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12.53.02C13.84 0 15.14.01 16.44 0c.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z" />
         </svg>
       );
 
     case "x":
-      /* O X. Geometria do próprio símbolo: duas barras cruzadas com o vão
-         interno recortado (daí o `evenodd`). */
+      /* O X. Duas barras cruzadas com o vão interno recortado, daí o
+         `evenodd` — com a regra padrão o miolo seria preenchido. */
       return (
-        <svg {...common} viewBox="0 0 24 24" fill="currentColor" fillRule="evenodd">
+        <svg {...comum} viewBox="0 0 24 24" fill="currentColor" fillRule="evenodd">
           <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
         </svg>
       );
 
+    /* case "kwai": */
+    /* case "utmify": */
+    /* case "otimizey": */
+    /* Sem glifo até os arquivos oficiais chegarem em
+       `public/images/marcas/<slug>.svg`; cada um vira um `case` acima, e a
+       assinatura deste componente não muda. */
     default:
-      /* Monograma: inicial do nome na cor da marca. */
-      return (
-        <span
-          aria-hidden
-          className={`${className} grid shrink-0 place-items-center rounded font-display text-[10px] font-bold leading-none`}
-          style={{ color, background: `${color}1f` }}
-        >
-          {name.charAt(0)}
-        </span>
-      );
+      return null;
   }
 }

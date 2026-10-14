@@ -76,12 +76,6 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${geistSans.variable} h-full antialiased`}
     >
       <body className="grain min-h-full flex flex-col bg-ink-950">
-        {/* Os blocos com animação de entrada nascem em opacity: 0 e só aparecem
-            quando o IntersectionObserver dispara. Sem JavaScript isso deixaria
-            a página em branco, então aqui o estado final é forçado. */}
-        <noscript>
-          <style>{`[data-reveal]{opacity:1!important;transform:none!important}`}</style>
-        </noscript>
         <LanguageProvider>{children}</LanguageProvider>
       </body>
     </html>

@@ -81,7 +81,7 @@ export function TrackingFlow() {
               >
                 {step.label}
               </p>
-              <p className="mt-0.5 text-xs text-faint">{step.detail}</p>
+              <p className="mt-0.5 text-[13px] text-faint">{step.detail}</p>
             </div>
           </li>
         );

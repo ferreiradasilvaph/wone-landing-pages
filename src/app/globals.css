@@ -5,6 +5,18 @@
    Preto quase absoluto, Vivid Orange (#FF7700) e Soft Cream (#FFFFE3).
    Os neutros são creme dessaturado, não cinza puro: é o que dá o tom quente
    da marca em vez do cinza padrão de framework.
+
+   Duas decisões estruturais moram neste arquivo e valem para a página inteira:
+
+   1. A fronteira entre seções é a TROCA DE FUNDO, nunca uma régua. As seções
+      alternam ink-950 (o preto da página) e ink-850 (o "branco" do modo
+      escuro), com ink-800 em Segurança e --floor na vitrine de Premiações.
+      Daí não existir `border-t` entre seções nem `.hairline`: o degrau de tom
+      já separa, e cada superfície de dentro (card, controle ativo) é um degrau
+      acima do fundo da sua seção.
+   2. O ritmo vertical vem de UM token, `--secao-y` (e `--secao-y-curta` no
+      fecho). Toda seção usa `padding-block: var(--secao-y)` — mudar a
+      respiração da página é mudar uma linha, não trinta utilitários.
    ========================================================================== */
 
 :root {
@@ -23,6 +35,21 @@
   --ink-850: #0f0f14;
   --ink-800: #15151c;
   --ink-750: #1b1b24;
+  /* Degrau de controle ativo para a seção que já nasce em ink-800 (Segurança):
+     sem ele, o card e o item selecionado cairiam no mesmo tom do fundo. */
+  --ink-700: #21212c;
+  /* Chão da vitrine de Premiações. Mesmo degrau de luminância do ink-850 da
+     alternância, em tom quente: é o único fundo fora da escala ink. */
+  --floor: #110f0e;
+
+  /* Ritmo vertical da página, em dois valores. O curto é o fecho (Segurança),
+     que a referência também encurta para o bloco invertido antes do fim. */
+  --secao-y: clamp(5rem, 3rem + 5.5vw, 8rem);
+  --secao-y-curta: clamp(4rem, 2.5rem + 4vw, 6rem);
+
+  /* A única sombra do site, no telefone do hero. Sobre preto, sombra de card
+     vira mancha cinza — por isso card se separa por tom, não por elevação. */
+  --shadow-device: 0 40px 80px -20px rgba(0, 0, 0, 0.9);
 
   /* Traços e textos derivados do creme.
 
@@ -61,6 +88,16 @@
   --color-ink-850: var(--ink-850);
   --color-ink-800: var(--ink-800);
   --color-ink-750: var(--ink-750);
+  --color-ink-700: var(--ink-700);
+  --color-floor: var(--floor);
+
+  /* Raios com nome próprio em vez de `rounded-sm/lg` redefinidos: a escala
+     padrão do Tailwind continua intacta e a intenção fica escrita na classe —
+     `rounded-card` diz o que a peça é, `rounded-3xl` diz só quanto mede.
+     Três formas no site inteiro, mais a pílula (`rounded-full`). */
+  --radius-field: 12px;
+  --radius-card: 24px;
+  --radius-device: 2.6rem;
 
   --color-line: var(--line);
   --color-line-strong: var(--line-strong);
@@ -79,15 +116,12 @@
      resolve os dois em qualquer SO, e `tabular-nums` nao depende da familia. */
   --font-mono: ui-monospace, "SF Mono", "Cascadia Mono", "Segoe UI Mono", "Roboto Mono", Menlo, Consolas, monospace;
 
-  /* Só as animações com uma classe `animate-*` em uso no site. `drift`,
-     `drift-slow`, `float` e `sweep` saíram daqui com os respectivos
-     `@keyframes`: nenhuma das quatro tinha uma única ocorrência em `src/`, e o
-     Tailwind gerava utilitário para todas. A `.aurora` caiu na mesma varredura,
-     pelo mesmo motivo. */
-  --animate-marquee: marquee 42s linear infinite;
-  --animate-pulse-ring: pulse-ring 3.2s cubic-bezier(0.16, 1, 0.3, 1) infinite;
-  --animate-breathe: breathe 6s ease-in-out infinite;
-  --animate-flag-shine: flag-shine 2.6s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+  /* Nenhuma animação em utilitário `animate-*`. As quatro que moravam aqui
+     saíram com as peças que as usavam: `marquee` (a faixa de integrações passou
+     a ser estática), `pulse-ring` e `breathe` (os anéis e o halo do telefone —
+     regra 8: sem halo laranja, sem blur decorativo) e `flag-shine` (o brilho na
+     bandeira em destaque). Os dois keyframes que restam são aplicados por
+     `style` inline, com a duração vinda de quem anima. */
 }
 
 /* --------------------------------------------------------------------------
@@ -113,10 +147,10 @@ body {
   color: var(--cream);
 }
 
-/* Compensa o header fixo ao navegar pelas âncoras */
-section[id] {
-  scroll-margin-top: 6rem;
-}
+/* A compensação do header fixo nas âncoras saiu daqui: a âncora deixou de ser
+   a `<section>` e passou a ser o bloco do título, com `scroll-mt-24` posto pelo
+   `SectionHead`. Parar o rolamento no topo da seção jogava o título contra o
+   header; parando no bloco do título, o kicker é a primeira linha visível. */
 
 /* Foco visível no tom da marca, em vez do anel azul do navegador */
 :focus-visible {
@@ -147,21 +181,67 @@ section[id] {
 }
 
 /* --------------------------------------------------------------------------
-   Tipografia fluida — escala sozinha entre 360px e 1440px, sem breakpoints
+   Tipografia fluida — escala sozinha entre 412px e 1440px, sem breakpoints
+
+   A escala é de dois andares, e as razões são a parte que faz a página parecer
+   desenhada: H1/H2 = 1,15 (o h1 abre, o h2 continua a mesma voz), tese/H2 =
+   1,22 (um único momento maior que a abertura), H2/H3 = 2,7 e H2/lead = 3,2
+   (entre o título e o corpo não existe tamanho intermediário — o que tira o
+   degradê de tamanhos que faz uma página ler como template). Todo o resto do
+   site vive entre 13 e 17px. Pisos do portão de acessibilidade: nada abaixo de
+   13px fora do PhoneMockup, nada abaixo de 11px dentro dele.
    -------------------------------------------------------------------------- */
 
 .t-display {
   font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
-  font-size: clamp(2.5rem, 1.2rem + 5.6vw, 5.25rem);
-  line-height: 0.98;
+  font-size: clamp(2.625rem, 1.95rem + 2.6vw, 3.875rem);
+  line-height: 0.97;
   letter-spacing: -0.035em;
   font-weight: 600;
 }
 
+/* O h1 em inglês é mais curto e cabia em duas linhas ("Sell on Telegram" pede
+   7,4em dos 8,8em que o `max-w-[34rem]` dá a 1440), então a palavra laranja
+   dividia a linha com "on". A medida em `em` acompanha o `clamp` acima e vale
+   em qualquer largura: 6,5em corta antes de "Telegram" e devolve as três linhas
+   do desenho — "Sell on / Telegram on / autopilot". */
+:lang(en) .t-display {
+  max-width: 6.5em;
+}
+
+/* Abre TODA seção, inclusive o hero: traço laranja de 24×1 + 13px em caixa
+   alta. O traço é a forma da referência; o ponto de 6px foi reprovado pelo
+   dono. Não é heading e não entra na árvore de cabeçalhos — o `<h2>` logo
+   abaixo é o único título do bloco, e um rótulo em caixa alta anunciado como
+   cabeçalho duplicaria cada seção no leitor de tela. */
+.t-kicker {
+  /* `flex` com largura de conteúdo, não `inline-flex`: como item de linha ele
+     se assentava na linha-base do bloco, e o strut do pai abria 7px invisíveis
+     acima do traço. Medido: a âncora da seção caía em y=96 (o `scroll-mt-24`
+     certo) e o kicker aparecia em 103 — 7px acima do alvo de ≤96 do portão de
+     navegação, nas dez seções. */
+  display: flex;
+  width: fit-content;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--brand);
+}
+.t-kicker::before {
+  content: "";
+  flex: none;
+  width: 24px;
+  height: 1px;
+  background: var(--brand);
+}
+
 .t-h2 {
   font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
-  font-size: clamp(1.95rem, 1.1rem + 3.2vw, 3.25rem);
-  line-height: 1.04;
+  font-size: clamp(2.25rem, 1.6rem + 2.4vw, 3.375rem);
+  line-height: 1.02;
   letter-spacing: -0.03em;
   font-weight: 600;
 }
@@ -174,26 +254,78 @@ section[id] {
   letter-spacing: -0.012em;
 }
 
-.t-h3 {
+/* A tese, em 700 — o único peso 700 da página junto ao numeral da vitrine.
+   Um uso só (Como funciona): repetida, deixaria de ser tese e viraria mais uma
+   escala de título. */
+.t-h2-tese {
   font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
-  font-size: clamp(1.3rem, 1rem + 1.1vw, 1.75rem);
-  line-height: 1.15;
+  font-size: clamp(2.375rem, 1.6rem + 3.2vw, 4.125rem);
+  line-height: 0.98;
+  letter-spacing: -0.035em;
+  font-weight: 700;
+}
+
+/* Título de card, de item e de painel. Fixo, não fluido: é o tamanho do objeto
+   dentro da seção, e crescer com a tela o aproximaria do h2. Nunca serve de
+   subtítulo de seção — a seção tem um heading só. */
+.t-h3 {
+  font-size: 1.25rem;
+  line-height: 1.3;
   letter-spacing: -0.02em;
   font-weight: 600;
 }
 
+/* Lead abaixo do título (variantes B, C e D). */
 .t-lead {
-  font-size: clamp(1rem, 0.93rem + 0.38vw, 1.2rem);
-  line-height: 1.65;
+  font-size: 1.0625rem;
+  font-weight: 400;
+  line-height: 1.53;
   color: var(--muted);
 }
 
-.t-eyebrow {
-  font-family: var(--font-mono);
-  font-size: 0.6875rem;
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
+/* Lead que fica AO LADO do título (variante A): menor que o de baixo, porque
+   divide a linha do olho com um título de 54px, e com a barra laranja fazendo
+   o papel do recuo. */
+.t-lead-side {
+  font-size: 1rem;
+  font-weight: 400;
+  line-height: 1.5;
+  color: var(--muted);
+  border-left: 2px solid var(--brand);
+  padding-left: 1rem;
+}
+@media (min-width: 1024px) {
+  .t-lead-side {
+    font-size: 0.875rem;
+  }
+}
+
+/* Rótulo de máquina: cabeçalho de tabela e de coluna, "Simulação", "n de 4".
+   13px e não 11 — o portão de acessibilidade não deixa descer. */
+.t-label {
+  font-size: 0.8125rem;
   font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+
+/* A mono aparece no site SÓ por este seletor (regra 2: uma família web). É o
+   cinza de máquina — ISO de moeda, locale, hora, código de evento, CNPJ —, e
+   quem escreve mono põe o valor em `<code>`, não uma classe. O utilitário
+   `font-mono` não tem uso nenhum e não deve voltar a ter. */
+code {
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--faint);
+}
+
+/* Dentro do chip o `<code>` é só a forma da letra: cor e tamanho são os do
+   chip, senão o valor sai mais apagado que o rótulo que o acompanha. */
+.chip code {
+  color: inherit;
+  font-size: inherit;
 }
 
 /* Números tabulares: painéis e contadores não "pulam" ao animar */
@@ -222,26 +354,10 @@ section[id] {
   background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.82' numOctaves='3' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
 }
 
-/* Malha técnica atrás do hero e das seções de destaque */
-.grid-mesh {
-  background-image:
-    linear-gradient(to right, color-mix(in oklab, var(--cream) 5%, transparent) 1px, transparent 1px),
-    linear-gradient(to bottom, color-mix(in oklab, var(--cream) 5%, transparent) 1px, transparent 1px);
-  background-size: 64px 64px;
-}
-
-/* Fio de luz: separador de seção que acende no centro */
-.hairline {
-  height: 1px;
-  background: linear-gradient(
-    to right,
-    transparent,
-    color-mix(in oklab, var(--cream) 14%, transparent) 20%,
-    color-mix(in oklab, var(--brand) 42%, transparent) 50%,
-    color-mix(in oklab, var(--cream) 14%, transparent) 80%,
-    transparent
-  );
-}
+/* O grão é a única textura que sobrou. Saíram a malha técnica (`.grid-mesh`)
+   do hero e dos destaques e o fio de luz (`.hairline`) entre seções: a fronteira
+   entre seções é a troca de fundo, e a malha competia com o telefone na
+   primeira dobra. */
 
 /* --------------------------------------------------------------------------
    Componentes utilitários
@@ -275,9 +391,9 @@ section[id] {
    ordem foi padronizar tudo no `.btn-solid`. Onde a ação precisa de menos peso,
    o caminho é link de texto, não um terceiro botão.
 
-   Hoje as duas chamadas do hero são o MESMO `.btn-solid` (commit 62e220a); o
-   dono decidiu em 14/10 que a segunda volta a ser link de texto, e é a próxima
-   etapa. */
+   É o que está no site: no hero, a primeira chamada é o `.btn-solid` (pelo
+   `CtaButton`) e a segunda é o link de texto laranja do `TextLink` — decisão do
+   dono em 14/10, que desfez o par de botões idênticos do commit 62e220a. */
 
 /* Palco do carrossel de Recursos.
 
@@ -307,115 +423,33 @@ section[id] {
   height: calc(var(--card-w) * 1.25);
 }
 
-/* Superfície de cartão padrão do site.
+/* Não existe mais classe de superfície de cartão.
 
-   Sem borda: o que separa o cartão do fundo é o tom (ink-850 sobre o quase
-   preto da página) mais a luz no topo. Contorno em volta de cada cartão, numa
-   página com dezenas deles, era a maior fonte de outline do site. */
-.surface {
-  background:
-    linear-gradient(180deg, color-mix(in oklab, var(--cream) 4%, transparent), transparent 42%),
-    var(--ink-850);
-}
+   `.surface` e `.surface-lit` punham um degradê de creme sobre o fundo do card
+   — e degradê em card é exatamente o que a regra 8 proíbe. O que separa um
+   card do fundo agora é só o degrau de tom: sobre ink-950 o card é ink-850,
+   sobre ink-850 é ink-800, sobre ink-800 (Segurança) é ink-750. É um utilitário
+   `bg-*` do Tailwind, não uma classe daqui.
 
-/* Variante clara, para blocos que ficam muito pesados com o degradê de cima
-   para baixo da `.surface` — a luz vem do topo em arco, em vez de escurecer
-   descendo, e a base é um tom acima. */
-.surface-lit {
-  background:
-    radial-gradient(130% 85% at 50% -10%, color-mix(in oklab, var(--cream) 9%, transparent), transparent 62%),
-    var(--ink-800);
-}
-
-/* Borda de 1px que acende seguindo o ponteiro (ver SpotlightCard) */
-.border-glow {
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  padding: 1px;
-  pointer-events: none;
-  -webkit-mask:
-    linear-gradient(#000 0 0) content-box,
-    linear-gradient(#000 0 0);
-  -webkit-mask-composite: xor;
-  mask:
-    linear-gradient(#000 0 0) content-box,
-    linear-gradient(#000 0 0);
-  mask-composite: exclude;
-}
-
-/* Máscara para marquees: as pontas somem em vez de cortar */
-.mask-edges {
-  -webkit-mask-image: linear-gradient(to right, transparent, #000 18%, #000 82%, transparent);
-  mask-image: linear-gradient(to right, transparent, #000 18%, #000 82%, transparent);
-}
+   Com eles saíram `.border-glow` (a borda de 1px que acendia seguindo o
+   ponteiro, do SpotlightCard) e `.mask-edges` (as pontas esmaecidas do
+   marquee): nem o cartão com holofote nem a faixa infinita continuam no site. */
 
 /* --------------------------------------------------------------------------
    Keyframes
    -------------------------------------------------------------------------- */
 
-@keyframes marquee {
+/* Preenchimento do segmento ativo das barras de progresso (`SegmentProgress`,
+   usado em Recursos, Segurança e Premiações). Horizontal e em `transform`, para
+   animar na GPU sem relayout; a duração vem por `style` de quem usa, e pausar é
+   `animation-play-state: paused` — o segmento congela onde está em vez de
+   voltar ao zero. */
+@keyframes segment-fill {
   from {
-    transform: translateX(0);
+    transform: scaleX(0);
   }
   to {
-    transform: translateX(-50%);
-  }
-}
-
-@keyframes pulse-ring {
-  0% {
-    transform: scale(0.85);
-    opacity: 0.7;
-  }
-  70%,
-  100% {
-    transform: scale(1.9);
-    opacity: 0;
-  }
-}
-
-/* Brilho que atravessa a bandeira do país em destaque. */
-@keyframes flag-shine {
-  0% {
-    transform: translateX(0) skewX(-12deg);
-  }
-  55%,
-  100% {
-    transform: translateX(300%) skewX(-12deg);
-  }
-}
-
-/* Luz ambiente. Mais lento que o `animate-pulse` do Tailwind (2s), que para um
-   glow de fundo pisca em vez de respirar. */
-@keyframes breathe {
-  0%,
-  100% {
-    opacity: 0.6;
-    transform: scale(0.97);
-  }
-  50% {
-    opacity: 1;
-    transform: scale(1.03);
-  }
-}
-
-/* Progresso da seleção na seção Segurança: a barra do card ativo cresce de
-   cima para baixo ao longo do intervalo do avanço automático. Vertical, por
-   isso um keyframe próprio — o do carrossel horizontal, que era o outro
-   usuário desta ideia, saiu junto com a barra dele.
-
-   O comentário que morava aqui prometia congelar a barra no meio com
-   `animation-play-state: paused` e voltar de onde parou. Não é o que acontece:
-   `SecurityCarousel` troca o `style` inteiro ao pausar, e ao retomar a barra
-   recomeça do zero enquanto o relógio continua do que faltava. O porquê de
-   ficar assim está no comentário da barra, em `SecurityCarousel.tsx`. */
-@keyframes security-progress {
-  from {
-    transform: scaleY(0);
-  }
-  to {
-    transform: scaleY(1);
+    transform: scaleX(1);
   }
 }
 

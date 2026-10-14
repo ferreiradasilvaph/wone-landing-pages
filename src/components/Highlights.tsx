@@ -2,15 +2,12 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { Zap, Boxes, ShieldCheck, Globe, type LucideIcon } from "lucide-react";
 import dynamic from "next/dynamic";
-import { useContent } from "@/i18n";
-import { Counter } from "./Counter";
-import { Reveal } from "./Reveal";
+import { useContent, useLanguage } from "@/i18n";
+import { Section } from "./Section";
+import { SectionHead } from "./SectionHead";
 
-const ICONS: Record<string, LucideIcon> = { Zap, Boxes, ShieldCheck, Globe };
 const EASE = [0.16, 1, 0.3, 1] as const;
-const ROTATE_MS = 6000;
 
 /* --------------------------------------------------------------------------
    Demos sob demanda
@@ -27,31 +24,31 @@ const ROTATE_MS = 6000;
 
    O caminho do `import()` precisa ser literal — nem variável, nem template —
    ou o bundler não liga o chunk à chamada.
+
+   `minH` é a altura REAL de cada demo, medida no navegador com o painel já
+   montado (celular 390: painel de 348; desktop 1440: painel de 696). Ela fica
+   na caixa do corpo do painel para o esqueleto ocupar exatamente o espaço que a
+   demo vai ocupar: é o que mantém o CLS em zero quando o chunk chega, e o que
+   impede o salto ao trocar de aba. Mexer numa demo é mexer nestes números.
+
+   Medidas (celular/desktop, o maior entre português e inglês): entrega 508/319,
+   blocos 886/396, confirmação 605/363, checkout 700/368 — o inglês quebra linha
+   noutro lugar e é ele quem manda na entrega.
+   O editor de fluxos troca de desenho em 768px (o `matchMedia` dele), e não em
+   640 como as outras três: por isso o `md:` no lugar do `sm:`.
    -------------------------------------------------------------------------- */
 
+/* Esqueleto: um bloco liso, sem pulso. Ele ocupa a altura da demo que está
+   chegando, então a troca não move nada — e um retângulo piscando ao lado do
+   texto seria mais um relógio na página, que é o que esta etapa tirou. */
 const DemoSkeleton = () => (
-  <div aria-hidden className="h-48 animate-pulse rounded-2xl bg-ink-800/60" />
+  <div aria-hidden className="rounded-field flex-1 bg-ink-900" />
 );
-
-/* --------------------------------------------------------------------------
-   A moldura tem a medida de cada demo
-
-   O painel era uma lâmina de 1280 px para as quatro — e o designer apontou o
-   que isso causava no "1,2s": uma tela grande demais para quatro etapas e um
-   cronômetro, com meio metro de vazio entre o texto e o carimbo de tempo.
-
-   Então a largura passa a ser do conteúdo, não do contêiner: cada demo declara
-   a sua, e a moldura anima entre elas quando se troca de aba. O editor de
-   fluxos continua com a página inteira, porque ele usa; os outros três encolhem
-   para a medida em que a composição fecha. O `key` aponta para o texto no
-   dicionário — título e subtítulo saíram de dentro das demos e viraram o
-   cabeçalho desta moldura, iguais para as quatro.
-   -------------------------------------------------------------------------- */
 
 const DEMOS = [
   {
     key: "delivery",
-    frame: "max-w-xl",
+    minH: "min-h-[32rem] sm:min-h-[20rem]",
     Component: dynamic(
       () => import("./demos/DeliveryDemo").then((mod) => mod.DeliveryDemo),
       { ssr: false, loading: DemoSkeleton },
@@ -59,7 +56,7 @@ const DEMOS = [
   },
   {
     key: "blocks",
-    frame: "max-w-5xl",
+    minH: "min-h-[56rem] md:min-h-[25rem]",
     Component: dynamic(
       () => import("./demos/FlowEditorDemo").then((mod) => mod.FlowEditorDemo),
       { ssr: false, loading: DemoSkeleton },
@@ -67,7 +64,7 @@ const DEMOS = [
   },
   {
     key: "confirmation",
-    frame: "max-w-2xl",
+    minH: "min-h-[38rem] sm:min-h-[23rem]",
     Component: dynamic(
       () => import("./demos/ConfirmationDemo").then((mod) => mod.ConfirmationDemo),
       { ssr: false, loading: DemoSkeleton },
@@ -75,7 +72,7 @@ const DEMOS = [
   },
   {
     key: "checkout",
-    frame: "max-w-3xl",
+    minH: "min-h-[44rem] sm:min-h-[23.5rem]",
     Component: dynamic(
       () => import("./demos/CheckoutDemo").then((mod) => mod.CheckoutDemo),
       { ssr: false, loading: DemoSkeleton },
@@ -117,41 +114,32 @@ function useNearViewport<T extends Element>(ref: React.RefObject<T | null>) {
 }
 
 /**
- * Os quatro números do produto, cada um demonstrando o que significa.
+ * A seção que demonstra o produto: a grade de spec à esquerda é a tablist, e o
+ * painel ao lado roda a parte correspondente.
  *
- * Os cards são as abas (`tablist` com ativação manual: as setas movem o foco e
- * Enter/Espaço seleciona — o padrão correto quando trocar de aba troca um painel
- * pesado) e o painel abaixo executa a demonstração correspondente.
+ * Os quatro cards com ícone, contador e descrição saíram. Eram quatro cartazes
+ * iguais anunciando o que o painel logo abaixo já mostrava — e o número, que é
+ * a prova, chegava contando a partir de zero — relógio que a página não tem mais.
+ * No lugar entra a grade 2×2 de números: figura grande, rótulo curto, fio
+ * laranja embaixo da célula ativa. Clicar num número é escolher a demo.
  *
- * A rotação automática para de vez no primeiro clique: quem está explorando não
- * pode ter o conteúdo trocado debaixo do cursor.
+ * A rotação automática de 6 s também saiu: trocar o painel debaixo do cursor de
+ * quem está lendo é o oposto de demonstrar. A troca é só por clique ou teclado
+ * (ativação manual: as setas movem o foco e Enter/Espaço seleciona — o padrão
+ * correto quando a aba troca um painel pesado).
  */
 export function Highlights() {
   const { highlights } = useContent();
+  const { locale } = useLanguage();
   const reduced = useReducedMotion();
   const items = highlights.items;
 
   const [active, setActive] = useState(0);
-  const [tookOver, setTookOver] = useState(false);
-  const [hovering, setHovering] = useState(false);
   const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const panelRef = useRef<HTMLDivElement>(null);
   const nearPanel = useNearViewport(panelRef);
 
-  useEffect(() => {
-    if (reduced || tookOver || hovering) return;
-
-    const id = window.setInterval(
-      () => setActive((value) => (value + 1) % items.length),
-      ROTATE_MS,
-    );
-    return () => window.clearInterval(id);
-  }, [reduced, tookOver, hovering, items.length]);
-
-  const select = useCallback((index: number) => {
-    setActive(index);
-    setTookOver(true);
-  }, []);
+  const select = useCallback((index: number) => setActive(index), []);
 
   /** Setas movem o foco; Enter e Espaço confirmam a aba focada. */
   const onKeyDown = (event: React.KeyboardEvent, index: number) => {
@@ -179,169 +167,127 @@ export function Highlights() {
   const Demo = demo.Component;
   const copy = highlights.demos[demo.key];
 
-  return (
-    <section
-      className="relative overflow-hidden px-5 py-20 sm:px-6"
-      onMouseEnter={() => setHovering(true)}
-      onMouseLeave={() => setHovering(false)}
+  /* As quatro figuras são inteiras hoje, mas o separador decimal continua
+     acompanhando o idioma (vírgula em português, ponto em inglês) para o dia em
+     que uma delas não for. A figura é estática — o número já é a prova, não
+     precisa contar. */
+  const figura = (value: number, decimals: number, suffix: string) =>
+    `${value.toLocaleString(locale === "pt" ? "pt-BR" : "en-US", {
+      minimumFractionDigits: decimals,
+      maximumFractionDigits: decimals,
+    })}${suffix}`;
+
+  /* A grade de spec, na coluna do texto: quatro números com rótulo, duas
+     colunas, réguas entre as células. O `border-b` em todas e o `border-l` nas
+     pares desenham a cruz interna mais o fecho de baixo — `divide-*` daria uma
+     régua solta na borda direita da primeira linha. */
+  const grade = (
+    <div
+      role="tablist"
+      aria-label={highlights.title}
+      className="grid max-w-[29rem] grid-cols-2 border-t border-line"
     >
-      {/* Luz de fundo: tira o peso do preto chapado sob os cards */}
-      <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
-        <div className="absolute top-1/4 left-1/2 hidden h-[26rem] w-[56rem] -translate-x-1/2 rounded-full bg-brand/8 blur-[150px] sm:block" />
-        <div className="grid-mesh absolute inset-0 opacity-40 [mask-image:radial-gradient(ellipse_75%_60%_at_50%_35%,#000,transparent_75%)]" />
-      </div>
+      {items.map((item, index) => {
+        const isActive = index === active;
 
-      <div className="mx-auto max-w-7xl">
-        <div className="hairline mb-12" />
-
-        {/* A secao nao renderizava titulo nenhum: o <h1> do hero era
-            seguido direto pelo <h3> das demos, pulando um nivel. Este h2 so
-            para leitor de tela recoloca o degrau sem mexer no desenho. */}
-        <h2 className="sr-only">{highlights.title}</h2>
-
-        <Reveal>
-          <p className="t-eyebrow mb-5 text-center text-faint">
-            {highlights.demos.tabHint}
-          </p>
-
-          {/* Abas. No celular viram faixa rolável com encaixe. */}
-          <div
-            role="tablist"
-            aria-label={highlights.title}
-            className="-mx-5 flex snap-x snap-mandatory gap-4 overflow-x-auto px-5 pb-2 sm:mx-0 sm:grid sm:grid-cols-2 sm:overflow-visible sm:px-0 lg:grid-cols-4"
+        return (
+          <button
+            key={item.title}
+            ref={(node) => {
+              tabRefs.current[index] = node;
+            }}
+            role="tab"
+            id={`highlight-tab-${index}`}
+            aria-selected={isActive}
+            aria-controls="highlight-panel"
+            tabIndex={isActive ? 0 : -1}
+            onClick={() => select(index)}
+            onKeyDown={(event) => onKeyDown(event, index)}
+            className={`relative cursor-pointer border-b border-line py-5 pr-6 text-left transition-colors duration-200 ${
+              index % 2 === 1 ? "border-l border-line pl-6" : ""
+            }`}
           >
-            {items.map((item, index) => {
-              const Icon = ICONS[item.icon] ?? Zap;
-              const isActive = index === active;
+            <span
+              className={`tnum block text-[2rem] leading-none font-semibold ${
+                isActive ? "text-cream" : "text-faint"
+              }`}
+            >
+              {figura(item.value, item.decimals, item.suffix)}
+            </span>
+            <span
+              className={`mt-2 block text-[13px] ${isActive ? "text-muted" : "text-faint"}`}
+            >
+              {item.title}
+            </span>
 
-              return (
-                <button
-                  key={item.title}
-                  ref={(node) => {
-                    tabRefs.current[index] = node;
-                  }}
-                  role="tab"
-                  id={`highlight-tab-${index}`}
-                  aria-selected={isActive}
-                  aria-controls="highlight-panel"
-                  tabIndex={isActive ? 0 : -1}
-                  onClick={() => select(index)}
-                  onKeyDown={(event) => onKeyDown(event, index)}
-                  // Ativo: opacidade cheia e o fio laranja no topo (abaixo). O
-                  // contorno border-brand/50 e a sombra laranja saíram — era
-                  // contorno sobre contorno, já que o card já tem superfície.
-                  className={`surface-lit group relative w-[17rem] shrink-0 snap-start cursor-pointer overflow-hidden rounded-2xl p-6 text-left transition-all duration-500 sm:w-auto ${
-                    isActive ? "opacity-100" : "opacity-55 hover:opacity-85"
-                  }`}
-                >
-                  {/* O halo laranja desfocado no canto saiu: roubava a atenção
-                      de quem lia o número. O que marca a aba ativa é o fio de
-                      1px no topo, abaixo, mais a opacidade do card. */}
-                  <span
-                    aria-hidden
-                    className={`absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-brand to-transparent transition-opacity duration-500 ${
-                      isActive ? "opacity-100" : "opacity-0"
-                    }`}
-                  />
-
-                  <span className="relative block">
-                    {/* Ícone solto, sem o quadrado com borda em volta */}
-                    <span
-                      className={`flex h-11 w-11 items-center justify-center transition-colors duration-500 ${
-                        isActive ? "text-brand" : "text-faint"
-                      }`}
-                    >
-                      <Icon className="h-6 w-6" />
-                    </span>
-
-                    <span className="mt-5 block text-4xl font-semibold tracking-tight text-cream">
-                      <Counter
-                        to={item.value}
-                        decimals={item.decimals}
-                        suffix={item.suffix}
-                      />
-                    </span>
-
-                    <span className="font-display mt-1 block text-base font-semibold text-brand">
-                      {item.title}
-                    </span>
-                    <span className="mt-2.5 block text-sm leading-relaxed text-muted">
-                      {item.description}
-                    </span>
-                  </span>
-
-                  {/* A seta que apontava da aba para o painel saiu com a
-                      moldura de largura variável: ela nasce no centro da aba, e
-                      o painel estreito já não passa por baixo das quatro. O que
-                      marca a aba ativa é o fio laranja no topo mais a opacidade
-                      — e o painel, que troca à vista. */}
-                </button>
-              );
-            })}
-          </div>
-        </Reveal>
-
-        {/* Painel da aba ativa.
-
-            A altura mínima de 19rem saiu junto com a largura fixa: as quatro
-            demos agora fecham entre 17rem e 21rem, e um piso só devolveria o
-            vazio que o designer pediu para tirar. O que estabiliza a seção é a
-            moldura animar entre as medidas em vez de saltar. */}
-        <Reveal delay={0.1}>
-          <div
-            ref={panelRef}
-            role="tabpanel"
-            id="highlight-panel"
-            aria-labelledby={`highlight-tab-${active}`}
-            tabIndex={0}
-            className={`surface-lit relative mx-auto mt-6 w-full overflow-hidden rounded-3xl transition-[max-width] duration-700 ease-[var(--ease-out-expo)] ${demo.frame}`}
-          >
-            {/* Só monta a demo quando o painel chega perto da viewport */}
-            {nearPanel ? (
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={active}
-                  initial={{ opacity: 0, y: 14 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -14 }}
-                  transition={{ duration: reduced ? 0 : 0.35, ease: EASE }}
-                >
-                  {/* Cabeçalho da moldura: o título e o subtítulo que cada demo
-                      repetia por conta própria, agora num lugar só e no mesmo
-                      lugar da tela nas quatro. O ícone à direita é o mesmo da
-                      aba clicada — é o fio que liga o card ao painel desde que
-                      a seta saiu. */}
-                  <div className="flex items-start justify-between gap-5 border-b border-line px-5 py-4 sm:px-6 sm:py-5">
-                    <div className="min-w-0">
-                      <h3 className="font-display text-base font-semibold text-balance text-cream sm:text-lg">
-                        {copy.title}
-                      </h3>
-                      <p className="mt-1 text-[13px] text-pretty text-muted sm:text-sm">
-                        {copy.subtitle}
-                      </p>
-                    </div>
-                    <PanelIcon name={items[active]?.icon} />
-                  </div>
-
-                  <div className="p-5 sm:p-6">
-                    <Demo />
-                  </div>
-                </motion.div>
-              </AnimatePresence>
-            ) : (
-              <div className="p-5 sm:p-6">
-                <DemoSkeleton />
-              </div>
+            {/* Marcador da aba ativa: fio de 2px por baixo da célula, sobre a
+                régua da grade. Não é contorno — item selecionado com borda em
+                volta é o que a regra 8 proíbe. */}
+            {isActive && (
+              <span aria-hidden className="absolute inset-x-0 -bottom-px h-0.5 bg-brand" />
             )}
-          </div>
-        </Reveal>
-      </div>
-    </section>
+          </button>
+        );
+      })}
+    </div>
   );
-}
 
-/** Eco do ícone da aba ativa no cabeçalho do painel. */
-function PanelIcon({ name }: { name?: string }) {
-  const Icon = ICONS[name ?? ""] ?? Zap;
-  return <Icon aria-hidden className="mt-0.5 h-5 w-5 shrink-0 text-brand/70" />;
+  /* O painel: um degrau acima do fundo da seção (ink-800 sobre ink-850), na
+     largura da coluna. A largura por demo e a transição de `max-width` saíram
+     — a moldura mudava de tamanho a cada clique e levava a página junto. */
+  const painel = (
+    <div
+      ref={panelRef}
+      role="tabpanel"
+      id="highlight-panel"
+      aria-labelledby={`highlight-tab-${active}`}
+      tabIndex={0}
+      className="overflow-hidden rounded-card bg-ink-800"
+    >
+      <div className="flex items-start justify-between gap-4 border-b border-line px-5 py-5 sm:px-6">
+        <div className="min-w-0">
+          <h3 className="t-h3 text-balance text-cream">{copy.title}</h3>
+          <p className="mt-1 text-[13px] text-pretty text-muted">{copy.subtitle}</p>
+        </div>
+        {/* A ficção se declara dentro do próprio objeto (regra 4). */}
+        <span className="t-label shrink-0">{highlights.simulationLabel}</span>
+      </div>
+
+      <div className={`flex flex-col p-4 sm:p-6 ${demo.minH}`}>
+        {nearPanel ? (
+          /* `initial={false}`: a primeira demo nasce pintada, e só a TROCA de
+             aba — que é gesto de quem está lendo — tem travessia. */
+          <AnimatePresence initial={false} mode="wait">
+            <motion.div
+              key={active}
+              className="flex flex-1 flex-col"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: reduced ? 0 : 0.35, ease: EASE }}
+            >
+              <Demo />
+            </motion.div>
+          </AnimatePresence>
+        ) : (
+          <DemoSkeleton />
+        )}
+      </div>
+    </div>
+  );
+
+  return (
+    <Section anchor="destaques" tone="ink-850">
+      <SectionHead
+        id="destaques"
+        kicker={highlights.kicker}
+        title={highlights.title}
+        lead={highlights.lead}
+        variant="B"
+        aside={painel}
+      >
+        {grade}
+      </SectionHead>
+    </Section>
+  );
 }

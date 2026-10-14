@@ -11,6 +11,8 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { useContent } from "@/i18n";
+import { PauseButton } from "./PauseButton";
+import { SegmentProgress } from "./SegmentProgress";
 
 const ICONS: Record<string, LucideIcon> = { KeyRound, CopySlash, Network, Vault };
 const EASE = [0.16, 1, 0.3, 1] as const;
@@ -19,24 +21,34 @@ const EASE = [0.16, 1, 0.3, 1] as const;
 const AUTOPLAY_MS = 5000;
 
 /**
- * Segurança: os quatro itens como lista de cards clicáveis à esquerda e o
- * detalhe do item escolhido à direita.
+ * Segurança: os quatro itens como lista de seleção à esquerda e o detalhe do
+ * item escolhido à direita.
  *
- * A faixa com scroll-snap saiu. O designer pediu os quatro cards visíveis ao
- * mesmo tempo, sem rolagem, e o clique trocando o card do lado — e ele está
- * certo: com quatro itens, rolar para ver o que já caberia na tela é trabalho
- * sem recompensa.
+ * Esta é a seção invertida da página — fundo ink-800 —, então cada superfície
+ * sobe um degrau: o item é ink-750 e o escolhido, ink-700. É tom, não contorno:
+ * medido, `--faint` dá 5,2:1 sobre o ink-700 e 5,4:1 sobre o ink-750, acima do
+ * 4,5:1 do portão, então não foi preciso somar borda ao item ativo.
  *
- * O avanço automático ficou, porque atende o outro pedido da equipe (a seção
- * "andar sozinha") sem reintroduzir rolagem: o que avança é a seleção, não a
- * posição. Pausa com o ponteiro em cima, com foco de teclado dentro da seção e
- * com a aba em segundo plano; pausar guarda quanto falta do intervalo e retomar
- * continua de onde parou. Com `prefers-reduced-motion` não liga — e esse "não
- * liga" só é conhecido depois da montagem, nunca no primeiro render (o porquê
- * está no efeito do `matchMedia`, abaixo).
+ * O avanço automático ficou, porque atende o pedido de a seção "andar sozinha"
+ * sem reintroduzir rolagem: o que avança é a seleção, não a posição. Pausa com
+ * o ponteiro em cima, com foco de teclado dentro da seção, com a aba em segundo
+ * plano e pelo "pausar" sob o card — este último é o que o ponteiro e o teclado
+ * não davam a quem usa toque (WCAG 2.2.2: algo que anda sozinho precisa de um
+ * controle visível). Pausar guarda quanto falta do intervalo e retomar continua
+ * de onde parou. Com `prefers-reduced-motion` não liga — e esse "não liga" só é
+ * conhecido depois da montagem, nunca no primeiro render (o porquê está no
+ * efeito do `matchMedia`, abaixo).
+ *
+ * Quanto falta do intervalo é a régua de 4 segmentos sob o card, não mais um
+ * fio laranja de 3px colado na borda do item ativo: contorno em item
+ * selecionado é o que a regra 8 proíbe, e a seleção já se lê pelo tom (ink-700
+ * sobre ink-750).
+ *
+ * E4 troca os quatro itens pelas linhas-tabela (termo + complemento); aqui a
+ * mecânica é a de hoje.
  */
 export function SecurityCarousel() {
-  const { security } = useContent();
+  const { security, ui } = useContent();
   const items = security.items;
   const count = items.length;
 
@@ -47,8 +59,11 @@ export function SecurityCarousel() {
   const [focused, setFocused] = useState(false);
   const [tabHidden, setTabHidden] = useState(false);
   const [reduced, setReduced] = useState(false);
+  /* O pedido explícito de quem lê: nasce `false` nos dois lados, como os
+     outros, para o primeiro render do cliente ser igual ao do servidor. */
+  const [userPaused, setUserPaused] = useState(false);
 
-  const paused = hovering || focused || tabHidden;
+  const paused = userPaused || hovering || focused || tabHidden;
   const playing = !reduced && !paused;
 
   /* Quanto falta do intervalo atual. */
@@ -87,7 +102,7 @@ export function SecurityCarousel() {
     setActive(index);
   }, []);
 
-  /* O efeito depende de `active`, então clicar num card reinicia o intervalo. */
+  /* O efeito depende de `active`, então clicar num item reinicia o intervalo. */
   useEffect(() => {
     if (!playing) {
       if (startedAt.current) {
@@ -126,7 +141,7 @@ export function SecurityCarousel() {
       onMouseEnter={() => setHovering(true)}
       onMouseLeave={() => setHovering(false)}
       onFocus={() => setFocused(true)}
-      /* Só despausa quando o foco sai da seção: andar de um card ao seguinte com
+      /* Só despausa quando o foco sai da seção: andar de um item ao seguinte com
          Tab dispara blur e depois focus, e o intervalo reiniciaria no caminho. */
       onBlur={(event) => {
         if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
@@ -148,7 +163,7 @@ export function SecurityCarousel() {
 
           return (
             <button
-              key={entry.title}
+              key={entry.term}
               type="button"
               role="tab"
               id={`security-tab-${index}`}
@@ -171,55 +186,10 @@ export function SecurityCarousel() {
                 event.preventDefault();
                 select(next);
               }}
-              className={`group relative flex cursor-pointer items-start gap-3.5 overflow-hidden rounded-2xl p-4 text-left transition-colors duration-300 sm:p-5 ${
-                isActive ? "surface-lit" : "surface hover:bg-ink-800"
+              className={`group relative flex cursor-pointer items-start gap-3.5 overflow-hidden rounded-card p-4 text-left transition-colors duration-300 sm:p-5 ${
+                isActive ? "bg-ink-700" : "bg-ink-750"
               }`}
             >
-              {/* Barra da seleção à esquerda. No card ativo ela é o progresso
-                  do avanço automático: cresce de cima para baixo ao longo do
-                  intervalo.
-
-                  Sem avanço — seção pausada, ou `prefers-reduced-motion` — ela
-                  aparece cheia: volta a ser só o marcador de seleção, que é o
-                  que ela tem de ser quando não há progresso para mostrar.
-
-                  Pausada, ela chega lá pelo `style` ausente. Com `reduce`, por
-                  outro caminho — e esse caminho é o conserto da hidratação: no
-                  primeiro render o atributo sai SEMPRE com a animação, igual no
-                  servidor e no cliente. O freio vem depois, pelo `matchMedia`
-                  lá em cima e pela regra de `globals.css` que corta toda
-                  `animation-duration` para 0,001 ms com `!important` sob
-                  `prefers-reduced-motion: reduce` — inline style perde de
-                  `!important` de folha, então a barra salta para cheia já no
-                  primeiro quadro, antes de o efeito rodar.
-
-                  O `animationPlayState: paused` que morava aqui nunca rodou:
-                  `playing` já é falso quando `paused` é verdadeiro, então a
-                  expressão devolvia `undefined` antes de chegar nele. Congelar
-                  de verdade não é trocar o play state — ao retomar, a barra
-                  recomeça de zero enquanto o relógio continua do que faltava
-                  (`remaining`), e o card troca com a barra no meio. Casar as
-                  duas pediria um `animation-delay` negativo do tamanho do já
-                  decorrido, ou seja, ler `remaining` durante o render. Não
-                  vale o preço: fica a barra cheia. */}
-              <span
-                aria-hidden
-                className="absolute inset-y-0 left-0 w-[3px] overflow-hidden"
-              >
-                {isActive && (
-                  <span
-                    className="block h-full w-full origin-top bg-brand"
-                    style={
-                      playing
-                        ? {
-                            animation: `security-progress ${AUTOPLAY_MS}ms linear forwards`,
-                          }
-                        : undefined
-                    }
-                  />
-                )}
-              </span>
-
               <span
                 className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center transition-colors duration-300 ${
                   isActive ? "text-brand" : "text-faint group-hover:text-brand"
@@ -228,16 +198,19 @@ export function SecurityCarousel() {
                 <Icon className="h-5 w-5" />
               </span>
 
+              {/* Termo e complemento, a forma de linha de tabela da referência:
+                  o rótulo curto carrega o item, a frase em minúscula o explica
+                  sem repetir o título que já está no card ao lado. */}
               <span className="min-w-0">
                 <span
-                  className={`font-display block text-[15px] leading-snug font-semibold transition-colors duration-300 ${
+                  className={`block text-[15px] leading-snug font-semibold transition-colors duration-300 ${
                     isActive ? "text-cream" : "text-cream/80"
                   }`}
                 >
-                  {entry.title}
+                  {entry.term}
                 </span>
-                <span className="mt-1 block text-[13px] leading-relaxed text-muted">
-                  {entry.description}
+                <span className="mt-1 block text-[15px] leading-relaxed text-muted">
+                  {entry.summary}
                 </span>
               </span>
             </button>
@@ -245,55 +218,64 @@ export function SecurityCarousel() {
         })}
       </div>
 
-      {/* Painel do item escolhido.
+      <div className="min-w-0">
+        {/* Painel do item escolhido.
 
-          `aria-live` fica em "off" enquanto a seleção anda sozinha: anunciar
-          cada troca automática encheria o leitor de tela de interrupções que o
-          usuário não pediu. Pausado, a troca partiu de um clique ou do teclado,
-          e aí o anúncio é esperado. */}
-      <div
-        role="tabpanel"
-        id="security-panel"
-        aria-labelledby={`security-tab-${active}`}
-        aria-live={paused ? "polite" : "off"}
-        aria-atomic="true"
-        className="surface relative overflow-hidden rounded-3xl p-7 sm:p-9 lg:sticky lg:top-28"
-      >
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={item.title}
-            initial={{ opacity: 0, y: reduced ? 0 : 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: reduced ? 0 : 0.22, ease: EASE }}
-          >
-            <div className="relative mb-6 flex h-24 items-center justify-center">
-              {[104, 78, 56].map((size, index) => (
-                <span
-                  key={size}
-                  aria-hidden
-                  className="absolute rounded-full border border-brand"
-                  style={{ height: size, width: size, opacity: 0.2 - index * 0.04 }}
-                />
-              ))}
-              <span className="relative flex h-14 w-14 items-center justify-center text-brand">
-                <ActiveIcon className="h-7 w-7" />
+            `aria-live` fica em "off" enquanto a seleção anda sozinha: anunciar
+            cada troca automática encheria o leitor de tela de interrupções que
+            o usuário não pediu. Pausado, a troca partiu de um clique ou do
+            teclado, e aí o anúncio é esperado. */}
+        <div
+          role="tabpanel"
+          id="security-panel"
+          aria-labelledby={`security-tab-${active}`}
+          aria-live={paused ? "polite" : "off"}
+          aria-atomic="true"
+          className="rounded-card bg-ink-750 p-6"
+        >
+          <AnimatePresence mode="wait" initial={false}>
+            <motion.div
+              key={item.title}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.35, ease: EASE }}
+            >
+              {/* O ícone sem os três anéis concêntricos que o cercavam, e tudo
+                  à esquerda: nada centrado na página. */}
+              <span className="flex h-8 w-8 items-center justify-center text-brand">
+                <ActiveIcon className="h-6 w-6" />
               </span>
-            </div>
 
-            <h3 className="font-display text-center text-lg font-semibold text-cream">
-              {item.title}
-            </h3>
-            <p className="mt-3 text-center text-sm leading-relaxed text-muted">
-              {item.detail}
-            </p>
+              <h3 className="t-h3 mt-5 text-cream">{item.title}</h3>
+              <p className="mt-3 text-[15px] leading-relaxed text-muted">{item.detail}</p>
+            </motion.div>
+          </AnimatePresence>
+        </div>
 
-            {/* Posição na lista, para quem chegou pelo teclado saber onde está */}
-            <p className="t-eyebrow mt-6 text-center text-faint">
-              {active + 1}/{count}
-            </p>
-          </motion.div>
-        </AnimatePresence>
+        {/* Onde a seleção está e quanto falta para ela andar, mais o controle de
+            parar. A régua fica FORA do card porque ela fala dos quatro itens da
+            esquerda, não do detalhe de um só. */}
+        <div className="mt-6 flex items-end gap-5">
+          <SegmentProgress
+            className="min-w-0 flex-1"
+            count={count}
+            active={active}
+            durationMs={AUTOPLAY_MS}
+            paused={!playing}
+            labelLeft={item.term}
+            labelRight={`${active + 1} ${ui.of} ${count}`}
+          />
+          <PauseButton
+            pressed={userPaused}
+            onToggle={() => setUserPaused((valor) => !valor)}
+            labels={{ pause: ui.pause, play: ui.play }}
+            /* Esta seção é o bloco invertido: a pílula padrão (ink-800) teria o
+               tom do próprio fundo, então ela sobe um degrau como as outras
+               superfícies daqui. */
+            className="shrink-0 bg-ink-700!"
+          />
+        </div>
       </div>
     </div>
   );

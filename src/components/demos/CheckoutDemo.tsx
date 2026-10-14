@@ -5,6 +5,7 @@ import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import dynamic from "next/dynamic";
 import { Info } from "lucide-react";
 import { FlagMark } from "../FlagMark";
+import { CtaButton } from "../CtaButton";
 import { useContent } from "@/i18n";
 
 const EASE = [0.16, 1, 0.3, 1] as const;
@@ -13,7 +14,7 @@ const EASE = [0.16, 1, 0.3, 1] as const;
 const GlobeScene = dynamic(() => import("./GlobeScene"), {
   ssr: false,
   loading: () => (
-    <div aria-hidden className="h-full animate-pulse rounded-full bg-ink-900/40" />
+    <div aria-hidden className="h-full rounded-full bg-ink-900" />
   ),
 });
 
@@ -21,7 +22,7 @@ const GlobeScene = dynamic(() => import("./GlobeScene"), {
  * Checkout do mesmo plano, na moeda de cada país.
  *
  * Os países, bandeiras, símbolos e métodos de pagamento vêm de
- * `payments.card.countries` — a mesma lista que a seção de Pagamentos usa, para
+ * `payments.table.countries` — a mesma lista que a seção de Pagamentos usa, para
  * não existirem duas verdades sobre onde a Wone cobra.
  *
  * O designer achou esta demo simples perto das outras, apontando a parte das
@@ -37,7 +38,7 @@ export function CheckoutDemo() {
   const { highlights, payments } = useContent();
   const demo = highlights.demos.checkout;
   const reduced = useReducedMotion();
-  const countries = payments.card.countries;
+  const countries = payments.table.countries;
 
   const [index, setIndex] = useState(0);
   const country = countries[index];
@@ -56,7 +57,7 @@ export function CheckoutDemo() {
         </div>
 
         {/* País de frente no globo, escrito */}
-        <div className="-mt-1 text-center leading-tight">
+        <div className="-mt-1 flex flex-col items-center leading-tight">
           <AnimatePresence mode="wait">
             <motion.p
               key={country.code}
@@ -69,7 +70,7 @@ export function CheckoutDemo() {
               {country.name}
             </motion.p>
           </AnimatePresence>
-          <p className="mt-0.5 text-[11px] text-faint">{country.method}</p>
+          <p className="mt-0.5 text-[13px] text-faint">{country.methods.join(", ")}</p>
         </div>
 
         {/* As bandeiras: o seletor. Quatro, lado a lado, do tamanho de bandeira */}
@@ -84,24 +85,21 @@ export function CheckoutDemo() {
                   onClick={() => setIndex(entryIndex)}
                   aria-pressed={isActive}
                   aria-label={entry.name}
-                  className={`flex w-full cursor-pointer flex-col items-center gap-1 rounded-xl px-1 py-2 transition-colors duration-300 ${
-                    isActive ? "bg-ink-750" : "bg-ink-900/60 hover:bg-ink-800"
+                  className={`rounded-field flex w-full cursor-pointer flex-col items-center gap-1 px-1 py-2 transition-colors duration-300 ${
+                    isActive ? "bg-ink-750" : "bg-ink-900 hover:bg-ink-800"
                   }`}
                 >
+                  {/* Bandeira estática de 36×24: o brilho que varria a do país
+                      ativo saiu junto com os relógios decorativos. O que marca
+                      a escolha é o tom do fundo, não o contorno (regra 8). */}
                   <FlagMark
                     code={entry.code}
-                    active={isActive}
                     className={`h-6 w-9 transition-opacity duration-300 ${
                       isActive ? "opacity-100" : "opacity-60"
                     }`}
                   />
-                  <span
-                    className={`font-mono text-[10px] transition-colors duration-300 ${
-                      isActive ? "text-cream" : "text-faint"
-                    }`}
-                  >
-                    {entry.code}
-                  </span>
+                  {/* ISO da moeda: valor de máquina, logo `<code>`. */}
+                  <code>{entry.code}</code>
                 </button>
               </li>
             );
@@ -109,21 +107,19 @@ export function CheckoutDemo() {
         </ul>
       </div>
 
-      {/* Card de checkout */}
-      <div className="surface relative overflow-hidden rounded-2xl p-5">
-        <div
-          aria-hidden
-          className="pointer-events-none absolute -top-16 -right-12 hidden h-40 w-40 rounded-full bg-brand/15 blur-[70px] sm:block"
-        />
-
-        <div className="relative">
-          <span className="t-eyebrow text-faint">{demo.product}</span>
-          <p className="mt-1 text-xs text-faint">{demo.productNote}</p>
+      {/* Card de checkout: é a tela do cliente dentro da demo, então segue a
+          forma de mini-mockup — fundo ink-950 com moldura de 1px e r-12, a
+          única exceção de card dentro de card. O halo laranja desfocado no
+          canto saiu com todos os outros blurs da página. */}
+      <div className="rounded-field border border-line bg-ink-950 p-5">
+        <div>
+          <span className="t-label">{demo.product}</span>
+          <p className="mt-1 text-[13px] text-faint">{demo.productNote}</p>
 
           {/* Preço: troca com animação ao mudar de país */}
           <div className="mt-4 flex items-end gap-2">
-            <FlagMark code={country.code} active className="mb-1 h-5 w-8" />
-            <span className="pb-0.5 font-mono text-base font-semibold text-brand">
+            <FlagMark code={country.code} className="mb-1 h-5 w-8" />
+            <span className="pb-0.5 text-base font-semibold text-brand">
               {country.symbol}
             </span>
             <AnimatePresence mode="wait">
@@ -133,7 +129,7 @@ export function CheckoutDemo() {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -12 }}
                 transition={{ duration: reduced ? 0 : 0.35, ease: EASE }}
-                className="tnum text-[2rem] leading-none font-bold text-cream"
+                className="tnum text-[2rem] leading-none font-semibold text-cream"
               >
                 {price.display}
               </motion.span>
@@ -142,7 +138,7 @@ export function CheckoutDemo() {
 
           {/* Métodos daquele país */}
           <div className="mt-4 border-t border-line pt-3.5">
-            <span className="t-eyebrow text-faint">{demo.payWith}</span>
+            <span className="t-label">{demo.payWith}</span>
             <AnimatePresence mode="wait">
               <motion.p
                 key={country.code}
@@ -152,21 +148,20 @@ export function CheckoutDemo() {
                 transition={{ duration: reduced ? 0 : 0.3 }}
                 className="mt-1.5 text-sm font-medium text-cream"
               >
-                {country.method}
+                {country.methods.join(", ")}
               </motion.p>
             </AnimatePresence>
           </div>
 
-          <button
-            type="button"
-            disabled
-            className="btn-solid mt-4 w-full cursor-default rounded-xl py-2.5 text-sm font-semibold opacity-90"
-          >
+          {/* Botão de produto: o `object` do CtaButton, a mesma pílula de
+              "Rodar" e "Simular de novo". Desabilitado de propósito — é o
+              checkout do cliente, não uma ação desta página. */}
+          <CtaButton size="object" disabled className="mt-4 w-full">
             {country.symbol} {price.display}
-          </button>
+          </CtaButton>
 
-          <p className="mt-3 flex items-start gap-1.5 text-[10px] leading-relaxed text-faint">
-            <Info className="mt-0.5 h-3 w-3 shrink-0" />
+          <p className="mt-3 flex items-start gap-1.5 text-[13px] leading-relaxed text-faint">
+            <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
             {demo.disclaimer}
           </p>
         </div>

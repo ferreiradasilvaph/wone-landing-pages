@@ -4,6 +4,11 @@
  * build até ser traduzido — é de propósito.
  */
 export const pt = {
+  /**
+   * O rótulo de cada item é o mesmo substantivo do kicker da seção e do link da
+   * coluna Produto do rodapé — a mesma palavra nos três lugares. Os `href`
+   * continuam em português nos dois idiomas: são âncoras técnicas, não texto.
+   */
   nav: [
     { label: "Como funciona", href: "#como-funciona" },
     { label: "Recursos", href: "#recursos" },
@@ -14,11 +19,12 @@ export const pt = {
 
   hero: {
     /**
-     * Posicionamento em texto corrido. Era um badge pill com borda, fundo
-     * laranja e ponto pulsante — o enfeite que mais entregava "template". Não
-     * repete "Telegram", que já está no título.
+     * Kicker da primeira dobra: posicionamento · cobertura, com o ponto-médio
+     * entre termos irmãos. Abaixo de `sm` a cobertura não cabe em uma linha de
+     * 13px, então entra a versão curta — é a única diferença entre as duas.
      */
-    context: "Infraestrutura de cobrança, entrega e rastreio",
+    kicker: "Cobrança, entrega e rastreio · Brasil, Argentina, México e Colômbia",
+    kickerShort: "Cobrança, entrega e rastreio",
 
     /**
      * Título curto e em cor sólida: `titleAccent` é a única palavra em laranja,
@@ -30,47 +36,85 @@ export const pt = {
     titleAccent: "automático",
 
     /**
-     * Resultado para o cliente, não lista de features. Opção alternativa:
-     *   "Você publica a oferta e a Wone faz o resto: cobra, confirma o
-     *    pagamento e libera o acesso ao canal. Você só olha o caixa."
+     * O lead do dono, quebrado em trechos só para marcar os dois momentos que
+     * ganham `<strong>` (o método de pagamento e a entrada no canal). O texto
+     * corrido é o mesmo; os objetos viram <strong class="font-medium
+     * text-cream"> e nada mais muda de peso na primeira dobra.
      */
-    lead: "Seu cliente paga no PIX ou no cartão e entra no canal em segundos — de madrugada, no fim de semana, sem você aprovar nada.",
+    lead: [
+      "Seu cliente ",
+      { strong: "paga no PIX ou no cartão" },
+      " e ",
+      { strong: "entra no canal" },
+      " em segundos — de madrugada, no fim de semana, sem você aprovar nada.",
+    ],
 
     ctaPrimary: "Lista de espera",
     ctaSecondary: "Ver como funciona",
 
-    /** Três fatos verificáveis, em texto simples no lugar das pills. */
-    facts: ["Entrega em 1,2s", "Revogação imediata", "Rastreio servidor a servidor"],
+    /**
+     * Três linhas de benefício: valor em creme, descrição em muted, na mesma
+     * linha. Os números são os que já existem neste dicionário (4 países, 3
+     * vias, 28 blocos); "1,2 s" e "Revogação imediata" saíram por não terem
+     * fonte fora do painel rotulado "Simulação".
+     */
+    benefits: [
+      {
+        value: "4 países",
+        label: "Real, peso argentino, mexicano e colombiano no checkout",
+      },
+      { value: "3 vias", label: "Webhook, reconciliação e botão no chat até a entrega" },
+      { value: "28 blocos", label: "Editor visual de funil, 4 deles de IA" },
+    ],
 
-    integrationsLabel: "As melhores integrações do mercado",
+    /** Rótulos do PauseButton que controla o relógio do telefone. */
+    pause: { pause: "pausar", play: "retomar" },
   },
 
-  integrations: [
-    { name: "PIX", icon: "pix", kind: "Pagamento", dot: "#32D583" },
-    { name: "Cartão", icon: "card", kind: "Pagamento", dot: "#FF9D45" },
-    { name: "Telegram", icon: "telegram", kind: "Entrega", dot: "#2AABEE" },
-    { name: "Meta Ads", icon: "meta", kind: "Rastreio", dot: "#0A7CFF" },
-    { name: "TikTok Ads", icon: "tiktok", kind: "Rastreio", dot: "#EE1D52" },
-    { name: "Kwai", icon: "kwai", kind: "Rastreio", dot: "#FF7700" },
-    { name: "X Ads", icon: "x", kind: "Rastreio", dot: "#FFFFE3" },
-    { name: "UTMify", icon: "utmify", kind: "Atribuição", dot: "#A78BFA" },
-    { name: "Otimizey", icon: "otimizey", kind: "Atribuição", dot: "#22D3EE" },
-  ],
+  /**
+   * As nove integrações, com o rótulo que abre a faixa. O campo `dot` saiu: os
+   * glifos passam a ser laranja único (regra 10), então a cor própria de cada
+   * marca não é usada em lugar nenhum.
+   */
+  integrations: {
+    title: "Por onde cada venda passa",
+    items: [
+      { name: "PIX", icon: "pix", kind: "Pagamento" },
+      { name: "Cartão", icon: "card", kind: "Pagamento" },
+      { name: "Telegram", icon: "telegram", kind: "Entrega" },
+      { name: "Meta Ads", icon: "meta", kind: "Rastreio" },
+      { name: "TikTok Ads", icon: "tiktok", kind: "Rastreio" },
+      { name: "Kwai", icon: "kwai", kind: "Rastreio" },
+      { name: "X Ads", icon: "x", kind: "Rastreio" },
+      { name: "UTMify", icon: "utmify", kind: "Atribuição" },
+      { name: "Otimizey", icon: "otimizey", kind: "Atribuição" },
+    ],
+  },
 
   /**
    * Destaques do produto. Nenhum deles é métrica de resultado de cliente — são
    * características verificáveis da plataforma.
    */
   highlights: {
-    eyebrow: "Por dentro da operação",
-    title: "O que a Wone faz enquanto você dorme",
+    kicker: "Plataforma",
+    title: "O cliente paga. A Wone confere. O convite chega.",
+    /* O convite de clique fecha o lead e substitui a dica solta que havia
+       acima das abas (regra de copy: o lead absorve o "hint"). */
+    lead: "Do pagamento ao acesso, na mesma conta: PIX ou cartão, três vias de confirmação, convite de uso único no chat. Clique num número para ver cada parte rodar.",
+    /** Etiqueta de ficção no cabeçalho do painel das demos (regra 4). */
+    simulationLabel: "Simulação",
     items: [
       {
+        /* "1,2 s" não vive aqui: a grade fica FORA do painel rotulado
+           "Simulação", e número de desempenho sem fonte não sai em texto da
+           página (regra 4). O 1,2 s continua no título da demo, que mora dentro
+           do painel. A figura desta célula é o convite de uso único por
+           pagamento, que é fato do produto. */
         icon: "Zap",
-        value: 1.2,
-        decimals: 1,
-        suffix: "s",
-        title: "Entrega instantânea",
+        value: 1,
+        decimals: 0,
+        suffix: "",
+        title: "Convite por pagamento",
         description:
           "Do PIX confirmado ao convite no chat. O cliente paga de madrugada e entra no canal na hora, sem você tocar em nada.",
       },
@@ -111,11 +155,9 @@ export const pt = {
      * revisão sem tocar em componente.
      */
     demos: {
-      tabHint: "Clique em um número para ver a demonstração",
-
       delivery: {
-        title: "Do PIX ao acesso, em 1,2 segundo",
-        subtitle: "Simulação do que acontece quando um cliente paga de madrugada",
+        title: "Do PIX ao acesso em 1,2 s",
+        subtitle: "Simulação de um pagamento às 03:14, com ninguém da equipe acordado.",
         clock: "03:14",
         clockNote: "Ninguém da sua equipe está acordado",
         replay: "Simular de novo",
@@ -129,10 +171,9 @@ export const pt = {
       },
 
       blocks: {
-        title: "28 blocos para desenhar qualquer funil",
-        subtitle: "Monte um aqui: clique nos blocos, encadeie e rode",
+        title: "28 blocos. Quatro de IA. Monte um funil aqui.",
+        subtitle: "Clique nos blocos, encadeie e rode.",
         aiTag: "IA",
-        hint: "Clique num bloco para somá-lo ao funil",
         /** Funil de exemplo. Cada nome precisa existir em `categories`. */
         flow: ["Início", "Conversar", "Oferta", "Checkout PIX", "Gerar convite"],
         builder: {
@@ -230,8 +271,8 @@ export const pt = {
       },
 
       confirmation: {
-        title: "Três vias independentes até a entrega",
-        subtitle: "Desligue uma via e veja o acesso sair pelas outras",
+        title: "Três vias até a entrega. Desligue uma.",
+        subtitle: "O acesso sai pelas outras duas.",
         payment: "Pagamento feito",
         delivered: "Entregue",
         offline: "Via fora do ar",
@@ -246,8 +287,9 @@ export const pt = {
       },
 
       checkout: {
-        title: "O mesmo plano, na moeda de cada país",
-        subtitle: "Escolha um país e veja o checkout que o cliente enxerga",
+        title: "O mesmo plano. A moeda de cada país.",
+        subtitle:
+          "Escolha um país e veja o checkout do cliente. Valores ilustrativos, sem cotação.",
         product: "Plano Anual VIP",
         productNote: "Acesso ao canal por 12 meses",
         payWith: "Pagar com",
@@ -263,11 +305,14 @@ export const pt = {
   },
 
   howItWorks: {
-    eyebrow: "Passo a passo",
-    title: "Do bot à primeira venda em",
-    titleAccent: "4 passos",
-    description:
-      "Sem planilha, sem conferência manual. Você configura uma vez e a operação roda sozinha.",
+    kicker: "Como funciona",
+    /**
+     * A única tese da página (66/700, três linhas de ≤ 8em). As linhas são
+     * separadas porque cada uma ganha a sua cor: creme, creme e laranja — sobre
+     * preto, um terceiro degrau em `--faint` leria como desabilitado.
+     */
+    thesis: ["Cole o token.", "Monte o funil.", "A Wone entrega."],
+    lead: "Bot, funil, gateway, venda. Você configura uma vez; a Wone mantém o bot no ar e a operação roda sozinha. Role para ver os quatro passos.",
     steps: [
       {
         step: "01",
@@ -292,69 +337,68 @@ export const pt = {
       {
         step: "04",
         icon: "money",
-        title: "Venda e entregue no automático",
+        title: "Venda e acompanhe",
         description:
           "O cliente paga, recebe o acesso na hora e você acompanha tudo no painel.",
       },
     ],
-  },
 
-  products: {
-    eyebrow: "Dois caminhos",
-    title: "Dois jeitos de montar seu funil",
-    description: "Escolha o que combina com você. Dá para usar os dois na mesma conta.",
-    featuredLabel: "Completo",
-    cta: "Solicitar acesso",
-    items: [
+    /**
+     * Os dois produtos. Eram uma seção inteira de cards ("Dois caminhos") e
+     * viraram os dois bullets com régua desta coluna: os mesmos fatos, sem a
+     * pílula "Completo" e sem os dois botões que repetiam o CTA.
+     */
+    paths: [
       {
         name: "Wone Estático",
-        tagline: "O funil pronto",
-        description:
-          "Boas-vindas, planos, order bump, upsell, downsell, packs, pagamento, entrega e renovação, organizados em abas. Você preenche, a Wone executa.",
-        bullets: [
-          "Ideal para começar a vender rápido",
-          "Nenhuma lógica para configurar",
-          "Funil completo de venda já estruturado",
-        ],
-        featured: false,
+        text: "Funil pronto em abas: boas-vindas, planos, order bump, upsell, downsell, packs e renovação. Você preenche, a Wone executa.",
       },
       {
         name: "Wone Fluxos",
-        tagline: "Editor visual",
-        description:
-          "Um editor visual por blocos, onde você monta a lógica de ponta a ponta: condições, esperas, etiquetas, integrações e inteligência artificial.",
-        bullets: [
-          "28 tipos de bloco, incluindo 4 de IA",
-          "Simulador e modo de teste no próprio painel",
-          "Métricas por bloco para saber onde o lead para",
-        ],
-        featured: true,
+        text: "Editor visual com 28 blocos, 4 de IA; simulador e modo de teste no painel; métricas por bloco para ver onde o lead para.",
       },
     ],
+
+    /** Link de texto que fecha a coluna (ação de menos peso, sem seta). */
+    listLink: "Entrar na lista",
+
+    /**
+     * Legendas do palco 3D. `{n}` é trocado pelo passo à vista; o chip de
+     * estado acompanha a cena (laranja-âmbar até o passo 4, verde no fim).
+     */
+    stage: {
+      counter: "{n} de 4",
+      states: { waiting: "PIX · aguardando", confirmed: "PIX · confirmado" },
+    },
   },
 
   features: {
-    eyebrow: "Recursos",
-    title: "Tudo o que seu funil precisa para",
-    titleAccent: "vender mais",
-    description: "Os recursos que fazem a diferença entre uma venda e dezenas.",
+    kicker: "Recursos",
+    title: "Order bump no mesmo PIX. Renovação antes de vencer.",
+    lead: "Planos de mensal a vitalício, packs com prévia, PIX livre e modo de teste sem cobrança real. Dez recursos, um por vez; use as setas.",
     /** Rótulos das setas do carrossel de Recursos. */
     prev: "Recurso anterior",
     next: "Próximo recurso",
+    /**
+     * Mesmos dez recursos e mesmos fatos de antes; a descrição passa à cadência
+     * pergunta-resposta onde a pergunta é a dúvida real de quem vende ("Venceu?
+     * Lembrete antes…"). Onde não havia pergunta honesta a fazer, a frase ficou
+     * afirmativa: forçar a fórmula nos dez viraria tique.
+     */
     items: [
       {
         title: "Order bump",
-        description: "Ofereça um adicional no checkout, cobrado no mesmo PIX.",
+        description: "O cliente já está pagando? O adicional entra no mesmo PIX, no checkout.",
         icon: "ShoppingBag",
       },
       {
         title: "Upsell e downsell",
-        description: "Sequências automáticas depois da compra e para quem abandonou.",
+        description: "Comprou? Vem a oferta maior. Desistiu? Vem a menor.",
         icon: "TrendingUp",
       },
       {
         title: "Packs",
-        description: "Venda conteúdos avulsos, com prévia antes da compra.",
+        description: "Venda conteúdo avulso. O cliente vê a prévia antes de comprar.",
         icon: "Boxes",
       },
       {
@@ -364,17 +408,17 @@ export const pt = {
       },
       {
         title: "Assinatura e renovação",
-        description: "Lembretes antes de vencer e remoção automática ao expirar.",
+        description: "Venceu? Lembrete antes e remoção automática depois.",
         icon: "RefreshCw",
       },
       {
         title: "PIX livre",
-        description: "Deixe o cliente escolher o valor dentro da faixa que você definir.",
+        description: "Quanto o cliente quer pagar? Ele escolhe dentro da faixa que você definir.",
         icon: "Sliders",
       },
       {
         title: "Modo de teste",
-        description: "Percorra seu funil no Telegram sem gerar cobrança real.",
+        description: "Quer conferir antes? Percorra o funil no Telegram sem cobrança real.",
         icon: "TestTube",
       },
       {
@@ -384,75 +428,105 @@ export const pt = {
       },
       {
         title: "Entrega automática",
-        description: "Convite único para canal ou grupo, gerado na hora do pagamento.",
+        description: "Pagou? O convite de uso único sai na hora, para canal ou grupo.",
         icon: "Zap",
       },
       {
         title: "IA no funil",
-        description: "Bots que conversam, classificam e qualificam seus leads.",
+        description: "Quatro blocos de IA conversam, classificam e qualificam seus leads.",
         icon: "Bot",
       },
     ],
   },
 
   payments: {
-    eyebrow: "Pagamentos e rastreio",
-    title: "Receba com segurança e saiba de onde vem cada venda",
-    description:
-      "O dinheiro cai na sua conta e cada clique no anúncio volta como dado para a sua campanha.",
+    kicker: "Pagamentos",
+    /** Texto do dono, em caixa alta: o único H2 que não é frase. */
+    title: "Checkout INTERNACIONAL",
+    lead: "Real, peso argentino, mexicano e colombiano. O cliente paga como já paga no país dele: PIX, cartão, SPEI ou PSE. O dinheiro cai na sua conta na processadora.",
 
-    card: {
-      title: "Pagamentos",
-      headline: "Checkout INTERNACIONAL",
-      lead: "Cobre em moeda local e deixe o cliente pagar do jeito que ele já paga no país dele. Sem conversão manual, sem checkout em inglês.",
-      /** Selo do quadro de moedas. O número acompanha a lista abaixo. */
-      badge: "4 países · 4 moedas · 1 checkout",
-      priceLabel: "O mesmo plano anual, na moeda de cada país",
-      priceNote: "Valores ilustrativos, sem cotação em tempo real.",
-      methodLabel: "Paga com",
+    /**
+     * A tabela de quatro países. Os cabeçalhos são as colunas da Wone — PAÍS ·
+     * PAGA COM · MOEDA · PLANO —, não as da referência: o checkout em espanhol
+     * é capacidade da processadora, não da Wone, e por isso não vira coluna.
+     */
+    table: {
+      headers: {
+        country: "País",
+        methods: "Paga com",
+        currency: "Moeda",
+        plan: "Plano",
+      },
+      planLabel: "Plano Anual VIP",
+      /* Um método por item, não uma frase ("PIX e cartão"): a coluna "Paga com"
+         é uma fileira de chips, e montá-los quebrando uma frase traduzida por
+         " e " / " and " acoplaria o componente ao idioma. */
       countries: [
         {
           name: "Brasil",
-          method: "PIX e cartão",
+          methods: ["PIX", "Cartão"],
           code: "BRL",
           symbol: "R$",
           currency: "Real",
         },
         {
           name: "Argentina",
-          method: "Cartão local",
+          methods: ["Cartão local"],
           code: "ARS",
           symbol: "$",
           currency: "Peso argentino",
         },
         {
           name: "México",
-          method: "Cartão e SPEI",
+          methods: ["Cartão", "SPEI"],
           code: "MXN",
           symbol: "$",
           currency: "Peso mexicano",
         },
         {
           name: "Colômbia",
-          method: "Cartão e PSE",
+          methods: ["Cartão", "PSE"],
           code: "COP",
           symbol: "$",
           currency: "Peso colombiano",
         },
       ],
-      moreLabel: "Mais garantias",
-      more: [
-        "O dinheiro cai na sua conta. Você conecta a sua própria conta na processadora.",
-        "Se um gateway cair, o próximo assume. Configure mais de um e não perca venda por instabilidade.",
-        'Confirmação em três caminhos: Webhook, reconciliação automática e botão "Verificar pagamento" no chat.',
-        "Sem entrega duplicada. Um mesmo pagamento nunca libera o acesso duas vezes.",
-        "Processadoras próprias para pagamentos nacionais e internacionais.",
+      /** Notas de rodapé da tabela: à esquerda a ficção, à direita o fato. */
+      notes: [
+        "Valores ilustrativos, sem cotação em tempo real.",
+        "Checkout próprio em cada país, na moeda local.",
       ],
     },
 
+    block2Title: "O dinheiro cai na sua conta. O clique volta como dado.",
+
+    /**
+     * As garantias viraram itens numerados em texto. "Confirmação em três
+     * caminhos" saiu daqui: é a figura "3" de Highlights, e cada afirmação-chave
+     * é dita uma vez só. "Processadoras próprias" segue fora até o dono
+     * confirmar.
+     */
+    guarantees: [
+      {
+        num: "01",
+        term: "Sua conta na processadora",
+        text: "O dinheiro cai direto nela; a Wone não passa pelo dinheiro.",
+      },
+      {
+        num: "02",
+        term: "Gateway reserva",
+        text: "Se um cair, o próximo assume. Configure mais de um.",
+      },
+      {
+        num: "03",
+        term: "Sem entrega duplicada",
+        text: "Um mesmo pagamento nunca libera o acesso duas vezes.",
+      },
+    ],
+
     tracking: {
-      title: "Rastreamento",
-      lead: "Do clique no anúncio até a venda confirmada e o pós-checkout.",
+      title: "Rastreio",
+      lead: "Do clique no anúncio à venda confirmada, servidor a servidor. Meta, TikTok, Kwai e X.",
       flow: [
         { label: "Clique no anúncio", detail: "Meta, TikTok, Kwai ou X" },
         { label: "Start no bot", detail: "UTM e código de venda guardados" },
@@ -469,11 +543,12 @@ export const pt = {
   },
 
   analytics: {
-    eyebrow: "Análises",
-    title: "Decida com números, não com",
-    titleAccent: "achismo",
-    description: "Um painel que mostra a saúde da sua comunidade VIP em tempo real.",
-    hint: "Clique em cada métrica para ver o painel correspondente.",
+    kicker: "Análises",
+    title: "Que hora vende mais. Onde o lead para.",
+    /* "Tempo real" saiu do lead junto com a pílula do painel: a amostra é
+       ilustrativa, e dizer as duas coisas na mesma seção era contradição. */
+    lead: "Faturamento por hora, funil, LTV, taxas e extrato, num painel só. Clique numa aba para ver cada um; a amostra é ilustrativa.",
+    simulationLabel: "Simulação",
     views: [
       {
         id: "faturamento",
@@ -486,7 +561,8 @@ export const pt = {
       {
         id: "funil",
         icon: "Filter",
-        label: "Funil completo: start, PIX gerado e pagamento",
+        /* Sem "completo": adjetivo de marketing fora das descrições. */
+        label: "Cada passo do funil: start, PIX gerado e pagamento",
         short: "Funil",
         panelTitle: "Funil de 100 leads",
         panelSubtitle: "Do start no bot até a compra concluída",
@@ -518,7 +594,6 @@ export const pt = {
       },
     ],
     panel: {
-      live: "Tempo real",
       accumulated: "acumulado hoje",
       peak: "pico",
       funnelNote: "que geraram o PIX e não pagaram entram na recuperação automática.",
@@ -541,7 +616,9 @@ export const pt = {
       ],
       statementRows: [
         { time: "21:47", flow: "Plano Anual VIP", gateway: "Dotfy", value: "$197.00" },
-        { time: "21:31", flow: "Order bump · Pack", gateway: "Dotfy", value: "$47.00" },
+        /* Vírgula, não ponto-médio: aqui são duas linhas de uma venda, não dois
+           termos irmãos de um rótulo. */
+        { time: "21:31", flow: "Order bump, Pack", gateway: "Dotfy", value: "$47.00" },
         { time: "20:58", flow: "Plano Mensal", gateway: "Mercado Pago", value: "$97.00" },
         { time: "20:12", flow: "Plano Trimestral", gateway: "Dotfy", value: "$247.00" },
       ],
@@ -549,36 +626,45 @@ export const pt = {
     },
   },
 
+  /**
+   * Segurança não tem lead: sob o título fica o card de detalhe do item ativo.
+   * Cada item serve a duas peças — a linha-tabela da esquerda ("termo —
+   * complemento", por isso o `summary` começa em minúscula e sem ponto) e o
+   * card da direita (`title` + `detail`).
+   */
   security: {
-    eyebrow: "Segurança",
-    title: "Sua operação blindada",
-    description: "Conteúdo protegido, acesso controlado e credenciais guardadas em cofre.",
+    kicker: "Segurança e acesso",
+    title: "O conteúdo não sai do canal. As chaves não saem do cofre.",
     items: [
       {
         icon: "KeyRound",
+        term: "2FA",
+        summary: "código que só existe no seu aparelho",
         title: "Verificação em duas etapas (2FA)",
-        description: "Proteção extra para o acesso ao painel.",
         detail:
           "Além da senha, o painel pede um código que só existe no seu aparelho. Mesmo que alguém descubra sua senha, não entra.",
       },
       {
         icon: "CopySlash",
+        term: "Anti-clone",
+        summary: "o lead não encaminha, não salva, não copia",
         title: "Anti-clone de conteúdo",
-        description: "O lead não encaminha, não salva e não copia suas mensagens.",
         detail:
           "O conteúdo do canal fica travado contra encaminhamento e cópia. Quem pagou consome; quem não pagou não recebe de graça.",
       },
       {
         icon: "Network",
+        term: "Contas isoladas",
+        summary: "nenhum dado cruza com outro produtor",
         title: "Contas isoladas",
-        description: "Os dados de cada cliente ficam separados dos demais.",
         detail:
           "Cada conta roda em seu próprio espaço. Nenhum dado seu cruza com o de outro produtor da plataforma.",
       },
       {
         icon: "Vault",
+        term: "Cofre",
+        summary: "tokens e chaves cifrados em repouso",
         title: "Cofre de segredos",
-        description: "Suas chaves e credenciais são guardadas cifradas.",
         detail:
           "Tokens de bot e chaves de gateway ficam cifrados em repouso. Nem a equipe da Wone lê o conteúdo.",
       },
@@ -586,8 +672,8 @@ export const pt = {
   },
 
   faq: {
-    eyebrow: "Dúvidas",
-    title: "Perguntas frequentes",
+    kicker: "FAQ",
+    title: "O que todo mundo pergunta antes de entrar na lista.",
     items: [
       {
         question: "Preciso saber programar?",
@@ -627,14 +713,16 @@ export const pt = {
     ],
   },
 
+  /**
+   * A vitrine. O marco em dólar saiu dos títulos e virou `milestoneLine`, uma
+   * linha própria em .t-label: o título é o nome do objeto, e o '•' que os
+   * separava não volta (nenhum bullet em título). As descrições dizem os mesmos
+   * fatos sem os superlativos que havia — o objeto já impressiona sozinho.
+   */
   awards: {
-    badge: "Premiações por marco",
-    title: "Premiações &",
-    titleAccent: "reconhecimento",
-    description:
-      "A cada novo patamar de faturamento no Telegram, o troféu oficial e os itens comemorativos exclusivos chegam na sua casa.",
-    progressLabel: "Arraste para percorrer os marcos",
-    milestoneLabel: "Marco",
+    kicker: "Prêmios",
+    title: "Aos 10 mil dólares, um pin. No milhão, um anel de ouro 18k.",
+    lead: "A cada marco de faturamento no Telegram, o troféu e o item do marco chegam na sua casa. Toque num marco para ver.",
     physicalItem: "Item físico enviado",
     items: [
       {
@@ -645,11 +733,12 @@ export const pt = {
         /** Vestida — a foto já vem sobre o dorso ou o pulso desenhado — aparece
             uma vez ao lado da placa; solta, repete nos quatro cantos. */
         photoWorn: false,
-        title: "Troféu Bronze • $10,000",
-        subtitle: "A validação da primeira escala",
+        title: "Troféu Bronze 10K",
+        milestoneLine: "$10,000 em faturamento",
+        subtitle: "A primeira escala",
         description:
-          "A validação da sua operação e as primeiras centenas de membros retidos na sua comunidade VIP.",
-        awardItem: "Pin Oficial Wone Bronze & Certificado de Escala",
+          "A sua operação validada e as primeiras centenas de membros na sua comunidade VIP.",
+        awardItem: "Pin oficial Wone em bronze + certificado de escala",
         accent: "#D97706",
       },
       {
@@ -657,11 +746,12 @@ export const pt = {
         image: "/placas/placa-100k.webp",
         photo: "/images/pulseira-100k-vestida.webp",
         photoWorn: true,
-        title: "Placa Acrílico 100K • $100,000",
-        subtitle: "Clube dos 6 Dígitos",
+        title: "Placa Acrílico 100K",
+        milestoneLine: "$100,000 em faturamento",
+        subtitle: "Clube dos 6 dígitos",
         description:
-          "Troféu comemorativo em bloco maciço de acrílico cristal facetado com a Raposa Wone oficial 100K. Acompanha a Pulseira Oficial Wone em titânio.",
-        awardItem: "Troféu Acrílico Cristal + Pulseira Oficial em Titânio Wone",
+          "Troféu em bloco de acrílico cristal facetado com a Raposa Wone 100K. Acompanha a pulseira oficial Wone em titânio.",
+        awardItem: "Troféu de acrílico cristal + pulseira oficial em titânio",
         accent: "#E4E4E7",
       },
       {
@@ -669,11 +759,12 @@ export const pt = {
         image: "/placas/placa-500k.webp",
         photo: "/images/colar-500k-vestido.webp",
         photoWorn: true,
-        title: "Placa Cerimonial 500K • $500,000",
-        subtitle: "Meio Milhão Faturado",
+        title: "Placa Cerimonial 500K",
+        milestoneLine: "$500,000 em faturamento",
+        subtitle: "Meio milhão faturado",
         description:
-          "Troféu em acrílico especial com a Raposa Wone em traje cerimonial e brasão cromado em alto relevo. Acompanha a joia exclusiva: colar com pingente cravejado em safira e diamante.",
-        awardItem: "Troféu 500K High Relief + Colar Cravejado Safira & Diamante",
+          "Troféu em acrílico especial com a Raposa Wone em traje cerimonial e brasão cromado em alto relevo. Acompanha o colar com pingente cravejado em safira e diamante.",
+        awardItem: "Troféu 500K em alto relevo + colar cravejado em safira e diamante",
         accent: "#EAB308",
       },
       {
@@ -681,26 +772,30 @@ export const pt = {
         image: "/placas/placa-1m.webp",
         photo: "/images/anel-1m.webp",
         photoWorn: false,
-        title: "Placa Black Diamond 1M • $1,000,000",
-        subtitle: "O Olimpo dos 7 Dígitos",
+        title: "Placa Black Diamond 1M",
+        milestoneLine: "$1,000,000 em faturamento",
+        subtitle: "Clube dos 7 dígitos",
         description:
-          "Troféu monumental Wone 1M para grandes produtores com ecossistemas dominantes. Acompanha o cobiçado Anel de Campeonato Ouro 18k e Titânio Negro gravado “1M WONE BOT”.",
-        awardItem: "Troféu Monumental 1M + Anel de Ouro 18k & Titânio Wone 1M Club",
+          "Troféu Wone 1M para quem chegou aos sete dígitos no Telegram. Acompanha o anel de campeonato em ouro 18k e titânio negro, gravado “1M WONE BOT”.",
+        awardItem: "Troféu 1M + anel de ouro 18k e titânio negro",
         accent: "#FF7700",
       },
     ],
   },
 
   cta: {
-    title: "Pronto para colocar sua comunidade no",
-    titleAccent: "piloto automático",
-    description:
-      "Conecte seu bot, monte seu funil e deixe a infraestrutura Wone cuidar da cobrança, do remarketing e da revogação de acessos.",
+    kicker: "Acesso",
+    title: "Entre na lista. A próxima leva sai por ordem de inscrição.",
+    lead: "Sem cartão. O acesso é liberado por convite, em levas, e o seu chega por e-mail.",
+    /** Lista "termo — complemento", a mesma forma das linhas de Segurança. */
     bullets: [
-      "Sem cartão para entrar na fila",
-      "Convites liberados em levas, por ordem de inscrição",
-      "Você recebe o acesso por e-mail",
+      { term: "Cadastro", detail: "nome, e-mail e país; Telegram e telefone se quiser" },
+      { term: "Levas", detail: "convites por ordem de inscrição" },
+      { term: "Convite", detail: "chega por e-mail" },
     ],
+    /** Par de fecho ao lado do submit; só renderiza com NEXT_PUBLIC_TELEGRAM_URL. */
+    telegramLink: "ou fale com a gente no Telegram",
+    success: { title: "Você está na fila." },
   },
 
   form: {
@@ -715,18 +810,17 @@ export const pt = {
     phonePlaceholder: "+55 11 90000-0000",
     optional: "(opcional)",
     submit: "Lista de espera",
-    sending: "Enviando...",
-    disclaimer: "O acesso à plataforma é liberado por convite. Sem spam.",
+    sending: "Enviando…",
+    disclaimer: "Acesso por convite. Sem spam.",
     successTitle: "Tudo certo, você está na fila.",
-    successBody: "Abrimos o Telegram em outra aba. Se ela não apareceu, use o botão abaixo.",
+    successBody: "Abrimos o Telegram em outra aba. Se não apareceu, use o botão.",
     /**
      * A mesma tela quando o `window.open` devolveu `null` — bloqueador de
      * pop-up. Existe porque `successBody` afirma uma aba que, nesse caso, não
      * abriu; o botão é o mesmo nos dois.
      */
     successBodyManual: "Abra o Telegram pelo botão abaixo.",
-    successNote:
-      "Assim que abrirmos uma nova leva de convites, você recebe o acesso por e-mail.",
+    successNote: "Quando a sua leva abrir, o convite chega por e-mail.",
     openTelegram: "Abrir no Telegram",
     again: "Cadastrar outro contato",
 
@@ -781,37 +875,82 @@ export const pt = {
   },
 
   footer: {
-    tagline: "Infraestrutura autônoma de monetização para Telegram.",
-    navigate: "Navegar",
-    access: "Acesso",
-    accessBody: "A plataforma é liberada progressivamente por convite.",
-    accessCta: "Entrar na lista",
-    integrations: "Integrações",
-    rights: "© 2026 Wone Bot. Todos os direitos reservados.",
-    legal:
+    /** Um posicionamento só, o mesmo do kicker do hero. */
+    tagline:
+      "Infraestrutura de cobrança, entrega e rastreio para quem vende no Telegram.",
+    columns: { product: "Produto", integrations: "Integrações", company: "Empresa" },
+    listLink: "Entrar na lista",
+
+    /**
+     * Contato e páginas legais. Cada endereço é um slot: string vazia = o dono
+     * ainda não forneceu e o item não renderiza — nada de link para página que
+     * não existe. Os rótulos ficam prontos para o dia em que chegarem.
+     */
+    company: {
+      email: "",
+      telegram: "",
+      terms: "",
+      privacy: "",
+      labels: {
+        email: "E-mail",
+        telegram: "Telegram",
+        terms: "Termos de uso",
+        privacy: "Privacidade",
+      },
+    },
+    /** Razão social e CNPJ, quando houver; vazio não renderiza. */
+    legalEntity: "",
+    copyright: "© 2026 Wone Bot.",
+    /** Aviso de não vínculo com o Telegram: texto obrigatório, não reescrever. */
+    disclaimer:
       "A Wone é uma plataforma SaaS independente e não possui vínculo corporativo ou endosso do Telegram.",
-    language: "Idioma",
+    /** Só para leitor de tela: a pílula PT/EN perdeu o rótulo visível. */
+    languageLabel: "Idioma",
+  },
+
+  /**
+   * Prova real. O dono tem nomes autorizados e números de operação para pôr
+   * aqui; até chegarem, as listas ficam vazias e os blocos não renderizam —
+   * inventar um número ou um depoimento é o que a regra 4 proíbe.
+   */
+  proof: {
+    numbers: [] as { value: string; label: string }[],
+    names: [] as { name: string; handle: string }[],
+  },
+
+  /** Rótulos repetidos em controles de várias seções. */
+  ui: {
+    pause: "pausar",
+    play: "retomar",
+    simulation: "Simulação",
+    of: "de",
   },
 
   phone: {
     botName: "Wone Bot",
     online: "online",
     approved: "Pagamento aprovado",
-    received: "Recebido no mês",
-    /** Valor de partida do acumulado do mês; cada venda que desce soma a ele. */
-    monthStart: 142580,
+    received: "Recebido nesta simulação",
+    /**
+     * Zero: o total soma só as vendas que o visitante viu descer na tela. O
+     * valor de partida de antes ($142.580) era um faturamento que ninguém mediu.
+     */
+    monthStart: 0,
     success: "Sucesso",
     transactions: [
       { label: "Plano Anual VIP", amount: "$197.00", value: 197 },
       { label: "Plano Trimestral", amount: "$147.00", value: 147 },
       { label: "Plano Mensal", amount: "$97.00", value: 97 },
       { label: "Pack avulso", amount: "$67.00", value: 67 },
-      { label: "Order bump · Pack", amount: "$57.00", value: 57 },
+      /* Vírgula, não ponto-médio: é UMA venda que levou order bump e pack, não
+         dois termos irmãos de um rótulo (o extrato do painel já foi corrigido
+         pelo mesmo motivo). */
+      { label: "Order bump, Pack", amount: "$57.00", value: 57 },
       { label: "Plano Semestral", amount: "$227.00", value: 227 },
       { label: "Acesso vitalício", amount: "$247.00", value: 247 },
     ],
     ariaLabel:
-      "Tela do Wone Bot: um pagamento aprovado, $142,580.00 recebidos no mês e entregas com status de sucesso.",
+      "Simulação da tela do Wone Bot: um pagamento aprovado, o total recebido e entregas com status de sucesso.",
   },
 };
 

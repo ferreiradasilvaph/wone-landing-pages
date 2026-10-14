@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { motion, useReducedMotion } from "motion/react";
 import { Check, Clock, RotateCcw } from "lucide-react";
 import { useContent } from "@/i18n";
+import { CtaButton } from "../CtaButton";
 
 /** Duração total da simulação — é o número que o card promete. */
 const TOTAL_S = 1.2;
@@ -61,7 +62,7 @@ export function DeliveryDemo() {
        antigo, o que deixava meio metro de vazio entre "PIX confirmado" e o
        "0,1s" encostado na borda direita. Agora o carimbo de tempo fica a um
        palmo do texto a que pertence. */
-    <div className="grid grid-cols-1 items-center gap-7 sm:grid-cols-[minmax(0,1fr)_10.5rem] sm:gap-8">
+    <div className="grid grid-cols-1 items-center gap-7 sm:grid-cols-[minmax(0,1fr)_12rem] sm:gap-8">
       <ol className="min-w-0">
         {demo.steps.map((step, index) => {
           const active = shown >= STEP_AT[index];
@@ -83,7 +84,7 @@ export function DeliveryDemo() {
               )}
 
               <span
-                className={`relative z-10 flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[10px] font-bold transition-colors duration-300 ${
+                className={`tnum relative z-10 flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[13px] font-semibold transition-colors duration-300 ${
                   active ? "bg-brand text-ink-950" : "bg-ink-800 text-faint"
                 }`}
               >
@@ -98,10 +99,13 @@ export function DeliveryDemo() {
                 >
                   {step.label}
                 </span>
-                <span className="mt-0.5 block text-[11px] text-faint">{step.detail}</span>
+                <span className="mt-0.5 block text-[13px] text-faint">{step.detail}</span>
               </span>
 
-              <span className="tnum shrink-0 pt-1 font-mono text-[11px] text-faint">
+              {/* Carimbo de tempo: número humano, então Geist com `tnum` — a
+                  mono do site vive só dentro de `<code>`, e isto é a duração
+                  que a demo promete, não um valor de máquina. */}
+              <span className="tnum shrink-0 pt-1 text-[13px] text-faint">
                 {STEP_AT[index].toFixed(1).replace(".", ",")}s
               </span>
             </li>
@@ -111,7 +115,9 @@ export function DeliveryDemo() {
 
       {/* Cronômetro, relógio e o botão de repetir, empilhados na coluna estreita */}
       <div className="flex shrink-0 flex-col items-center gap-3.5">
-        <div className="relative flex h-[7.5rem] w-[7.5rem] items-center justify-center">
+        {/* 8,5rem e não 7,5: o rótulo sob o cronômetro subiu para 13px (piso do
+            portão) e, no diâmetro antigo, encostava no anel. */}
+        <div className="relative flex h-[8.5rem] w-[8.5rem] items-center justify-center">
           {/* Anel de progresso */}
           <svg viewBox="0 0 100 100" className="absolute inset-0 -rotate-90">
             <circle cx="50" cy="50" r="44" fill="none" stroke="#FFFFE3" strokeOpacity="0.1" strokeWidth="5" />
@@ -128,12 +134,12 @@ export function DeliveryDemo() {
             />
           </svg>
 
-          <span className="relative text-center">
-            <span className="tnum block text-[1.75rem] leading-none font-bold text-cream">
+          <span className="relative flex flex-col items-center">
+            <span className="tnum block text-[1.75rem] leading-none font-semibold text-cream">
               {shown.toFixed(1).replace(".", ",")}s
             </span>
             <span
-              className={`mt-1 block text-[10px] font-semibold transition-colors duration-300 ${
+              className={`mt-1 block text-[13px] font-semibold transition-colors duration-300 ${
                 finished ? "text-emerald-400" : "text-faint"
               }`}
             >
@@ -142,24 +148,24 @@ export function DeliveryDemo() {
           </span>
         </div>
 
-        <div className="flex w-full items-center gap-2 rounded-xl bg-ink-800 px-3 py-2">
+        <div className="rounded-field flex w-full items-center gap-2 bg-ink-750 px-3 py-2">
           <Clock className="h-3.5 w-3.5 shrink-0 text-brand" />
           <span className="min-w-0 leading-tight">
-            <span className="tnum block font-mono text-[13px] font-bold text-cream">
-              {demo.clock}
-            </span>
-            <span className="block text-[10px] text-faint">{demo.clockNote}</span>
+            {/* Hora do relógio: valor de máquina, logo `<code>` — é o único
+                lugar onde a mono do sistema aparece (regra 2). A cor e o
+                tamanho são os do seletor global: o cinza de máquina. */}
+            <code>{demo.clock}</code>
+            <span className="mt-0.5 block text-[13px] text-faint">{demo.clockNote}</span>
           </span>
         </div>
 
-        <button
-          type="button"
-          onClick={replay}
-          className="btn-solid inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl px-3 py-2 text-[11px] font-semibold"
-        >
-          <RotateCcw className="h-3.5 w-3.5" />
+        {/* Botão de produto dentro da demo: o `object` do CtaButton, a mesma
+            pílula dos outros ("Pagar com PIX", "Rodar"), nunca um terceiro
+            formato inventado aqui. */}
+        <CtaButton size="object" onClick={replay} className="w-full">
+          <RotateCcw className="h-3.5 w-3.5" aria-hidden />
           {demo.replay}
-        </button>
+        </CtaButton>
       </div>
     </div>
   );
