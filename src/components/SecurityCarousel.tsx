@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { AnimatePresence, motion } from "motion/react";
 import {
   KeyRound,
   CopySlash,
@@ -31,12 +31,12 @@ const AUTOPLAY_MS = 5000;
  * "andar sozinha") sem reintroduzir rolagem: o que avança é a seleção, não a
  * posição. Pausa com o ponteiro em cima, com foco de teclado dentro da seção e
  * com a aba em segundo plano; pausar guarda quanto falta do intervalo e retomar
- * continua de onde parou, igual à barra de progresso do card ativo. Com
- * `prefers-reduced-motion` não liga.
+ * continua de onde parou. Com `prefers-reduced-motion` não liga — e esse "não
+ * liga" só é conhecido depois da montagem, nunca no primeiro render (o porquê
+ * está no efeito do `matchMedia`, abaixo).
  */
 export function SecurityCarousel() {
   const { security } = useContent();
-  const reduced = useReducedMotion();
   const items = security.items;
   const count = items.length;
 
@@ -46,6 +46,7 @@ export function SecurityCarousel() {
   const [hovering, setHovering] = useState(false);
   const [focused, setFocused] = useState(false);
   const [tabHidden, setTabHidden] = useState(false);
+  const [reduced, setReduced] = useState(false);
 
   const paused = hovering || focused || tabHidden;
   const playing = !reduced && !paused;
@@ -57,6 +58,28 @@ export function SecurityCarousel() {
   useEffect(() => {
     activeRef.current = active;
   }, [active]);
+
+  /* `useReducedMotion` do motion não serve aqui, e esta seção é a prova: ele
+     devolve valor falso no servidor e já devolve `true` no PRIMEIRO render do
+     cliente. Como o `style` da barra de progresso e o `initial` do painel
+     dependem deste valor, os atributos saíam de um jeito no HTML do servidor e
+     de outro na hidratação. Medido
+     com `prefers-reduced-motion: reduce`, nos dois idiomas: "A tree hydrated
+     but some attributes of the server rendered HTML didn't match the client
+     properties", com o diff do React apontando `+ style={undefined}` (cliente)
+     contra `- style={{animation-duration:"5000ms", ...}}` (servidor). Sem
+     `reduce`, zero erros — e era por isso que o defeito passava.
+
+     O listener responde a mesma pergunta, começa em `false` nos dois lados e só
+     muda depois da montagem. É o mesmo arranjo de `FeatureCarousel`, a seção
+     irmã, onde `reduced` só alimenta o relógio e nunca decidiu atributo. */
+  useEffect(() => {
+    const query = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const sync = () => setReduced(query.matches);
+    sync();
+    query.addEventListener("change", sync);
+    return () => query.removeEventListener("change", sync);
+  }, []);
 
   const select = useCallback((index: number) => {
     remaining.current = AUTOPLAY_MS;
@@ -152,9 +175,33 @@ export function SecurityCarousel() {
                 isActive ? "surface-lit" : "surface hover:bg-ink-800"
               }`}
             >
-              {/* Barra da seleção à esquerda. No card ativo ela é o progresso do
-                  avanço automático: cresce de cima para baixo ao longo do
-                  intervalo e congela quando a seção pausa. */}
+              {/* Barra da seleção à esquerda. No card ativo ela é o progresso
+                  do avanço automático: cresce de cima para baixo ao longo do
+                  intervalo.
+
+                  Sem avanço — seção pausada, ou `prefers-reduced-motion` — ela
+                  aparece cheia: volta a ser só o marcador de seleção, que é o
+                  que ela tem de ser quando não há progresso para mostrar.
+
+                  Pausada, ela chega lá pelo `style` ausente. Com `reduce`, por
+                  outro caminho — e esse caminho é o conserto da hidratação: no
+                  primeiro render o atributo sai SEMPRE com a animação, igual no
+                  servidor e no cliente. O freio vem depois, pelo `matchMedia`
+                  lá em cima e pela regra de `globals.css` que corta toda
+                  `animation-duration` para 0,001 ms com `!important` sob
+                  `prefers-reduced-motion: reduce` — inline style perde de
+                  `!important` de folha, então a barra salta para cheia já no
+                  primeiro quadro, antes de o efeito rodar.
+
+                  O `animationPlayState: paused` que morava aqui nunca rodou:
+                  `playing` já é falso quando `paused` é verdadeiro, então a
+                  expressão devolvia `undefined` antes de chegar nele. Congelar
+                  de verdade não é trocar o play state — ao retomar, a barra
+                  recomeça de zero enquanto o relógio continua do que faltava
+                  (`remaining`), e o card troca com a barra no meio. Casar as
+                  duas pediria um `animation-delay` negativo do tamanho do já
+                  decorrido, ou seja, ler `remaining` durante o render. Não
+                  vale o preço: fica a barra cheia. */}
               <span
                 aria-hidden
                 className="absolute inset-y-0 left-0 w-[3px] overflow-hidden"
@@ -163,12 +210,11 @@ export function SecurityCarousel() {
                   <span
                     className="block h-full w-full origin-top bg-brand"
                     style={
-                      reduced || !playing
-                        ? undefined
-                        : {
+                      playing
+                        ? {
                             animation: `security-progress ${AUTOPLAY_MS}ms linear forwards`,
-                            animationPlayState: paused ? "paused" : "running",
                           }
+                        : undefined
                     }
                   />
                 )}

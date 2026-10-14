@@ -49,5 +49,16 @@ next-env.d.ts
 lighthouse-*.report.html
 lighthouse-*.report.json
 
+# Saida de `npm run perf`: JSON do Lighthouse e a tabela da rodada. Descrevem
+# uma maquina e um instante, nao o codigo; a pasta e recriada a cada medicao.
+/.lighthouse/
+
+# Saida do Playwright MCP (capturas, logs de console, snapshots .yml). Mesma
+# natureza do /.lighthouse/: evidencia de uma verificacao, nao codigo. Sao
+# megabytes de JPG — a pasta estava com 2,1 MB em 13 arquivos, um deles de
+# 1,06 MB e de um site de terceiro — e `git status` listava tudo como novo,
+# pronto para entrar num `git add -A` distraido.
+/.playwright-mcp/
+
 # Registro verbatim dos prompts: fica local, fora do repo publico
 prompts-originais.local.txt

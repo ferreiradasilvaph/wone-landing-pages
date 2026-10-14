@@ -291,7 +291,7 @@ export const en: Content = {
         name: "Wone Static",
         tagline: "The ready-made funnel",
         description:
-          "Welcome, plans, order bump, upsell, downsell, packs, payment, delivery and renewal, organised in tabs. You fill it in, Wone runs it.",
+          "Welcome, plans, order bump, upsell, downsell, packs, payment, delivery and renewal, organized in tabs. You fill it in, Wone runs it.",
         bullets: [
           "Ideal for selling quickly",
           "No logic to configure",
@@ -339,7 +339,7 @@ export const en: Content = {
       },
       {
         title: "Flexible plans",
-        description: "Monthly, quarterly, biannual, annual or lifetime.",
+        description: "Monthly, quarterly, six-month, annual or lifetime.",
         icon: "Calendar",
       },
       {
@@ -380,8 +380,6 @@ export const en: Content = {
     title: "Get paid safely and know where every sale comes from",
     description:
       "The money lands in your account and every ad click comes back as data for your campaign.",
-    bannerEyebrow: "From creative to cash",
-    bannerTitle: "Every ad click returns as server-to-server data.",
 
     card: {
       title: "Payments",
@@ -390,7 +388,6 @@ export const en: Content = {
       badge: "4 countries · 4 currencies · 1 checkout",
       priceLabel: "The same annual plan, in each country's currency",
       priceNote: "Illustrative amounts, no live exchange rate.",
-      currencyLabel: "Local currency",
       methodLabel: "Pays with",
       countries: [
         {
@@ -487,7 +484,7 @@ export const en: Content = {
         label: "Upsell, downsell, order bump and recovery rates, with the numbers behind each",
         short: "Rates",
         panelTitle: "Funnel rates",
-        panelSubtitle: "Where every extra real is earned",
+        panelSubtitle: "Where the extra revenue is earned",
       },
       {
         id: "extrato",
@@ -502,7 +499,6 @@ export const en: Content = {
       live: "Live",
       accumulated: "so far today",
       peak: "peak",
-      funnelTitle: "Funnel of 100 leads",
       funnelNote: "who generated the PIX and didn't pay enter automatic recovery.",
       funnelSteps: ["Started the bot", "Generated the PIX key", "Completed the purchase"],
       ltvRows: [
@@ -580,7 +576,7 @@ export const en: Content = {
       {
         question: "How many bots can I connect?",
         answer:
-          "You can connect several bots to the same account, within the limit set for your plan. Talk to us if you need more.",
+          "You can connect several bots to the same account, within the limit set for your access. Talk to us if you need more.",
       },
       {
         question: "Can I sell outside Brazil?",
@@ -638,7 +634,7 @@ export const en: Content = {
         title: "100K Acrylic Plaque • $100,000",
         subtitle: "The 6-Figure Club",
         description:
-          "Commemorative trophy in a solid faceted crystal acrylic block with the official 100K Wone Fox. Comes with the Official Wone Bracelet in fine leather with a titanium clasp.",
+          "Commemorative trophy in a solid faceted crystal acrylic block with the official 100K Wone Fox. Comes with the Official Wone Bracelet in titanium.",
         awardItem: "Crystal Acrylic Trophy + Official Wone Titanium Bracelet",
         accent: "#E4E4E7",
       },
@@ -650,7 +646,7 @@ export const en: Content = {
         title: "500K Ceremonial Plaque • $500,000",
         subtitle: "Half a Million in Revenue",
         description:
-          "Special acrylic trophy with the Wone Fox in ceremonial dress and a chrome crest in high relief. Comes with the exclusive jewel: a necklace with an orange sapphire pendant.",
+          "Special acrylic trophy with the Wone Fox in ceremonial dress and a chrome crest in high relief. Comes with the exclusive jewel: a necklace with a sapphire-and-diamond pendant.",
         awardItem: "500K High Relief Trophy + Sapphire & Diamond Necklace",
         accent: "#EAB308",
       },
@@ -690,16 +686,27 @@ export const en: Content = {
     telegram: "Telegram username",
     telegramPlaceholder: "@yourusername",
     phone: "WhatsApp / Phone",
-    phonePlaceholder: "+55 11 90000-0000",
+    /** O exemplo aqui NÃO é o brasileiro do `pt.ts`: quem lê o site em inglês
+        digita o número do país dele, e um DDI +55 com DDD de São Paulo sugere
+        um formato obrigatório que o campo não exige. O 555 é a faixa reservada
+        para número fictício, então ninguém liga para alguém por engano. */
+    phonePlaceholder: "+1 555 000 0000",
     optional: "(optional)",
     submit: "Join the waitlist",
     sending: "Sending...",
     disclaimer: "Access to the platform is invite-only. No spam.",
     successTitle: "All set — you're in the queue.",
     successBody: "We opened Telegram in another tab. If it didn't appear, use the button below.",
+    /** Quando o `window.open` foi barrado; veja `pt.ts`. */
+    successBodyManual: "Open Telegram using the button below.",
     successNote: "As soon as we open a new batch of invites, you'll get access by email.",
     openTelegram: "Open in Telegram",
     again: "Register another contact",
+
+    /**
+     * Só os rótulos; a lista canônica de códigos é `NATIONALITIES`, em
+     * `src/lib/waitlist.ts`, e tem de bater com os cinco daqui. Veja `pt.ts`.
+     */
     countries: [
       { code: "BR", label: "Brazil" },
       { code: "AR", label: "Argentina" },
@@ -707,6 +714,21 @@ export const en: Content = {
       { code: "CO", label: "Colombia" },
       { code: "OT", label: "Other country" },
     ],
+
+    /** Chaves = códigos de `src/lib/waitlist-errors.ts`; veja `pt.ts`. */
+    errors: {
+      name_missing: "Enter your name.",
+      email_invalid: "Enter a valid email address.",
+      nationality_invalid: "Select a nationality from the list.",
+      invalid_fields: "Check the highlighted fields.",
+      field_too_long: "One of the fields is longer than allowed.",
+      too_large: "The data you sent is too large.",
+      unreadable_body: "We couldn't read the data you sent.",
+      rate_limited: "Too many attempts in a row. Wait a minute and try again.",
+      save_failed: "We couldn't register you right now. Try again in a moment.",
+      network: "No connection to the server. Try again.",
+      unknown: "We couldn't send it. Try again.",
+    },
   },
 
   footer: {
@@ -736,7 +758,7 @@ export const en: Content = {
       { label: "Monthly Plan", amount: "$97.00", value: 97 },
       { label: "Single pack", amount: "$67.00", value: 67 },
       { label: "Order bump · Pack", amount: "$57.00", value: 57 },
-      { label: "Biannual Plan", amount: "$227.00", value: 227 },
+      { label: "Six-Month Plan", amount: "$227.00", value: 227 },
       { label: "Lifetime access", amount: "$247.00", value: 247 },
     ],
     ariaLabel:

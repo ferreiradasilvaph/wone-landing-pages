@@ -6,7 +6,7 @@
  *
  * O padrão deixou de ser `localhost` em produção, e o motivo é um defeito real:
  * `NEXT_PUBLIC_SITE_URL` não estava definida no servidor, então o site no ar
- * publicava `og:image` apontando para `http://localhost:3000/images/frame-19.png`.
+ * publicava `og:image` apontando para `http://localhost:3000/images/og.png`.
  * Todo link compartilhado em WhatsApp, Telegram ou LinkedIn saía sem imagem de
  * prévia — e nada no site dava sinal disso, porque a página em si funciona.
  *

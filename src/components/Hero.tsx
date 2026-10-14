@@ -14,7 +14,10 @@ const HERO_CTA = `${CTA} inline-flex w-full sm:w-auto`;
  * A simetria central saiu de propósito, junto com o badge pill, o gradiente no
  * título, o botão outline e as duas camadas de aurora — somados, davam o ar de
  * página genérica. Ficou uma malha discreta no fundo, um título em cor sólida
- * com uma única palavra em laranja, um botão com peso e um link de texto.
+ * com uma única palavra em laranja e as duas chamadas.
+ *
+ * As duas chamadas são botões idênticos desde o commit 62e220a; o dono decidiu
+ * em 14/10 que a segunda volta a ser link de texto, e é a próxima etapa.
  *
  * NÃO ANIME NADA DESTA SEÇÃO NA ENTRADA.
  *

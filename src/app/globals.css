@@ -41,9 +41,10 @@
   --muted: color-mix(in oklab, var(--cream) 70%, transparent);
   --faint: color-mix(in oklab, var(--cream) 52%, transparent);
 
-  /* Curvas reutilizadas em todo o site */
+  /* Curva reutilizada em todo o site. A `--ease-spring` que morava aqui, com
+     overshoot em 1.56, não tinha um único uso no site — saiu com o resto do
+     CSS morto. */
   --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
-  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 @theme inline {
@@ -78,12 +79,13 @@
      resolve os dois em qualquer SO, e `tabular-nums` nao depende da familia. */
   --font-mono: ui-monospace, "SF Mono", "Cascadia Mono", "Segoe UI Mono", "Roboto Mono", Menlo, Consolas, monospace;
 
+  /* Só as animações com uma classe `animate-*` em uso no site. `drift`,
+     `drift-slow`, `float` e `sweep` saíram daqui com os respectivos
+     `@keyframes`: nenhuma das quatro tinha uma única ocorrência em `src/`, e o
+     Tailwind gerava utilitário para todas. A `.aurora` caiu na mesma varredura,
+     pelo mesmo motivo. */
   --animate-marquee: marquee 42s linear infinite;
-  --animate-drift: drift 22s ease-in-out infinite;
-  --animate-drift-slow: drift 34s ease-in-out infinite reverse;
   --animate-pulse-ring: pulse-ring 3.2s cubic-bezier(0.16, 1, 0.3, 1) infinite;
-  --animate-float: float 7s ease-in-out infinite;
-  --animate-sweep: sweep 5s cubic-bezier(0.16, 1, 0.3, 1) infinite;
   --animate-breathe: breathe 6s ease-in-out infinite;
   --animate-flag-shine: flag-shine 2.6s cubic-bezier(0.16, 1, 0.3, 1) infinite;
 }
@@ -228,14 +230,6 @@ section[id] {
   background-size: 64px 64px;
 }
 
-/* Aurora: manchas laranja que derivam devagar e nunca repetem o mesmo ponto */
-.aurora {
-  background:
-    radial-gradient(42rem 26rem at 18% 12%, color-mix(in oklab, var(--brand) 22%, transparent), transparent 70%),
-    radial-gradient(34rem 22rem at 82% 28%, color-mix(in oklab, var(--brand-deep) 26%, transparent), transparent 72%);
-  filter: blur(18px);
-}
-
 /* Fio de luz: separador de seção que acende no centro */
 .hairline {
   height: 1px;
@@ -279,8 +273,11 @@ section[id] {
    O `.btn-ghost` que vivia aqui — fundo de creme a 7%, `backdrop-filter` e
    laranja translúcido no hover — era o terceiro estilo de botão da página, e a
    ordem foi padronizar tudo no `.btn-solid`. Onde a ação precisa de menos peso,
-   o caminho é link de texto (como o "Ver como funciona" do hero), não um
-   terceiro botão. */
+   o caminho é link de texto, não um terceiro botão.
+
+   Hoje as duas chamadas do hero são o MESMO `.btn-solid` (commit 62e220a); o
+   dono decidiu em 14/10 que a segunda volta a ser link de texto, e é a próxima
+   etapa. */
 
 /* Palco do carrossel de Recursos.
 
@@ -366,19 +363,6 @@ section[id] {
   }
 }
 
-@keyframes drift {
-  0%,
-  100% {
-    transform: translate3d(0, 0, 0) scale(1);
-  }
-  33% {
-    transform: translate3d(4%, -6%, 0) scale(1.12);
-  }
-  66% {
-    transform: translate3d(-5%, 4%, 0) scale(0.95);
-  }
-}
-
 @keyframes pulse-ring {
   0% {
     transform: scale(0.85);
@@ -388,16 +372,6 @@ section[id] {
   100% {
     transform: scale(1.9);
     opacity: 0;
-  }
-}
-
-@keyframes float {
-  0%,
-  100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-10px);
   }
 }
 
@@ -426,35 +400,22 @@ section[id] {
   }
 }
 
-/* Barra de progresso do indicador ativo do carrossel: cresce da esquerda ao
-   longo do intervalo do autoplay.
+/* Progresso da seleção na seção Segurança: a barra do card ativo cresce de
+   cima para baixo ao longo do intervalo do avanço automático. Vertical, por
+   isso um keyframe próprio — o do carrossel horizontal, que era o outro
+   usuário desta ideia, saiu junto com a barra dele.
 
-   É animação CSS, e não um contador em JS, justamente para poder congelar no
-   meio com `animation-play-state: paused` quando o carrossel pausa — e voltar
-   de onde parou, não do zero. */
-/* Progresso da selecao na secao Seguranca: a barra do card ativo cresce de
-   cima para baixo ao longo do intervalo. Vertical, por isso um keyframe
-   proprio em vez de reusar o do carrossel. */
+   O comentário que morava aqui prometia congelar a barra no meio com
+   `animation-play-state: paused` e voltar de onde parou. Não é o que acontece:
+   `SecurityCarousel` troca o `style` inteiro ao pausar, e ao retomar a barra
+   recomeça do zero enquanto o relógio continua do que faltava. O porquê de
+   ficar assim está no comentário da barra, em `SecurityCarousel.tsx`. */
 @keyframes security-progress {
   from {
     transform: scaleY(0);
   }
   to {
     transform: scaleY(1);
-  }
-}
-
-@keyframes sweep {
-  0% {
-    transform: translateY(-100%);
-    opacity: 0;
-  }
-  40% {
-    opacity: 1;
-  }
-  100% {
-    transform: translateY(100%);
-    opacity: 0;
   }
 }
 

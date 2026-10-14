@@ -338,9 +338,9 @@ export const pt = {
     title: "Tudo o que seu funil precisa para",
     titleAccent: "vender mais",
     description: "Os recursos que fazem a diferença entre uma venda e dezenas.",
-    /** Rotulos das setas do carrossel de Recursos. */
+    /** Rótulos das setas do carrossel de Recursos. */
     prev: "Recurso anterior",
-    next: "Proximo recurso",
+    next: "Próximo recurso",
     items: [
       {
         title: "Order bump",
@@ -400,8 +400,6 @@ export const pt = {
     title: "Receba com segurança e saiba de onde vem cada venda",
     description:
       "O dinheiro cai na sua conta e cada clique no anúncio volta como dado para a sua campanha.",
-    bannerEyebrow: "Do criativo ao caixa",
-    bannerTitle: "Cada clique no anúncio volta como dado servidor a servidor.",
 
     card: {
       title: "Pagamentos",
@@ -411,7 +409,6 @@ export const pt = {
       badge: "4 países · 4 moedas · 1 checkout",
       priceLabel: "O mesmo plano anual, na moeda de cada país",
       priceNote: "Valores ilustrativos, sem cotação em tempo real.",
-      currencyLabel: "Moeda local",
       methodLabel: "Paga com",
       countries: [
         {
@@ -524,7 +521,6 @@ export const pt = {
       live: "Tempo real",
       accumulated: "acumulado hoje",
       peak: "pico",
-      funnelTitle: "Funil de 100 leads",
       funnelNote: "que geraram o PIX e não pagaram entram na recuperação automática.",
       funnelSteps: [
         "Deram start no bot",
@@ -632,7 +628,7 @@ export const pt = {
   },
 
   awards: {
-    badge: "Milestone Awards",
+    badge: "Premiações por marco",
     title: "Premiações &",
     titleAccent: "reconhecimento",
     description:
@@ -664,7 +660,7 @@ export const pt = {
         title: "Placa Acrílico 100K • $100,000",
         subtitle: "Clube dos 6 Dígitos",
         description:
-          "Troféu comemorativo em bloco maciço de acrílico cristal facetado com a Raposa Wone oficial 100K. Acompanha a Pulseira Oficial Wone em couro nobre com fecho em titânio.",
+          "Troféu comemorativo em bloco maciço de acrílico cristal facetado com a Raposa Wone oficial 100K. Acompanha a Pulseira Oficial Wone em titânio.",
         awardItem: "Troféu Acrílico Cristal + Pulseira Oficial em Titânio Wone",
         accent: "#E4E4E7",
       },
@@ -676,7 +672,7 @@ export const pt = {
         title: "Placa Cerimonial 500K • $500,000",
         subtitle: "Meio Milhão Faturado",
         description:
-          "Troféu em acrílico especial com a Raposa Wone em traje cerimonial e brasão cromado em alto relevo. Acompanha a joia exclusiva: colar com pingente cravado em safiras laranjas.",
+          "Troféu em acrílico especial com a Raposa Wone em traje cerimonial e brasão cromado em alto relevo. Acompanha a joia exclusiva: colar com pingente cravejado em safira e diamante.",
         awardItem: "Troféu 500K High Relief + Colar Cravejado Safira & Diamante",
         accent: "#EAB308",
       },
@@ -723,10 +719,23 @@ export const pt = {
     disclaimer: "O acesso à plataforma é liberado por convite. Sem spam.",
     successTitle: "Tudo certo, você está na fila.",
     successBody: "Abrimos o Telegram em outra aba. Se ela não apareceu, use o botão abaixo.",
+    /**
+     * A mesma tela quando o `window.open` devolveu `null` — bloqueador de
+     * pop-up. Existe porque `successBody` afirma uma aba que, nesse caso, não
+     * abriu; o botão é o mesmo nos dois.
+     */
+    successBodyManual: "Abra o Telegram pelo botão abaixo.",
     successNote:
       "Assim que abrirmos uma nova leva de convites, você recebe o acesso por e-mail.",
     openTelegram: "Abrir no Telegram",
     again: "Cadastrar outro contato",
+
+    /**
+     * Rótulos das nacionalidades. A lista canônica — a que `POST /api/waitlist`
+     * aceita — é `NATIONALITIES`, em `src/lib/waitlist.ts`; o que está aqui é a
+     * tradução dela, e os cinco códigos têm de ser exatamente os de lá, porque
+     * é daqui que o `select` do formulário monta as opções.
+     */
     countries: [
       { code: "BR", label: "Brasil" },
       { code: "AR", label: "Argentina" },
@@ -734,6 +743,41 @@ export const pt = {
       { code: "CO", label: "Colômbia" },
       { code: "OT", label: "Outro país" },
     ],
+
+    /**
+     * Erros do cadastro, indexados pelos códigos que `POST /api/waitlist`
+     * devolve — e também pelos que o próprio formulário cunha quando valida
+     * antes de enviar, que são os mesmos de propósito. O contrato e o porquê de
+     * cada código estão em `src/lib/waitlist-errors.ts` — e é de lá que vem o
+     * snake_case destas chaves, as únicas do dicionário fora do padrão
+     * camelCase: são valores de protocolo, não rótulos de interface.
+     *
+     * Antes a rota mandava a frase pronta, em português, e o site em inglês
+     * respondia em português por cima de um formulário inteiro traduzido. Agora
+     * a rota só nomeia o que aconteceu; a frase é escolhida aqui, e o
+     * formulário a resolve no render, de modo que trocar de idioma com o erro
+     * na tela também troca o erro.
+     *
+     * `field_too_long` não repete o limite de 120 caracteres de propósito: o
+     * número já vive no `maxLength` dos campos e no `MAX_FIELD_LENGTH` da rota,
+     * e uma terceira cópia aqui — em dois idiomas — só existiria para
+     * desencontrar das outras duas no dia em que o limite mudar.
+     */
+    errors: {
+      name_missing: "Informe seu nome.",
+      email_invalid: "Informe um e-mail válido.",
+      nationality_invalid: "Selecione uma nacionalidade da lista.",
+      invalid_fields: "Confira os campos destacados.",
+      field_too_long: "Algum campo passou do tamanho aceito.",
+      too_large: "Dados enviados grandes demais.",
+      unreadable_body: "Não foi possível ler os dados enviados.",
+      rate_limited:
+        "Muitas tentativas seguidas. Aguarde um minuto e tente de novo.",
+      save_failed:
+        "Não foi possível registrar agora. Tente novamente em instantes.",
+      network: "Sem conexão com o servidor. Tente novamente.",
+      unknown: "Não foi possível enviar. Tente novamente.",
+    },
   },
 
   footer: {

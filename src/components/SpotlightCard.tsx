@@ -63,7 +63,7 @@ export function SpotlightCard({
       onMouseMove={handleMouseMove}
       onMouseEnter={() => setActive(true)}
       onMouseLeave={handleMouseLeave}
-      className={`${lit ? "surface-lit" : "surface"} group/card relative isolate overflow-hidden rounded-2xl p-6 transition-transform duration-500 ease-out ${className}`}
+      className={`${lit ? "surface-lit" : "surface"} group/card relative isolate overflow-hidden rounded-2xl p-6 ${className}`}
       {...props}
     >
       {/* Halo difuso sobre a superfície */}

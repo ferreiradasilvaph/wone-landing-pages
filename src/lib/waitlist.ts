@@ -1,9 +1,30 @@
+/**
+ * As nacionalidades aceitas. Esta lista é a fonte da verdade.
+ *
+ * A rota aceitava qualquer string de até 120 caracteres em `nationality`, então
+ * o lead podia chegar ao webhook com qualquer coisa no campo — e quem lê a
+ * planilha do outro lado não tem como saber se "BR", "Brasil" e "br" são a
+ * mesma pessoa de três cadastros ou três lixos de um POST na mão.
+ *
+ * Os rótulos traduzidos vivem em `form.countries` de `src/i18n/pt.ts` e
+ * `en.ts`, porque cada idioma escreve "Brasil"/"Brazil" do seu jeito; mas os
+ * CÓDIGOS são estes, e o dicionário é a tradução da lista, não a lista.
+ */
+export const NATIONALITIES = ["BR", "AR", "MX", "CO", "OT"] as const;
+
+export type Nationality = (typeof NATIONALITIES)[number];
+
+/** Guarda de tipo para a string que chega no corpo do POST. */
+export function isNationality(value: string): value is Nationality {
+  return (NATIONALITIES as readonly string[]).includes(value);
+}
+
 export type WaitlistEntry = {
   name: string;
   email: string;
   telegram?: string;
-  /** Código do país escolhido no formulário (BR, AR, MX, CO, OT). */
-  nationality?: string;
+  /** Código do país escolhido no formulário; os aceitos são `NATIONALITIES`. */
+  nationality?: Nationality;
   phone?: string;
   createdAt: string;
 };

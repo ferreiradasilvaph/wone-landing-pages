@@ -90,21 +90,31 @@ export function SiteHeader() {
             {nav.map((link) => {
               const isActive = activeId === link.href;
               return (
+                /* `isolate` + pílula antes do rótulo no DOM, o mesmo arranjo
+                   explicado por extenso em LanguageToggle.tsx. Aqui a pílula
+                   era `absolute inset-0 -z-10` dentro de um `<a>` só
+                   `relative`, que não cria contexto de empilhamento: o z
+                   negativo caía no contexto do `<header>` (fixed + transform)
+                   e a pílula só não desaparecia por acidente, porque a partir
+                   de `sm` o `backdrop-blur-xl` da barra rolada cria um
+                   contexto intermediário que a segurava. Sem blur (ou se o
+                   blur sair daqui), ela ia para trás do `bg-ink-950` da barra
+                   e o item ativo ficava igual aos inativos. */
                 <a
                   key={link.href}
                   href={link.href}
-                  className={`relative rounded-full px-3.5 py-1.5 text-sm transition-colors ${
+                  className={`relative isolate rounded-full px-3.5 py-1.5 text-sm transition-colors ${
                     isActive ? "text-cream" : "text-muted hover:text-cream"
                   }`}
                 >
                   {isActive && (
                     <motion.span
                       layoutId="nav-pill"
-                      className="absolute inset-0 -z-10 rounded-full bg-brand/14"
+                      className="absolute inset-0 rounded-full bg-brand/14"
                       transition={{ type: "spring", stiffness: 380, damping: 32 }}
                     />
                   )}
-                  {link.label}
+                  <span className="relative">{link.label}</span>
                 </a>
               );
             })}
