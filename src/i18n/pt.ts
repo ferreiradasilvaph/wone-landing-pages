@@ -70,6 +70,31 @@ export const pt = {
        aqui: são `ui.pause` e `ui.play`, criados para os controles repetidos da
        página (o carrossel de Recursos e o de Segurança já os usam). Duas cópias
        do mesmo "pausar" acabariam divergindo na revisão de copy. */
+
+    /**
+     * O palco da coluna direita: o mapa da América Latina com o telefone na
+     * frente, pedido do dono em 14/10 ("uma prévia do checkout internacional,
+     * mostrando um mapa sul americano, como o da página da Dotfy").
+     *
+     * Só três coisas moram aqui — o rótulo do palco, o nome de cada cidade e a
+     * frase que abre o resumo para leitor de tela. País, método, símbolo, ISO e
+     * valor NÃO: vêm de `payments.table.countries` e de
+     * `highlights.demos.checkout.prices`, para o palco e a tabela de Pagamentos
+     * nunca divergirem.
+     */
+    stage: {
+      /** Renderizado como `{label} · {ui.simulation}` em `.t-label`. */
+      label: "Checkout internacional",
+      /** A cidade de cada ping, na chave da moeda do país. */
+      cities: [
+        { code: "BRL", city: "São Paulo" },
+        { code: "ARS", city: "Buenos Aires" },
+        { code: "MXN", city: "Cidade do México" },
+        { code: "COP", city: "Bogotá" },
+      ],
+      /** Abre o resumo; o resto da frase é montado dos quatro países. */
+      srIntro: "Mapa da América Latina com o checkout simulado em quatro países:",
+    },
   },
 
   /**
@@ -792,6 +817,11 @@ export const pt = {
       {
         tier: "10K",
         image: "/placas/placa-10k.webp",
+        /** A arte IMPRESSA, recortada da ilustração por
+            `scripts/recorta-placas.mjs`: é ela que entra dentro do bloco de
+            acrílico na cena 3D. O `image` acima continua sendo a ilustração
+            inteira do troféu — o fallback 2D, onde não há WebGL. */
+        print: "/placas/arte-10k.webp",
         /** A joia do marco, como imagem. O 10K ainda não tem a sua. */
         photo: "",
         /** Vestida — a foto já vem sobre o dorso ou o pulso desenhado — aparece
@@ -808,6 +838,7 @@ export const pt = {
       {
         tier: "100K",
         image: "/placas/placa-100k.webp",
+        print: "/placas/arte-100k.webp",
         photo: "/images/pulseira-100k-vestida.webp",
         photoWorn: true,
         title: "Placa Acrílico 100K",
@@ -821,6 +852,7 @@ export const pt = {
       {
         tier: "500K",
         image: "/placas/placa-500k.webp",
+        print: "/placas/arte-500k.webp",
         photo: "/images/colar-500k-vestido.webp",
         photoWorn: true,
         title: "Placa Cerimonial 500K",
@@ -834,6 +866,7 @@ export const pt = {
       {
         tier: "1M",
         image: "/placas/placa-1m.webp",
+        print: "/placas/arte-1m.webp",
         photo: "/images/anel-1m.webp",
         photoWorn: false,
         title: "Placa Black Diamond 1M",
@@ -996,13 +1029,22 @@ export const pt = {
     botName: "Wone Bot",
     online: "online",
     approved: "Pagamento aprovado",
-    received: "Recebido nesta simulação",
+    /** A segunda linha da bolha do convite, abaixo de `howItWorks.demo.inviteSent`. */
+    inviteNote: "link de uso único",
     /**
-     * Zero: o total soma só as vendas que o visitante viu descer na tela. O
-     * valor de partida de antes ($142.580) era um faturamento que ninguém mediu.
+     * O texto do campo de digitação no pé da tela do telefone do hero, que
+     * entrou em 14/10 quando o aparelho ficou mais alto (268×560 e 300×620). É
+     * o placeholder de um chat de verdade — o campo é `<span>`, inerte, e não
+     * aceita texto: existe para a tela não terminar num vão de preto embaixo
+     * das bolhas.
      */
-    monthStart: 0,
-    success: "Sucesso",
+    composer: "Mensagem",
+    /* `received`, `monthStart` e `success` SAÍRAM em 14/10, com o telefone do
+       hero: ele deixou de ser painel de caixa ("Recebido nesta simulação", o
+       total somado, cada entrega marcada "Sucesso") e virou o chat do cliente,
+       que é o que o dono pediu ao pedir a prévia do checkout internacional. No
+       chat de um comprador não existe total recebido. `transactions` fica: o
+       carrossel de Recursos e o `CustomerChat` de "Como funciona" usam. */
     transactions: [
       { label: "Plano Anual VIP", amount: "$197.00", value: 197 },
       { label: "Plano Trimestral", amount: "$147.00", value: 147 },
@@ -1016,7 +1058,7 @@ export const pt = {
       { label: "Acesso vitalício", amount: "$247.00", value: 247 },
     ],
     ariaLabel:
-      "Simulação da tela do Wone Bot: um pagamento aprovado, o total recebido e entregas com status de sucesso.",
+      "Simulação do chat do cliente no Wone Bot: a oferta do Plano Anual VIP na moeda do país, o pagamento aprovado e o convite de uso único para o canal.",
   },
 };
 

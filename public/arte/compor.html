@@ -12,7 +12,10 @@
 
   Para refazer: `npm run dev`, abra /arte/compor.html, confira as duas e
   clique em baixar. Os arquivos caem na pasta de downloads com o nome certo;
-  e so mover para public/images.
+  e so mover para public/images. Com o receptor do scratchpad de pe
+  (`node receber.js <...>/public/images`), um `?gravar=colar-500k-vestido.webp`
+  no endereco grava direto, sem passar pela pasta de downloads — e so as pecas
+  nomeadas ali sao gravadas, para uma nao sobrescrever a outra sem querer.
 
   Esta pagina mora em public/ junto com os SVG porque precisa ser SERVIDA
   para funcionar: desenhar SVG e webp num canvas e ler o resultado de volta
@@ -49,22 +52,82 @@ async function silhuetaDe(svg, id) {
   return el.getAttribute("d");
 }
 
-/* O recorte da foto so vale acima da corrente. Ele existe para cortar as
-   duas pontas soltas dela — a esquerda contra o pescoco, a direita contra o
-   ombro — e nada mais. Abaixo, o pingente pende na frente do corpo e passa
-   por cima de tudo, inclusive do vao entre braco e tronco; recortar ali
-   obrigaria o corpo a ser um bloco macico. */
-const CORRENTE = "M-500 -500 L 1600 -500 L 1600 330 L -500 330 Z";
-const PINGENTE = "M-500 330 L 1600 330 L 1600 2300 L -500 2300 Z";
+/* ===================================================================
+   O COLAR DO 500K, refeito em 14/10 a pedido do dono: "diminua a imagem do
+   pingente no dorso que voce fez, para deixar mais proporcional e real".
 
-/* O arco de baixo do vao da pulseira, medido na propria foto. Divide a
-   imagem em duas: acima dele o braco passa na frente do metal, abaixo passa
-   atras. Os dois recortes partem do mesmo arco, entao nenhum pedaco do braco
-   e pintado duas vezes — o que importa, porque ele e semitransparente. */
+   O QUE ESTAVA ERRADO. A foto inteira entrava num quadro so, escalada e
+   posicionada de uma vez. Isso amarra duas coisas que nao tem nada a ver uma
+   com a outra: o tamanho do PINGENTE e o vao que a CORRENTE precisa cobrir.
+   Na foto, a corrente visivel mede cerca de 480 de ponta a ponta e o pingente
+   610 de largura. Para as duas pontas alcancarem os lados do pescoco (272 de
+   distancia no desenho), a foto tinha de entrar a 0,56 — e nessa escala o
+   pingente dava 78% da largura do peito. Um peitoral de metal, nao uma joia.
+
+   O QUE MUDOU. A foto passa a entrar em DUAS partes, cada uma no seu lugar:
+
+   - o PINGENTE (com o bail, a alca que o prende) entra em escala de joia:
+     152 de largura, 27,7% do peito, pendendo no esterno. E o tamanho que o
+     dono pediu, "grande como e um pingente de luxo" mas crivel;
+   - a CORRENTE e refeita elo a elo. Uma corrida reta de elos da propria foto
+     e de-rotacionada numa fita horizontal, e essa fita e entao curvada ao
+     longo de duas Bezier que sobem do bail, passam por cima do trapezio e
+     somem atras do pescoco. Os elos sao os reais, da foto; so o caminho e
+     novo. A escala da fita e a MESMA do pingente, entao o calibre da corrente
+     sai certo por construcao: 15,5 de metal, que no peito de 548 da cerca de
+     1,1 cm — corrente cubana grossa, como a da foto.
+
+   POR QUE A CORRENTE SOME NO CANTO. Ela e recortada pelo corpo MENOS o
+   pescoco: a Bezier passa por dentro do pescoco no fim, e o recorte a corta
+   exatamente na borda, no canto onde o pescoco encontra o trapezio. E ali
+   que uma corrente some de verdade — ela da a volta por tras. Sem esse
+   recorte ela ou flutuaria no meio do peito ou serraria o pescoco, que foi o
+   que o dono apontou.
+
+   A SOMBRA. Antes de desenhar a joia, uma copia dela escurecida e borrada vai
+   para o peito, deslocada para baixo e para a direita (a luz principal vem de
+   cima e da esquerda). E o que faz a joia assentar no corpo em vez de ficar
+   colada por cima — pedido do dono no mesmo recado.
+   =================================================================== */
+const COLAR = {
+  /* medidos na propria foto (713x655) pelo canal alfa */
+  ping: { x0: 12, y0: 258, x1: 622, y1: 639 },  // o pingente
+  bail: { x0: 283, y0: 158, x1: 362 },          // a alca, ate o topo do pingente
+
+  /* a fita: a corrida reta de elos entre o bail e a borda direita da foto.
+     eixo ajustado por minimos quadrados sobre o centroide das colunas
+     (y = -0,3335x + 365,9); `u0`/`per` recortam dela um pedaco de dois elos
+     que emenda consigo mesmo — e o que permite repetir a fita ao longo de um
+     tirante quatro vezes mais comprido do que ela. */
+  fita: { ax: 450, ay: 215.8, incl: -0.3335, L: 230, T: 96, u0: 77, per: 98 },
+
+  largura: 152,        // do pingente, no quadro de 1000 — 27,7% do peito (548)
+  centro: [500, 523],  // esterno: entre as claviculas e a linha dos peitorais
+
+  /* o tirante direito, em Bezier cubica, do bail ate dentro do pescoco. O
+     esquerdo e o espelho deste — num colar de verdade os dois lados sao
+     espelhos mesmo. A curva sai do bail quase na vertical (70 graus), abre
+     sobre o peito, estufa para fora do pescoco ao passar pelo trapezio
+     (x 637 contra os 636 da borda do pescoco) e volta para dentro: e esse
+     "estufa e volta" que faz a corrente contornar um pescoco em vez de
+     estar pintada nele. */
+  tirante: [[504, 452], [532, 372], [704, 336], [612, 168]],
+
+  /* o pescoco, no mesmo contorno do #silhueta: os dois lados e o arco de tras
+     do corte. A corrente e recortada POR FORA dele. */
+  pescoco: "M364 226 C 364 180 366 140 372 60"
+    + " A 128 36 0 0 1 628 60 C 634 140 636 180 636 226 Z",
+
+  sombra: { dx: 6, dy: 7, borrao: 7, opacidade: 0.36 },
+};
+
+/* O recorte da foto da PULSEIRA so vale acima dela. Ele existe para cortar as
+   duas pontas soltas e nada mais. */
 const ARCO = "L 727.6 526 A 281.6 75.6 0 0 1 164.4 526 L -400 526 Z";
 const ACIMA = "M-400 -600 L 1600 -600 L 1600 526 " + ARCO;
 const ABAIXO = "M-400 2200 L 1600 2200 L 1600 526 " + ARCO;
 
+const TUDO = "M-500 -500 L 1600 -500 L 1600 2300 L -500 2300 Z";
 
 const log = (s) => (document.getElementById("log").textContent += s + "\n");
 
@@ -81,6 +144,119 @@ function carrega(src, w, h) {
   });
 }
 
+function tela(w, h) {
+  const c = document.createElement("canvas");
+  c.width = w; c.height = h;
+  return c;
+}
+
+/* A fita de elos: a corrida da foto, de-rotacionada para ficar horizontal.
+   Depois disto, andar na corrente e andar em x. */
+function fitaDeElos(foto, f) {
+  const c = tela(f.L, f.T);
+  const x = c.getContext("2d");
+  const ang = Math.atan(f.incl);
+  x.translate(0, f.T / 2);
+  x.rotate(-ang);
+  x.translate(-f.ax, -f.ay);
+  x.drawImage(foto, 0, 0);
+  return c;
+}
+
+/* Uma Bezier cubica virada em polilinha com comprimento acumulado, para
+   andar nela em passos de distancia iguais — que e o que a corrente pede:
+   elo do mesmo tamanho em todo o percurso, por mais que a curva aperte. */
+function caminho(bez, n) {
+  const pt = [];
+  for (let i = 0; i <= n; i++) {
+    const t = i / n, u = 1 - t;
+    const a = u * u * u, b = 3 * u * u * t, c = 3 * u * t * t, d = t * t * t;
+    pt.push([a * bez[0][0] + b * bez[1][0] + c * bez[2][0] + d * bez[3][0],
+             a * bez[0][1] + b * bez[1][1] + c * bez[2][1] + d * bez[3][1]]);
+  }
+  const acu = [0];
+  for (let i = 1; i <= n; i++)
+    acu.push(acu[i - 1] + Math.hypot(pt[i][0] - pt[i - 1][0], pt[i][1] - pt[i - 1][1]));
+  return {
+    total: acu[n],
+    em(d) {
+      let i = 1;
+      while (i < n && acu[i] < d) i++;
+      const f = (d - acu[i - 1]) / (acu[i] - acu[i - 1] || 1);
+      return {
+        x: pt[i - 1][0] + (pt[i][0] - pt[i - 1][0]) * f,
+        y: pt[i - 1][1] + (pt[i][1] - pt[i - 1][1]) * f,
+        ang: Math.atan2(pt[i][1] - pt[i - 1][1], pt[i][0] - pt[i - 1][0]),
+      };
+    },
+  };
+}
+
+/* Um tirante: a fita curvada ao longo do caminho, fatia por fatia. Cada
+   fatia e um pedaco de 2,5 de destino, girado para a tangente da curva ali.
+   As fatias se sobrepoem 6% para nao deixar fio de costura entre elas, e a
+   leitura da fita volta ao inicio a cada `per` — dois elos — que e por isso
+   que `per` foi medido por autocorrelacao e nao chutado.
+
+   A espessura afina 16% do bail ate o pescoco: a corrente vai se virando
+   para o fundo conforme contorna, e um calibre rigorosamente constante leria
+   como fita adesiva. */
+function tirante(x, fita, f, bez, escala) {
+  const via = caminho(bez, 300);
+  const passo = 2.5;
+  for (let u = 0; u < via.total; u += passo) {
+    const du = Math.min(passo, via.total - u);
+    const m = via.em(u + du / 2);
+    const esp = f.T * escala * (1 - 0.16 * (u / via.total));
+    const su = f.u0 + ((u / escala) % f.per);
+    x.save();
+    x.translate(m.x, m.y);
+    x.rotate(m.ang);
+    x.drawImage(fita, su, 0, du / escala, f.T,
+                -du * 0.03, -esp / 2, du * 1.06, esp);
+    x.restore();
+  }
+}
+
+/* O colar inteiro, numa tela a parte: a sombra e esta mesma tela borrada e
+   escurecida, entao ela precisa existir antes de qualquer coisa ir ao peito. */
+function montaColar(foto, peca, busto) {
+  const K = COLAR;
+  const escala = K.largura / (K.ping.x1 - K.ping.x0);
+  const qx = K.centro[0] - escala * (K.ping.x0 + K.ping.x1) / 2;
+  const qy = K.centro[1] - escala * (K.ping.y0 + K.ping.y1) / 2;
+
+  const c = tela(peca.w, peca.h);
+  const x = c.getContext("2d");
+  const fita = fitaDeElos(foto, K.fita);
+
+  /* a corrente: recortada pelo corpo MENOS o pescoco (evenodd = o furo) */
+  x.save();
+  x.clip(new Path2D(busto));
+  x.clip(new Path2D(TUDO + K.pescoco), "evenodd");
+  tirante(x, fita, K.fita, K.tirante, escala);
+  x.save();
+  x.translate(peca.w, 0);
+  x.scale(-1, 1);
+  tirante(x, fita, K.fita, K.tirante, escala);
+  x.restore();
+  x.restore();
+
+  /* o bail e o pingente, sem recorte nenhum: pendem na frente do corpo, e
+     passam por cima de tudo — inclusive da propria corrente, que e onde os
+     dois tirantes se encontram */
+  x.save();
+  x.translate(qx, qy);
+  x.scale(escala, escala);
+  x.clip(new Path2D(
+    "M" + K.bail.x0 + " " + K.bail.y0 + " H" + K.bail.x1 + " V" + K.ping.y0
+    + " H1200 V1400 H-400 V" + K.ping.y0 + " H" + K.bail.x0 + " Z"));
+  x.drawImage(foto, 0, 0);
+  x.restore();
+
+  return { tela: c, escala, quadro: [qx, qy, foto.width * escala, foto.height * escala] };
+}
+
 (async () => {
   /* A silhueta do corpo vem do desenho, entao PECAS so pode ser montado
      aqui dentro: antes dela chegar nao ha com o que recortar a foto. */
@@ -90,12 +266,23 @@ function carrega(src, w, h) {
     {
       nome: "colar-500k-vestido.webp", w: 1000, h: 1500,
       arte: "/arte/dorso.svg", foto: "/images/colar-500k.webp",
-      quadro: [201.1, 158.8, 492.8, 452.5],
-      camadas: [
-        { o: "arte" },
-        { o: "foto", recorte: [BUSTO, CORRENTE] },
-        { o: "foto", recorte: [PINGENTE] },
-      ],
+      desenha(x, arte, foto, peca) {
+        x.drawImage(arte, 0, 0, peca.w, peca.h);
+        const colar = montaColar(foto, peca, BUSTO);
+        const S = COLAR.sombra;
+        x.save();
+        x.clip(new Path2D(BUSTO));
+        x.clip(new Path2D(TUDO + COLAR.pescoco), "evenodd");
+        x.filter = "blur(" + S.borrao + "px) brightness(0)";
+        x.globalAlpha = S.opacidade;
+        x.drawImage(colar.tela, S.dx, S.dy);
+        x.restore();
+        x.drawImage(colar.tela, 0, 0);
+        return "pingente " + COLAR.largura + " de largura ("
+          + (COLAR.largura / 548 * 100).toFixed(1) + "% do peito 548)"
+          + "  escala da foto " + colar.escala.toFixed(4)
+          + "  quadro " + colar.quadro.map((v) => v.toFixed(1)).join(", ");
+      },
     },
     {
       nome: "pulseira-100k-vestida.webp", w: 970, h: 1465,
@@ -109,30 +296,35 @@ function carrega(src, w, h) {
     },
   ];
 
+  const GRAVAR = (new URLSearchParams(location.search).get("gravar") || "").split(",");
+
   for (const peca of PECAS) {
     const [arte, foto] = await Promise.all([
       carrega(peca.arte, peca.w, peca.h), carrega(peca.foto),
     ]);
-    const c = document.createElement("canvas");
-    c.width = peca.w; c.height = peca.h;
+    const c = tela(peca.w, peca.h);
     const x = c.getContext("2d");
-    const [fx, fy, fw, fh] = peca.quadro;
+    let nota = "";
 
-    for (const camada of peca.camadas) {
-      x.save();
-      /* varios recortes se somam por intersecao, que e como o canvas
-         empilha clip() */
-      for (const r of [camada.recorte].flat()) if (r) x.clip(new Path2D(r));
-      if (camada.o === "arte") x.drawImage(arte, 0, 0, peca.w, peca.h);
-      else x.drawImage(foto, fx, fy, fw, fh);
-      x.restore();
+    if (peca.desenha) {
+      nota = peca.desenha(x, arte, foto, peca);
+    } else {
+      const [fx, fy, fw, fh] = peca.quadro;
+      for (const camada of peca.camadas) {
+        x.save();
+        /* varios recortes se somam por intersecao, que e como o canvas
+           empilha clip() */
+        for (const r of [camada.recorte].flat()) if (r) x.clip(new Path2D(r));
+        if (camada.o === "arte") x.drawImage(arte, 0, 0, peca.w, peca.h);
+        else x.drawImage(foto, fx, fy, fw, fh);
+        x.restore();
+      }
     }
 
     const url = c.toDataURL("image/webp", 0.92);
     for (const alvo of ["g", "p"]) {
       const fig = document.createElement("figure");
-      const v = document.createElement("canvas");
-      v.width = peca.w; v.height = peca.h;
+      const v = tela(peca.w, peca.h);
       v.getContext("2d").drawImage(c, 0, 0);
       const a = document.createElement("a");
       a.href = url; a.download = peca.nome; a.textContent = "baixar " + peca.nome;
@@ -140,7 +332,16 @@ function carrega(src, w, h) {
       document.getElementById(alvo).append(fig);
     }
     log(peca.nome + "  " + peca.w + "x" + peca.h
-        + "  razao " + (peca.w / peca.h).toFixed(4));
+        + "  razao " + (peca.w / peca.h).toFixed(4) + (nota ? "\n  " + nota : ""));
+
+    /* so grava o que foi pedido por nome: as duas pecas sao montadas sempre,
+       mas uma passada para refazer o colar nao pode reescrever a pulseira */
+    if (GRAVAR.includes(peca.nome)) {
+      const r = await fetch("http://localhost:7731/", {
+        method: "POST", body: JSON.stringify({ nome: peca.nome, dados: url }),
+      });
+      log("  receptor: " + (await r.text()));
+    }
   }
 })().catch((e) => log("ERRO " + e.message + "\n" + e.stack));
 </script>

@@ -345,6 +345,16 @@ code {
   font-size: inherit;
 }
 
+/* Mesma regra dentro da tela do telefone do hero, e pelo mesmo motivo: lá a
+   escala é a de dentro do aparelho (11px é o piso do portão), e a hora na barra
+   de status e o ISO da moeda ao lado do preço são `<code>` no meio de texto de
+   11 e de 17px. Sem isto os dois sairiam em 13px apagado, fora da escala do
+   bloco que os contém. Quem decide cor e tamanho é o `<span>` em volta. */
+.phone-screen code {
+  color: inherit;
+  font-size: inherit;
+}
+
 /* Números tabulares: painéis e contadores não "pulam" ao animar */
 .tnum {
   font-variant-numeric: tabular-nums;
@@ -558,13 +568,23 @@ code {
   animation: header-menu-out 0.25s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
-/* Cartão do PIX no telefone do hero. O primeiro NÃO anima (regra 1: nada do
-   hero anima na entrada) — quem decide é `tick > 0` no componente, porque o
-   primeiro cartão é sempre o do primeiro render. */
-@keyframes phone-pix-in {
+/* As três batidas do chat no telefone do hero: a oferta, o "pagamento
+   aprovado" e o convite. Cada bloco entra uma vez, quando a batida chega.
+
+   NENHUMA roda na entrada da página (regra 1: o hero não anima — o `<h1>` ao
+   lado é o LCP). Quem decide é `started` no componente, que nasce `false` no
+   servidor e no primeiro render do cliente e só vira `true` dentro do primeiro
+   avanço do relógio, 2,6 s depois da montagem. O primeiro render já traz o
+   Brasil com as três batidas pintadas, sem classe de animação em nada.
+
+   Substituiu o par `phone-pix-in`/`phone-pix-out`: o telefone deixou de ser
+   painel de caixa (cartão do PIX entrando e saindo) e passou a ser o chat do
+   cliente, pelo pedido do dono de 14/10 — os blocos agora só entram, e quem os
+   troca é a mudança de país. */
+@keyframes phone-beat-in {
   from {
     opacity: 0;
-    transform: translateY(-6px) scale(0.94);
+    transform: translateY(6px);
   }
   to {
     opacity: 1;
@@ -572,23 +592,29 @@ code {
   }
 }
 
-@keyframes phone-pix-out {
+.phone-beat-in {
+  animation: phone-beat-in 0.42s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* O anel que acende no país da vez, no mapa do palco do hero.
+
+   Roda UMA vez por ativação: o nó tem `key` do país e só existe enquanto
+   aquele país está ativo, então entrar na tela é montar, e montar é animar.
+   Como o `phone-beat-in`, só aparece depois que o relógio começa a andar —
+   nunca na entrada, e nunca com movimento reduzido. */
+@keyframes hero-ping {
   from {
-    opacity: 1;
-    transform: none;
+    opacity: 0.5;
+    transform: scale(0.35);
   }
   to {
     opacity: 0;
-    transform: translateY(6px) scale(0.97);
+    transform: scale(1);
   }
 }
 
-.phone-pix-in {
-  animation: phone-pix-in 0.42s cubic-bezier(0.16, 1, 0.3, 1) both;
-}
-
-.phone-pix-out {
-  animation: phone-pix-out 0.42s cubic-bezier(0.16, 1, 0.3, 1) both;
+.hero-ping {
+  animation: hero-ping 1.15s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 /* Entrada em escada dos blocos de "Como funciona" (`StepEnter`). A distância

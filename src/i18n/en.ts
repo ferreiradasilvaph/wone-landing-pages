@@ -50,6 +50,19 @@ export const en: Content = {
       { value: "28 blocks", label: "Visual funnel editor, 4 of them AI" },
     ],
     /* `pause`/`play` do telefone: veja `pt.ts` — são `ui.pause` e `ui.play`. */
+
+    /* O palco do hero. Só rótulo, cidades e a abertura do resumo; país, método,
+       símbolo, ISO e valor vêm das mesmas chaves do `pt.ts`. Veja `pt.ts`. */
+    stage: {
+      label: "International checkout",
+      cities: [
+        { code: "BRL", city: "São Paulo" },
+        { code: "ARS", city: "Buenos Aires" },
+        { code: "MXN", city: "Mexico City" },
+        { code: "COP", city: "Bogotá" },
+      ],
+      srIntro: "Map of Latin America with the simulated checkout in four countries:",
+    },
   },
 
   integrations: {
@@ -606,6 +619,11 @@ export const en: Content = {
       {
         tier: "10K",
         image: "/placas/placa-10k.webp",
+        /** A arte IMPRESSA, recortada da ilustração por
+            `scripts/recorta-placas.mjs`: é ela que entra dentro do bloco de
+            acrílico na cena 3D. O `image` acima continua sendo a ilustração
+            inteira do troféu — o fallback 2D, onde não há WebGL. */
+        print: "/placas/arte-10k.webp",
         /** A joia do marco, como imagem. O 10K ainda não tem a sua. */
         photo: "",
         /** Vestida — a foto já vem sobre o dorso ou o pulso desenhado — aparece
@@ -622,6 +640,7 @@ export const en: Content = {
       {
         tier: "100K",
         image: "/placas/placa-100k.webp",
+        print: "/placas/arte-100k.webp",
         photo: "/images/pulseira-100k-vestida.webp",
         photoWorn: true,
         title: "100K Acrylic Plaque",
@@ -635,6 +654,7 @@ export const en: Content = {
       {
         tier: "500K",
         image: "/placas/placa-500k.webp",
+        print: "/placas/arte-500k.webp",
         photo: "/images/colar-500k-vestido.webp",
         photoWorn: true,
         title: "500K Ceremonial Plaque",
@@ -648,6 +668,7 @@ export const en: Content = {
       {
         tier: "1M",
         image: "/placas/placa-1m.webp",
+        print: "/placas/arte-1m.webp",
         photo: "/images/anel-1m.webp",
         photoWorn: false,
         title: "1M Black Diamond Plaque",
@@ -770,10 +791,11 @@ export const en: Content = {
     botName: "Wone Bot",
     online: "online",
     approved: "Payment approved",
-    received: "Received in this simulation",
-    /** Zero: o total soma só o que o visitante viu. Veja `pt.ts`. */
-    monthStart: 0,
-    success: "Success",
+    inviteNote: "single-use link",
+    /** O campo inerte no pé da tela do telefone do hero — veja `pt.ts`. */
+    composer: "Message",
+    /* `received`, `monthStart` e `success` saíram com o telefone do hero, que
+       virou o chat do cliente — veja `pt.ts`. `transactions` fica. */
     transactions: [
       { label: "Annual VIP Plan", amount: "$197.00", value: 197 },
       { label: "Quarterly Plan", amount: "$147.00", value: 147 },
@@ -785,6 +807,6 @@ export const en: Content = {
       { label: "Lifetime access", amount: "$247.00", value: 247 },
     ],
     ariaLabel:
-      "A simulation of the Wone Bot screen: an approved payment, the running total and deliveries marked as successful.",
+      "A simulation of the customer's Wone Bot chat: the Annual VIP Plan offer in the local currency, the approved payment and the single-use channel invite.",
   },
 };
