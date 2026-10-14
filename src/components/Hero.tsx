@@ -37,6 +37,16 @@ const DURACOES = [1600, 1200, 2200];
 const PRIMEIRA_ESPERA = 2600;
 
 /**
+ * A escada do título na entrada da home: 80 ms entre as linhas, como o dono
+ * pediu. São classes de propriedade arbitrária do Tailwind (elas só escrevem a
+ * variável `--ent-atraso`, que é o `animation-delay` lá em `globals.css`) e não
+ * `style` inline, para o atraso continuar visível aqui no JSX e o CSS continuar
+ * sendo o único dono da coreografia. A terceira linha — a palavra laranja — tem
+ * o atraso escrito no próprio nó, logo abaixo.
+ */
+const ATRASO_LINHA = ["[--ent-atraso:0ms]", "[--ent-atraso:80ms]"];
+
+/**
  * Abertura da página: o texto nas colunas 1–6 e, nas 7–12, o PALCO — o globo
  * pontilhado sangrando até a borda da tela, com o telefone em pé na frente
  * dele.
@@ -254,16 +264,34 @@ export function Hero() {
 
             {/* Sem `text-balance`: o balanceador igualava o comprimento das três
                 linhas e empurrava "no" para junto de "automático", quebrando o
-                h1 em "Venda pelo / Telegram / no automático". */}
+                h1 em "Venda pelo / Telegram / no automático".
+                Desde 15/10 as três linhas são TRÊS BLOCOS, cada um com a
+                própria janela de recorte (`.ent-linha`), porque a entrada da
+                home sobe cada linha de dentro dela — e isso não mexe no LCP:
+                continua UM `<h1>`, na mesma caixa de 34rem, com as mesmas três
+                linhas de 0,97 de entrelinha, pintado pelo servidor. O que
+                mudou para melhor é que a quebra deixou de depender da métrica
+                da fonte: ela vem do dicionário (`hero.titleLines`). */}
             <h1 className="t-display mt-6 max-w-[34rem] text-cream">
-              {hero.titleStart}{" "}
-              <span className="text-brand">{hero.titleAccent}</span>
+              {hero.titleLines.map((linha, index) => (
+                <span
+                  key={linha}
+                  className={`ent-linha ${ATRASO_LINHA[index] ?? ""}`}
+                >
+                  <span>{linha}</span>
+                </span>
+              ))}
+              {/* A palavra laranja é a última linha, e fecha a escada do
+                  título em 160 + 600 = 760 ms. */}
+              <span className="ent-linha [--ent-atraso:160ms]">
+                <span className="text-brand">{hero.titleAccent}</span>
+              </span>
             </h1>
 
             {/* O lead vem fatiado do dicionário: os trechos em objeto são os dois
                 momentos que ganham peso (o método de pagamento e a entrada no
                 canal). Nada mais muda de peso na primeira dobra. */}
-            <p className="t-lead mt-6 max-w-[31rem] text-pretty">
+            <p className="t-lead ent-sobe mt-6 max-w-[31rem] text-pretty [--ent-atraso:300ms]">
               {hero.lead.map((trecho, index) =>
                 typeof trecho === "string" ? (
                   <Fragment key={index}>{trecho}</Fragment>
@@ -278,7 +306,7 @@ export function Hero() {
             {/* Botão + link na MESMA linha nos dois tamanhos de tela: dois botões
                 lado a lado não diriam qual é a ação principal, e o link empilhado
                 no celular empurrava o aparelho para fora da primeira tela. */}
-            <div className="mt-8 flex flex-wrap items-center gap-6">
+            <div className="ent-sobe mt-8 flex flex-wrap items-center gap-6 [--ent-atraso:400ms]">
               <CtaButton href="#fila-de-espera">{hero.ctaPrimary}</CtaButton>
               {/* O link tem 23px de altura de texto, e o portão pede alvo de
                   44: o pseudo-elemento de 11px em cima e embaixo leva o alvo a
@@ -332,7 +360,7 @@ export function Hero() {
                   1440: o rótulo ocupa x 296–592 e y 0–20 do palco, e o disco
                   (centro 98,336 e R 300) só começa em y 111 nessa faixa de x —
                   90px de folga entre a linha e a borda do planeta. */}
-              <p className="t-label absolute top-0 right-0 hidden xl:block">
+              <p className="t-label ent-sobe absolute top-0 right-0 hidden [--ent-atraso:500ms] xl:block">
                 {hero.stage.label} · {ui.simulation}
               </p>
 
@@ -349,7 +377,11 @@ export function Hero() {
                   mais a leste (São Paulo) cai em x 195 e a moldura começa em
                   223, 22px depois da borda direita do ponto. Os outros três
                   ficam em 151, 101 e 14. */}
-              <div className="relative flex justify-center lg:absolute lg:right-0 lg:bottom-0 lg:justify-end">
+              {/* O aparelho sobe 16px com a escada do texto (400 ms), e não
+                  antes: quem abre a página lê o título primeiro. Os 16px são
+                  mais curso que os 12 do texto porque a peça é grande — a mesma
+                  distância ficaria imperceptível em 620px de altura. */}
+              <div className="ent-sobe relative flex justify-center [--ent-atraso:400ms] [--ent-sobe:16px] lg:absolute lg:right-0 lg:bottom-0 lg:justify-end">
                 <PhoneMockup index={ativo} beat={batida} started={animado} />
               </div>
             </div>
@@ -358,7 +390,7 @@ export function Hero() {
                 controle do palco. Rótulos de `ui`, não de `hero` —
                 "pausar"/"retomar" é texto de controle repetido (o carrossel de
                 Recursos e o de Segurança usam os mesmos). */}
-            <div className="mt-3 flex items-center justify-between gap-3 min-[1420px]:justify-end">
+            <div className="ent-sobe mt-3 flex items-center justify-between gap-3 [--ent-atraso:550ms] min-[1420px]:justify-end">
               <StageStatus
                 code={pais.code}
                 name={pais.name}
@@ -378,7 +410,9 @@ export function Hero() {
             deixava 244px de preto entre o fim do conteúdo e a faixa.
             Só a partir de `lg`: abaixo disso ela é o que decide se o chat do
             cliente cabe na primeira tela do celular (~80px), e some. */}
-        <div className="mt-auto hidden grid-cols-3 gap-x-8 pt-10 pb-10 lg:grid">
+        {/* Último degrau da escada: 500 + 500 = 1.000 ms, dentro do 1,2 s que o
+            dono pediu de total. */}
+        <div className="ent-sobe mt-auto hidden grid-cols-3 gap-x-8 pt-10 pb-10 [--ent-atraso:500ms] lg:grid">
           {hero.benefits.map((benefit) => (
             <p
               key={benefit.value}

@@ -23,7 +23,8 @@ export const en: Content = {
      *   2. "They pay, they are in the channel"       — accent on "in"
      *   3. "Telegram that charges and delivers itself" — accent on "itself"
      */
-    titleStart: "Sell on Telegram on",
+    /** As mesmas três linhas do `pt.ts`, na mesma quebra. */
+    titleLines: ["Sell on", "Telegram on"],
     titleAccent: "autopilot",
 
     /** Os mesmos dois trechos em `<strong>` do `pt.ts`, na mesma ordem. */

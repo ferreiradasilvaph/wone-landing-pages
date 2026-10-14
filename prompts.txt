@@ -704,3 +704,32 @@ o mesmo para a imagem do pulso, em relacao ao podio.
 ===============================================================================
 inverta de lugar o texto "venda pelo telegram no automatico" com o globo
 terrestre.
+
+
+===============================================================================
+[75] 2026-10-15
+===============================================================================
+quero que a home do wone tenha o mesmo comportamento de carregamento da Dotfy,
+porem melhor. Ele precisa acontecer igual em 3 casos: F5, clique na logo e URL
+digitada na barra (porem, visualmente melhor, tire de referencia).
+1. Sempre abrir no topo: history.scrollRestoration = manual e window.scrollTo(0,0)
+   no carregamento, sem pular ancoras antigas.
+2. O header/nav aparece imediatamente, sem animacao.
+3. Animacao de entrada do hero (~1,2s no total, easing cubic-bezier(.2,.7,.2,1)):
+   titulo: cada linha dentro do wrapper com overflow:hidden; a linha sobe de
+   translateY(100%) para 0, com stagger de ~80ms entre as linhas; em seguida,
+   subtitulo (fade + translateY 12px), depois CTAs, depois os numeros/stats, com
+   stagger de ~100ms.
+4. Fundo/mapa (se houver): pontos acendem numa onda de cima para baixo (faca o
+   inverso) e depois volta ao brilho normal.
+5. A logo leva para "/" e REPETE tudo: use <a href="/"> comum (nao next/link)
+   ou, se ja estiver na home, role ao topo e reinicie a animacao.
+6. Nada pode piscar antes da animacao: o estado inicial escondido vem do CSS
+   (classe aplicada no <html> por um script inline no <head>), e o conteudo
+   continua visivel se o JS falhar.
+7. Com prefers-reduced-motion: sem animacao, conteudo aparece direto.
+8. Animar so transform e opacity, sem atrasar o LCP do titulo alem de ~300ms.
+Planeje primeiro, depois implemente e teste os 3 cenarios no navegador. O globo
+deve ser como estava antes, porem com o icone da wone de fundo. mas o globo deve
+ser o que voce no prompt anterior. trabalhe e lembre-se faca melhor que o que
+esta na dotfy. bom trabalho. (finge que eu usei um icone de xicara de cafe).

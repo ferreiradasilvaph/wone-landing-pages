@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type MouseEvent } from "react";
 import { Menu, X } from "lucide-react";
 import { useContent } from "@/i18n";
 import { CtaButton } from "./CtaButton";
@@ -9,6 +9,69 @@ import { LanguageToggle } from "./LanguageToggle";
 
 /** Quanto dura a travessia do menu móvel, em ms — o mesmo número do CSS. */
 const MENU_MS = 250;
+
+/**
+ * A LOGO REINICIA A HOME — pedido do dono de 15/10: "a logo leva para '/' e
+ * REPETE tudo".
+ *
+ * O `href` é `/` de verdade, em `<a>` cru e não em `next/link`: vindo de outra
+ * rota, é uma navegação de documento inteiro, o script do `<head>` roda outra
+ * vez e a coreografia acontece igual ao F5 e à URL digitada — os três casos que
+ * o dono exigiu idênticos.
+ *
+ * Estando JÁ na home, recarregar a página inteira para ver uma animação de 1,2 s
+ * seria um desperdício visível (tela branca, fontes, hidratação). Então aqui se
+ * faz à mão o que o recarregamento faria, na mesma ordem:
+ *   1. a âncora velha sai da URL (`#faq` e companhia), sem empilhar histórico;
+ *   2. a tela vai ao topo SEM rolagem suave — o pedido é "rola ao topo e
+ *      reinicia", e uma rolagem de 3 s competindo com a coreografia de 1,2 s
+ *      mostraria o título subindo em algum ponto do meio da página;
+ *   3. a classe `wone-entrando` sai, o `offsetHeight` força o reflow (sem ele o
+ *      navegador agrupa remoção e adição no mesmo quadro e NADA reinicia) e a
+ *      classe volta: as animações de CSS recomeçam do zero;
+ *   4. `wone:entrada` avisa o globo, que é o único pedaço da coreografia que
+ *      não é CSS — ele refaz a onda de pontos (ver `HeroGlobe`).
+ *
+ * Com movimento reduzido, só o passo 1 e 2: quem pediu menos movimento não
+ * ganha animação nenhuma por clicar na logo.
+ */
+function reiniciarEntrada(evento: MouseEvent<HTMLAnchorElement>) {
+  /* Clique com modificador ou botão do meio é "abrir em outra aba": não é nosso
+     assunto, e o navegador faz o certo com o `href` real. */
+  if (
+    evento.defaultPrevented ||
+    evento.metaKey ||
+    evento.ctrlKey ||
+    evento.shiftKey ||
+    evento.altKey ||
+    evento.button !== 0
+  ) {
+    return;
+  }
+  if (window.location.pathname !== "/") return;
+
+  evento.preventDefault();
+  if (window.location.hash) {
+    history.replaceState(null, "", window.location.pathname + window.location.search);
+  }
+  window.scrollTo({ top: 0, behavior: "instant" });
+  /* Duas vezes, e o segundo no quadro seguinte: a página tem
+     `scroll-behavior: smooth`, e quem clica na logo logo depois de um item do
+     nav tem uma rolagem suave EM VOO. Medido no navegador: o salto instantâneo
+     a cancela, mas ela ainda deixa alguns pixels no quadro seguinte (6 px num
+     teste, 124 noutro, dependendo de onde a animação estava). O segundo empurrão
+     fecha isso, e é o mesmo remédio que o script do `<head>` usa no `load`. */
+  requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: "instant" }));
+
+  const raiz = document.documentElement;
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+  raiz.classList.remove("wone-entrando");
+  void raiz.offsetHeight;
+  raiz.classList.add("wone-entrando");
+  raiz.dataset.entrada = String(Math.round(performance.now()));
+  document.dispatchEvent(new CustomEvent("wone:entrada"));
+}
 
 /**
  * Header fixo de 64px: transparente sobre o hero, sólido depois de 24px de
@@ -111,9 +174,16 @@ export function SiteHeader() {
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-6 px-4 sm:px-6 lg:px-8">
           {/* `h-11`: o alvo de toque é o link inteiro, não o desenho da marca —
               a 412px ele media 28×45 e ficava abaixo dos 44px do portão. */}
+          {/* eslint-disable-next-line @next/next/no-html-link-for-pages --
+              o `<a>` cru é O PEDIDO ("use <a href='/'> comum, não next/link"), e
+              é o que faz a logo repetir a entrada: `next/link` faria navegação
+              de cliente, sem recarregar o documento, sem o script do `<head>` e
+              sem coreografia. Vindo de outra rota é recarga de documento; já na
+              home, o `onClick` acima faz o reinício sem pagar a recarga. */}
           <a
-            href="#topo"
-            aria-label="Wone, ir para o topo"
+            href="/"
+            onClick={reiniciarEntrada}
+            aria-label="Wone, voltar ao início"
             className="flex h-11 shrink-0 items-center transition-opacity hover:opacity-80"
           >
             <WoneIcon className="h-7 w-auto sm:h-8" />

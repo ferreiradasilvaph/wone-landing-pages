@@ -32,7 +32,15 @@ export const pt = {
      *   2. "Pagou no PIX, entrou no canal"        — destaque em "PIX"
      *   3. "Telegram que cobra e entrega sozinho" — destaque em "sozinho"
      */
-    titleStart: "Venda pelo Telegram no",
+    /**
+     * O título em LINHAS, não em texto corrido, desde 15/10: a entrada da home
+     * sobe cada linha de dentro da própria janela de recorte (`.ent-linha`), e
+     * para isso cada linha precisa ser um elemento. O texto é o mesmo de antes
+     * ("Venda pelo Telegram no" + "automático") e a quebra também — era a que o
+     * `max-w-[34rem]` já produzia a qualquer largura; agora ela é explícita, e
+     * deixou de depender da medida da fonte carregada.
+     */
+    titleLines: ["Venda pelo", "Telegram no"],
     titleAccent: "automático",
 
     /**

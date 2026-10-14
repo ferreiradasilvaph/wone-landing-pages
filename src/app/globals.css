@@ -761,6 +761,105 @@ code {
 }
 
 /* --------------------------------------------------------------------------
+   A ENTRADA DA HOME — a coreografia de ~1,2 s (pedido do dono, 15/10)
+
+   Tudo aqui é regido por UMA classe no `<html>`: `wone-entrando`, posta pelo
+   script síncrono do `<head>` (ver `src/app/layout.tsx`). A direção da
+   dependência é essa, e é ela que cumpre as regras 6 e 7 do pedido:
+
+   - sem a classe (JS desligado, script quebrado, movimento reduzido) NENHUMA
+     regra daqui casa, e a página nasce exatamente como antes: visível, estática
+     e pintada pelo servidor. Nada "fica escondido esperando o JavaScript";
+   - o estado inicial escondido não é uma classe `opacity-0` que alguém tem de
+     vir tirar: é o `both` de uma animação que JÁ ESTÁ COMEÇANDO. Quem anima é o
+     CSS, do primeiro quadro — a hidratação não participa, e por isso o `<h1>`,
+     que é o elemento de LCP, não espera React nenhum para aparecer.
+
+   Só `transform` e `opacity`, em elementos que já têm caixa própria: zero
+   layout, zero CLS, tudo no compositor (regra 8).
+   -------------------------------------------------------------------------- */
+
+:root {
+  /* A curva do pedido, uma só para toda a coreografia: sai rápido, chega
+     assentando. É o que faz a primeira linha do título estar legível em ~150 ms
+     mesmo com 600 ms de animação. */
+  --ent-ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+/* A JANELA DE RECORTE DE CADA LINHA DO TÍTULO.
+
+   Existe SEMPRE, com ou sem a classe — e de propósito: `padding-bottom` e
+   `margin-bottom` se anulam, então a caixa do `<h1>` tem a mesma altura nos
+   dois estados e não há um pixel de diferença de layout entre a página animada
+   e a estática.
+
+   O par de 0,16em não é zelo: `.t-display` tem `line-height: 0.97`, menos que
+   a altura natural da Geist, então a perna do "p" de "pelo" e do "g" de
+   "Telegram" passa ~0,085em ABAIXO da caixa de linha. Com `overflow: hidden`
+   cravado na linha, elas seriam cortadas. O padding devolve o espaço da perna,
+   e a margem negativa devolve o espaço ao layout. */
+.ent-linha {
+  display: block;
+  overflow: hidden;
+  padding-bottom: 0.16em;
+  margin-bottom: -0.16em;
+}
+
+.ent-linha > span {
+  display: block;
+}
+
+/* 125% e não 100%: o deslocamento é medido na altura da própria linha (0,97em),
+   e a janela visível é 0,16em mais alta por causa do padding acima — a 100% o
+   topo das letras ficaria aparecendo na faixa do padding. */
+@keyframes ent-linha {
+  from {
+    transform: translateY(125%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+html.wone-entrando .ent-linha > span {
+  animation: ent-linha 0.6s var(--ent-ease) var(--ent-atraso, 0ms) both;
+}
+
+/* O resto da escada: sobe e aparece. A distância vem por `--ent-sobe` (12px no
+   texto, 16px no aparelho, que é maior e precisa de mais curso para a subida
+   se ler). */
+@keyframes ent-sobe {
+  from {
+    opacity: 0;
+    transform: translateY(var(--ent-sobe, 12px));
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+html.wone-entrando .ent-sobe {
+  animation: ent-sobe 0.5s var(--ent-ease) var(--ent-atraso, 0ms) both;
+}
+
+/* Só opacidade, para o que não deve se mover: os quatro pinos do globo entram
+   DEPOIS da onda de pontos, quando já existe planeta embaixo deles. Mover um
+   pino seria mentir sobre a posição dele no planeta. */
+@keyframes ent-surge {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+html.wone-entrando .ent-surge {
+  animation: ent-surge 0.45s var(--ent-ease) var(--ent-atraso, 0ms) both;
+}
+
+/* --------------------------------------------------------------------------
    Movimento reduzido: tudo congela, nada quebra o layout
    -------------------------------------------------------------------------- */
 

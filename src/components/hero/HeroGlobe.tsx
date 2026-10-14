@@ -96,6 +96,57 @@ const PASSO_MS = 27;
 const NUCLEO = 500 / 6371;
 const BORDA = 1100 / 6371;
 
+/* --------------------------------------------------------------------------
+   A ONDA DE ENTRADA (pedido do dono, 15/10)
+
+   "Os pontos acendem numa onda de BAIXO PARA CIMA e depois voltam ao brilho
+   normal." É uma linha horizontal — o front — que sobe do pé do planeta (y =
+   2R, a base da caixa) até o topo (y = 0) em 1,1 s, na MESMA curva da
+   coreografia do CSS. Abaixo dela o planeta já está pronto, no brilho de
+   sempre; acima dela ainda não existe nada; e na faixa logo abaixo do front os
+   pontos valem 1,8× de alfa — é a crista, o que faz a onda ser onda e não uma
+   cortina subindo.
+
+   Quem a arma é a classe `wone-entrando` do `<html>`, a mesma do CSS: com
+   movimento reduzido ela não existe e o globo nasce no primeiro quadro completo,
+   como antes. No celular também não há onda — lá o globo é textura a 40% atrás
+   do aparelho, desenhado UMA vez, e 33 quadros de canvas na janela em que o
+   `<h1>` está pintando é o tipo de gasto que o LCP mobile cobra.
+
+   O reinício pela logo chega por `wone:entrada` (ver `SiteHeader`).
+   -------------------------------------------------------------------------- */
+
+/** Duração da travessia do front, em ms. Fecha com a escada do CSS (~1,2 s). */
+const ONDA_MS = 1100;
+/** Altura da crista, em fração do diâmetro. */
+const ONDA_BANDA = 0.12;
+/** Quanto a crista multiplica o alfa de cada balde. */
+const ONDA_BRILHO = 1.8;
+
+/**
+ * `cubic-bezier(0.2, 0.7, 0.2, 1)` resolvida em JavaScript — a MESMA curva que
+ * `--ent-ease` dá ao título, ao lead e ao aparelho em `globals.css`. Sem isto a
+ * onda do canvas subiria numa curva e o texto em outra, e os dois movimentos
+ * acontecem na mesma tela ao mesmo tempo.
+ *
+ * Quatro passos de Newton sobre x(t) e uma avaliação de y(t): são ~20 flops uma
+ * vez por quadro (não por ponto), contra uma tabela pré-calculada que custaria
+ * memória para a mesma resposta.
+ */
+function curva(p: number) {
+  let t = p;
+  for (let i = 0; i < 4; i += 1) {
+    const u = 1 - t;
+    const x = 3 * u * u * t * 0.2 + 3 * u * t * t * 0.2 + t * t * t;
+    const dx = 3 * u * u * 0.2 + 3 * t * t * 0.8;
+    if (dx < 1e-5) break;
+    t -= (x - p) / dx;
+    t = t < 0 ? 0 : t > 1 ? 1 : t;
+  }
+  const u = 1 - t;
+  return 3 * u * u * t * 0.7 + 3 * u * t * t + t * t * t;
+}
+
 /**
  * Alfa e cor de cada balde: 6 níveis de terra (braseiro → laranja), 1 de costa
  * e 3 dos países em creme. São dez `fill` por quadro, não um por ponto.
@@ -241,6 +292,30 @@ export function HeroGlobe({
   const primeiraVolta = useRef(true);
 
   /**
+   * A onda de entrada: `ondaT0` é o instante em que o front saiu do pé do
+   * planeta (`null` = não há onda, brilho normal), e `ondaPendente` é o que
+   * garante que ela seja armada UMA vez por entrada — o efeito de desenho se
+   * refaz a cada troca de país e a cada mudança de largura, e nenhuma dessas
+   * coisas é uma entrada.
+   */
+  const ondaT0 = useRef<number | null>(null);
+  const ondaPendente = useRef(true);
+  /** Sobe a cada `wone:entrada` só para refazer o efeito de desenho. */
+  const [entrada, setEntrada] = useState(0);
+
+  /* O reinício pela logo (ver `SiteHeader`): a classe do `<html>` já voltou, as
+     animações de CSS já recomeçaram, e o globo refaz a onda. O relógio do hero
+     NÃO reinicia — o país da vez continua de onde estava. */
+  useEffect(() => {
+    const refaz = () => {
+      ondaPendente.current = true;
+      setEntrada((n) => n + 1);
+    };
+    document.addEventListener("wone:entrada", refaz);
+    return () => document.removeEventListener("wone:entrada", refaz);
+  }, []);
+
+  /**
    * Três modos, por largura. O balanço SÓ existe a partir de `xl`, e isso é
    * medida, não gosto: a 1024 o corredor entre a moldura do aparelho (791) e a
    * borda da janela (1014) tem 223px e o vão do pino do México ao de São Paulo,
@@ -305,6 +380,28 @@ export function HeroGlobe({
 
     /** Celular: nuvem pela metade, dpr 1, sem pino e sem laço. */
     const celular = modo === "celular";
+
+    /* Arma a onda — uma vez por entrada, e só onde ela cabe.
+       Quem diz se é celular aqui é o `matchMedia`, e NÃO o `modo`: `modo` nasce
+       "parado" nos dois lados (ele só pode olhar a largura dentro de um efeito,
+       ou o HTML do servidor divergiria do primeiro render), então no primeiro
+       desenho de um celular ele ainda diz "parado". Medido a 412×915: a onda
+       acendia no celular, que é justamente onde ela não deve existir — 33
+       quadros de canvas disputando a pintura do `<h1>`, que é o LCP de lá. */
+    if (ondaPendente.current) {
+      ondaPendente.current = false;
+      ondaT0.current =
+        window.matchMedia("(min-width: 1024px)").matches &&
+        document.documentElement.classList.contains("wone-entrando")
+          ? performance.now()
+          : null;
+    }
+
+    /** 0 → 1 enquanto o front sobe; 1 (acabou) quando não há onda. */
+    const progresso = () =>
+      ondaT0.current === null
+        ? 1
+        : Math.min(1, (performance.now() - ondaT0.current) / ONDA_MS);
 
     function mede() {
       const lado = box!.clientWidth;
@@ -427,8 +524,31 @@ export function HeroGlobe({
       const cp = Math.cos(pitch);
       const sp = Math.sin(pitch);
 
+      /* A ONDA: o front em px da caixa (lado = 2R), do pé ao topo. A grade e a
+         rede obedecem à mesma régua, por recorte — é um `clip` retangular por
+         quadro, mais barato que decidir ponto a ponto onde elas entram, e o
+         resultado é o mesmo: nada existe acima do front. */
+      const p = progresso();
+      const ondando = p < 1;
+      const front = ondando ? (1 - curva(p)) * g.lado : 0;
+      const crista = ONDA_BANDA * g.lado;
+
+      /** Recorta tudo acima do front enquanto a onda sobe. */
+      const sob = (pinta: () => void) => {
+        if (!ondando) {
+          pinta();
+          return;
+        }
+        ctx!.save();
+        ctx!.beginPath();
+        ctx!.rect(0, front, g.lado, g.lado - front);
+        ctx!.clip();
+        pinta();
+        ctx!.restore();
+      };
+
       ctx!.clearRect(0, 0, g.lado, g.lado);
-      grade(cy, sy, cp, sp);
+      sob(() => grade(cy, sy, cp, sp));
 
       const atual = ativo.current;
       let n = 0;
@@ -465,11 +585,23 @@ export function HeroGlobe({
           if (dados.ac[i] > 0 && balde >= 4) balde = 6;
         }
 
+        const py = R - y2 * R;
+        if (ondando) {
+          /* Acima do front o ponto ainda não acendeu — e some inteiro, não pela
+             metade: é a diferença entre uma onda e uma cortina recortando
+             pontos no meio. Na crista ele vale 1,8× (balde + BALDES). */
+          if (py < front) continue;
+          if (py < front + crista) balde += BALDES;
+        }
+
         trab.x[n] = R + x1 * R;
-        trab.y[n] = R - y2 * R;
+        trab.y[n] = py;
         /* Os países ganham 18% de raio além do alfa: é o que faz os quatro
            acesos ficarem legíveis contra uma terra que agora é toda laranja. */
-        trab.r[n] = dados.rb[i] * (0.72 + 0.4 * lit) * (balde >= 7 ? 1.18 : 1);
+        trab.r[n] =
+          dados.rb[i] *
+          (0.72 + 0.4 * lit) *
+          (balde % BALDES >= 7 ? 1.18 : 1);
         trab.b[n] = balde;
         usados |= 1 << balde;
         n += 1;
@@ -477,7 +609,12 @@ export function HeroGlobe({
 
       /* Um `beginPath` + um `fill` por balde: dez chamadas de pintura por
          quadro, não uma por ponto. */
-      for (let b = 0; b < BALDES; b += 1) {
+      /* Dez baldes fora da onda; vinte enquanto ela sobe — os dez de cima são
+         os MESMOS dez com o alfa da crista, e por isso a onda não acrescenta
+         cor nenhuma ao planeta, só luz. Quase todos ficam vazios em cada
+         quadro, e o `usados` os pula sem custo. */
+      const topo = ondando ? BALDES * 2 : BALDES;
+      for (let b = 0; b < topo; b += 1) {
         if (!(usados & (1 << b))) continue;
         ctx!.beginPath();
         for (let k = 0; k < n; k += 1) {
@@ -486,14 +623,16 @@ export function HeroGlobe({
           ctx!.moveTo(trab.x[k] + r, trab.y[k]);
           ctx!.arc(trab.x[k], trab.y[k], r, 0, TAU);
         }
-        ctx!.globalAlpha = ALFA[b] * g.ganho;
-        ctx!.fillStyle = COR[b];
+        const base = b % BALDES;
+        const alfa = ALFA[base] * g.ganho * (b >= BALDES ? ONDA_BRILHO : 1);
+        ctx!.globalAlpha = alfa > 1 ? 1 : alfa;
+        ctx!.fillStyle = COR[base];
         ctx!.fill();
       }
 
       /* A rede POR CIMA da terra: embaixo de 5.102 pontos de laranja ela
          desaparece, e ligar as quatro capitais é o que a imagem tem a dizer. */
-      malha(cy, sy, cp, sp);
+      sob(() => malha(cy, sy, cp, sp));
       ctx!.globalAlpha = 1;
 
       /* Os pinos: `transform` com o DESLOCAMENTO a partir da posição de
@@ -540,7 +679,28 @@ export function HeroGlobe({
          está — voltar ao repouso seria um salto.) */
       if (modo !== "laco") angulo.current = { yaw: 0, pitch: 0 };
       umQuadro();
-      return () => observador?.disconnect();
+      if (progresso() >= 1) return () => observador?.disconnect();
+
+      /* A exceção, e ela tem fim: a onda de entrada precisa de quadros. Este
+         laço vive os 1,1 s dela e morre — o último quadro é o planeta inteiro
+         no brilho normal, que é o estado em que ele ficaria de todo modo. */
+      let rafOnda = 0;
+      let ultimoOnda = -1;
+      const quadroOnda = (t: number) => {
+        if (progresso() >= 1) {
+          umQuadro();
+          return;
+        }
+        rafOnda = requestAnimationFrame(quadroOnda);
+        if (ultimoOnda >= 0 && t - ultimoOnda < PASSO_MS) return;
+        ultimoOnda = t;
+        umQuadro();
+      };
+      rafOnda = requestAnimationFrame(quadroOnda);
+      return () => {
+        cancelAnimationFrame(rafOnda);
+        observador?.disconnect();
+      };
     }
 
     let raf = 0;
@@ -579,7 +739,7 @@ export function HeroGlobe({
       cancelAnimationFrame(raf);
       observador?.disconnect();
     };
-  }, [codes, running, modo, trocaParada]);
+  }, [codes, running, modo, trocaParada, entrada]);
 
   /**
    * O arco do pino ativo até o aparelho, na troca de país.
@@ -667,8 +827,11 @@ export function HeroGlobe({
         {/* A terra firme. Vazio e transparente até o primeiro quadro. */}
         <canvas ref={tela} className="absolute inset-0 h-full w-full" />
 
-        {/* Os pinos. Abaixo de `lg` não existem (globo atrás do aparelho). */}
-        <div className="absolute inset-0 hidden lg:block">
+        {/* Os pinos. Abaixo de `lg` não existem (globo atrás do aparelho).
+            Na entrada eles aparecem DEPOIS da onda (700 ms), e só em
+            opacidade: mover um pino seria mentir sobre o lugar dele no planeta,
+            e mostrá-lo antes da onda seria pendurá-lo no vazio. */}
+        <div className="ent-surge absolute inset-0 hidden [--ent-atraso:700ms] lg:block">
           {pins.map((pin, index) => {
             const p = REPOUSO[pin.code];
             if (!p) return null;
