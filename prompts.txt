@@ -976,3 +976,11 @@ Telegram no automatico"
 ===============================================================================
 entao, por hora, melhore a aparencia e disposicao do celular na onde ficam os
 fluxos em "comom funciona"
+
+
+===============================================================================
+[109] 2026-10-15
+===============================================================================
+(doc "Recriar o fluxo real do Wone na landing")
+pronto. criei a pasta em /public/referencia-fluxos/ . O nome dos arquivos e
+"canvas-1.png" e "canvas-2.png"
