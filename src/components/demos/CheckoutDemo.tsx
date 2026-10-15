@@ -30,7 +30,10 @@ const GlobeScene = dynamic(() => import("./GlobeScene"), {
  *
  * Os países, bandeiras, símbolos e métodos de pagamento vêm de
  * `payments.table.countries` — a mesma lista que a seção de Pagamentos usa, para
- * não existirem duas verdades sobre onde a Wone cobra.
+ * não existirem duas verdades sobre onde a Wone cobra. Daquela lista esta demo
+ * mostra os QUATRO PRIMEIROS países e, de cada um, o MÉTODO PRINCIPAL: o
+ * porquê de cada corte está nos dois comentários abaixo, e os dois são de
+ * altura — a tabela de Pagamentos continua com os sete e com tudo.
  *
  * O designer achou esta demo simples perto das outras, apontando a parte das
  * bandeiras: era uma lista de quatro linhas num canto. Agora a coluna da
@@ -45,7 +48,19 @@ export function CheckoutDemo() {
   const { highlights, payments } = useContent();
   const demo = highlights.demos.checkout;
   const reduced = useReducedMotion();
-  const countries = payments.table.countries;
+  /* OS QUATRO PRIMEIROS, não os sete da tabela. A lista cresceu em 15/10
+     (Equador, Portugal e Reino Unido), mas aqui ela é um seletor de bandeiras
+     de quatro colunas dentro de uma coluna de 15rem: com sete, ele quebra em
+     duas fileiras e a demo passa de 320px para 422 no desktop — e 320 é a
+     altura do esqueleto que segura o lugar enquanto o chunk do globo baixa
+     (`min-h` medido em Highlights). Mais alto que o esqueleto é CLS de volta,
+     que foi caro de tirar. Quem quer a lista inteira tem a tabela da seção de
+     Pagamentos, que é onde ela mora; aqui o ponto é ver o preço mudar de moeda.
+     Se um dia couberem sete, é só tirar o `slice` e remedir o `min-h`. */
+  const countries = useMemo(
+    () => payments.table.countries.slice(0, 4),
+    [payments.table.countries],
+  );
 
   const [index, setIndex] = useState(0);
   const country = countries[index];
@@ -77,7 +92,13 @@ export function CheckoutDemo() {
               {country.name}
             </motion.p>
           </AnimatePresence>
-          <p className="mt-0.5 text-[13px] text-faint">{country.methods.join(", ")}</p>
+          {/* O MÉTODO PRINCIPAL, não a lista inteira. Com os métodos da Dotfy
+              (15/10) o Brasil tem seis, e a lista toda ocupava três linhas aqui
+              e três no card ao lado — a demo passava do esqueleto de 320px e
+              mudava de altura a cada país. Um método por país: altura igual nos
+              quatro, e é o mesmo que a tabela de Pagamentos marca em laranja.
+              A lista completa é lá, que é onde ela informa. */}
+          <p className="mt-0.5 text-[13px] text-faint">{country.methods[0]}</p>
         </div>
 
         {/* As bandeiras: o seletor. Quatro, lado a lado, do tamanho de bandeira */}
@@ -143,7 +164,8 @@ export function CheckoutDemo() {
             </AnimatePresence>
           </div>
 
-          {/* Métodos daquele país */}
+          {/* O método principal daquele país — o mesmo que aparece sob o globo,
+              e pela mesma razão (ver o comentário lá). */}
           <div className="mt-4 border-t border-line pt-3.5">
             <span className="t-label">{demo.payWith}</span>
             <AnimatePresence mode="wait">
@@ -155,7 +177,7 @@ export function CheckoutDemo() {
                 transition={{ duration: reduced ? 0 : 0.3 }}
                 className="mt-1.5 text-sm font-medium text-cream"
               >
-                {country.methods.join(", ")}
+                {country.methods[0]}
               </motion.p>
             </AnimatePresence>
           </div>

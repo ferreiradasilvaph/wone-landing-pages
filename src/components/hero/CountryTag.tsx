@@ -29,6 +29,8 @@ export function CountryTag({
   left,
   top,
   side,
+  nudge,
+  sempre,
   active,
   animated,
   pinRef,
@@ -41,8 +43,18 @@ export function CountryTag({
   /** Posição de repouso do ponto, em % da caixa do globo. */
   left: string;
   top: string;
-  /** Lado em que o rótulo abre. México e Colômbia à direita; Brasil e Argentina à esquerda. */
+  /** Lado em que o rótulo abre — para DENTRO do disco (ver `globeMath.LADO`). */
   side: "left" | "right";
+  /** Empurrão vertical do rótulo, em px: separa Bogotá de Quito sem mover o ponto. */
+  nudge: number;
+  /**
+   * Rótulo visível já a partir de `lg`, e não só de 1420 — é o caso de Lisboa e
+   * de Londres desde 15/10: o dono pediu para a Europa aparecer, e um pino sem
+   * nome no canto do disco não diz que a Wone cobra em Portugal e no Reino
+   * Unido. Os dois abrem à esquerda, para dentro do disco, longe da coluna de
+   * texto do hero.
+   */
+  sempre?: boolean;
   active: boolean;
   /** `true` só depois de o relógio começar a andar e sem movimento reduzido. */
   animated: boolean;
@@ -72,20 +84,31 @@ export function CountryTag({
       {active && animated ? (
         <span
           key={code}
-          className="hero-ping absolute top-1/2 left-1/2 -mt-[18px] -ml-[18px] h-9 w-9 rounded-full ring-2 ring-brand"
+          /* 48px nos dois europeus, 36 nos outros: com o anel maior o olho
+             encontra Lisboa e Londres do outro lado do Atlântico, que é o que o
+             dono pediu em 15/10. O `key` continua sendo o país — montar é
+             animar, uma volta por ativação. */
+          className={`hero-ping absolute top-1/2 left-1/2 rounded-full ring-2 ring-brand ${
+            sempre ? "-mt-6 -ml-6 h-12 w-12" : "-mt-[18px] -ml-[18px] h-9 w-9"
+          }`}
         />
       ) : null}
 
-      {/* Rótulo. Some abaixo de 1420px, e não abaixo de `xl` (1280): o globo de
-          600px põe o pino mais a oeste (México) a 23px da moldura do aparelho a
-          1440, e abaixo dessa largura o corredor entre o telefone e a borda da
-          janela encurta até o rótulo do México nascer metade atrás do aparelho
-          — pior que não existir. Nessa faixa quem nomeia o país é o
-          `StageStatus`, exatamente como já acontecia a 1024 e no celular.
+      {/* Rótulo. O `translateY` carrega o empurrão de `nudge` junto com a
+          centralização: o ponto fica onde a projeção manda, e só a caixa de
+          texto se afasta do vizinho (Bogotá e Quito, a 27px um do outro).
+          Some abaixo de 1420px, e não abaixo de `xl` (1280): são SETE rótulos
+          desde 15/10, e abaixo dessa largura o disco encolhe até os pares
+          vizinhos (Bogotá/Quito, Lisboa/Londres) se cobrirem — pior que não
+          existir. Nessa faixa quem nomeia o país da vez é o `StageStatus`,
+          exatamente como já acontecia a 1024 e no celular.
           1420 e não 1440: media query mede a viewport SEM a barra de rolagem,
           e uma janela de 1440 no Windows reporta 1430. */}
       <span
-        className={`absolute top-1/2 hidden w-max -translate-y-1/2 transition-opacity duration-300 min-[1420px]:block ${
+        style={{ transform: `translateY(calc(-50% + ${nudge}px))` }}
+        className={`absolute top-1/2 hidden w-max transition-opacity duration-300 ${
+          sempre ? "lg:block" : "min-[1420px]:block"
+        } ${
           side === "right" ? "left-[14px]" : "right-[14px]"
         } ${active ? "opacity-100" : "opacity-50"}`}
       >
@@ -95,8 +118,8 @@ export function CountryTag({
           {city}
         </span>
         {/* Sempre `neutral`: o único laranja do palco é o ponto que acende (a
-            regra do `Chip` reserva o `brand` ao método principal, e quatro
-            chips laranja fariam o destaque deixar de destacar). */}
+            regra do `Chip` reserva o `brand` ao método principal, e sete chips
+            laranja fariam o destaque deixar de destacar). */}
         <Chip tone="neutral">{chip}</Chip>
       </span>
     </span>

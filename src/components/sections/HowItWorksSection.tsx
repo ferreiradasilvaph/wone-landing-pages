@@ -5,35 +5,38 @@ import { useContent } from "@/i18n";
 import { Section } from "@/components/Section";
 import { SectionHead } from "@/components/SectionHead";
 import { TextLink } from "@/components/TextLink";
+import { OperationStage } from "@/components/howitworks/OperationStage";
+import { StepFacts } from "@/components/howitworks/StepFacts";
 import { StepRail } from "@/components/howitworks/StepRail";
-import { TwoSidesDemo } from "@/components/howitworks/TwoSidesDemo";
 import { useStepShow } from "@/components/howitworks/useStepShow";
 
 /**
- * "Como funciona", refeita em 14/10 depois de o dono olhar a versão com palco
- * 3D e dizer: "refaça sendo mais criativo a seção como funciona. ao meu ver
- * está confuso. refaça a lógica e me entregue algo incrível".
+ * "Como funciona" — a SALA DE OPERAÇÃO, refeita em 15/10 depois do veredito do
+ * dono: "preciso que melhore pra ontem a seção como funciona. visualmente está
+ * ruim. preciso de algo visualmente espetacular para quem está acessando a
+ * página. seja mais criativo nessa sessão", e "adicione mais informações nas
+ * sessões com poucas informações".
  *
- * O que estava errado, em três pontos:
- *  1. TRÊS enumerações competiam no mesmo bloco — a tese de 3 linhas, os 2
- *     caminhos e os 4 passos. Agora há UMA: as quatro abas do trilho. A tese
- *     passou a dizer os dois lados da venda, e os dois caminhos viraram as duas
- *     abas (inertes) do painel no passo 02.
- *  2. Os objetos 3D eram abstratos e não explicavam nada. Saíram, com o WebGL:
- *     a página fica com um canvas só, o da placa de Premiações.
- *  3. Os passos ficavam espaçados em 36vh e dependiam da rolagem, então o
- *     leitor nunca via a relação entre o que ELE faz e o que ACONTECE. Agora os
- *     quatro títulos estão sempre à vista, sob duas etiquetas que dizem a dobra
- *     ("Você faz uma vez" · "Depois, a cada venda"), e a seção se lê PARADA no
- *     passo 01. Nada aqui é acoplado à rolagem.
+ * A LÓGICA FICA — é a que ele aprovou em 14/10: três coisas que você faz uma vez
+ * (bot, funil, gateway) e uma que acontece sempre (a venda), com um relógio só e
+ * os quatro passos clicáveis. O que mudou são a encenação e a quantidade de
+ * informação, em quatro peças:
  *
- * A lógica que a seção conta: três conexões que você faz uma vez (bot, funil,
- * gateway) e uma coisa que acontece para sempre (o cliente paga e entra no
- * canal, sem você). O desfecho se distingue por desenho, não por rótulo: no
- * passo 04 a demo entra invertida e o fio volta do chat para o painel.
+ *  1. `StepRail` — os quatro passos EM LINHA, com o numeral de 2,5rem fazendo o
+ *     trabalho gráfico, as duas réguas da dobra 3+1, a barra do relógio e o
+ *     "pausar". Era uma lista vertical de quatro linhas iguais.
+ *  2. `OperationStage` — o palco: horizonte laranja, chão, a tela grande do
+ *     painel inclinada em perspectiva de CSS e o aparelho do cliente em pé, com
+ *     o fio laranja e a faísca entre eles. Zero WebGL, zero `motion/react`.
+ *  3. `WonePanel` / `CustomerDevice` — quatro telas de verdade e quatro estados
+ *     de chat, com os VALORES vindo de outras seções do dicionário (o funil de
+ *     Plataforma, os países de Pagamentos, o extrato e a série por hora de
+ *     Análises). Eram dois retângulos com três linhas de texto.
+ *  4. `StepFacts` — três fatos por passo em texto de verdade, abaixo do palco:
+ *     o mockup mostra, e estas nove linhas AFIRMAM.
  *
  * O bloco inteiro é o dono das pausas (ponteiro e foco), porque o relógio é da
- * seção — um só, com "pausar" visível.
+ * seção — um só, com "pausar" visível, e nada aqui acoplado à rolagem.
  */
 export function HowItWorksSection() {
   const { howItWorks } = useContent();
@@ -56,10 +59,10 @@ export function HowItWorksSection() {
              tupla de três: a terceira é a que sai em laranja. */
           titleLines={[tese[0], tese[1], tese[2]]}
           lead={howItWorks.lead}
-          /* O trilho de abas nas colunas 7-12, na linha do kicker. A demo não
-             cabe aqui: duas telas e o fio precisam dos 1216 do container para
-             cada painel passar de 550px. */
-          aside={<StepRail active={show.active} onSelect={show.select} />}
+          /* O trilho nas colunas 7-12, na linha do kicker: é o controle do
+             palco, e fica à vista junto da tese. O palco não cabe aqui — a tela
+             grande sozinha pede 640px, e o fio precisa dos 1216 do container. */
+          aside={<StepRail show={show} />}
         >
           {/* `min-h-11` vai no próprio `<a>`: o link de texto mede a altura da
               linha (23px medidos a 1440 e a 412), abaixo dos 44px de alvo de
@@ -72,10 +75,8 @@ export function HowItWorksSection() {
           </TextLink>
         </SectionHead>
 
-        {/* A demo em largura cheia embaixo das duas colunas. */}
-        <div className="mt-8 lg:mt-12">
-          <TwoSidesDemo show={show} />
-        </div>
+        <OperationStage show={show} />
+        <StepFacts show={show} />
       </div>
     </Section>
   );

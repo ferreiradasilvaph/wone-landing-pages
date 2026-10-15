@@ -5,12 +5,14 @@ import { useId } from "react";
 /**
  * Bandeiras desenhadas em SVG, por país.
  *
- * Substituem os emoji 🇧🇷🇦🇷🇲🇽🇨🇴, que o Windows não renderiza — lá eles saem
- * como as duas letras do código regional. Em SVG o desenho é o mesmo em
+ * Substituem os emoji 🇧🇷🇦🇷🇲🇽🇨🇴🇪🇨🇵🇹🇬🇧, que o Windows não renderiza — lá eles
+ * saem como as duas letras do código regional. Em SVG o desenho é o mesmo em
  * qualquer sistema e escala sem perder nitidez.
  *
  * São versões simplificadas: as faixas e os símbolos centrais que identificam
- * cada bandeira, sem os detalhes heráldicos que sumiriam neste tamanho.
+ * cada bandeira, sem os detalhes heráldicos que sumiriam neste tamanho — e
+ * bandeira é símbolo nacional, não logotipo de marca, por isso ela pode ser
+ * redesenhada assim.
  *
  * A bandeira é estática e não tem estado: a prop `active`, que acendia um
  * brilho varrendo a do país em destaque, saiu com os outros relógios
@@ -67,18 +69,83 @@ function Colombia() {
   );
 }
 
+function Equador() {
+  return (
+    <>
+      {/* Tricolor 2:1:1 — o amarelo vale metade da altura. */}
+      <rect width="60" height="21" fill="#FFDD00" />
+      <rect y="21" width="60" height="10.5" fill="#034EA2" />
+      <rect y="31.5" width="60" height="10.5" fill="#EF3340" />
+      {/* O brasão é a ÚNICA coisa que separa esta bandeira da colombiana: as
+          duas são amarelo-azul-vermelho na mesma proporção, e lado a lado na
+          tabela ficariam iguais. Então ele entra, reduzido ao que se lê a 36px:
+          o escudo e o arco do condor em cima. Não é desenho heráldico — é a
+          marca que diz "não é a Colômbia". */}
+      <path
+        d="M25 12.5 H35 V21 Q35 27 30 29 Q25 27 25 21 Z"
+        fill="#FFFEF2"
+        stroke="#1B3A6B"
+        strokeWidth="1.1"
+      />
+      <path d="M24.5 10 Q30 6.5 35.5 10" fill="none" stroke="#1B3A6B" strokeWidth="1.6" />
+    </>
+  );
+}
+
+function Portugal() {
+  return (
+    <>
+      <rect width="24" height="42" fill="#046A38" />
+      <rect x="24" width="36" height="42" fill="#DA291C" />
+      {/* A esfera armilar e o escudo são um disco amarelo só: é o que se lê a
+          36px de largura, e é o que marca a divisa verde/vermelha. */}
+      <circle cx="24" cy="21" r="7.4" fill="#FFD100" />
+      <circle cx="24" cy="21" r="3.4" fill="#DA291C" />
+    </>
+  );
+}
+
+function ReinoUnido() {
+  return (
+    <>
+      <rect width="60" height="42" fill="#012169" />
+      {/* Union Jack simplificada: as diagonais brancas e, mais finas, as
+          vermelhas por cima; depois a cruz reta branca e a vermelha. Sem o
+          contra-esquartelado (as diagonais vermelhas deslocadas da Saltire),
+          que some neste tamanho. */}
+      {/* `fill="none"` em todas: são traços abertos, e sem isso o preenchimento
+          padrão fecharia os triângulos entre as duas diagonais em preto. */}
+      <path d="M0 0 L60 42 M60 0 L0 42" fill="none" stroke="#fff" strokeWidth="8.5" />
+      <path d="M0 0 L60 42 M60 0 L0 42" fill="none" stroke="#C8102E" strokeWidth="3.4" />
+      <path d="M30 0 V42 M0 21 H60" fill="none" stroke="#fff" strokeWidth="13" />
+      <path d="M30 0 V42 M0 21 H60" fill="none" stroke="#C8102E" strokeWidth="7.4" />
+    </>
+  );
+}
+
+/**
+ * A chave é o ISO DA MOEDA (o `code` de `payments.table.countries`), não o do
+ * país: é o campo que a tabela, a demo e o globo já carregam. O Equador paga em
+ * dólar, então sua bandeira entra em `USD` — se um dia a lista ganhar os
+ * Estados Unidos, as duas disputam a mesma chave e aí o `code` passa a ser o do
+ * país. Os sete são os de 15/10 (pedido da diretoria do dono, com Portugal e
+ * Reino Unido): BR, MX, AR, CO, EC, PT, GB.
+ */
 const FLAGS: Record<string, () => React.ReactElement> = {
   BRL: Brasil,
   ARS: Argentina,
   MXN: Mexico,
   COP: Colombia,
+  USD: Equador,
+  EUR: Portugal,
+  GBP: ReinoUnido,
 };
 
 export function FlagMark({
   code,
   className = "h-6 w-9",
 }: {
-  /** Código da moeda: BRL, ARS, MXN ou COP. */
+  /** Código da moeda: BRL, ARS, MXN, COP, USD, EUR ou GBP. */
   code: string;
   /** Padrão 36×24, a medida da tabela de Pagamentos. */
   className?: string;

@@ -108,8 +108,9 @@ function noise(seed) {
   return value - Math.floor(value);
 }
 
-function amostra(i) {
-  const y = 1 - (i / (SAMPLES - 1)) * 2;
+function amostra(i, samples = SAMPLES) {
+  const passo = (Math.sqrt((4 * Math.PI) / samples) * 180) / Math.PI;
+  const y = 1 - (i / (samples - 1)) * 2;
   const raio = Math.sqrt(Math.max(0, 1 - y * y));
   const theta = GOLDEN * i;
   const baseLat = (Math.asin(y) * 180) / Math.PI;
@@ -118,18 +119,43 @@ function amostra(i) {
   /* Longitude anda mais rápido perto dos polos: o passo cresce com 1/cos. */
   const span = 1 / Math.max(0.25, Math.cos((baseLat * Math.PI) / 180));
   return {
-    lat: baseLat + (noise(i) - 0.5) * STEP * 0.4,
-    lon: baseLon + (noise(i + 0.5) - 0.5) * STEP * span * 0.4,
+    lat: baseLat + (noise(i) - 0.5) * passo * 0.4,
+    lon: baseLon + (noise(i + 0.5) - 0.5) * passo * span * 0.4,
     span,
+    passo,
   };
+}
+
+/**
+ * A JANELA DA EUROPA, e a segunda espiral que a adensa.
+ *
+ * Pedido do dono de 15/10: "quando um ponto ligar no outro (no globo da tela
+ * principal) mostre mais os países do continente europeu. melhore a
+ * visibilidade deles". Com o centro da vista no Atlântico a Europa aparece de
+ * frente, mas ela é PEQUENA no mapa — Portugal, Irlanda e a Itália cabem em
+ * poucos graus — e a espiral de 18.000 candidatos deixava ~150 pontos no
+ * continente inteiro, menos que o Brasil sozinho.
+ *
+ * A correção é uma SEGUNDA espiral, de 36.000 candidatos, peneirada pela mesma
+ * máscara e recortada nesta janela: ela dobra a contagem de pontos na Europa
+ * sem tocar em um único ponto do resto do planeta. O cliente a refaz com a
+ * mesma `amostra(i, GLOBE_EU_SAMPLES)`, igualzinho à primeira.
+ */
+const EU = { lat: [35, 60], lon: [-12, 30] };
+const SAMPLES_EU = SAMPLES * 2;
+
+function naEuropa(lat, lon) {
+  return lat >= EU.lat[0] && lat <= EU.lat[1] && lon >= EU.lon[0] && lon <= EU.lon[1];
 }
 
 const indices = [];
 const costas = [];
+let europaBase = 0;
 
 for (let i = 0; i < SAMPLES; i += 1) {
   const { lat, lon, span } = amostra(i);
   if (!isLand(lat, lon)) continue;
+  if (naEuropa(lat, lon)) europaBase += 1;
 
   const vizinho = span * STEP;
   const costa =
@@ -140,6 +166,15 @@ for (let i = 0; i < SAMPLES; i += 1) {
 
   indices.push(i);
   costas.push(costa ? 1 : 0);
+}
+
+/* A segunda espiral, só dentro da janela europeia. */
+const indicesEu = [];
+for (let i = 0; i < SAMPLES_EU; i += 1) {
+  const { lat, lon } = amostra(i, SAMPLES_EU);
+  if (!naEuropa(lat, lon)) continue;
+  if (!isLand(lat, lon)) continue;
+  indicesEu.push(i);
 }
 
 /* ---------------------------------------------------------- codificação */
@@ -159,6 +194,19 @@ for (const i of indices) {
   }
   deltas.push(d);
 }
+
+const deltasEu = [];
+let anteriorEu = -1;
+for (const i of indicesEu) {
+  let d = i - anteriorEu;
+  anteriorEu = i;
+  while (d >= 255) {
+    deltasEu.push(255);
+    d -= 255;
+  }
+  deltasEu.push(d);
+}
+const DELTAS_EU = Buffer.from(deltasEu).toString("base64");
 
 const bitmap = Buffer.alloc(Math.ceil(costas.length / 8));
 costas.forEach((valor, k) => {
@@ -200,6 +248,23 @@ export const GLOBE_DELTAS =
 /** 1 bit por ponto, na ordem dos deltas: ligado quando o vizinho já é mar. */
 export const GLOBE_COAST =
   "${COAST}";
+
+/**
+ * A SEGUNDA ESPIRAL, só da Europa (lon −12..30, lat 35..60): ${indicesEu.length}
+ * pontos de uma espiral de ${SAMPLES_EU} candidatos, a mesma peneira de terra
+ * firme. É o adensamento que o dono pediu em 15/10 — a janela tinha
+ * ${europaBase} pontos da espiral principal e passa a ter ${europaBase + indicesEu.length}.
+ * O cliente os recupera com \`amostra(i, GLOBE_EU_SAMPLES)\`, e eles entram na
+ * mesma nuvem, depois dos outros.
+ */
+export const GLOBE_EU_SAMPLES = ${SAMPLES_EU};
+
+/** Quantos pontos a janela europeia acrescenta. */
+export const GLOBE_EU_COUNT = ${indicesEu.length};
+
+/** Deltas do índice do candidato na espiral europeia, 1 byte cada. */
+export const GLOBE_EU_DELTAS =
+  "${DELTAS_EU}";
 `;
 
 mkdirSync(dirname(SAIDA), { recursive: true });
@@ -208,7 +273,11 @@ writeFileSync(SAIDA, arquivo, "utf8");
 console.log(
   `globeDots.ts: ${indices.length} pontos (${COSTA_N} de costa), ` +
     `${deltas.length} bytes de delta + ${bitmap.length} de bitmap = ` +
-    `${DELTAS.length + COAST.length} caracteres de base64 (alvo ≤ 8192)`,
+      `${DELTAS.length + COAST.length + DELTAS_EU.length} caracteres de base64 (alvo ≤ 8192)`,
+);
+console.log(
+  `Europa: ${europaBase} pontos na espiral principal + ${indicesEu.length} da ` +
+    `espiral de ${SAMPLES_EU} = ${europaBase + indicesEu.length} (${DELTAS_EU.length} caracteres),`,
 );
 if (defeituosas.length > 0) {
   console.log(

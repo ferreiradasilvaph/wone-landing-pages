@@ -1,149 +1,193 @@
 "use client";
 
-import { Fragment } from "react";
+import { useEffect, useRef } from "react";
 import { useContent } from "@/i18n";
-import { STEP_COUNT } from "./useStepShow";
+import { PauseButton } from "@/components/PauseButton";
+import { SegmentProgress } from "@/components/SegmentProgress";
+import { STEP_COUNT, STEP_MS, type StepShow } from "./useStepShow";
 
 /**
- * O trilho dos quatro passos: as abas que mandam na demo ao lado.
+ * O TRILHO: os quatro passos em linha, em formato grande, mandando no palco
+ * abaixo.
  *
- * Substituiu o "log" que espaçava cada passo em 36vh e dependia da rolagem para
- * trocar de cena. Aqui os quatro títulos ficam SEMPRE visíveis — com as duas
- * etiquetas de grupo, a seção conta a história inteira PARADA no passo 01, que
- * era o furo do desenho antigo: o leitor não entendia a relação entre o que ELE
- * faz e o que ACONTECE (diagnóstico de 14/10).
+ * Era uma lista vertical de abas com o número em 13px ao lado do título. Em
+ * 15/10 o dono olhou a seção e disse "visualmente está ruim... preciso de algo
+ * visualmente espetacular", e o trilho era metade do problema: lido de longe,
+ * não havia hierarquia nenhuma — quatro linhas de texto do mesmo tamanho.
+ * Agora o numeral é a peça gráfica (2,5rem/600 tabular, creme no passo
+ * escolhido e `faint` nos outros) e os quatro ficam lado a lado, que é a forma
+ * de uma barra de controle.
  *
- * As etiquetas são a dobra 3+1: "Você faz uma vez" sobre os passos 01-03 e
- * "Depois, a cada venda" sobre o 04, com régua acima. É o que faz o desfecho
- * ler como desfecho sem precisar de um estilo diferente de aba.
+ * A DOBRA 3+1 é desenhada pelas duas réguas do alto: uma atravessa as três
+ * primeiras colunas sob "Você faz uma vez", a outra cobre só a quarta, sob
+ * "Depois, a cada venda". É o que faz o desfecho ler como desfecho sem inventar
+ * um segundo estilo de aba.
  *
- * `tablist` vertical é o papel correto (uma lista de opções que controla um
- * painel), e as setas andam nela — o mesmo manipulador de `SecurityCarousel`.
- * As duas etiquetas são irmãs diretas das abas e vão `aria-hidden` mais
- * `role="presentation"`: um `<div>` de agrupamento entre o `tablist` e o `tab`
- * quebraria a relação de posse do ARIA, e `role="group"` não é filho válido de
- * `tablist`; declarar as etiquetas como apresentacionais satisfaz a regra dos
- * "required owned elements" sem mudar nada do que o leitor de tela recebe — a
- * descrição do passo 04 já diz "Sem você.", que é o que as etiquetas desenham
- * para quem vê.
+ * A DESCRIÇÃO NÃO CABE DENTRO DA ABA. Medido a 1440: o trilho vive nas colunas
+ * 7-12 do cabeçalho (592px) e cada aba fica com 133px — 14px de texto ali dá 15
+ * caracteres por linha, e as descrições têm 54 a 80. Então ela mora num
+ * compartimento de altura fixa abaixo das quatro, na largura toda do trilho, e
+ * troca com o passo. Dentro da aba ficam o numeral e o título, que é o que se
+ * lê de longe. (A primeira versão da seção punha a descrição dentro da aba
+ * ativa e registrava 4 saltos de layout por ciclo, CLS 0,026 a 412.)
  *
- * Altura CONSTANTE em cada aba, e não só na soma do trilho: em `lg` as quatro
- * descrições ficam no DOM com altura reservada (`h-10` e `line-clamp-2`, que
- * também seguram o inglês, mais longo); abaixo de `lg` a descrição sai de
- * dentro dos botões e vive UMA vez, num compartimento de altura fixa logo
- * abaixo do `tablist`. A primeira versão mostrava a descrição dentro da aba
- * ativa: a soma do trilho não mudava, mas as abas seguintes desciam 44px a cada
- * troca, e o autoplay registrava quatro saltos de layout por ciclo (CLS 0,026
- * medido a 412) sem o visitante tocar em nada. Agora toda aba mede o mesmo,
- * então nada dentro do trilho se move — CLS 0 nos dois breakpoints.
+ * No celular as quatro abas viram uma faixa horizontal com `snap`, e o
+ * compartimento da descrição continua embaixo, parado.
+ *
+ * `tablist` horizontal com foco rotativo: o trilho é UMA parada de Tab e as
+ * setas andam nele. As duas etiquetas são irmãs diretas das abas e vão
+ * `aria-hidden` + `role="presentation"` — um `<div>` de agrupamento entre o
+ * `tablist` e o `tab` quebraria a relação de posse do ARIA, e `role="group"`
+ * não é filho válido de `tablist`.
  */
-export function StepRail({
-  active,
-  onSelect,
-}: {
-  active: number;
-  onSelect: (index: number) => void;
-}) {
-  const { howItWorks } = useContent();
+export function StepRail({ show }: { show: StepShow }) {
+  const { howItWorks, ui } = useContent();
   const { steps, demo } = howItWorks;
+  const { active, select, playing, reduced, userPaused, toggleUserPaused } = show;
+
+  const counter = demo.counter.replace("{n}", String(active + 1));
+
+  /* NA TELA ESTREITA a faixa das abas rola, e cabem duas e meia: sem isto o
+     relógio avançava para um passo que estava FORA da vista, e o leitor via a
+     descrição trocar sem saber qual numeral acendeu. O passo escolhido é
+     trazido para dentro da faixa — e só dela: `scrollIntoView` moveria a página
+     inteira, que é o que ninguém pediu. Com movimento reduzido, sem deslize. */
+  const stripRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const strip = stripRef.current;
+    const tab = document.getElementById(`hiw-tab-${active}`);
+    if (!strip || !tab || strip.scrollWidth <= strip.clientWidth) return;
+
+    const alvo = tab.offsetLeft - (strip.clientWidth - tab.offsetWidth) / 2;
+    strip.scrollTo({ left: Math.max(0, alvo), behavior: reduced ? "auto" : "smooth" });
+  }, [active, reduced]);
 
   return (
-    <div>
-      <div role="tablist" aria-orientation="vertical" aria-label={howItWorks.kicker}>
-        {steps.map((step, index) => {
-          const isActive = index === active;
-          /* O 04 é o desfecho: a segunda etiqueta de grupo entra antes dele. */
-          const opensRuntime = index === STEP_COUNT - 1;
+    /* `contain: inline-size` não é enfeite: sem ele a faixa rolável de 700px
+       EMPURRAVA a página. O trilho é item de uma grade de uma coluna (o `aside`
+       do `SectionHead`), e item de grade tem `min-width: auto` — a coluna
+       crescia até o conteúdo mínimo do filho, e a 412 o documento ficava com
+       732px de largura, com rolagem horizontal na página inteira. Com a
+       contenção, a largura deste bloco deixa de depender do que ele contém: a
+       faixa rola dentro dele, como se pretendia. */
+    <div className="[contain:inline-size]">
+      {/* A faixa sangra para as bordas no celular (`-mx-4`) para a quarta aba
+          não parecer cortada por acidente: a rolagem começa colada no gutter.
+          A partir de `lg` não há rolagem nenhuma — as quatro cabem. */}
+      <div
+        ref={stripRef}
+        className="-mx-4 overflow-x-auto px-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden lg:mx-0 lg:overflow-visible lg:px-0"
+      >
+        <div
+          role="tablist"
+          aria-orientation="horizontal"
+          aria-label={howItWorks.kicker}
+          className="grid min-w-[700px] snap-x snap-mandatory grid-cols-4 gap-x-3 lg:min-w-0 lg:gap-x-4"
+        >
+          <p
+            role="presentation"
+            aria-hidden
+            className="t-label col-span-3 border-t border-line pt-3"
+          >
+            {demo.groups.setup}
+          </p>
+          <p role="presentation" aria-hidden className="t-label border-t border-brand/40 pt-3">
+            {demo.groups.runtime}
+          </p>
 
-          return (
-            <Fragment key={step.step}>
-              {index === 0 ? (
-                <p role="presentation" aria-hidden className="t-label mb-2">
-                  {demo.groups.setup}
-                </p>
-              ) : null}
-              {opensRuntime ? (
-                <p
-                  role="presentation"
-                  aria-hidden
-                  className="t-label mt-4 mb-2 border-t border-line pt-4"
-                >
-                  {demo.groups.runtime}
-                </p>
-              ) : null}
+          {steps.map((step, index) => {
+            const isActive = index === active;
 
+            return (
               <button
+                key={step.step}
                 type="button"
                 role="tab"
                 id={`hiw-tab-${index}`}
                 aria-selected={isActive}
-                aria-controls="hiw-panel"
-                /* Foco rotativo: o trilho inteiro é UMA parada de Tab, e dentro
-                   dele quem anda são as setas. */
+                aria-controls="hiw-stage"
+                /* Foco rotativo: só a aba escolhida está na ordem de Tab. */
                 tabIndex={isActive ? 0 : -1}
-                onClick={() => onSelect(index)}
+                onClick={() => select(index)}
                 onKeyDown={(event) => {
                   const last = STEP_COUNT - 1;
                   let next: number | null = null;
-                  if (event.key === "ArrowDown" || event.key === "ArrowRight") {
+                  if (event.key === "ArrowRight" || event.key === "ArrowDown") {
                     next = index === last ? 0 : index + 1;
                   }
-                  if (event.key === "ArrowUp" || event.key === "ArrowLeft") {
+                  if (event.key === "ArrowLeft" || event.key === "ArrowUp") {
                     next = index === 0 ? last : index - 1;
                   }
                   if (event.key === "Home") next = 0;
                   if (event.key === "End") next = last;
                   if (next === null) return;
                   event.preventDefault();
-                  onSelect(next);
+                  select(next);
                   /* O foco acompanha a seleção: com `tabIndex` rotativo,
                      deixá-lo na aba antiga tiraria o teclado do trilho na tecla
                      seguinte. */
                   document.getElementById(`hiw-tab-${next}`)?.focus();
                 }}
-                /* Tom, nunca contorno (regra 8): a aba escolhida sobe um degrau
-                   de superfície sobre o fundo da seção. `py-3` com a linha do
-                   título leva o alvo de toque aos 44px sem um `min-h` solto. */
-                className={`w-full cursor-pointer rounded-field px-3 py-3 text-left transition-colors duration-300 ${
+                /* Tom, nunca contorno: a aba escolhida sobe um degrau de
+                   superfície sobre o fundo da seção. O respiro já leva o alvo
+                   de toque muito além dos 44px. */
+                className={`mt-2 flex cursor-pointer snap-start flex-col items-start rounded-field px-3 pt-2 pb-3 text-left transition-colors duration-300 ${
                   isActive ? "bg-ink-800" : "hover:bg-ink-850"
                 }`}
               >
-                <span className="flex items-baseline gap-2">
-                  <span className="tnum text-[13px] text-faint">{step.step}</span>
-                  <span
-                    className={`text-[15px] leading-snug font-semibold transition-colors duration-300 ${
-                      isActive ? "text-cream" : "text-muted"
-                    }`}
-                  >
-                    {step.title}
-                  </span>
+                <span
+                  className={`tnum text-[2.5rem] leading-[1.1] font-semibold transition-colors duration-300 ${
+                    isActive ? "text-cream" : "text-faint"
+                  }`}
+                >
+                  {step.step}
                 </span>
-                {/* Dentro da aba só em `lg`, onde as quatro ficam no DOM e a
-                    altura reservada não depende de qual está ativa. */}
-                <span className="mt-1 line-clamp-2 hidden h-10 text-[13px] leading-[1.5] text-muted lg:block">
-                  {step.description}
+                {/* `h-10` reservado nos quatro: o título ocupa uma ou duas
+                    linhas conforme o idioma, e sem a altura fixa a troca de
+                    passo mexeria na barra abaixo. */}
+                <span
+                  className={`mt-0.5 h-10 text-[15px] leading-tight font-semibold transition-colors duration-300 ${
+                    isActive ? "text-cream" : "text-muted"
+                  }`}
+                >
+                  {step.title}
                 </span>
               </button>
-            </Fragment>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
 
-      {/* O compartimento da descrição abaixo de `lg`: altura fixa, fora do
-          `tablist` (lá dentro só cabem abas) e fora dos botões, para a troca de
-          passo não empurrar as abas seguintes. Sem `aria-live` — quem narra a
-          troca é a região do card da demo; aqui o texto é só o que está à vista
-          de quem usa um leitor de tela em tela estreita.
-
-          Leva o tom da aba escolhida (`bg-ink-800`) e repete o número do passo:
-          solto, logo abaixo do 04, o texto parecia descrever o ÚLTIMO item da
-          lista. Com o mesmo tom e o mesmo par número+texto das abas, ele se lê
-          como o corpo do passo marcado — e o card da demo, logo abaixo, mostra
-          esse mesmo passo. */}
-      <p className="mt-2 flex gap-2 rounded-field bg-ink-800 px-3 py-2 text-[13px] leading-[1.5] lg:hidden">
-        <span className="tnum shrink-0 text-faint">{steps[active].step}</span>
-        <span className="line-clamp-2 h-10 text-muted">{steps[active].description}</span>
+      {/* O compartimento da descrição: altura cravada em duas linhas de 14px,
+          fora do `tablist` (lá dentro só cabem abas) e fora dos botões, para a
+          troca de passo não empurrar a barra. Sem `aria-live` — quem narra a
+          troca é a região do palco. */}
+      {/* `line-clamp-2` é rede de segurança, não recorte esperado: medidas as
+          quatro descrições nos dois idiomas, a mais longa (81 caracteres, em
+          inglês) cabe nas duas linhas a 412 e a 1440. Se uma revisão de copy
+          passar do teto, ela corta em vez de empurrar a barra do relógio. */}
+      <p className="mt-3 line-clamp-2 h-[42px] text-[14px] leading-[1.5] text-muted">
+        {steps[active].description}
       </p>
+
+      {/* A barra é o DESENHO do relógio, não um segundo relógio: é animação CSS
+          alimentada pelo mesmo `durationMs`/`paused`. O "pausar" fecha o
+          trilho porque é daqui que a seção se controla (WCAG 2.2.2). */}
+      <div className="mt-4 flex items-center gap-4">
+        <SegmentProgress
+          className="min-w-0 flex-1"
+          count={STEP_COUNT}
+          active={active}
+          durationMs={STEP_MS[active]}
+          paused={!playing}
+        />
+        <span className="tnum shrink-0 text-[13px] text-faint">{counter}</span>
+        <PauseButton
+          pressed={userPaused}
+          onToggle={toggleUserPaused}
+          labels={{ pause: ui.pause, play: ui.play }}
+        />
+      </div>
     </div>
   );
 }

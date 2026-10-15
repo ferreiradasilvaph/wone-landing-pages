@@ -15,7 +15,8 @@ export const en: Content = {
 
   hero: {
     /** Abaixo de `sm` entra a versão curta; veja `pt.ts`. */
-    kicker: "Billing, delivery and tracking · Brazil, Argentina, Mexico and Colombia",
+    /* Continente no lugar dos quatro nomes desde 15/10; veja `pt.ts`. */
+    kicker: "Billing, delivery and tracking · Brazil, Latin America and Europe",
     kickerShort: "Billing, delivery and tracking",
 
     /**
@@ -41,8 +42,9 @@ export const en: Content = {
 
     benefits: [
       {
-        value: "4 countries",
-        label: "Real and Argentine, Mexican and Colombian pesos at checkout",
+        /* Sete desde 15/10; veja `pt.ts`. */
+        value: "7 countries",
+        label: "Local currency: real, pesos, dollar, euro and pound",
       },
       {
         value: "3 paths",
@@ -61,8 +63,11 @@ export const en: Content = {
         { code: "ARS", city: "Buenos Aires" },
         { code: "MXN", city: "Mexico City" },
         { code: "COP", city: "Bogotá" },
+        { code: "USD", city: "Quito" },
+        { code: "EUR", city: "Lisbon" },
+        { code: "GBP", city: "London" },
       ],
-      srIntro: "Globe with the simulated checkout in four countries:",
+      srIntro: "Globe with the simulated checkout in seven countries:",
     },
   },
 
@@ -110,7 +115,9 @@ export const en: Content = {
         title: "Confirmation paths",
       },
       {
-        value: 4,
+        /* Sete desde 15/10: a figura conta as linhas da tabela de Pagamentos —
+           veja `pt.ts`. */
+        value: 7,
         decimals: 0,
         suffix: "",
         title: "Countries, local currency",
@@ -255,11 +262,15 @@ export const en: Content = {
         productNote: "Channel access for 12 months",
         payWith: "Pay with",
         disclaimer: "Illustrative amounts, not live exchange rates.",
+        /* Uma linha por `code` da tabela de Pagamentos — veja `pt.ts`. */
         prices: [
           { code: "BRL", display: "197.00" },
-          { code: "ARS", display: "38,000" },
           { code: "MXN", display: "650" },
+          { code: "ARS", display: "38,000" },
           { code: "COP", display: "155,000" },
+          { code: "USD", display: "197.00" },
+          { code: "EUR", display: "180.00" },
+          { code: "GBP", display: "155.00" },
         ],
       },
     },
@@ -271,29 +282,88 @@ export const en: Content = {
        dois dos três passos de configuração. O porquê está em `pt.ts`. */
     thesis: ["You wire it up.", "The buyer pays.", "Wone delivers."],
     lead: "Bot, funnel and gateway: three connections you make once. After that, every sale happens without you. Pick a step and watch both sides — your dashboard and the customer's chat.",
-    /* Sem `icon`: o palco 3D saiu. As descrições têm de caber em duas linhas de
-       13px na largura do trilho — o teto medido é ~80 caracteres, e o inglês é
-       o idioma que chega mais perto dele. */
+    /* A descrição mora no compartimento abaixo das quatro abas, na largura toda
+       do trilho (o porquê está em `pt.ts`): o teto é ~110 caracteres em duas
+       linhas, e o inglês é o idioma que chega mais perto dele. `facts` são os
+       três fatos do passo, na fileira abaixo do palco — cada um já é afirmado em
+       outra seção, dito aqui na voz do passo. */
     steps: [
       {
         step: "01",
         title: "Connect your bot",
         description: "Paste the token from @BotFather. Wone keeps the bot online.",
+        facts: [
+          {
+            term: "Token from @BotFather",
+            text: "You paste it once; Wone registers the commands and the webhook.",
+          },
+          {
+            term: "Wone keeps the bot online",
+            text: "Nothing to host, nothing to restart by hand.",
+          },
+          {
+            term: "Several bots, one account",
+            text: "Within the limit set for your access.",
+          },
+        ],
       },
       {
         step: "02",
         title: "Build your funnel",
         description: "A ready funnel in tabs or an editor with 28 blocks, 4 of them AI. Same account.",
+        facts: [
+          {
+            term: "A ready funnel in tabs",
+            text: "In Wone Static you just fill the funnel in and publish.",
+          },
+          {
+            term: "28 blocks, 4 of them AI",
+            text: "In Wone Flows you drag blocks to build the logic, no code.",
+          },
+          {
+            term: "Both paths",
+            text: "Wone Static and Wone Flows live in the same account.",
+          },
+        ],
       },
       {
         step: "03",
         title: "Connect your gateway",
         description: "Your own processor account. Add a backup: if one goes down, the other takes over.",
+        facts: [
+          {
+            term: "The money lands in your account",
+            text: "It's your processor account; Wone never touches the money.",
+          },
+          {
+            term: "Backup gateway",
+            text: "If the first one fails to charge, the next takes over.",
+          },
+          {
+            /* Sem contagem de países: ver `pt.ts`. */
+            term: "Each country's own currency",
+            text: "PIX, SPEI, Nequi, MB WAY or card: the local method.",
+          },
+        ],
       },
       {
         step: "04",
         title: "The sale happens",
         description: "The customer pays, gets the single-use invite and joins the channel. Without you.",
+        facts: [
+          {
+            term: "Single-use invite",
+            text: "The same payment never unlocks access twice.",
+          },
+          {
+            term: "Three confirmation paths",
+            text: "Webhook, reconciliation and the button in the chat, independent.",
+          },
+          {
+            term: "All in the dashboard",
+            text: "Revenue by hour, funnel, LTV, rates and statement.",
+          },
+        ],
       },
     ],
 
@@ -302,13 +372,12 @@ export const en: Content = {
 
     listLink: "Join the list",
 
-    /* Rótulos da demo dos dois lados. Nenhum valor é cunhado aqui, e o valor da
-       venda é um só nas duas telas (`phone.transactions[0].amount`) — ver
+    /* Rótulos da sala de operação. Nenhum valor é cunhado aqui, e o valor da
+       venda é um só nos dois objetos (`phone.transactions[0].amount`) — ver
        `pt.ts`. */
     demo: {
       counter: "{n} of 4",
       groups: { setup: "You do this once", runtime: "Then, on every sale" },
-      sides: { panel: "Your dashboard", chat: "The customer's chat" },
       announce: "Step {n} of 4: {title}",
       tokenLabel: "Bot token",
       botOnline: "Bot online",
@@ -319,6 +388,23 @@ export const en: Content = {
       hand: "From here on, it's your customer.",
       inviteSent: "Invite sent",
       statement: "In your statement",
+
+      /* A tela grande: nomes de tela e estados de UI, nunca afirmação de
+         produto (ver `pt.ts`). */
+      panel: {
+        window: "Dashboard · Wone",
+        screens: ["Bots", "Funnel", "Payments", "Sales"],
+        botChecks: ["Token validated", "Commands registered", "Channel linked"],
+        webhook: "Webhook active",
+        blocksCount: "28 blocks, 4 of them AI",
+        hourly: "Revenue by hour",
+        now: "now",
+      },
+
+      /* O aparelho do cliente. */
+      chat: {
+        welcome: "Hi! I'm the Wone Bot. Tap start and I'll show you the plans.",
+      },
     },
   },
 
@@ -333,6 +419,12 @@ export const en: Content = {
       bump: "Add to order",
       preview: "Preview",
       reminder: "Reminder sent",
+      /* Os cinco rótulos das placas que entraram em 15/10; veja `pt.ts`. */
+      bought: "Bought",
+      declined: "Declined",
+      freeAmount: "Whatever the customer picks",
+      noCharge: "No real charge",
+      abTest: "A/B test",
     },
     items: [
       {
@@ -391,8 +483,11 @@ export const en: Content = {
   payments: {
     kicker: "Payments",
     title: "INTERNATIONAL checkout",
-    lead: "Real and Argentine, Mexican and Colombian pesos. Customers pay the way they already pay at home: PIX, card, SPEI or PSE. The money lands in your own processor account.",
+    /* Lead refeito em 15/10 — veja `pt.ts`: é o pedido da diretoria do dono
+       (integrações próprias, não via Stripe, menores taxas do mercado). */
+    lead: "Real, pesos, dollars, euros and pounds. Customers pay the way they already pay at home — PIX, SPEI, Nequi, MB WAY, card. Our own integrations with each payment method, not via Stripe, at the lowest fees on the market.",
 
+    /** Os sete países de 15/10 e os métodos da Dotfy — veja `pt.ts`. */
     table: {
       headers: {
         country: "Country",
@@ -405,31 +500,63 @@ export const en: Content = {
       countries: [
         {
           name: "Brazil",
-          methods: ["PIX", "Card"],
+          /* Nomes de produto ficam como a marca escreve, mesmo em inglês: PIX,
+             Pix Automático, MB WAY. Só o que é substantivo comum traduz
+             (boleto, dinheiro, cartão). */
+          methods: [
+            "PIX",
+            "Pix Automático",
+            "Registered boleto",
+            "Card up to 12x · 3DS",
+            "Apple Pay",
+            "Google Pay",
+          ],
           code: "BRL",
           symbol: "R$",
           currency: "Brazilian real",
         },
         {
-          name: "Argentina",
-          methods: ["Local card"],
-          code: "ARS",
-          symbol: "$",
-          currency: "Argentine peso",
-        },
-        {
           name: "Mexico",
-          methods: ["Card", "SPEI"],
+          methods: ["SPEI", "Cash at stores"],
           code: "MXN",
           symbol: "$",
           currency: "Mexican peso",
         },
         {
+          name: "Argentina",
+          methods: ["CVU / CBU transfer", "Cash"],
+          code: "ARS",
+          symbol: "$",
+          currency: "Argentine peso",
+        },
+        {
           name: "Colombia",
-          methods: ["Card", "PSE"],
+          methods: ["Nequi", "Daviplata", "Bancolombia", "Efecty", "PSE"],
           code: "COP",
           symbol: "$",
           currency: "Colombian peso",
+        },
+        {
+          /* O `code` é a MOEDA, e o Equador paga em dólar — veja `pt.ts`. */
+          name: "Ecuador",
+          methods: ["Transfer", "Cash"],
+          code: "USD",
+          symbol: "$",
+          currency: "US dollar",
+        },
+        {
+          name: "Portugal",
+          methods: ["MB WAY"],
+          code: "EUR",
+          symbol: "€",
+          currency: "Euro",
+        },
+        {
+          name: "United Kingdom",
+          methods: ["Card"],
+          code: "GBP",
+          symbol: "£",
+          currency: "Pound sterling",
         },
       ],
       notes: [
@@ -440,11 +567,12 @@ export const en: Content = {
 
     block2Title: "The money lands in your account. The click comes back as data.",
 
+    /** "Our own integrations" abre e "Fees made to measure" fecha — veja `pt.ts`. */
     guarantees: [
       {
         num: "01",
-        term: "Your own processor account",
-        text: "The money lands straight in it; Wone never touches it.",
+        term: "Our own integrations",
+        text: "Not via Stripe: Wone integrates straight with each payment method, and the money lands in your account.",
       },
       {
         num: "02",
@@ -455,6 +583,11 @@ export const en: Content = {
         num: "03",
         term: "No double delivery",
         text: "The same payment never grants access twice.",
+      },
+      {
+        num: "04",
+        term: "Fees made to measure",
+        text: "The lowest fees on the market, tailored to each operation.",
       },
     ],
 
@@ -590,8 +723,9 @@ export const en: Content = {
       },
       {
         question: "Can I sell outside Brazil?",
+        /* Os seis países da tabela de Pagamentos, na ordem dela — veja `pt.ts`. */
         answer:
-          "Yes. Wone lets you charge customers in Argentina, Mexico and Colombia in local currency, with its own checkout.",
+          "Yes. Wone lets you charge customers in Mexico, Argentina, Colombia, Ecuador, Portugal and the United Kingdom in local currency, with its own checkout.",
       },
       {
         question: "What happens if a gateway goes down?",
@@ -609,6 +743,14 @@ export const en: Content = {
           "No. Wone is an independent platform that uses the Telegram bot API.",
       },
     ],
+  },
+
+  /** O prefácio da vitrine; os quatro marcos vêm de `awards.items`. */
+  awardsPreface: {
+    kicker: "Awards",
+    title: "Every milestone becomes a trophy at your door.",
+    lead: "From the first $10,000 to the first million: four revenue milestones on Telegram, and the physical item for each. The full showcase is further down.",
+    link: "See the showcase",
   },
 
   awards: {
@@ -807,7 +949,5 @@ export const en: Content = {
       { label: "Six-Month Plan", amount: "$227.00", value: 227 },
       { label: "Lifetime access", amount: "$247.00", value: 247 },
     ],
-    ariaLabel:
-      "A simulation of the customer's Wone Bot chat: the Annual VIP Plan offer in the local currency, the approved payment and the single-use channel invite.",
   },
 };

@@ -1,13 +1,21 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type RefObject } from "react";
 
 import { CountryTag } from "./CountryTag";
-import { GLOBE_COAST, GLOBE_COUNT, GLOBE_DELTAS } from "./globeDots";
+import {
+  GLOBE_COAST,
+  GLOBE_COUNT,
+  GLOBE_DELTAS,
+  GLOBE_EU_COUNT,
+  GLOBE_EU_DELTAS,
+  GLOBE_EU_SAMPLES,
+} from "./globeDots";
 import {
   amostra,
   baseVector,
   CAPITAIS,
+  naEuropa,
   GLOBE_STEP,
   noise,
   RECUO,
@@ -92,6 +100,15 @@ const PAIS_NUCLEO = "#ffffe3";
  */
 const PASSO_MS = 27;
 
+/**
+ * Os dois países do outro lado do Atlântico, por código de moeda. A rede e o
+ * anel do pino os tratam diferente desde 15/10: o dono pediu para a Europa
+ * aparecer quando "um ponto liga no outro".
+ */
+const EUROPEUS = new Set(["EUR", "GBP"]);
+/** Quanto dura o laranja cheio na perna que chega à Europa, em ms. */
+const FLASH_MS = 1000;
+
 /** Raio angular, em radianos, do núcleo e da borda do tingimento (500/1.100 km). */
 const NUCLEO = 500 / 6371;
 const BORDA = 1100 / 6371;
@@ -172,7 +189,7 @@ type Nuvem = {
   ac: Float32Array;
   /** Força do tingimento, 0 fora dos quatro países. */
   tingimento: Float32Array;
-  /** Índice do país tingido (0–3), só vale quando `tingimento > 0`. */
+  /** Índice do país tingido, ou 255 (nenhum). Só vale com `tingimento > 0`. */
   pais: Uint8Array;
 };
 
@@ -185,7 +202,9 @@ type Nuvem = {
  * uma vez — não por quadro.
  */
 function monta(codes: string[]): Nuvem {
-  const n = GLOBE_COUNT;
+  /* Os pontos da espiral principal MAIS os da espiral europeia, numa nuvem
+     so: o laco de desenho nao sabe de onde cada ponto veio, e nao precisa. */
+  const n = GLOBE_COUNT + GLOBE_EU_COUNT;
   const nuvem: Nuvem = {
     bx: new Float32Array(n),
     by: new Float32Array(n),
@@ -195,6 +214,11 @@ function monta(codes: string[]): Nuvem {
     tingimento: new Float32Array(n),
     pais: new Uint8Array(n),
   };
+  /* 255 e "nenhum pais", e nao 0: desde que a Europa inteira ganhou tingimento
+     permanente, um ponto tingido PODE nao pertencer a capital nenhuma — e com
+     o zero padrao a Franca inteira acenderia junto com o Brasil, que e o indice
+     0 da lista. */
+  nuvem.pais.fill(255);
 
   const alvos = codes.map((code) => {
     const lugar = CAPITAIS[code] ?? { lat: 0, lon: 0 };
@@ -229,24 +253,82 @@ function monta(codes: string[]): Nuvem {
     nuvem.rb[k] = 1.15 * (0.86 + 0.3 * fleck + 0.18 * costa);
     nuvem.ac[k] = 0.12 * costa;
 
-    /* Tingimento: 1 dentro de 500 km da capital, caindo por smoothstep até 0 em
-       1.100 km. O produto escalar já é o cosseno da distância angular. */
-    for (let j = 0; j < alvos.length; j += 1) {
-      const d = x * alvos[j][0] + y * alvos[j][1] + z * alvos[j][2];
-      if (d < Math.cos(BORDA)) continue;
-      const ang = Math.acos(Math.min(1, d));
-      const u = 1 - Math.min(1, Math.max(0, (ang - NUCLEO) / (BORDA - NUCLEO)));
-      const t = u * u * (3 - 2 * u);
-      if (t > nuvem.tingimento[k]) {
-        nuvem.tingimento[k] = t;
-        nuvem.pais[k] = j;
-      }
-    }
+    tinge(nuvem, k, x, y, z, alvos, naEuropa(lat, lon));
+    k += 1;
+  }
 
+  /* A SEGUNDA ESPIRAL, só da Europa: os mesmos passos, com o número de
+     candidatos dela. Entram no fim da nuvem, e o laço de desenho os trata como
+     todos os outros — o que os distingue é o tingimento, logo abaixo. Sem
+     bitmap de costa aqui: o litoral europeu já sai claro pelo tingimento, e um
+     segundo bitmap custaria mais bytes do que o efeito vale. */
+  const deltasEu = atob(GLOBE_EU_DELTAS);
+  let indiceEu = -1;
+  acumulado = 0;
+
+  for (let p = 0; p < deltasEu.length; p += 1) {
+    const byte = deltasEu.charCodeAt(p);
+    if (byte === 255) {
+      acumulado += 255;
+      continue;
+    }
+    indiceEu += acumulado + byte;
+    acumulado = 0;
+    if (k >= n) break;
+
+    const { lat, lon } = amostra(indiceEu, GLOBE_EU_SAMPLES);
+    const [x, y, z] = baseVector(lat, lon);
+    nuvem.bx[k] = x;
+    nuvem.by[k] = y;
+    nuvem.bz[k] = z;
+    nuvem.rb[k] = 1.15 * (0.86 + 0.3 * noise(indiceEu + 0.25));
+    nuvem.ac[k] = 0;
+    tinge(nuvem, k, x, y, z, alvos, true);
     k += 1;
   }
 
   return nuvem;
+}
+
+/**
+ * O tingimento de um ponto: creme no lugar do laranja da terra.
+ *
+ * Duas origens, e a mais forte vence:
+ *
+ *  - as CAPITAIS, como sempre: 1 dentro de 500 km, caindo por smoothstep até 0
+ *    em 1.100 km (o produto escalar já é o cosseno da distância angular). O
+ *    ponto guarda de qual das sete ele é, e o país da vez ganha meio passo a
+ *    mais de brilho no laço de desenho;
+ *  - a EUROPA inteira, desde 15/10: 0,78 fixo em toda a janela do continente,
+ *    sem raio e sem queda. É o pedido do dono — "melhore a visibilidade dos
+ *    países do continente europeu" —, e um halo em volta de Lisboa e de
+ *    Londres não resolveria: o que precisa aparecer é o CONTINENTE, com Espanha,
+ *    França, Itália e Alemanha dentro. 0,78 cai no balde do creme quente
+ *    (#FFE2B8, alfa 0,5 contra os 0,33 médios da terra laranja) e os pontos
+ *    ganham os mesmos 18% de raio dos países acesos.
+ */
+function tinge(
+  nuvem: Nuvem,
+  k: number,
+  x: number,
+  y: number,
+  z: number,
+  alvos: [number, number, number][],
+  europa: boolean,
+) {
+  if (europa) nuvem.tingimento[k] = 0.78;
+
+  for (let j = 0; j < alvos.length; j += 1) {
+    const d = x * alvos[j][0] + y * alvos[j][1] + z * alvos[j][2];
+    if (d < Math.cos(BORDA)) continue;
+    const ang = Math.acos(Math.min(1, d));
+    const u = 1 - Math.min(1, Math.max(0, (ang - NUCLEO) / (BORDA - NUCLEO)));
+    const t = u * u * (3 - 2 * u);
+    if (t > nuvem.tingimento[k]) {
+      nuvem.tingimento[k] = t;
+      nuvem.pais[k] = j;
+    }
+  }
 }
 
 type Geometria = {
@@ -269,14 +351,17 @@ export function HeroGlobe({
   activeIndex,
   animated,
   running,
+  alvoRef,
 }: {
-  /** Na ordem de `payments.table.countries`: Brasil, Argentina, México, Colômbia. */
+  /** Na ordem de `payments.table.countries` — sete desde 15/10. */
   pins: { code: string; city: string; chip: string }[];
   activeIndex: number;
   /** `true` só depois de o relógio começar a andar e sem movimento reduzido. */
   animated: boolean;
   /** Os quatro freios do relógio do `Hero`, já combinados. */
   running: boolean;
+  /** O nó em que o arco termina: o ticket do palco (ver `HeroTicket`). */
+  alvoRef?: RefObject<HTMLElement | null>;
 }) {
   const caixa = useRef<HTMLDivElement>(null);
   const tela = useRef<HTMLCanvasElement>(null);
@@ -286,6 +371,8 @@ export function HeroGlobe({
   /** Ângulos do último quadro: o arco congela a posição do pino na ativação. */
   const angulo = useRef({ yaw: 0, pitch: 0 });
   const ativo = useRef(activeIndex);
+  /** Instante em que o país da vez acendeu: é o relógio do flash da rede. */
+  const acendeuEm = useRef(0);
 
   /** O arco do pino até o aparelho. `null` até o relógio trocar de país. */
   const [arco, setArco] = useState<{ code: string; d: string } | null>(null);
@@ -343,9 +430,12 @@ export function HeroGlobe({
     };
   }, []);
 
-  /* O país da vez vai para um `ref`: o laço lê a cada quadro sem se refazer. */
+  /* O país da vez vai para um `ref`: o laço lê a cada quadro sem se refazer.
+     O carimbo de hora vai junto, e é o relógio do flash da rede: a perna que
+     chega a Lisboa ou a Londres acende em laranja cheio por 1 s a partir daqui. */
   useEffect(() => {
     ativo.current = activeIndex;
+    acendeuEm.current = performance.now();
   }, [activeIndex]);
 
   /**
@@ -358,10 +448,10 @@ export function HeroGlobe({
   /* Listas de trabalho do desenho, alocadas uma vez: posição, raio e balde de
      cada ponto visível. Reusar é o que mantém o laço sem lixo para coletar. */
   const buffers = useRef({
-    x: new Float32Array(GLOBE_COUNT),
-    y: new Float32Array(GLOBE_COUNT),
-    r: new Float32Array(GLOBE_COUNT),
-    b: new Uint8Array(GLOBE_COUNT),
+    x: new Float32Array(GLOBE_COUNT + GLOBE_EU_COUNT),
+    y: new Float32Array(GLOBE_COUNT + GLOBE_EU_COUNT),
+    r: new Float32Array(GLOBE_COUNT + GLOBE_EU_COUNT),
+    b: new Uint8Array(GLOBE_COUNT + GLOBE_EU_COUNT),
   });
 
   const codes = pins.map((pin) => pin.code).join(",");
@@ -415,7 +505,14 @@ export function HeroGlobe({
         esquerda: box!.offsetLeft,
         topo: box!.offsetTop,
         salto: celular ? 2 : 1,
-        ganho: celular ? 0.4 : 1,
+        /* 0,85 no celular, e eram 0,4: lá o globo era TEXTURA atrás do
+           telefone, e precisava apagar para o chat ficar legível por cima. Com
+           o aparelho fora do hero (15/10) ele passou a ser a figura da seção —
+           um planeta a 40% de alfa, sozinho num bloco de 420px, lia como
+           imagem meio carregada. Continua um degrau abaixo do desktop porque
+           ali ele desenha metade dos pontos (`salto: 2`), e o mesmo alfa com
+           metade da densidade ficaria mais ralo, não mais claro. */
+        ganho: celular ? 0.85 : 1,
         repouso: lista.map((code) => {
           const p = REPOUSO[code];
           return {
@@ -487,33 +584,72 @@ export function HeroGlobe({
       const pts = rede();
       const n = REDE_PASSOS + 1;
 
-      ctx!.beginPath();
-      for (let p = 0; p < REDE_PERNAS.length; p += 1) {
-        let caneta = false;
-        for (let s = 0; s < n; s += 1) {
-          const i = (p * n + s) * 3;
-          const x = pts[i];
-          const y = pts[i + 1];
-          const z = pts[i + 2];
-          const x1 = cy * x + sy * z;
-          const z1 = -sy * x + cy * z;
-          const y2 = cp * y - sp * z1;
-          const z2 = sp * y + cp * z1;
-          if (z2 <= 0) {
-            caneta = false;
-            continue;
+      /** Traça as pernas que passam no filtro, numa cor e num alfa só. */
+      const traca = (
+        passa: (perna: [string, string], p: number) => boolean,
+        alfa: number,
+        largura = 1,
+      ) => {
+        let desenhou = false;
+        ctx!.beginPath();
+        for (let p = 0; p < REDE_PERNAS.length; p += 1) {
+          if (!passa(REDE_PERNAS[p], p)) continue;
+          desenhou = true;
+          let caneta = false;
+          for (let s = 0; s < n; s += 1) {
+            const i = (p * n + s) * 3;
+            const x = pts[i];
+            const y = pts[i + 1];
+            const z = pts[i + 2];
+            const x1 = cy * x + sy * z;
+            const z1 = -sy * x + cy * z;
+            const y2 = cp * y - sp * z1;
+            const z2 = sp * y + cp * z1;
+            if (z2 <= 0) {
+              caneta = false;
+              continue;
+            }
+            const sx = R + x1 * R;
+            const sv = R - y2 * R;
+            if (caneta) ctx!.lineTo(sx, sv);
+            else ctx!.moveTo(sx, sv);
+            caneta = true;
           }
-          const sx = R + x1 * R;
-          const sv = R - y2 * R;
-          if (caneta) ctx!.lineTo(sx, sv);
-          else ctx!.moveTo(sx, sv);
-          caneta = true;
         }
-      }
-      ctx!.globalAlpha = 0.14 * g.ganho;
-      ctx!.strokeStyle = LARANJA;
-      ctx!.lineWidth = 1;
-      ctx!.stroke();
+        if (!desenhou) return;
+        ctx!.globalAlpha = Math.min(1, alfa) * g.ganho;
+        ctx!.strokeStyle = LARANJA;
+        ctx!.lineWidth = largura;
+        ctx!.stroke();
+      };
+
+      /* TRÊS FORÇAS, e é o pedido do dono de 15/10: "quando um ponto ligar no
+         outro, mostre mais os países do continente europeu". A perna que chega
+         à Europa precisa ser vista para o olho ir até lá.
+           · 0,14 — as pernas das Américas, como sempre;
+           · 0,30 — as que tocam Lisboa ou Londres, sempre;
+           · até 1,0 — a perna do país ATIVO, quando ele é Portugal ou Reino
+             Unido, por 1 s depois da troca, em laranja cheio e 1,5px.
+         O flash só existe no modo de laço (xl para cima): abaixo disso o globo
+         é redesenhado uma vez por troca de país, e uma animação de 1 s num
+         quadro só seria um piscar aleatório. */
+      const ativoCode = lista[ativo.current] ?? "";
+      const europeuAtivo = EUROPEUS.has(ativoCode);
+      const desde = performance.now() - acendeuEm.current;
+      const flash =
+        europeuAtivo && modo === "laco" && desde < FLASH_MS
+          ? 1 - desde / FLASH_MS
+          : 0;
+      const naPerna = (perna: [string, string]) =>
+        perna[0] === ativoCode || perna[1] === ativoCode;
+      const tocaEuropa = (perna: [string, string]) =>
+        EUROPEUS.has(perna[0]) || EUROPEUS.has(perna[1]);
+      const acesa = (perna: [string, string]) =>
+        flash > 0 && europeuAtivo && naPerna(perna);
+
+      traca((perna) => !tocaEuropa(perna) && !acesa(perna), 0.14);
+      traca((perna) => tocaEuropa(perna) && !acesa(perna), 0.3);
+      if (flash > 0) traca(acesa, 0.3 + 0.7 * flash, 1.5);
     }
 
     function desenha(yaw: number, pitch: number) {
@@ -554,7 +690,7 @@ export function HeroGlobe({
       let n = 0;
       let usados = 0;
 
-      for (let i = 0; i < GLOBE_COUNT; i += g.salto) {
+      for (let i = 0; i < GLOBE_COUNT + GLOBE_EU_COUNT; i += g.salto) {
         const x = dados.bx[i];
         const y = dados.by[i];
         const z = dados.bz[i];
@@ -720,8 +856,8 @@ export function HeroGlobe({
       /* Balanço: ±6° de guinada em 20 s e ±2,5° de inclinação em 33 s, os dois
          partindo de ZERO — é por isso que o primeiro quadro do laço cai
          exatamente sobre o que o servidor pintou. */
-      const balancoYaw = 0.10472 * Math.sin((TAU * seg) / 20);
-      const balancoPitch = 0.04363 * Math.sin(((TAU * seg) / 20) * 0.6);
+      const balancoYaw = 0.02618 * Math.sin((TAU * seg) / 20);
+      const balancoPitch = 0.01309 * Math.sin(((TAU * seg) / 20) * 0.6);
 
       /* Recuo para o país ativo, perseguido (assenta em ~1,2 s). */
       const meta = RECUO[lista[ativo.current]] ?? { yaw: 0, pitch: 0 };
@@ -770,15 +906,18 @@ export function HeroGlobe({
     const R = g.raio;
     const px = g.esquerda + R + x1 * R;
     const py = g.topo + R - y2 * R;
-    /* Meio da borda ESQUERDA do aparelho — o lado por onde o globo chega desde
-       a inversão de 14/10. 300 de largura e 620 de altura encostados na base
-       DIREITA do palco, que é a medida de `xl`, o único tamanho em que o arco
-       aparece: o destino é `largura − 300` (292 a 1440), não mais o 300 fixo da
-       borda direita de um aparelho que ficava à esquerda. */
-    const altura = box.parentElement?.clientHeight ?? 656;
-    const largura = box.parentElement?.clientWidth ?? 592;
-    const tx = largura - 300;
-    const ty = altura - 310;
+    /* O destino é o TICKET, e ele é MEDIDO, não deduzido: o card muda de canto
+       entre o celular e o desktop, e a camada do palco muda de tamanho junto —
+       repetir essa geometria aqui seria duas verdades sobre onde o fio termina.
+       O ponto de chegada é o meio da borda de cima do card, que é a aresta
+       voltada para o planeta. Sem o nó (primeiro render, ou `alvo` vazio), cai
+       no pé da camada, que é onde o ticket mora. */
+    const camada = box.parentElement;
+    const base = camada?.getBoundingClientRect();
+    const destino = alvoRef?.current?.getBoundingClientRect();
+    const tx =
+      destino && base ? destino.left - base.left + destino.width / 2 : (camada?.clientWidth ?? 600) / 2;
+    const ty = destino && base ? destino.top - base.top : (camada?.clientHeight ?? 600) - 120;
     const qx = (px + tx) / 2;
     const qy = (py + ty) / 2 - 70;
 
@@ -786,24 +925,35 @@ export function HeroGlobe({
       code: pins[activeIndex]?.code ?? "",
       d: `M${px.toFixed(1)} ${py.toFixed(1)}Q${qx.toFixed(1)} ${qy.toFixed(1)} ${tx.toFixed(1)} ${ty.toFixed(1)}`,
     });
-  }, [activeIndex, pins]);
+  }, [activeIndex, pins, alvoRef]);
 
   return (
     <div aria-hidden className="pointer-events-none absolute inset-0">
       {/* A CAIXA DO GLOBO: tamanho CRAVADO por breakpoint, sempre absoluta —
           CLS zero por construção, porque nada aqui participa do fluxo.
-          Em 14/10 o dono pediu para "inverter de lugar o texto (...) com o globo
-          terrestre": o palco passou para as colunas 1–6 e a caixa ESPELHOU —
-          agora ela sangra pela borda ESQUERDA da janela (202px além do palco,
-          que a 1440 dão 95px além da janela; quem corta é o `overflow-x-clip`
-          da seção), com o aparelho encostado na base direita do palco. É a
-          mesma mordida da referência, do outro lado.
-          No celular ela fica centrada ATRÁS do aparelho: lá os quatro pinos
-          cairiam todos dentro dos 268px da moldura, então eles não existem e
-          quem nomeia o país é a `StageStatus`. */}
+          Desde 15/10 ela mede a METADE ESQUERDA DA JANELA, e não um pedaço de
+          coluna: o pai desta camada é a seção inteira, então `left` conta da
+          borda da janela, e o disco sangra por ela. A conta de cada degrau tem
+          duas pontas presas — a borda esquerda da coluna de texto (x 445 a
+          1024, 552 a 1280, 632 a 1440) e o pino mais a oeste, a Cidade do
+          México, que mora a 9,5% da caixa:
+            · o limbo leste termina 74–88px DEPOIS do início do texto, que é o
+              "levemente por cima" do pedido;
+            · o pino do México sobra 23–32px dentro da tela, com folga para a
+              excursão do balanço (±1,5°) e do recuo (±2,5°).
+          Os degraus são `min-[]` arbitrários, e não `lg:`/`xl:`, porque o
+          Tailwind emite os arbitrários ANTES dos nomeados: com `lg:left` e
+          `min-[1400px]:left` na mesma classe, o `lg` venceria a 1440 (medido —
+          o disco não saía do lugar). Em arbitrários, a ordem é a numérica.
+          O corte de cima é 1400 e não 1440 porque quem o avalia é a LARGURA DE
+          LAYOUT: numa janela de 1440 com barra de rolagem clássica sobram
+          1430px, e um `min-[1440px]` nunca valeria na medida que o dono usa.
+          No celular ela fica centrada no bloco de 420px que vem depois dos
+          botões: lá não há pino nem rótulo (sete caixas de texto não cabem em
+          370px de largura), e quem nomeia o país é a `StageStatus`. */}
       <div
         ref={caixa}
-        className="absolute top-1/2 left-1/2 -mt-[210px] -ml-[210px] h-[420px] w-[420px] lg:top-[64px] lg:left-[-140px] lg:mt-0 lg:ml-0 lg:h-[440px] lg:w-[440px] xl:top-[36px] xl:left-[-202px] xl:h-[600px] xl:w-[600px]"
+        className="absolute top-1/2 left-1/2 -mt-[210px] -ml-[210px] h-[420px] w-[420px] min-[1024px]:top-[60px] min-[1024px]:left-[-10px] min-[1024px]:mt-0 min-[1024px]:ml-0 min-[1024px]:h-[540px] min-[1024px]:w-[540px] min-[1280px]:top-[45px] min-[1280px]:left-[-14px] min-[1280px]:h-[660px] min-[1280px]:w-[660px] min-[1400px]:top-[30px] min-[1400px]:left-[-13px] min-[1400px]:h-[720px] min-[1400px]:w-[720px]"
       >
         {/* Oceano e atmosfera: CSS, pintados no servidor. É o que faz o planeta
             existir antes de o JavaScript montar a nuvem. */}
@@ -844,6 +994,8 @@ export function HeroGlobe({
                 left={p.left}
                 top={p.top}
                 side={p.side}
+                nudge={p.nudge}
+                sempre={EUROPEUS.has(pin.code)}
                 active={index === activeIndex}
                 animated={animated}
                 pinRef={(el) => {
@@ -892,15 +1044,24 @@ function alvo(code: string): [number, number, number] {
 /* ------------------------------------------------------------------ a rede */
 
 /**
- * As quatro pernas da rede, em anel: México → Colômbia → Brasil → Argentina →
- * México. São os MESMOS quatro países dos pinos — a rede não acrescenta
- * mercado nenhum, ela mostra que os quatro estão ligados.
+ * As sete pernas da rede, em anel: México → Colômbia → Equador → Brasil →
+ * Argentina → Portugal → Reino Unido → México. São os MESMOS sete países dos
+ * pinos — a rede não acrescenta mercado nenhum, ela mostra que os sete estão
+ * ligados.
+ *
+ * A ordem do anel é geográfica, não a da tabela: assim nenhuma perna cruza o
+ * disco de lado a lado, e a volta se lê como um circuito. A perna que fecha o
+ * anel (Londres → Cidade do México) é a única que atravessa o Atlântico por
+ * cima, e é ela que diz, sem palavra, que a Europa entrou.
  */
 const REDE_PERNAS: [string, string][] = [
   ["MXN", "COP"],
-  ["COP", "BRL"],
+  ["COP", "USD"],
+  ["USD", "BRL"],
   ["BRL", "ARS"],
-  ["ARS", "MXN"],
+  ["ARS", "EUR"],
+  ["EUR", "GBP"],
+  ["GBP", "MXN"],
 ];
 
 /** Pontos por perna. 22 dá a curva lisa a R 300 sem virar polilinha visível. */

@@ -20,12 +20,14 @@ export const STEP_COUNT = 4;
  */
 export const STEP_MS = [6000, 6000, 6000, 7500] as const;
 
-/* O easing do site (`cubic-bezier(0.16, 1, 0.3, 1)`) deixou de morar aqui: os
-   dois únicos consumidores — `StepEnter` e `EventWire` — passaram as entradas
-   para `@keyframes` em `globals.css`, onde a curva é escrita em CSS. Era por
-   esses dois `import` de `motion/react` que o pacote do motion (42,2 kB
-   transferidos) entrava no grafo dos 8 scripts baixados antes da primeira
-   pintura; medido em 14/10, tirá-lo valeu FCP −0,42 s e LCP −0,21 s (E-f1). */
+/* O easing do site (`cubic-bezier(0.16, 1, 0.3, 1)`) não mora mais aqui: quem
+   anima é o CSS. Em 15/10, com a sala de operação, até as entradas em
+   `@keyframes` saíram — as camadas de passo ficam montadas e trocam por
+   `transition` (`StepLayer`), e a única animação da seção é a faísca do fio
+   (`stage-spark`, em globals.css). Nada aqui importa `motion/react`: era esse
+   import, em treze componentes, que punha o pacote do motion (42,2 kB
+   transferidos) no grafo dos 8 scripts baixados antes da primeira pintura —
+   medido em 14/10, tirá-lo valeu FCP −0,42 s e LCP −0,21 s (E-f1). */
 
 export type StepShow = ReturnType<typeof useStepShow>;
 

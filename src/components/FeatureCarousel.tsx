@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ArrowLeft, ArrowRight, Check } from "lucide-react";
+import { ArrowDownRight, ArrowLeft, ArrowRight, ArrowUpRight, Check } from "lucide-react";
 import { useContent } from "@/i18n";
 import { useOnScreen } from "@/lib/useOnScreen";
 import { Chip } from "./Chip";
@@ -45,22 +45,43 @@ const DEPTH = [
 const TX = { anual: 0, trimestral: 1, mensal: 2, pack: 3, bump: 4 } as const;
 
 /**
- * O mini-mockup que abre o card, na forma Operação da referência: uma moldura
- * escura com um pedaço de produto dentro, e o título embaixo.
+ * A PLACA DE SIMULAÇÃO que abre o card, na forma Operação da referência: uma
+ * moldura escura com um pedaço de produto dentro, e o título embaixo.
  *
- * Só quatro dos dez recursos têm moldura, e é de propósito: a moldura mostra
- * dado, e o dicionário só tem dado para esses quatro (planos e preços, o
- * adicional do order bump, o pack avulso e o lembrete de renovação). Onde não
- * há dado, o card fica com título e texto — inventar um valor para encher a
- * moldura é exatamente o que a regra 4 proíbe. "PIX livre" é o caso mais
- * visível: a faixa de valor que a moldura mostraria não existe em pt.ts, então
- * ele não tem moldura até o dono mandar a faixa.
+ * Desde 15/10 ela está nos DEZ cards, e é pedido do dono, literal: "na sessão
+ * recursos adicione a placa de simulação em todos os cards e melhore o visual
+ * desses cards". Eram quatro — os únicos para os quais existia dado pronto no
+ * dicionário —, e os outros seis ficavam com um vazio onde os vizinhos tinham
+ * objeto: na fileira do carrossel isso lia como card quebrado.
+ *
+ * O que NÃO mudou é de onde vem o dado. Nenhum número ou nome foi cunhado aqui
+ * (regra 4): os valores saem de `phone.transactions` (a mesma lista de vendas
+ * do telefone do hero), os nomes de bloco de `highlights.demos.blocks`, o
+ * "Convite enviado · Acesso liberado" de `highlights.demos.delivery` e o
+ * símbolo da moeda de `payments.table.countries`. O que entrou novo em
+ * `features.mockup` é só RÓTULO — as palavras que a placa precisa para dizer o
+ * que está mostrando ("Comprou", "Recusou", "Teste A/B", "Sem cobrança real",
+ * "Valor que o cliente escolher"), nunca um fato.
+ *
+ * O "PIX livre" é o caso que mostra a regra em pé: a faixa de valor continua
+ * não existindo em pt.ts, então a placa dele mostra o MECANISMO — o campo
+ * aberto, com o símbolo da moeda e o cursor — e nenhum número.
  *
  * `h-[45%]` e não altura fixa: a moldura acompanha o card, que muda de medida
- * entre celular e desktop.
+ * entre celular e desktop. O cabeçalho da placa (rótulo "Simulação" à esquerda,
+ * número do recurso à direita, régua embaixo) é o que a fez virar PLACA e não
+ * caixa: é a mesma anatomia dos painéis das demos da página.
  */
-function FeatureMockup({ id, isCenter }: { id: string; isCenter: boolean }) {
-  const { features, phone, ui } = useContent();
+function FeatureMockup({
+  id,
+  index,
+  isCenter,
+}: {
+  id: string;
+  index: number;
+  isCenter: boolean;
+}) {
+  const { features, highlights, payments, phone, ui } = useContent();
   const tx = phone.transactions;
 
   /* Sem `truncate` em lugar nenhum: o que não cabe quebra em duas linhas. Um
@@ -134,21 +155,176 @@ function FeatureMockup({ id, isCenter }: { id: string; isCenter: boolean }) {
     );
   }
 
+  /* ---------------------------------------------------------------------
+     As SEIS placas que entraram em 15/10, com o dono pedindo a placa de
+     simulação nos dez cards. Cada uma mostra o mecanismo do recurso com dado
+     que já existia em outro bloco do dicionário — e, onde não existe número
+     (o PIX livre), mostra o campo vazio em vez de inventar um.
+     --------------------------------------------------------------------- */
+
+  if (id === "upsell") {
+    /* Os dois caminhos depois do checkout, lado a lado: quem comprou vê a
+       oferta maior (o plano anual), quem recusou vê a menor (o mensal). Os dois
+       preços são os de `phone.transactions`, e a seta diz para que lado a
+       oferta vai — é o `Upsell`/`Downsell` do editor em duas linhas. */
+    conteudo = (
+      <ul className="flex flex-col gap-1.5">
+        {[
+          { rot: features.mockup.bought, i: TX.anual, up: true },
+          { rot: features.mockup.declined, i: TX.mensal, up: false },
+        ].map((caminho) => (
+          <li key={caminho.rot} className={`${linha} rounded-[8px] bg-cream/6 px-2 py-1`}>
+            <span className="flex min-w-0 items-center gap-1.5">
+              {caminho.up ? (
+                <ArrowUpRight aria-hidden className="h-3.5 w-3.5 shrink-0 text-brand" />
+              ) : (
+                <ArrowDownRight aria-hidden className="h-3.5 w-3.5 shrink-0 text-faint" />
+              )}
+              <span className={rotulo}>{caminho.rot}</span>
+            </span>
+            <span className={valor}>{tx[caminho.i].amount}</span>
+          </li>
+        ))}
+      </ul>
+    );
+  }
+
+  if (id === "openPix") {
+    /* A faixa de valor do PIX livre NÃO existe em pt.ts, e continua não
+       existindo: a placa mostra o campo aberto — o símbolo da moeda do Brasil
+       (de `payments.table.countries`, onde o PIX é o método) e o cursor —, e
+       quem escreve o número é o cliente. Zero número cunhado. */
+    conteudo = (
+      <div className="flex flex-col gap-2 px-2">
+        <div className="flex items-center gap-2 rounded-[8px] bg-cream/6 px-2.5 py-2">
+          <span className="text-[15px] font-semibold text-cream">
+            {payments.table.countries[0].symbol}
+          </span>
+          <span aria-hidden className="h-4 w-px bg-brand" />
+        </div>
+        <span className="text-[13px] leading-snug text-muted">
+          {features.mockup.freeAmount}
+        </span>
+      </div>
+    );
+  }
+
+  if (id === "testMode") {
+    /* O plano mensal com o valor RISCADO e o aviso: no modo de teste o funil
+       inteiro roda e a cobrança não acontece. */
+    conteudo = (
+      <div className="flex flex-col gap-2 px-2">
+        <div className={linha}>
+          <span className={rotulo}>{tx[TX.mensal].label}</span>
+          <span className="tnum shrink-0 text-[13px] font-semibold text-faint line-through">
+            {tx[TX.mensal].amount}
+          </span>
+        </div>
+        <Chip tone="warn" className="self-start">
+          {features.mockup.noCharge}
+        </Chip>
+      </div>
+    );
+  }
+
+  if (id === "remarketing") {
+    /* O teste A/B em duas réguas: o tráfego reparte entre dois caminhos, e os
+       nomes das saídas são os do editor (`branchA`/`branchB`). Sem porcentagem
+       escrita — a divisão se vê, e um "50%" aqui seria número sem fonte. */
+    conteudo = (
+      <div className="flex flex-col gap-2.5 px-2">
+        <span className={rotulo}>{features.mockup.abTest}</span>
+        <ul className="flex flex-col gap-2">
+          {[
+            { nome: highlights.demos.blocks.builder.branchA, forte: true },
+            { nome: highlights.demos.blocks.builder.branchB, forte: false },
+          ].map((saida) => (
+            <li key={saida.nome} className="flex items-center gap-2.5">
+              <span className="t-label w-3 shrink-0">{saida.nome}</span>
+              <span aria-hidden className="h-1.5 flex-1 rounded-full bg-cream/10">
+                <span
+                  className={`block h-full w-1/2 rounded-full ${
+                    saida.forte ? "bg-brand" : "bg-cream/25"
+                  }`}
+                />
+              </span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    );
+  }
+
+  if (id === "delivery") {
+    /* As duas pontas da entrega, com as palavras da demo de entrega: o convite
+       sai e o acesso está liberado. */
+    conteudo = (
+      <div className="flex flex-col gap-2 px-2">
+        <span className={rotulo}>
+          {highlights.demos.delivery.steps[3].label}
+        </span>
+        <Chip tone="ok" className="self-start">
+          {highlights.demos.delivery.done}
+        </Chip>
+      </div>
+    );
+  }
+
+  if (id === "ai") {
+    /* Os quatro blocos de IA, com os nomes que o editor usa. A categoria de IA
+       é a ÚLTIMA de `blocks.categories` por construção (ela fecha a lista dos
+       28 nos dois idiomas); se um dia deixar de ser, a placa fica vazia em vez
+       de mostrar bloco errado — e vazio se vê na revisão, bloco errado não. */
+    const ia = highlights.demos.blocks.categories.at(-1);
+    conteudo = ia ? (
+      <ul className="grid grid-cols-2 gap-1.5">
+        {ia.items.slice(0, 4).map((bloco) => (
+          <li
+            key={bloco.name}
+            className="rounded-[8px] bg-cream/6 px-2 py-1.5 text-[13px] leading-tight text-cream"
+          >
+            {bloco.name}
+          </li>
+        ))}
+      </ul>
+    ) : null;
+  }
+
   if (!conteudo) return null;
 
   return (
     /* A única exceção de card dentro de card do site: a moldura de objeto é
        ink-950 com `border-line` e raio de campo, sobre o card de qualquer tom
-       (espec-final, item 10). */
-    <div className="flex h-[45%] shrink-0 flex-col gap-2 rounded-field border border-line bg-ink-950 p-3">
+       (espec-final, item 10).
+       O fio de creme a 5% no alto (`inset 0 1px 0`) é o que dá ao vidro da
+       placa a borda iluminada de cima — 1px de linha, não um blur nem um
+       degradê sobre o card (regra 8 continua em pé). */
+    <div className="flex h-[45%] shrink-0 flex-col overflow-hidden rounded-field border border-line bg-ink-950 shadow-[inset_0_1px_0_rgba(255,255,227,0.05)]">
       {/* No vizinho fica a moldura VAZIA, e é o que a tarefa pede ("vizinhos só
           com a moldura"): abaixo de `lg` o card do meio cobre a borda do
           vizinho, e o que sobrava à vista era "Pack avulso" cortado pela borda
           da tela de 412 ou pelo card central. Mesmo ponto de corte do texto do
           card, abaixo, para os dois sumirem juntos. */}
-      <div className={`flex min-h-0 flex-1 flex-col gap-2 ${isCenter ? "" : "hidden lg:flex"}`}>
-        <p className="t-label">{ui.simulation}</p>
-        <div className="flex min-h-0 flex-1 flex-col justify-center">{conteudo}</div>
+      {/* O CABEÇALHO DA PLACA: "Simulação" à esquerda, o número do recurso à
+          direita, régua embaixo. É a mesma anatomia dos painéis de demo da
+          página, e é o que faz as dez placas lerem como o mesmo objeto — o
+          número também diz, de dentro do card, em que ponto dos dez se está. */}
+      <div
+        className={`items-center justify-between gap-2 border-b border-line px-3 py-1.5 ${
+          isCenter ? "flex" : "hidden lg:flex"
+        }`}
+      >
+        <span className="t-label">{ui.simulation}</span>
+        <span className="tnum text-[13px] text-faint">
+          {String(index + 1).padStart(2, "0")}
+        </span>
+      </div>
+      <div
+        className={`min-h-0 flex-1 flex-col justify-center p-3 ${
+          isCenter ? "flex" : "hidden lg:flex"
+        }`}
+      >
+        {conteudo}
       </div>
     </div>
   );
@@ -393,11 +569,21 @@ export function FeatureCarousel({
                 tabIndex={isCenter ? 0 : -1}
                 aria-current={isCenter}
                 onClick={() => !isCenter && onSelect(index)}
-                className={`flex h-full w-full flex-col rounded-card p-5 text-left transition-colors duration-[350ms] ${
-                  isCenter ? "cursor-default bg-ink-750" : "cursor-pointer bg-ink-800"
+                /* A BORDA entrou em 15/10, com "melhore o visual desses cards":
+                   sobre o ink-850 da seção, o degrau de tom sozinho dava ao
+                   card do meio uma silhueta de 4px de contraste, e no giro dos
+                   vizinhos a quina do card desaparecia no fundo. 1px de
+                   `border-line` desenha o objeto; no card do meio ela é a
+                   `border-line-strong`, que é a mesma linha do cabeçalho de
+                   tabela — nada de laranja e nada de brilho, o tom continua
+                   sendo quem diz qual card está ativo. */
+                className={`flex h-full w-full flex-col rounded-card border p-5 text-left transition-colors duration-[350ms] ${
+                  isCenter
+                    ? "cursor-default border-line-strong bg-ink-750"
+                    : "cursor-pointer border-line bg-ink-800"
                 }`}
               >
-                <FeatureMockup id={item.id} isCenter={isCenter} />
+                <FeatureMockup id={item.id} index={index} isCenter={isCenter} />
 
                 {/* O vizinho mostra só a moldura até `lg`, e o corte subiu de
                     `sm` por geometria medida: com card de 16rem, abaixo de

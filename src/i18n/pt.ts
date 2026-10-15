@@ -23,7 +23,12 @@ export const pt = {
      * entre termos irmãos. Abaixo de `sm` a cobertura não cabe em uma linha de
      * 13px, então entra a versão curta — é a única diferença entre as duas.
      */
-    kicker: "Cobrança, entrega e rastreio · Brasil, Argentina, México e Colômbia",
+    /* A cobertura virou continente em 15/10, com a tabela passando a sete
+       países: nomear Brasil, Argentina, México e Colômbia já não cabia numa
+       linha de 13px, e nomear os sete, menos ainda. "Brasil, América Latina e
+       Europa" diz a mesma coisa em três termos — e o Brasil fica fora da
+       América Latina de propósito, porque é o país de quem lê. */
+    kicker: "Cobrança, entrega e rastreio · Brasil, América Latina e Europa",
     kickerShort: "Cobrança, entrega e rastreio",
 
     /**
@@ -68,8 +73,12 @@ export const pt = {
      */
     benefits: [
       {
-        value: "4 países",
-        label: "Real, peso argentino, mexicano e colombiano no checkout",
+        /* Sete desde 15/10, com Equador, Portugal e Reino Unido entrando na
+           tabela. A lista de moedas substituiu a de países pelo mesmo motivo do
+           kicker: sete nomes não cabem em duas linhas de 13px, e o que o
+           visitante precisa saber é que ele cobra na moeda de cada um. */
+        value: "7 países",
+        label: "Moeda local: real, pesos, dólar, euro e libra",
       },
       { value: "3 vias", label: "Webhook, reconciliação e botão no chat até a entrega" },
       { value: "28 blocos", label: "Editor visual de funil, 4 deles de IA" },
@@ -80,9 +89,11 @@ export const pt = {
        do mesmo "pausar" acabariam divergindo na revisão de copy. */
 
     /**
-     * O palco da coluna direita: o mapa da América Latina com o telefone na
-     * frente, pedido do dono em 14/10 ("uma prévia do checkout internacional,
-     * mostrando um mapa sul americano, como o da página da Dotfy").
+     * O palco: o globo ocupando a metade esquerda da janela, com o ticket da
+     * venda do país da vez no pé. Era o mapa com o telefone na frente, pedido
+     * do dono em 14/10; em 15/10 a diretoria tirou o aparelho e mandou o
+     * planeta crescer até a metade da tela, com o texto entrando levemente por
+     * cima dele.
      *
      * Só três coisas moram aqui — o rótulo do palco, o nome de cada cidade e a
      * frase que abre o resumo para leitor de tela. País, método, símbolo, ISO e
@@ -93,15 +104,23 @@ export const pt = {
     stage: {
       /** Renderizado como `{label} · {ui.simulation}` em `.t-label`. */
       label: "Checkout internacional",
-      /** A cidade de cada ping, na chave da moeda do país. */
+      /**
+       * A cidade de cada pino, na chave da MOEDA do país — a mesma de
+       * `payments.table.countries` e de `globeMath.CAPITAIS`. São sete desde
+       * 15/10; o país, o método e o valor de cada uma continuam vindo da tabela
+       * de Pagamentos, não daqui.
+       */
       cities: [
         { code: "BRL", city: "São Paulo" },
         { code: "ARS", city: "Buenos Aires" },
         { code: "MXN", city: "Cidade do México" },
         { code: "COP", city: "Bogotá" },
+        { code: "USD", city: "Quito" },
+        { code: "EUR", city: "Lisboa" },
+        { code: "GBP", city: "Londres" },
       ],
-      /** Abre o resumo; o resto da frase é montado dos quatro países. */
-      srIntro: "Globo com o checkout simulado em quatro países:",
+      /** Abre o resumo; o resto da frase é montado dos sete países. */
+      srIntro: "Globo com o checkout simulado em sete países:",
     },
   },
 
@@ -166,7 +185,10 @@ export const pt = {
         title: "Vias de confirmação",
       },
       {
-        value: 4,
+        /* Sete desde 15/10, com Equador, Portugal e Reino Unido: a figura conta
+           as linhas de `payments.table.countries`, e os dois números têm de
+           bater — é a mesma afirmação em dois lugares da página. */
+        value: 7,
         decimals: 0,
         suffix: "",
         title: "Países, moeda local",
@@ -325,11 +347,18 @@ export const pt = {
         productNote: "Acesso ao canal por 12 meses",
         payWith: "Pagar com",
         disclaimer: "Valores ilustrativos, sem cotação em tempo real.",
+        /* O mesmo plano nas sete moedas, uma linha por `code` de
+           `payments.table.countries`. Os três novos (15/10) são o mesmo plano
+           de $197 em cotação ilustrativa — a nota "Valores ilustrativos, sem
+           cotação em tempo real." vale para todos e já está dita acima. */
         prices: [
           { code: "BRL", display: "197,00" },
-          { code: "ARS", display: "38.000" },
           { code: "MXN", display: "650" },
+          { code: "ARS", display: "38.000" },
           { code: "COP", display: "155.000" },
+          { code: "USD", display: "197,00" },
+          { code: "EUR", display: "180,00" },
+          { code: "GBP", display: "155,00" },
         ],
       },
     },
@@ -364,15 +393,36 @@ export const pt = {
      * é o desfecho ("depois, a cada venda"); quem marca a dobra 3+1 são as
      * etiquetas de `demo.groups`, não mais quatro passos espaçados em 36vh.
      *
-     * A descrição tem de caber em duas linhas de 13px na largura do trilho (é
-     * `line-clamp-2` com altura reservada, para a troca de passo não mover um
-     * pixel): o teto medido é ~80 caracteres.
+     * A descrição NÃO vive dentro da aba: ela aparece num compartimento de
+     * altura fixa logo abaixo das quatro, na largura toda do trilho. A aba tem
+     * ~133px a 1440 (seis colunas divididas por quatro), e 14px de texto ali
+     * dentro dava 15 caracteres por linha — o teto do compartimento, na largura
+     * cheia, é ~110 caracteres em duas linhas.
+     *
+     * `facts` são os TRÊS fatos do passo, na fileira abaixo do palco. Cada um é
+     * um fato que a página já afirma em outra seção (FAQ, garantias de
+     * Pagamentos, lead de Análises), dito aqui na voz do passo — nenhum número
+     * novo e nenhuma promessa nova entra por este campo.
      */
     steps: [
       {
         step: "01",
         title: "Conecte seu bot",
         description: "Cole o token do @BotFather. A Wone mantém o bot no ar.",
+        facts: [
+          {
+            term: "Token do @BotFather",
+            text: "Você cola o token uma vez; a Wone registra os comandos e o webhook.",
+          },
+          {
+            term: "A Wone mantém o bot no ar",
+            text: "Nada para hospedar, nada para reiniciar na mão.",
+          },
+          {
+            term: "Vários bots na mesma conta",
+            text: "Dentro do limite definido para o seu acesso.",
+          },
+        ],
       },
       {
         step: "02",
@@ -380,11 +430,42 @@ export const pt = {
         /* "28 blocos, 4 de IA" veio de `paths[1].text`, que deixou de existir:
            o fato continua na seção, agora no passo a que ele pertence. */
         description: "Funil pronto em abas ou editor com 28 blocos, 4 de IA. Na mesma conta.",
+        facts: [
+          {
+            term: "Funil pronto em abas",
+            text: "No Wone Estático você só preenche o funil e publica.",
+          },
+          {
+            term: "Editor com 28 blocos, 4 de IA",
+            text: "No Wone Fluxos você monta a lógica arrastando blocos, sem código.",
+          },
+          {
+            term: "Os dois caminhos",
+            text: "Wone Estático e Wone Fluxos vivem na mesma conta.",
+          },
+        ],
       },
       {
         step: "03",
         title: "Conecte seu gateway",
         description: "Sua conta na processadora. Configure um reserva: se um cair, o outro assume.",
+        facts: [
+          {
+            term: "O dinheiro cai na sua conta",
+            text: "É a sua conta na processadora; a Wone não passa pelo dinheiro.",
+          },
+          {
+            term: "Gateway reserva",
+            text: "Se o primeiro não gerar a cobrança, o próximo assume.",
+          },
+          {
+            /* Sem contagem de países: a diretoria passou de quatro para sete em
+               15/10, e um número cravado aqui envelheceria na primeira mudança
+               da tabela de Pagamentos — que é quem conta a lista. */
+            term: "A moeda de cada país",
+            text: "PIX, SPEI, Nequi, MB WAY ou cartão: o método local de lá.",
+          },
+        ],
       },
       {
         step: "04",
@@ -393,6 +474,20 @@ export const pt = {
            pede nada de quem vende, e é por isso que a demo o desenha invertido
            (o chat primeiro, e o fio voltando para o painel). */
         description: "O cliente paga, recebe o convite de uso único e entra no canal. Sem você.",
+        facts: [
+          {
+            term: "Convite de uso único",
+            text: "Um mesmo pagamento nunca libera o acesso duas vezes.",
+          },
+          {
+            term: "Três vias de confirmação",
+            text: "Webhook, reconciliação e o botão no chat, independentes.",
+          },
+          {
+            term: "Tudo no painel",
+            text: "Faturamento por hora, funil, LTV, taxas e extrato.",
+          },
+        ],
       },
     ],
 
@@ -413,9 +508,12 @@ export const pt = {
     listLink: "Entrar na lista",
 
     /**
-     * Rótulos da demo "os dois lados da mesma venda", que substituiu o palco 3D
-     * (`stage` saiu inteiro: `stage.states` só existia para o chip que flutuava
-     * sobre a cena, e nenhum WebGL mora mais nesta seção).
+     * Rótulos da SALA DE OPERAÇÃO (15/10), o palco que substituiu os dois
+     * painéis pequenos lado a lado — "visualmente está ruim... preciso de algo
+     * visualmente espetacular", disse o dono. A lógica não mudou (três conexões
+     * que você faz uma vez e uma venda que acontece sempre); o que mudou é que
+     * agora são DOIS OBJETOS num palco com horizonte: a tela grande do painel,
+     * inclinada em perspectiva, e o aparelho do cliente em pé. Nenhum WebGL.
      *
      * São SÓ rótulos. Todo valor que aparece nas duas telas vem de outro bloco
      * deste dicionário — o token do @BotFather, os nós de
@@ -437,8 +535,6 @@ export const pt = {
          PARADA: sem tocar em nada, o visitante já sabe o que é trabalho dele e
          o que acontece sem ele. */
       groups: { setup: "Você faz uma vez", runtime: "Depois, a cada venda" },
-      /** Cabeçalho das duas telas da demo. */
-      sides: { panel: "Seu painel", chat: "O chat do cliente" },
       /** Região viva: a ilustração é `aria-hidden`, quem narra é esta frase. */
       announce: "Passo {n} de 4: {title}",
       tokenLabel: "Token do bot",
@@ -452,6 +548,41 @@ export const pt = {
       hand: "Daqui em diante é o seu cliente.",
       inviteSent: "Convite enviado",
       statement: "Entrou no seu extrato",
+
+      /**
+       * A TELA GRANDE da sala de operação. `sides` saiu daqui: cada objeto do
+       * palco se nomeia por dentro agora — a tela grande pela aba da janela e o
+       * aparelho pelo cabeçalho do chat, como no `PhoneMockup` —, e um rótulo
+       * flutuando ao lado de cada um repetia a mesma informação duas vezes.
+       *
+       * Tudo abaixo é NOME DE TELA e ESTADO DE UI, não afirmação de produto: os
+       * valores que aparecem no painel continuam vindo de outros blocos
+       * (`highlights.demos.blocks`, `payments.table`, `analytics.panel`, e a
+       * série por hora de `src/data/content.ts`).
+       */
+      panel: {
+        /** A aba da janela, ao lado dos três pontos. */
+        window: "Painel · Wone",
+        /** A tela que o painel abre em cada passo, na ordem dos quatro passos. */
+        screens: ["Bots", "Funil", "Pagamentos", "Vendas"],
+        /** O checklist do passo 01. É o que a tela mostra, não uma promessa. */
+        botChecks: ["Token validado", "Comandos registrados", "Canal vinculado"],
+        webhook: "Webhook ativo",
+        /* A contagem da paleta do editor, no passo 02. Os dois números já estão
+           em `steps[1].description` e na grade de Highlights — nenhum é novo. */
+        blocksCount: "28 blocos, 4 de IA",
+        /** O gráfico pequeno do passo 04. A série é a mesma de Análises. */
+        hourly: "Faturamento por hora",
+        /** O carimbo da linha nova do extrato, no alto da lista. */
+        now: "agora",
+      },
+
+      /** O APARELHO do cliente. */
+      chat: {
+        /* A primeira mensagem do bot, depois do `/start` do cliente (o comando
+           é o de `payments.tracking.flow[1].code`). */
+        welcome: "Oi! Sou o Wone Bot. Toque em começar e eu te mostro os planos.",
+      },
     },
   },
 
@@ -463,10 +594,15 @@ export const pt = {
     prev: "Recurso anterior",
     next: "Próximo recurso",
     /**
-     * Rótulos dos mini-mockups que abrem os cards. São SÓ rótulos: todo número
-     * que aparece dentro da moldura vem de `phone.transactions`, a mesma lista
-     * de vendas do telefone do hero. Nenhum valor é cunhado aqui (regra 4), e
-     * por isso quatro cards têm mockup e os outros seis só título e texto.
+     * Rótulos das placas de simulação que abrem os cards. São SÓ rótulos: todo
+     * número que aparece dentro da placa vem de `phone.transactions`, a mesma
+     * lista de vendas do telefone do hero, e todo nome de bloco vem de
+     * `highlights.demos.blocks`. Nenhum valor é cunhado aqui (regra 4).
+     *
+     * Desde 15/10 os DEZ cards têm placa, a pedido do dono. Onde não existe
+     * número no dicionário, a placa mostra o mecanismo e não um valor: o "PIX
+     * livre" é o campo aberto com o símbolo da moeda e o cursor, porque a faixa
+     * de valor continua sem fonte.
      */
     mockup: {
       bump: "Adicionar ao pedido",
@@ -474,6 +610,20 @@ export const pt = {
       /* Sem prazo em dias: "renova em 12 dias" era invenção, e o lembrete é o
          fato que o produto garante. */
       reminder: "Lembrete enviado",
+      /* Os cinco rótulos que entraram em 15/10, quando o dono pediu a placa de
+         simulação nos DEZ cards. Continuam sendo só rótulos: os valores das
+         placas novas saem de `phone.transactions`, os nomes de bloco de
+         `highlights.demos.blocks` e o símbolo da moeda de
+         `payments.table.countries`. */
+      /** As duas saídas depois do checkout (upsell e downsell). */
+      bought: "Comprou",
+      declined: "Recusou",
+      /** PIX livre: o campo é aberto, e o número é do cliente — não nosso. */
+      freeAmount: "Valor que o cliente escolher",
+      /** Modo de teste: o funil roda inteiro e a cobrança não acontece. */
+      noCharge: "Sem cobrança real",
+      /** Remarketing: o nome do que as duas réguas A/B mostram. */
+      abTest: "Teste A/B",
     },
     /**
      * Mesmos dez recursos e mesmos fatos de antes; a descrição passa à cadência
@@ -543,12 +693,22 @@ export const pt = {
     kicker: "Pagamentos",
     /** Texto do dono, em caixa alta: o único H2 que não é frase. */
     title: "Checkout INTERNACIONAL",
-    lead: "Real, peso argentino, mexicano e colombiano. O cliente paga como já paga no país dele: PIX, cartão, SPEI ou PSE. O dinheiro cai na sua conta na processadora.",
+    /* Lead refeito em 15/10 por pedido da diretoria do dono, que mandou
+       "destacar a parte de que todos os pagamentos serão próprios e com menores
+       taxas do mercado" e, nas palavras do diretor, que "não é via Stripe, e
+       sim integrações próprias". As três afirmações entram aqui e voltam, uma
+       por item, nas garantias — o lead anuncia, a lista detalha. */
+    lead: "Real, pesos, dólar, euro e libra. O cliente paga como já paga no país dele — PIX, SPEI, Nequi, MB WAY, cartão. Integrações próprias com cada meio de pagamento, não via Stripe, com as menores taxas do mercado e taxa personalizada por operação.",
 
     /**
-     * A tabela de quatro países. Os cabeçalhos são as colunas da Wone — PAÍS ·
-     * PAGA COM · MOEDA · PLANO —, não as da referência: o checkout em espanhol
-     * é capacidade da processadora, não da Wone, e por isso não vira coluna.
+     * A tabela de sete países — os quatro do início mais Equador, Portugal e
+     * Reino Unido, que a diretoria pediu em 15/10 ("colocar portugal, reino
+     * unido e afins"). Os métodos de cada um são os da Dotfy, que o dono mandou
+     * copiar, escritos como a marca escreve (MB WAY, PSE, SPEI).
+     *
+     * Os cabeçalhos são as colunas da Wone — PAÍS · PAGA COM · MOEDA · PLANO —,
+     * não as da referência: o checkout em espanhol é capacidade da
+     * processadora, não da Wone, e por isso não vira coluna.
      */
     table: {
       headers: {
@@ -564,31 +724,61 @@ export const pt = {
       countries: [
         {
           name: "Brasil",
-          methods: ["PIX", "Cartão"],
+          methods: [
+            "PIX",
+            "Pix Automático",
+            "Boleto registrado",
+            "Cartão até 12x · 3DS",
+            "Apple Pay",
+            "Google Pay",
+          ],
           code: "BRL",
           symbol: "R$",
           currency: "Real",
         },
         {
-          name: "Argentina",
-          methods: ["Cartão local"],
-          code: "ARS",
-          symbol: "$",
-          currency: "Peso argentino",
-        },
-        {
           name: "México",
-          methods: ["Cartão", "SPEI"],
+          methods: ["SPEI", "Dinheiro em lojas"],
           code: "MXN",
           symbol: "$",
           currency: "Peso mexicano",
         },
         {
+          name: "Argentina",
+          methods: ["Transferência CVU / CBU", "Dinheiro"],
+          code: "ARS",
+          symbol: "$",
+          currency: "Peso argentino",
+        },
+        {
           name: "Colômbia",
-          methods: ["Cartão", "PSE"],
+          methods: ["Nequi", "Daviplata", "Bancolombia", "Efecty", "PSE"],
           code: "COP",
           symbol: "$",
           currency: "Peso colombiano",
+        },
+        {
+          /* O Equador paga em dólar: o `code` é a MOEDA, e é por ele que a
+             bandeira, o globo e o preço se acham. */
+          name: "Equador",
+          methods: ["Transferência", "Dinheiro"],
+          code: "USD",
+          symbol: "$",
+          currency: "Dólar",
+        },
+        {
+          name: "Portugal",
+          methods: ["MB WAY"],
+          code: "EUR",
+          symbol: "€",
+          currency: "Euro",
+        },
+        {
+          name: "Reino Unido",
+          methods: ["Cartão"],
+          code: "GBP",
+          symbol: "£",
+          currency: "Libra",
         },
       ],
       /** Notas de rodapé da tabela: à esquerda a ficção, à direita o fato. */
@@ -603,14 +793,22 @@ export const pt = {
     /**
      * As garantias viraram itens numerados em texto. "Confirmação em três
      * caminhos" saiu daqui: é a figura "3" de Highlights, e cada afirmação-chave
-     * é dita uma vez só. "Processadoras próprias" segue fora até o dono
-     * confirmar.
+     * é dita uma vez só.
+     *
+     * 15/10: "Integrações próprias" abre a lista e "Taxas sob medida" fecha, as
+     * duas mensagens que a diretoria do dono mandou destacar — a primeira é a
+     * frase do diretor, literal ("não é via Stripe, e sim integrações
+     * próprias"), e por isso a seção a marca em laranja. Ela ficou no lugar de
+     * "Sua conta na processadora" e absorveu o que aquele item dizia (o
+     * dinheiro cai na sua conta): integração própria com cada meio de pagamento
+     * e dinheiro na conta do produtor não se contradizem — é o que a FAQ "O
+     * dinheiro passa pela Wone?" também diz.
      */
     guarantees: [
       {
         num: "01",
-        term: "Sua conta na processadora",
-        text: "O dinheiro cai direto nela; a Wone não passa pelo dinheiro.",
+        term: "Integrações próprias",
+        text: "Não é via Stripe: a Wone integra direto com cada meio de pagamento e o dinheiro cai na sua conta.",
       },
       {
         num: "02",
@@ -621,6 +819,11 @@ export const pt = {
         num: "03",
         term: "Sem entrega duplicada",
         text: "Um mesmo pagamento nunca libera o acesso duas vezes.",
+      },
+      {
+        num: "04",
+        term: "Taxas sob medida",
+        text: "As menores taxas do mercado, personalizadas por operação.",
       },
     ],
 
@@ -789,8 +992,11 @@ export const pt = {
       },
       {
         question: "Posso vender para fora do Brasil?",
+        /* Os seis países de fora da tabela de Pagamentos, na mesma ordem dela:
+           a resposta e a tabela contam a mesma lista (15/10, com Equador,
+           Portugal e Reino Unido). */
         answer:
-          "Sim. A Wone permite cobrar clientes da Argentina, do México e da Colômbia na moeda local, com checkout próprio.",
+          "Sim. A Wone permite cobrar clientes do México, da Argentina, da Colômbia, do Equador, de Portugal e do Reino Unido na moeda local, com checkout próprio.",
       },
       {
         question: "O que acontece se um gateway cair?",
@@ -808,6 +1014,23 @@ export const pt = {
           "Não. A Wone é uma plataforma independente que usa a API de bots do Telegram.",
       },
     ],
+  },
+
+  /**
+   * O PREFÁCIO da vitrine, a seção que o dono pediu em 15/10 para o espaço
+   * abaixo dos botões do hero. Só texto novo: os quatro marcos que a régua
+   * mostra saem de `awards.items`, logo abaixo — nenhum número, nome de troféu
+   * ou item físico é cunhado aqui (regra 4).
+   *
+   * O kicker é o MESMO substantivo do item de navegação e do kicker da vitrine
+   * ("Prêmios"), porque é a mesma seção sendo anunciada; o lead termina dizendo
+   * onde ela está, que é o trabalho de um prefácio.
+   */
+  awardsPreface: {
+    kicker: "Prêmios",
+    title: "Cada marco vira um troféu na sua casa.",
+    lead: "Do primeiro $10,000 ao primeiro milhão: quatro marcos de faturamento no Telegram, e o item físico de cada um. A vitrine completa está mais abaixo.",
+    link: "Ver a vitrine",
   },
 
   /**
@@ -1065,8 +1288,6 @@ export const pt = {
       { label: "Plano Semestral", amount: "$227.00", value: 227 },
       { label: "Acesso vitalício", amount: "$247.00", value: 247 },
     ],
-    ariaLabel:
-      "Simulação do chat do cliente no Wone Bot: a oferta do Plano Anual VIP na moeda do país, o pagamento aprovado e o convite de uso único para o canal.",
   },
 };
 

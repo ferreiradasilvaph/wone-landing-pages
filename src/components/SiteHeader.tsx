@@ -23,9 +23,9 @@ const MENU_MS = 250;
  * seria um desperdício visível (tela branca, fontes, hidratação). Então aqui se
  * faz à mão o que o recarregamento faria, na mesma ordem:
  *   1. a âncora velha sai da URL (`#faq` e companhia), sem empilhar histórico;
- *   2. a tela vai ao topo SEM rolagem suave — o pedido é "rola ao topo e
- *      reinicia", e uma rolagem de 3 s competindo com a coreografia de 1,2 s
- *      mostraria o título subindo em algum ponto do meio da página;
+ *   2. a tela TELETRANSPORTA para o topo — o `scroll-behavior` da raiz é
+ *      desligado durante o salto, para nem a rolagem suave da página nem uma
+ *      que esteja em voo deixarem percurso visível (ver abaixo);
  *   3. a classe `wone-entrando` sai, o `offsetHeight` força o reflow (sem ele o
  *      navegador agrupa remoção e adição no mesmo quadro e NADA reinicia) e a
  *      classe volta: as animações de CSS recomeçam do zero;
@@ -54,16 +54,42 @@ function reiniciarEntrada(evento: MouseEvent<HTMLAnchorElement>) {
   if (window.location.hash) {
     history.replaceState(null, "", window.location.pathname + window.location.search);
   }
-  window.scrollTo({ top: 0, behavior: "instant" });
-  /* Duas vezes, e o segundo no quadro seguinte: a página tem
-     `scroll-behavior: smooth`, e quem clica na logo logo depois de um item do
-     nav tem uma rolagem suave EM VOO. Medido no navegador: o salto instantâneo
-     a cancela, mas ela ainda deixa alguns pixels no quadro seguinte (6 px num
-     teste, 124 noutro, dependendo de onde a animação estava). O segundo empurrão
-     fecha isso, e é o mesmo remédio que o script do `<head>` usa no `load`. */
-  requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: "instant" }));
 
   const raiz = document.documentElement;
+
+  /* TELETRANSPORTE, e não rolagem — pedido do dono de 15/10, literal: "quando eu
+     clicar na logo em qualquer sessão, não quero que scrolle tudo para cima,
+     quero que teleporte para a página inicial do hero".
+     `behavior: "instant"` sozinho não bastava, e o motivo é o `html` ter
+     `scroll-behavior: smooth` (globals.css): com uma rolagem suave EM VOO — quem
+     clica na logo logo depois de um item do nav —, o salto instantâneo cancelava
+     a animação mas o navegador ainda devolvia alguns pixels no quadro seguinte
+     (6 px num teste, 124 noutro, dependendo de onde ela estava).
+     O remédio é desligar a suavidade NA RAIZ enquanto o salto acontece: com
+     `scroll-behavior: auto` no `style` do `<html>`, o `scrollTo(0, 0)` é
+     síncrono, aborta qualquer rolagem programada e não tem como ser
+     reinterpretado como animação. Três empurrões — um agora, um no quadro
+     seguinte e um no outro, que é quando a classe de entrada já voltou e o
+     layout já se refez — e só então o estilo volta ao que era, para a rolagem
+     suave dos itens do nav continuar suave. Nunca `behavior: "smooth"` aqui. */
+  const suavidade = raiz.style.scrollBehavior;
+  raiz.style.scrollBehavior = "auto";
+  /* O `offsetHeight` aqui não é zelo, é o que faz o salto ser NO MESMO QUADRO.
+     Medido no navegador: escrever o `scroll-behavior: auto` e chamar o
+     `scrollTo` na linha seguinte não adianta — o estilo ainda não foi
+     recalculado, o motor lê o `smooth` antigo e agenda uma animação (o
+     `scrollY` lido logo depois ainda era 5.000 de 5.000). Com o reflow forçado
+     entre os dois, a mesma chamada devolve 0 na hora. */
+  void raiz.offsetHeight;
+  window.scrollTo(0, 0);
+  requestAnimationFrame(() => {
+    window.scrollTo(0, 0);
+    requestAnimationFrame(() => {
+      window.scrollTo(0, 0);
+      raiz.style.scrollBehavior = suavidade;
+    });
+  });
+
   if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
   raiz.classList.remove("wone-entrando");

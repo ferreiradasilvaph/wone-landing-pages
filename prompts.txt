@@ -733,3 +733,89 @@ Planeje primeiro, depois implemente e teste os 3 cenarios no navegador. O globo
 deve ser como estava antes, porem com o icone da wone de fundo. mas o globo deve
 ser o que voce no prompt anterior. trabalhe e lembre-se faca melhor que o que
 esta na dotfy. bom trabalho. (finge que eu usei um icone de xicara de cafe).
+
+
+===============================================================================
+[76] 2026-10-15
+===============================================================================
+chat, quando eu clicar na logo em qualquer sessao, nao quero que scrolle tudo
+para cima, quero que "teleporte" para a pagina inicial do hero. tambem quero
+que afaste um pouco o celular do globo. lembre de adicionar os paises do
+continente europeu. crie uma sessao adicional abaixo dos botoes "lista de
+espera" e "ver como funciona". seja voce a criatividade. crie uma sessao que
+remeta a alguma sessao ja existe. uma especie de prefacio de alguma sessao da
+pagina. escolha voce a sessao que ficara mais atrativa.
+
+
+===============================================================================
+[77] 2026-10-15
+===============================================================================
+eu preciso que voce adicione mais informacoes nas sessoes com poucas
+informacoes. preciso que melhore "pra ontem" a sessao "como funciona".
+visualmente esta ruim. preciso de algo visualmente espetacular para quem esta
+acessando a pagina. seja mais criativo nessa sessao.
+
+
+===============================================================================
+[78] 2026-10-15
+===============================================================================
+so visual
+
+as imagens das placas estao horriveis. refaca, tem que ser 3d transparente,
+melhore o dorso, deixe-o mais atraente, diminua o pulso, afaste o podio com
+(margin:padding) para baixo em alguns pixels (nao muitos)
+
+
+===============================================================================
+[79] 2026-10-15
+===============================================================================
+eu preciso que as notificacoes no celular cheguem mais rapido
+
+
+===============================================================================
+[80] 2026-10-15
+===============================================================================
+esse prompt eu criei baseado em peticoes dos meus superiores na empresa (talvez
+va algum prompt repetido, nesse caso ignore ou melhore):
+- colocar portugal, reino unido e afins no globo, para destacar bem o continente
+  europeu. deixar destacado a parte de que todos os pagamentos serao proprios e
+  com menores taxas do mercado. taxas personalizadas de acordo com cada operacao.
+  "nao e via stripe, e sim integracoes proprias" - (palavras do diretor da
+  empresa em questao.). colocar os pagamentos por moeda local. mbway, cop e afins
+  (sao as mesmas da dotfy)
+- remover o celular, deixar o globo cobrindo metade da tela com o texto
+  levemente em cima dele.
+
+
+===============================================================================
+[81] 2026-10-15
+===============================================================================
+quando um ponto ligar no outro (no globo da tela principal) mostre mais os
+paises do continente europeu. melhore a visibilidade deles
+
+
+===============================================================================
+[82] 2026-10-15
+===============================================================================
+troque os icones de "por onde cada venda passa" por pontinhos laranjas e
+mantenha o nome das integracoes
+
+
+===============================================================================
+[83] 2026-10-15
+===============================================================================
+faca dessa sessao um carrossol continuo
+
+
+===============================================================================
+[84] 2026-10-15
+===============================================================================
+e esta muito ruim as placas na sessao "premios" - a sessao depois de
+"pagamentos". melhore, chat. essa sessao e a mais importante. tire essa
+opacidade. me traga 3d das placas e capriche na disposicao dessa sessao.
+
+
+===============================================================================
+[85] 2026-10-15
+===============================================================================
+a pulseira esta atravessando a imagem do pulso. melhore isso

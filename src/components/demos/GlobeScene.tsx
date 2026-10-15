@@ -36,18 +36,27 @@ import { isLand } from "./landMask";
    opacidade fixa; e a grade de meridianos e paralelos fica no limite do
    visível, só para o giro ter referência.
 
-   Os quatro marcadores ficam na latitude e longitude de verdade de cada
+   Os marcadores ficam na latitude e longitude de verdade de cada
    capital, e o globo gira para pôr o país escolhido de frente — a rotação sai
    de um `setFromUnitVectors` entre o marcador e a direção da câmera, então é
    exata, sem conta de ângulo de Euler.
    -------------------------------------------------------------------------- */
 
-/** Capitais dos quatro países onde a Wone cobra. */
+/**
+ * Capitais dos países onde a Wone cobra, pela chave que a lista carrega — o ISO
+ * da MOEDA (`payments.table.countries[].code`), não o do país. Os três últimos
+ * entraram em 15/10 com Equador, Portugal e Reino Unido (pedido da diretoria do
+ * dono): Quito, Lisboa e Londres. Quem não estiver aqui cai no (0, 0) do golfo
+ * da Guiné, lá embaixo — por isso a lista acompanha a do dicionário.
+ */
 const PLACES: Record<string, { lat: number; lon: number }> = {
   BRL: { lat: -15.8, lon: -47.9 },
   ARS: { lat: -34.6, lon: -58.4 },
   MXN: { lat: 19.4, lon: -99.1 },
   COP: { lat: 4.7, lon: -74.1 },
+  USD: { lat: -0.2, lon: -78.5 },
+  EUR: { lat: 38.7, lon: -9.1 },
+  GBP: { lat: 51.5, lon: -0.1 },
 };
 
 const BRAND = "#FF7700";

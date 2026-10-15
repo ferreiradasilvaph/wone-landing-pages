@@ -594,8 +594,42 @@ code {
   }
 }
 
+/* NOTA de 15/10: o `PhoneMockup` do hero saiu (a diretoria tirou o celular da
+   primeira dobra) e era o único nó que usava esta classe. Ela fica porque o
+   chat de "Como funciona" está sendo refeito nesta mesma rodada e a bolha de
+   lá tem a mesma entrada; se a revisão terminar sem nenhum uso, esta regra e o
+   `@keyframes` acima saem juntos. */
 .phone-beat-in {
   animation: phone-beat-in 0.42s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* O TICKET do palco do hero trocando de país.
+   Em 15/10 a diretoria do dono tirou o celular do hero e pôs no lugar um card
+   de 300×120 com o comprovante da venda do país da vez (`HeroTicket`). Ele
+   troca a cada 3 s, e a troca é um crossfade curto com 4px de subida: menos
+   que isso não se percebe que mudou, mais que isso vira movimento competindo
+   com a coreografia de entrada, que é a única animação grande desta seção.
+   Montar é animar — quem a dispara é o `key` do país no nó, e só depois que o
+   relógio começa a andar. */
+@keyframes hero-ticket-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Sem `both` — e é de propósito, ao contrário das outras animações daqui. Com
+   `fill-mode: both` o card nasce em `opacity: 0` e SÓ aparece quando o primeiro
+   quadro roda; medido num navegador afogado (2 fps), a animação ficava
+   `pending` e o ticket ficava vazio na tela por segundos. Sem preenchimento, o
+   estado natural do nó é o estado final: se o quadro não vier, o ticket aparece
+   inteiro, sem crossfade. O conteúdo nunca depende da animação. */
+.hero-ticket-in {
+  animation: hero-ticket-in 0.32s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 /* O anel que acende no país da vez, no mapa do palco do hero.
@@ -686,36 +720,65 @@ code {
   animation: globe-arc 2.4s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
-/* Entrada em escada dos blocos de "Como funciona" (`StepEnter`). A distância
-   vem por `style`, porque muda por chamada. */
-@keyframes step-enter {
-  from {
+/* A FAÍSCA do fio da sala de operação ("Como funciona", `StageWire`).
+   Saíram daqui, com a seção refeita em 15/10, o `step-enter` (a entrada em
+   escada dos blocos: as camadas de passo agora ficam montadas e trocam por
+   `transition`, não por animação de montagem) e o par `wire-travel-x/y` (o
+   ponto que deslizava num trilho reto entre os dois painéizinhos).
+
+   O caminho vem por `style`, porque é a geometria do palco — a mesma string do
+   `<path>` que desenha o fio, para o desenho e o movimento nunca divergirem. Os
+   dois sentidos existem porque o passo 04 é o único em que o evento nasce no
+   cliente: ali a faísca volta do aparelho para o painel, e é essa inversão que
+   torna o desfecho visivelmente diferente dos três passos de configuração.
+
+   `opacity` nas pontas, e não um `from`/`to` seco: a faísca ACENDE depois de
+   sair e apaga antes de chegar, então ela não aparece parada em cima do objeto
+   nem fica acesa no fim (o `both` congelaria o último quadro). */
+@keyframes stage-spark {
+  0% {
+    offset-distance: 0%;
     opacity: 0;
-    transform: translateY(var(--step-enter-y, 6px));
   }
-  to {
+  14% {
     opacity: 1;
-    transform: none;
+  }
+  86% {
+    opacity: 1;
+  }
+  100% {
+    offset-distance: 100%;
+    opacity: 0;
   }
 }
 
-/* O ponto que viaja no fio entre as duas telas (`EventWire`). Um por eixo: o
-   eixo muda de breakpoint, e keyframe não responde a media query. */
-@keyframes wire-travel-x {
-  from {
-    transform: translateX(var(--wire-from));
+@keyframes stage-spark-back {
+  0% {
+    offset-distance: 100%;
+    opacity: 0;
   }
-  to {
-    transform: none;
+  14% {
+    opacity: 1;
+  }
+  86% {
+    opacity: 1;
+  }
+  100% {
+    offset-distance: 0%;
+    opacity: 0;
   }
 }
 
-@keyframes wire-travel-y {
-  from {
-    transform: translateY(var(--wire-from));
-  }
-  to {
-    transform: none;
+/* Sem `offset-path` (navegador antigo) a faísca NÃO aparece: sem caminho ela
+   não tem posição e pousaria no canto do palco. O fio continua desenhado, que é
+   o estado de repouso do desenho. */
+.stage-spark {
+  visibility: hidden;
+}
+
+@supports (offset-path: path("M 0 0 L 1 1")) {
+  .stage-spark {
+    visibility: visible;
   }
 }
 
@@ -874,4 +937,21 @@ html.wone-entrando .ent-surge {
     animation-iteration-count: 1 !important;
     transition-duration: 0.001ms !important;
   }
+}
+
+/* O carrossel contínuo da faixa de integrações (IntegrationBand). Só
+   `transform`, numa camada própria: a lista é dupla e o deslocamento de -50%
+   faz a emenda cair sempre no mesmo lugar. 36 s por volta: lento o bastante
+   para ler cada nome, rápido o bastante para se perceber que anda. */
+@keyframes band-marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+.band-marquee {
+  animation: band-marquee 36s linear infinite;
+  will-change: transform;
 }
