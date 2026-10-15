@@ -851,3 +851,9 @@ deixe mais atletico/atraente
 ===============================================================================
 chat, as placas 3d devem ser transparentes, sem esse fundo preto, preciso que
 elas sejam transparentes, meu amigo....
+
+
+===============================================================================
+[91] 2026-10-15
+===============================================================================
+chat o popup de pagamento aprovado, no hero, voce pode retirar

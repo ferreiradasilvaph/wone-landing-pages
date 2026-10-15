@@ -914,7 +914,13 @@ export function HeroGlobe({
        no pé da camada, que é onde o ticket mora. */
     const camada = box.parentElement;
     const base = camada?.getBoundingClientRect();
+    /* Sem o ticket (o dono o retirou em 15/10) nao ha destino: o pino acende
+       com o anel e o arco nao e desenhado. */
     const destino = alvoRef?.current?.getBoundingClientRect();
+    if (!destino) {
+      setArco(null);
+      return;
+    }
     const tx =
       destino && base ? destino.left - base.left + destino.width / 2 : (camada?.clientWidth ?? 600) / 2;
     const ty = destino && base ? destino.top - base.top : (camada?.clientHeight ?? 600) - 120;

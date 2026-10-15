@@ -7,7 +7,6 @@ import { useOnScreen } from "@/lib/useOnScreen";
 import { CtaButton } from "./CtaButton";
 import { chipDe, metodoDe, precoDe } from "./hero/paises";
 import { HeroGlobe } from "./hero/HeroGlobe";
-import { HeroTicket } from "./hero/HeroTicket";
 import { StageStatus } from "./hero/StageStatus";
 import { IntegrationBand } from "./IntegrationBand";
 import { PauseButton } from "./PauseButton";
@@ -79,7 +78,7 @@ const ATRASO_LINHA = ["[--ent-atraso:0ms]", "[--ent-atraso:80ms]"];
  * na base sem altura cravada.
  */
 export function Hero() {
-  const { hero, integrations, payments, highlights, phone, ui } = useContent();
+  const { hero, integrations, payments, highlights, ui } = useContent();
 
   const paises = payments.table.countries;
   const precos = highlights.demos.checkout.prices;
@@ -98,8 +97,6 @@ export function Hero() {
   const [reduced, setReduced] = useState(false);
   const [tabHidden, setTabHidden] = useState(false);
 
-  /** O alvo do arco: o ticket. O globo mede este nó para saber onde terminar. */
-  const ticket = useRef<HTMLDivElement>(null);
 
   /**
    * A preferência de movimento JAMAIS decide o primeiro render: ela vem do
@@ -339,7 +336,6 @@ export function Hero() {
           activeIndex={ativo}
           animated={animado}
           running={!paused && !reduced && !tabHidden && naTela}
-          alvoRef={ticket}
         />
 
         {/* O TICKET, a etiqueta de ficção e o controle do palco, num bloco só —
@@ -382,15 +378,6 @@ export function Hero() {
               labels={{ pause: ui.pause, play: ui.play }}
             />
           </div>
-          <HeroTicket
-            ref={ticket}
-            country={pais}
-            product={highlights.demos.checkout.product}
-            approved={phone.approved}
-            price={precoDe(precos, pais.code)}
-            method={metodoDe(pais)}
-            animated={animado}
-          />
         </div>
 
         {/* O palco inteiro em texto, montado no servidor. */}
