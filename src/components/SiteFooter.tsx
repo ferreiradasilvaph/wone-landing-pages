@@ -1,14 +1,10 @@
 "use client";
 
 import { useContent } from "@/i18n";
-import { IntegrationMark } from "./IntegrationMark";
 import { LanguageToggle } from "./LanguageToggle";
 import { TextLink } from "./TextLink";
 import { WoneIcon } from "./WoneMark";
 
-/* O mesmo laranja único da faixa do hero: a cor própria de cada marca não é
-   usada em lugar nenhum da página. */
-const MARCA = "#FF7700";
 
 /**
  * Link de rodapé: 14px.
@@ -127,12 +123,9 @@ export function SiteFooter() {
             <div className="grid grid-cols-2 gap-x-4 gap-y-2.5 md:grid-cols-[auto_auto] md:justify-start md:gap-x-10">
               {integrations.items.map((item) => (
                 <span key={item.name} className="flex items-center gap-2 text-sm text-muted">
-                  <IntegrationMark
-                    icon={item.icon}
-                    name={item.name}
-                    color={MARCA}
-                    className="h-4 w-4 shrink-0"
-                  />
+                  {/* Ponto laranja no lugar do glifo da marca — o dono pediu em
+                      15/10 o mesmo tratamento da faixa do hero. */}
+                  <span aria-hidden className="h-1.5 w-1.5 shrink-0 rounded-full bg-brand" />
                   {item.name}
                 </span>
               ))}

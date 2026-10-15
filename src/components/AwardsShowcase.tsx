@@ -242,6 +242,34 @@ export function AwardsShowcase() {
      o estouro. O mesmo vale para a grade empilhada das fichas, lá embaixo. */
   return (
     <div className="grid grid-cols-1 gap-x-8 gap-y-6 sm:gap-y-8 lg:grid-cols-12 lg:gap-y-0">
+      {/* A RAIL, em largura total e ACIMA do palco — o dono pediu em 15/10
+          que os cards de cada placa, com a linha do tempo, ficassem em cima
+          das imagens. No celular ela abre a vitrine; no desktop ocupa a
+          linha 1 da grade e empurra numeral, palco e ficha uma linha abaixo. */}
+      <div className="lg:col-span-12 lg:col-start-1 lg:row-start-1 lg:mb-8">
+        <MarcoRail
+          items={awards.items}
+          active={active}
+          onSelect={escolher}
+          /* A barra remonta a cada vez que a cena começa a contar: a animação de
+             CSS do segmento nasce com o HTML, muito antes do canvas, e sem este
+             reinício a primeira barra terminava com a cena ainda no meio da
+             primeira parada. Daí em diante cada troca já remonta o segmento. */
+          epoca={epoca}
+          durationMs={correndo ? CICLO_MS : undefined}
+          /* Antes do primeiro quadro da cena a barra fica parada no zero: não há
+             relógio nenhum andando ainda. */
+          paused={relogioParado || epoca === 0}
+          pause={
+            <PauseButton
+              pressed={pausado}
+              onToggle={alternarPausa}
+              labels={{ pause: ui.pause, play: ui.play }}
+            />
+          }
+        />
+      </div>
+
       {/* O NUMERAL DO MARCO: o único 700 da página junto com a tese, em largura
           fixa de 4.2ch para que trocar "1M" por "100K" não empurre o texto. O
           teto de largura é a coluna: a 1440 os 4.2ch do corpo de 176px dão
@@ -257,7 +285,7 @@ export function AwardsShowcase() {
           `self-end` na linha 1: é metade da centralização vertical da coluna de
           texto. Veja o cabeçalho do componente. */}
       <p
-        className="tnum max-w-full font-bold leading-[0.85] text-cream lg:col-span-5 lg:col-start-1 lg:row-start-1 lg:self-end"
+        className="tnum max-w-full font-bold leading-[0.85] text-cream lg:col-span-5 lg:col-start-1 lg:row-start-2 lg:self-end"
         style={{ fontSize: "clamp(5rem, 14vw, 11rem)", width: "4.2ch" }}
       >
         {item.tier}
@@ -267,7 +295,7 @@ export function AwardsShowcase() {
           rail —, e no desktop a grade recoloca cada peça: o palco passa a
           ocupar as colunas 6–12 nas duas linhas, e é a altura dele que a coluna
           de texto usa de régua. */}
-      <div className="lg:col-span-7 lg:col-start-6 lg:row-span-2 lg:row-start-1">
+      <div className="lg:col-span-7 lg:col-start-6 lg:row-span-2 lg:row-start-2">
         <div
           ref={stageRef}
           /* A caixa do palco é SEMPRE quadrada e cravada por breakpoint — nunca
@@ -320,7 +348,7 @@ export function AwardsShowcase() {
 
           `self-start` na linha 2 — a outra metade da centralização vertical da
           coluna de texto (veja o cabeçalho). */}
-      <div className="grid grid-cols-1 lg:col-span-5 lg:col-start-1 lg:row-start-2 lg:mt-7 lg:self-start">
+      <div className="grid grid-cols-1 lg:col-span-5 lg:col-start-1 lg:row-start-3 lg:mt-7 lg:self-start">
         {awards.items.map((entry, indice) => (
           <div
             key={entry.tier}
@@ -353,30 +381,6 @@ export function AwardsShowcase() {
         ))}
       </div>
 
-      {/* A RAIL, em largura total e abaixo do palco. */}
-      <div className="lg:col-span-12 lg:col-start-1 lg:row-start-3 lg:mt-8">
-        <MarcoRail
-          items={awards.items}
-          active={active}
-          onSelect={escolher}
-          /* A barra remonta a cada vez que a cena começa a contar: a animação de
-             CSS do segmento nasce com o HTML, muito antes do canvas, e sem este
-             reinício a primeira barra terminava com a cena ainda no meio da
-             primeira parada. Daí em diante cada troca já remonta o segmento. */
-          epoca={epoca}
-          durationMs={correndo ? CICLO_MS : undefined}
-          /* Antes do primeiro quadro da cena a barra fica parada no zero: não há
-             relógio nenhum andando ainda. */
-          paused={relogioParado || epoca === 0}
-          pause={
-            <PauseButton
-              pressed={pausado}
-              onToggle={alternarPausa}
-              labels={{ pause: ui.pause, play: ui.play }}
-            />
-          }
-        />
-      </div>
     </div>
   );
 }

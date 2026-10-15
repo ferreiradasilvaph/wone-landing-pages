@@ -864,3 +864,23 @@ chat o popup de pagamento aprovado, no hero, voce pode retirar
 ===============================================================================
 bom dia, adicione informacoes (plausiveis) ao lado direito no hero (ao lado de
 "venda pelo telegram no automatico"
+
+
+===============================================================================
+[93] 2026-10-15
+===============================================================================
+fine, agora joga um pouco mais para o centro, todo o conteudo do hero
+
+
+===============================================================================
+[94] 2026-10-15
+===============================================================================
+na sessao de premios, coloque aqueles cards de cada placa (os cards onde tem
+uma linha do tempo em cada um, a baixo das imagens das placas) coloque em cima
+
+
+===============================================================================
+[95] 2026-10-15
+===============================================================================
+la no footer, nas integracoes. troque os icones das integracoes por pontinhos
+laranjas...
