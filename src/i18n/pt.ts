@@ -641,7 +641,6 @@ export const pt = {
       tokenLabel: "Token do bot",
       botOnline: "Bot no ar",
       connected: "Bot conectado",
-      funnelNote: "Os dois na mesma conta.",
       gatewayMain: "Principal",
       gatewayBackup: "Em espera",
       /* A régua do passo 04, dentro do chat: é a fronteira entre o que você
@@ -651,27 +650,109 @@ export const pt = {
       statement: "Entrou no seu extrato",
 
       /**
-       * A TELA GRANDE da sala de operação. `sides` saiu daqui: cada objeto do
-       * palco se nomeia por dentro agora — a tela grande pela aba da janela e o
-       * aparelho pelo cabeçalho do chat, como no `PhoneMockup` —, e um rótulo
-       * flutuando ao lado de cada um repetia a mesma informação duas vezes.
+       * A TELA GRANDE da sala de operação — e, desde 15/10, o PAINEL DE VERDADE.
+       *
+       * O dono mandou os prints do editor real (`public/referencia-fluxos/`,
+       * fora do git) com um diagnóstico curto: a simulação estava INVENTADA —
+       * paleta "Fluxo/Conteúdo/Venda", nós em pílula, setas retas. Nada disso
+       * existe no produto. Então cada rótulo daqui saiu dos prints, lido um por
+       * um: a barra superior, os dois grupos da lateral com os onze itens, os
+       * oito botões da barra de ferramentas, os tipos de nó e os nomes das
+       * portas. O que não aparece nos prints não entrou.
        *
        * Tudo abaixo é NOME DE TELA e ESTADO DE UI, não afirmação de produto: os
        * valores que aparecem no painel continuam vindo de outros blocos
-       * (`highlights.demos.blocks`, `payments.table`, `analytics.panel`, e a
-       * série por hora de `src/data/content.ts`).
+       * (`payments.table`, `analytics.panel`, e a série por hora de
+       * `src/data/content.ts`).
        */
       panel: {
-        /** A aba da janela, ao lado dos três pontos. */
-        window: "Painel · Wone",
-        /** A tela que o painel abre em cada passo, na ordem dos quatro passos. */
-        screens: ["Bots", "Funil", "Pagamentos", "Vendas"],
+        /* ---- A BARRA SUPERIOR ---- */
+        /** O logotipo, em caixa baixa, como na barra do app. */
+        wordmark: "wone",
+        /** A saudação do centro; o nome vai em laranja, ao lado. */
+        greeting: "Boa tarde,",
+        user: "Pedro",
+        /** A data sob a saudação, desenhada em caixa alta com entreletra largo. */
+        date: "15 de outubro de 2026",
+        /** O contador do sininho e as iniciais do avatar. */
+        notifications: "2",
+        avatar: "PC",
+
+        /* ---- A BARRA LATERAL ---- */
+        /** Os dois grupos do menu, na ordem do print. */
+        navGroups: ["Operação", "Construção"],
+        /** Os itens de cada grupo, na ordem do print. */
+        nav: [
+          ["Dashboard", "Clientes", "Financeiro", "Análises", "Mapa de Acessos"],
+          ["Bots", "Fluxos", "Conversas", "Remarketing", "Links", "Páginas"],
+        ],
+        /** O cartão do pé da lateral. O valor vem da série de Análises. */
+        billing: "Faturamento",
+
+        /* ---- O EDITOR DE FLUXOS (passo 02) ---- */
+        /** O nome do fluxo aberto, como no print. */
+        flowName: "Boas vindas e boas vendas",
+        /** Sob o nome, no cabeçalho. `{n}` nós, `{e}` ligações — contados. */
+        counts: "{n} nós · {e} ligações",
+        /** No rodapé, à esquerda. Mesmos dois números. */
+        countsNew: "{n} nós novos, {e} ligações novas",
+        /** A barra de ferramentas, na ordem do print. */
+        tools: [
+          "Desfazer",
+          "Refazer",
+          "Organizar",
+          "Enquadrar",
+          "Criar com IA",
+          "Testar",
+          "Métricas",
+          "Apagar",
+        ],
+        /** O botão da barra de blocos, fechada (como no print). */
+        nodesPanel: "Nós",
+        /** O rodapé, à direita. */
+        history: "Histórico",
+        publish: "Publicar",
+        /** O aviso flutuante acima do rodapé. */
+        draftSaved: "Rascunho salvo",
+        /** A marca d'água do canvas, em contraste baixíssimo. */
+        watermark: "WONE",
+
+        /** Os tipos de nó que o fluxo do print usa. */
+        nodeTypes: {
+          start: "Início",
+          text: "Texto",
+          ai: "IA Conversa",
+          charge: "Gerar cobrança",
+          await: "Aguardar pagamento",
+          deliver: "Entregar acesso",
+          end: "Fim",
+        },
+        /**
+         * Os nomes das portas de saída. Só entram as que o fluxo PRONTO usa:
+         * toda porta desenhada tem destino, que é o que distingue esta versão
+         * do print (lá o fluxo ainda tinha 1 erro e 4 avisos).
+         */
+        nodePorts: {
+          limit: "limite",
+          created: "gerada",
+          paid: "pago",
+          expired: "expirou",
+          delivered: "entregue",
+        },
+        /** O corpo do nó de IA: o começo do prompt e o chip de ajuste. */
+        aiPrompt: "Você é o assistente de vendas do canal. Se…",
+        aiTuning: "5 mensagens · pensa 15 s",
+        /** As três mensagens que os nós de Texto carregam, na ordem do fluxo. */
+        nodeMessages: [
+          "Oi! Sou o Wone Bot 👋 Me conta o que você procura que eu te mostro o plano ideal.",
+          "Tenho o plano certo pra você 👇 Plano Anual VIP: acesso ao canal por 12 meses por R$ 197,00. Vou gerar seu PIX agora.",
+          "Seu PIX expirou ⏳ Quando quiser, é só mandar /start que eu gero outro.",
+        ],
+
+        /* ---- OS OUTROS TRÊS PASSOS ---- */
         /** O checklist do passo 01. É o que a tela mostra, não uma promessa. */
         botChecks: ["Token validado", "Comandos registrados", "Canal vinculado"],
         webhook: "Webhook ativo",
-        /* A contagem da paleta do editor, no passo 02. Os dois números já estão
-           em `steps[1].description` e na grade de Highlights — nenhum é novo. */
-        blocksCount: "28 blocos, 4 de IA",
         /** O gráfico pequeno do passo 04. A série é a mesma de Análises. */
         hourly: "Faturamento por hora",
         /** O carimbo da linha nova do extrato, no alto da lista. */

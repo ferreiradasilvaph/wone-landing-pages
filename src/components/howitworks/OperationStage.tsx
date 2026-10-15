@@ -117,7 +117,7 @@ export function OperationStage({ show }: { show: StepShow }) {
             aparelho de (840, 539) a (1089, 528). A elipse é centrada na média
             dessas alturas. */}
         <span
-          className="absolute top-[446px] left-[88px] hidden h-[26px] w-[600px] xl:block"
+          className="absolute top-[462px] left-[88px] hidden h-[26px] w-[606px] xl:block"
           style={{ background: CONTACT, borderRadius: "50%" }}
         />
         <span
@@ -135,7 +135,21 @@ export function OperationStage({ show }: { show: StepShow }) {
              painel deixaria 150px de chão morto na direita do palco. Com os
              dois deslocados, a composição fica com 88px de margem à esquerda e
              127 à direita — centrada, com o peso do painel puxando um pouco. */
-          className="h-[280px] w-full sm:h-[330px] xl:absolute xl:top-[54px] xl:left-16 xl:h-[400px] xl:w-[640px] xl:[transform:rotateY(-12deg)_rotateX(3deg)]"
+          /* A ALTURA CRESCEU de 400 para 432 em 15/10, quando o painel passou a
+             vestir o chrome do app de verdade: barra superior, lateral com os
+             onze itens e, no passo 02, o editor inteiro (cabeçalho, barra de
+             ferramentas, canvas com três fileiras de nós e rodapé). Com 400 a
+             última fileira batia no rodapé.
+
+             O CRESCIMENTO É SIMÉTRICO em torno de y=254 (daí `top` cair de 54
+             para 38): é o que preserva o ponto (700, 254) de onde o `StageWire`
+             — que não se toca — nasce. No meio da altura o `rotateX(3deg)` tem
+             z=0, então o x da borda direita ali não muda com a altura; mudar a
+             LARGURA, sim, moveria o fio. A largura ficou em 640.
+
+             A altura é a mesma nos quatro passos (as camadas do `StepLayer` são
+             absolutas), então o relógio pode rodar sem mover um pixel: CLS 0. */
+          className="h-[280px] w-full sm:h-[330px] xl:absolute xl:top-[38px] xl:left-16 xl:h-[432px] xl:w-[640px] xl:[transform:rotateY(-12deg)_rotateX(3deg)]"
         />
 
         {/* Um fio por eixo: o eixo do movimento muda de breakpoint, e nem

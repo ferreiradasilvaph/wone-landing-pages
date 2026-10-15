@@ -57,6 +57,59 @@
 }
 
 /* --------------------------------------------------------------------------
+   TEXTURAS DO CANVAS DO EDITOR (passo 02)
+
+   As três camadas que o print mostra sob os nós, nesta ordem: o quase-preto com
+   a GRADE quadrada de linhas tênues, o BRILHO laranja vindo do alto e a marca
+   d'água (essa é texto, e mora no JSX).
+
+   A grade é feita de dois degradês de duas paradas no MESMO pixel — borda dura,
+   sem rampa de cor: é linha, não gradiente decorativo (mesma nota da malha de
+   pontos que havia aqui antes).
+   -------------------------------------------------------------------------- */
+
+.hiw-grade {
+  background-color: #060608;
+  background-image:
+    linear-gradient(rgba(255, 255, 227, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 227, 0.035) 1px, transparent 1px);
+  background-size: 34px 34px;
+}
+
+/* O brilho é o único laranja difuso da página, e existe porque está no print: o
+   canvas do editor recebe luz de cima. Sem blur e sem halo — é um degradê
+   radial de 16% caindo a zero em 75% do raio. */
+.hiw-brilho {
+  background-image: radial-gradient(
+    62% 70% at 50% -12%,
+    rgba(255, 119, 0, 0.16) 0%,
+    rgba(255, 119, 0, 0.045) 45%,
+    transparent 75%
+  );
+}
+
+/* A PASSAGEM DE LUZ pelos nós. Quando o passo 02 entra, a borda de cada cartão
+   vai a laranja na ORDEM DO FLUXO e volta — é o passo "rodando" o fluxo, que é
+   o que o editor faz ao testar. O atraso de cada nó vem inline, do `FlowCanvas`.
+   Só cor: nenhuma caixa se move, nada reflui. */
+[data-hiw-on="1"] .hiw-no {
+  animation: hiw-no 1.1s ease-out both;
+}
+
+@keyframes hiw-no {
+  0% {
+    border-color: var(--ink-700);
+  }
+  18%,
+  38% {
+    border-color: color-mix(in oklab, var(--brand) 70%, transparent);
+  }
+  100% {
+    border-color: var(--ink-700);
+  }
+}
+
+/* --------------------------------------------------------------------------
    O TEMPO DA CONVERSA
 
    Nenhum texto novo entrou no dicionário para isto: o que anima é a ORDEM em
@@ -160,7 +213,8 @@
   [data-hiw-on="1"] .hiw-ponto:nth-child(2),
   [data-hiw-on="1"] .hiw-ponto:nth-child(3),
   [data-hiw-on="1"] .hiw-bolha-entra,
-  [data-hiw-on="1"] .hiw-pop {
+  [data-hiw-on="1"] .hiw-pop,
+  [data-hiw-on="1"] .hiw-no {
     animation: none;
   }
 }

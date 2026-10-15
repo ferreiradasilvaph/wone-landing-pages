@@ -428,21 +428,67 @@ export const en: Content = {
       tokenLabel: "Bot token",
       botOnline: "Bot online",
       connected: "Bot connected",
-      funnelNote: "Both in the same account.",
       gatewayMain: "Primary",
       gatewayBackup: "On standby",
       hand: "From here on, it's your customer.",
       inviteSent: "Invite sent",
       statement: "In your statement",
 
-      /* A tela grande: nomes de tela e estados de UI, nunca afirmação de
-         produto (ver `pt.ts`). */
+      /* A tela grande: o painel de verdade, rótulo por rótulo dos prints do
+         editor. Nomes de tela e estados de UI, nunca afirmação de produto (ver
+         `pt.ts`). O logotipo, o nome do usuário e as iniciais do avatar não se
+         traduzem; as mensagens do chat vêm em inglês equivalente. */
       panel: {
-        window: "Dashboard · Wone",
-        screens: ["Bots", "Funnel", "Payments", "Sales"],
+        wordmark: "wone",
+        greeting: "Good afternoon,",
+        user: "Pedro",
+        date: "October 15, 2026",
+        notifications: "2",
+        avatar: "PC",
+
+        navGroups: ["Operation", "Build"],
+        nav: [
+          ["Dashboard", "Clients", "Financial", "Analytics", "Access Map"],
+          ["Bots", "Flows", "Conversations", "Remarketing", "Links", "Pages"],
+        ],
+        billing: "Revenue",
+
+        flowName: "Welcome and good sales",
+        counts: "{n} nodes · {e} links",
+        countsNew: "{n} new nodes, {e} new links",
+        tools: ["Undo", "Redo", "Arrange", "Fit", "Create with AI", "Test", "Metrics", "Delete"],
+        nodesPanel: "Nodes",
+        history: "History",
+        publish: "Publish",
+        draftSaved: "Draft saved",
+        watermark: "WONE",
+
+        nodeTypes: {
+          start: "Start",
+          text: "Text",
+          ai: "AI Chat",
+          charge: "Create charge",
+          await: "Await payment",
+          deliver: "Deliver access",
+          end: "End",
+        },
+        nodePorts: {
+          limit: "limit",
+          created: "created",
+          paid: "paid",
+          expired: "expired",
+          delivered: "delivered",
+        },
+        aiPrompt: "You are the channel's sales assistant. If…",
+        aiTuning: "5 messages · thinks 15 s",
+        nodeMessages: [
+          "Hi! I'm the Wone Bot 👋 Tell me what you're after and I'll show you the right plan.",
+          "I've got the right plan for you 👇 VIP Annual: 12 months of channel access for $197.00. Generating your PIX now.",
+          "Your PIX expired ⏳ Whenever you want, just send /start and I'll generate another one.",
+        ],
+
         botChecks: ["Token validated", "Commands registered", "Channel linked"],
         webhook: "Webhook active",
-        blocksCount: "28 blocks, 4 of them AI",
         hourly: "Revenue by hour",
         now: "now",
       },

@@ -1,12 +1,42 @@
 "use client";
 
-import { Bot, Check, CreditCard, Receipt, Workflow, type LucideIcon } from "lucide-react";
+import { Fragment } from "react";
+import {
+  ArrowLeft,
+  BarChart3,
+  Bell,
+  Bot,
+  Check,
+  ChevronDown,
+  ChevronsLeft,
+  CircleHelp,
+  CloudUpload,
+  CreditCard,
+  FileCode2,
+  FlaskConical,
+  Frame,
+  Globe,
+  History,
+  LayoutDashboard,
+  LayoutGrid,
+  Link2,
+  MessageSquare,
+  PanelLeft,
+  Redo2,
+  Send,
+  Sparkles,
+  Trash2,
+  Undo2,
+  Users,
+  Workflow,
+  type LucideIcon,
+} from "lucide-react";
 import { useContent } from "@/i18n";
 import { Chip } from "@/components/Chip";
 import { FlagMark } from "@/components/FlagMark";
 import { WoneIcon } from "@/components/WoneMark";
 import { HOURLY_REVENUE } from "@/data/content";
-import { FlowCanvas, FlowStack } from "./FlowCanvas";
+import { FLOW_EDGES, FLOW_NODES, FlowCanvas } from "./FlowCanvas";
 import { StepLayer } from "./StepLayer";
 
 /** Rótulo de máquina dentro do mockup: 11px é o piso aqui dentro. */
@@ -15,56 +45,120 @@ const LABEL = "text-[11px] font-medium tracking-[0.08em] text-faint uppercase";
 const SCREEN = "text-[12px] font-semibold text-cream xl:text-[13px]";
 /** Linha de conteúdo do painel: 11px no celular, 12 na tela grande. */
 const BODY = "text-[11px] xl:text-[12px]";
+/** A superfície de cartão do app: 12px de raio, borda de 1px, fundo um tom acima. */
+const CARD = "rounded-field border border-ink-700 bg-ink-900";
 
-/** O ícone de cada tela do painel, na ordem dos quatro passos. */
-const SCREEN_ICONS: LucideIcon[] = [Bot, Workflow, CreditCard, Receipt];
+/** O valor do cartão de faturamento da lateral. Mesma série de Análises. */
+const USD = new Intl.NumberFormat("en-US", {
+  style: "currency",
+  currency: "USD",
+  maximumFractionDigits: 0,
+});
+const REVENUE = HOURLY_REVENUE.reduce((soma, valor) => soma + valor, 0);
+
+/** Os ícones da lateral, na ordem dos dois grupos do print. */
+const NAV_ICONS: LucideIcon[][] = [
+  [LayoutDashboard, Users, CreditCard, BarChart3, Globe],
+  [Bot, Workflow, MessageSquare, Send, Link2, FileCode2],
+];
 
 /**
- * A TELA GRANDE da sala de operação: o seu painel, com quatro telas de verdade
+ * Qual item da lateral acende em cada passo: `[grupo, item]`.
+ *   01 → Bots · 02 → Fluxos · 03 → Financeiro · 04 → Dashboard.
+ */
+const ACTIVE_NAV: [number, number][] = [
+  [1, 0],
+  [1, 1],
+  [0, 2],
+  [0, 0],
+];
+
+/** Os ícones da barra de ferramentas do editor, na ordem do print. */
+const TOOL_ICONS: LucideIcon[] = [
+  Undo2,
+  Redo2,
+  LayoutGrid,
+  Frame,
+  Sparkles,
+  FlaskConical,
+  BarChart3,
+  Trash2,
+];
+/** "Refazer" e "Apagar" aparecem apagados no print — não há o que refazer nem o
+    que apagar com nada selecionado. */
+const TOOLS_OFF = [1, 7];
+
+/**
+ * A TELA GRANDE da sala de operação: o SEU painel, com quatro telas de verdade
  * — uma por passo.
  *
- * Substituiu o `OperatorPanel`, que era um retângulo de 552×187 com duas ou
- * três linhas de texto dentro. O diagnóstico do dono, em 15/10: "visualmente
- * está ruim... adicione mais informações nas seções com poucas informações".
- * Então o objeto virou uma JANELA de painel — barra com três pontos, aba,
- * trilho de navegação com as quatro telas — e cada passo abre a tela que ele
- * configura, cheia:
+ * O que havia aqui até 15/10 era um objeto de software GENÉRICO: barra de janela
+ * com três pontinhos, uma lateral inventada (Bots/Funil/Pagamentos/Vendas) e, no
+ * passo 02, um funil com paleta "Fluxo/Conteúdo/Venda", nós em pílula e setas
+ * retas. O dono mandou os prints do editor real e o veredito foi direto: nada
+ * daquilo existe no produto.
  *
- *  01 Bots — o campo do token mascarado, o card do bot no ar e o checklist;
- *  02 Funil — as duas abas de produto, a paleta com as sete categorias e o
- *     funil de exemplo no canvas, com ramo condicional;
- *  03 Pagamentos — os dois slots de gateway e a tabela dos quatro países;
- *  04 Vendas — o extrato com a venda nova no topo e o faturamento por hora.
+ * Então o painel passou a vestir o CHROME DE VERDADE nos quatro estados:
  *
- * O TRILHO DE NAVEGAÇÃO acende a tela do passo. Ele não é enfeite: é o que faz
- * o visitante entender que as três primeiras coisas são TELAS DIFERENTES do
- * mesmo painel, e que a quarta é a que ele vai olhar depois, quando a venda
- * acontecer sozinha.
+ *  · A BARRA SUPERIOR — wordmark laranja à esquerda, a saudação com o nome em
+ *    laranja e a data em caixa alta ao centro, e os quatro botões redondos
+ *    (notificação com o contador, ajuda, equipe, IA) com o avatar à direita.
+ *  · A BARRA LATERAL — o seletor do bot no topo, os dois grupos do print
+ *    (OPERAÇÃO com cinco itens, CONSTRUÇÃO com seis), o item ativo em laranja
+ *    com fundo tingido e a barra vertical à esquerda, e o cartão de faturamento
+ *    no pé. Abaixo de `xl` ela recolhe para a coluna de ícones: os MESMOS onze
+ *    itens, na mesma ordem, sem rótulo — é o estado que o próprio app tem (o
+ *    "«" do pé é o que o aciona), e não uma lista diferente.
  *
- * Nenhum valor é cunhado aqui (regra 4). O funil vem de
- * `highlights.demos.blocks`, os países e os métodos de `payments.table`, os
- * gateways e o extrato de `analytics.panel`, a série por hora de
- * `src/data/content.ts` — a mesma que o painel de Análises desenha — e os
- * rótulos de `howItWorks.demo.panel`. A ficção se declara na barra de janela.
+ * O item que acende acompanha o passo (`ACTIVE_NAV`), e é ele que nomeia a tela:
+ * 01 abre Bots, 02 abre Fluxos, 03 abre Financeiro, 04 abre Dashboard.
+ *
+ * O PASSO 02 é o editor inteiro em miniatura — cabeçalho com o nome do fluxo e a
+ * contagem, barra de ferramentas, o botão "Nós" (a barra de blocos FECHADA, como
+ * no print), o canvas com grade, brilho e marca d'água, o rodapé com a contagem
+ * e o botão laranja de publicar, e o aviso de rascunho salvo. O fluxo em si está
+ * no `FlowCanvas`.
+ *
+ * O QUE NÃO ENTROU, de propósito: os chips de estado do print ("1 erro · 4
+ * avisos", "Sem bot") e os avisos amarelos dentro dos nós. O dono pediu a versão
+ * PRONTA, e ela é a que não tem nada a corrigir.
+ *
+ * Nenhum valor é cunhado aqui (regra 4). Os países e os métodos vêm de
+ * `payments.table`, os gateways e o extrato de `analytics.panel`, a série por
+ * hora de `src/data/content.ts` — a mesma que o painel de Análises desenha — e
+ * todo rótulo de interface de `howItWorks.demo.panel`, lido dos prints. A ficção
+ * se declara na barra superior.
  *
  * Tudo aqui dentro é `aria-hidden` pelo palco, então o piso de tamanho é 11px.
  */
 export function WonePanel({ step, className = "" }: { step: number; className?: string }) {
   const { howItWorks, highlights, payments, analytics, ui, phone } = useContent();
-  const { demo, paths } = howItWorks;
+  const { demo } = howItWorks;
   const panel = demo.panel;
-  const blocks = highlights.demos.blocks;
+
+  /* O PIX confirmado é o rótulo do primeiro evento da entrega, não uma frase
+     nova: é o mesmo fato, dito uma vez no dicionário. */
+  const pixConfirmed = highlights.demos.delivery.steps[0].label;
 
   /* Os nomes das processadoras vêm do extrato de Análises — as duas que a
      página já nomeia. */
   const mainGateway = analytics.panel.statementRows[0].gateway;
   const backupGateway = analytics.panel.statementRows[2].gateway;
-  /* O PIX confirmado é o rótulo do primeiro evento da entrega, não uma frase
-     nova: é o mesmo fato, dito uma vez no dicionário. */
-  const pixConfirmed = highlights.demos.delivery.steps[0].label;
 
   const peak = HOURLY_REVENUE.indexOf(Math.max(...HOURLY_REVENUE));
   const peakValue = HOURLY_REVENUE[peak];
+
+  /* A tela aberta é o item da lateral que está aceso — um nome só, dito num
+     lugar só. */
+  const [activeGroup, activeItem] = ACTIVE_NAV[step] ?? ACTIVE_NAV[0];
+  const screen = panel.nav[activeGroup][activeItem];
+
+  const counts = panel.counts
+    .replace("{n}", String(FLOW_NODES))
+    .replace("{e}", String(FLOW_EDGES));
+  const countsNew = panel.countsNew
+    .replace("{n}", String(FLOW_NODES))
+    .replace("{e}", String(FLOW_EDGES));
 
   return (
     <div
@@ -78,56 +172,121 @@ export function WonePanel({ step, className = "" }: { step: number; className?: 
         className ? ` ${className}` : ""
       }`}
     >
-      {/* A BARRA DE JANELA. Três pontos, a aba e a etiqueta de ficção no canto:
-          é o que transforma um retângulo com texto num objeto de software. */}
-      <div className="flex h-9 shrink-0 items-center gap-3 border-b border-line bg-ink-900 px-3">
-        <span className="flex shrink-0 gap-1.5">
-          <span className="h-2 w-2 rounded-full bg-ink-700" />
-          <span className="h-2 w-2 rounded-full bg-ink-700" />
-          <span className="h-2 w-2 rounded-full bg-ink-700" />
+      {/* ================= A BARRA SUPERIOR DO APP ================= */}
+      <div className="flex h-[26px] shrink-0 items-center gap-2 border-b border-line bg-black px-2 xl:h-8 xl:px-2.5">
+        <span className="flex shrink-0 items-center gap-1">
+          <WoneIcon className="h-[9px] w-auto xl:h-[11px]" />
+          <span className="text-[11px] leading-none font-semibold text-brand xl:text-[13px]">
+            {panel.wordmark}
+          </span>
         </span>
-        <span className="min-w-0 truncate text-[11px] text-muted">{panel.window}</span>
-        <span className={`${LABEL} ml-auto shrink-0`}>{ui.simulation}</span>
+
+        <span className="hidden min-w-0 flex-1 flex-col items-center justify-center leading-[1.1] sm:flex">
+          <span className="truncate text-[11px] font-semibold text-cream">
+            {panel.greeting} <span className="text-brand">{panel.user}</span>
+          </span>
+          <span className="hidden truncate text-[11px] tracking-[0.16em] text-faint uppercase xl:block">
+            {panel.date}
+          </span>
+        </span>
+
+        <span className="ml-auto flex shrink-0 items-center gap-1 xl:gap-1.5">
+          {/* A ficção, declarada no canto — como antes, só que agora no canto da
+              barra do app em vez do da barra de janela que saiu. */}
+          <span className={`${LABEL} mr-0.5 shrink-0`}>{ui.simulation}</span>
+
+          <TopButton Icon={Bell} badge={panel.notifications} />
+          <TopButton Icon={CircleHelp} />
+          <TopButton Icon={Users} />
+          <TopButton Icon={Sparkles} />
+
+          <span className="flex h-[18px] w-[18px] items-center justify-center rounded-full bg-brand/18 text-[11px] leading-none font-semibold text-brand xl:h-5 xl:w-5">
+            {panel.avatar}
+          </span>
+        </span>
       </div>
 
       <div className="flex min-h-0 flex-1">
-        {/* O trilho de telas. Fora da tela estreita: a 412 ele comeria metade da
-            largura do painel, e lá o título da tela já diz onde se está. */}
-        <nav className="hidden w-[132px] shrink-0 flex-col gap-1 border-r border-line p-2 xl:flex">
-          {panel.screens.map((name, index) => {
-            const Icone = SCREEN_ICONS[index];
-            return (
-              <span
-                key={name}
-                className={`flex h-8 items-center gap-2 rounded-[8px] px-2 text-[12px] transition-colors duration-300 ${
-                  index === step ? "bg-ink-800 font-medium text-cream" : "text-faint"
-                }`}
-              >
-                <Icone className="h-3.5 w-3.5 shrink-0" />
-                <span className="min-w-0 truncate">{name}</span>
+        {/* ================= A BARRA LATERAL ================= */}
+        <nav className="flex w-[34px] shrink-0 flex-col gap-0.5 border-r border-line bg-black p-1 xl:w-[108px] xl:p-1.5">
+          {/* O seletor do bot. O ponto verde no ombro do ícone é o "no ar". */}
+          <span className="mb-1 flex h-5 shrink-0 items-center gap-1 rounded-[8px] border border-line px-1 xl:h-6">
+            <span className="relative shrink-0">
+              <Bot className="h-3 w-3 text-cream/70" />
+              <span className="absolute -right-px -bottom-px h-1.5 w-1.5 rounded-full bg-emerald-400" />
+            </span>
+            <span className="hidden min-w-0 truncate text-[11px] font-medium text-cream xl:block">
+              {phone.botName}
+            </span>
+            <ChevronDown className="ml-auto hidden h-2.5 w-2.5 shrink-0 text-faint xl:block" />
+          </span>
+
+          {panel.nav.map((items, group) => (
+            <Fragment key={panel.navGroups[group]}>
+              {/* Recolhida, a lateral troca o rótulo do grupo por um fio: a
+                  separação continua existindo, o nome é que não cabe. */}
+              <span className="my-1 h-px bg-line xl:hidden" />
+              <span className={`${LABEL} mt-1 hidden px-1.5 xl:block`}>
+                {panel.navGroups[group]}
               </span>
-            );
-          })}
+
+              {items.map((item, index) => {
+                const Icone = NAV_ICONS[group][index];
+                const on = group === activeGroup && index === activeItem;
+
+                return (
+                  <span
+                    key={item}
+                    className={`relative flex h-[18px] shrink-0 items-center justify-center gap-1.5 rounded-[6px] transition-colors duration-300 xl:h-5 xl:justify-start xl:px-1.5 ${
+                      on ? "bg-brand/12 text-brand" : "text-cream/60"
+                    }`}
+                  >
+                    {on ? (
+                      <span className="absolute inset-y-[3px] -left-1 w-[2px] rounded-full bg-brand xl:-left-1.5" />
+                    ) : null}
+                    <Icone className="h-3 w-3 shrink-0" />
+                    <span className="hidden min-w-0 truncate text-[11px] xl:block">{item}</span>
+                  </span>
+                );
+              })}
+            </Fragment>
+          ))}
+
+          {/* O cartão do pé. O valor é o acumulado do dia da série de Análises —
+              a meta e o "0%" do print não têm fonte nesta página e ficaram de
+              fora. */}
+          <span className="mt-auto hidden flex-col gap-0.5 rounded-[8px] bg-ink-900 px-1.5 py-1 xl:flex">
+            <span className={LABEL}>{panel.billing}</span>
+            <span className="tnum text-[11px] leading-none font-semibold text-cream">
+              {USD.format(REVENUE)}
+            </span>
+            <span className="truncate text-[11px] leading-tight text-faint">
+              {analytics.panel.accumulated}
+            </span>
+          </span>
+          <span className="hidden h-4 shrink-0 items-center justify-center xl:flex">
+            <ChevronsLeft className="h-3 w-3 text-faint" />
+          </span>
         </nav>
 
         <div className="relative min-w-0 flex-1">
-          {/* PASSO 01 — a tela de Bots */}
+          {/* ================= PASSO 01 — a tela de Bots ================= */}
           <StepLayer active={step === 0} className="flex flex-col gap-2.5 p-3 xl:gap-3 xl:p-4">
-            <p className={SCREEN}>{panel.screens[0]}</p>
+            <p className={SCREEN}>{screen}</p>
 
             <div>
               <p className={LABEL}>{demo.tokenLabel}</p>
               {/* O token é valor de máquina: `<code>` é o único lugar em que a
                   mono aparece (regra 2), e o resto sai mascarado como em
                   qualquer campo de credencial. */}
-              <p className="mt-1.5 flex h-9 items-center gap-2 rounded-field bg-ink-900 px-3 xl:h-10">
+              <p className={`mt-1.5 flex h-9 items-center gap-2 px-3 xl:h-10 ${CARD}`}>
                 <code>@BotFather</code>
                 <span className="text-[11px] tracking-[0.18em] text-cream/55">••••••••</span>
                 <Check className="ml-auto h-3.5 w-3.5 shrink-0 stroke-[3] text-emerald-400" />
               </p>
             </div>
 
-            <div className="flex items-center gap-2.5 rounded-field bg-ink-900 px-3 py-2.5">
+            <div className={`flex items-center gap-2.5 px-3 py-2.5 ${CARD}`}>
               <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand/15">
                 <WoneIcon className="h-3 w-auto" />
               </span>
@@ -157,66 +316,100 @@ export function WonePanel({ step, className = "" }: { step: number; className?: 
             </ul>
           </StepLayer>
 
-          {/* PASSO 02 — o editor de blocos */}
-          <StepLayer active={step === 1} className="flex flex-col gap-2.5 p-3 xl:gap-3 xl:p-4">
-            <div className="flex items-center gap-2">
-              {/* Segmentado INERTE: os dois produtos na mesma conta, ditos sem
-                  uma palavra. Quem escolhe o passo é o trilho da seção — um
-                  controle dentro do controle foi o que o dono chamou de confuso
-                  em 14/10. */}
-              <span className="flex shrink-0 gap-1 rounded-field bg-ink-900 p-1 text-[11px] font-medium">
-                {paths.map((path, index) => (
-                  <span
-                    key={path.name}
-                    /* 8px é o raio do campo (12) menos o respiro de 4: a conta
-                       do raio aninhado, não uma quarta forma no sistema. */
-                    className={`truncate rounded-[8px] px-2 py-1 ${
-                      index === 1 ? "bg-ink-800 text-cream" : "text-faint"
-                    }`}
-                  >
-                    {path.name}
-                  </span>
-                ))}
+          {/* ================= PASSO 02 — o editor de fluxos ================= */}
+          <StepLayer active={step === 1} className="overflow-hidden">
+            {/* O CANVAS: quase preto com grade quadrada, o brilho laranja vindo
+                do alto e a marca d'água em contraste baixíssimo. */}
+            <span className="hiw-grade absolute inset-0" />
+            <span className="hiw-brilho absolute inset-0" />
+            <span className="absolute inset-0 flex items-center justify-center overflow-hidden">
+              <span className="text-[54px] leading-none font-bold tracking-[0.12em] text-cream/[0.05] xl:text-[92px]">
+                {panel.watermark}
               </span>
-              <span className="ml-auto hidden truncate text-[11px] text-faint sm:block">
-                {demo.funnelNote}
-              </span>
-            </div>
+            </span>
 
-            <div className="flex min-h-0 flex-1 gap-3">
-              {/* A paleta com as sete categorias e a contagem de cada uma: é a
-                  informação que o passo 02 tinha de dar e não dava. */}
-              <div className="hidden w-[122px] shrink-0 flex-col xl:flex">
-                <p className={LABEL}>{blocks.builder.palette}</p>
-                <span className="mt-1.5 flex flex-col">
-                  {blocks.categories.map((category) => (
+            <span className="absolute inset-0 xl:hidden">
+              <FlowCanvas variant="mini" />
+            </span>
+            <span className="absolute inset-0 hidden xl:block">
+              <FlowCanvas variant="full" />
+            </span>
+
+            {/* O CABEÇALHO do editor, flutuando sobre o canvas. */}
+            <span className="absolute top-0.5 left-2 flex items-center gap-1.5 rounded-[10px] bg-ink-950/85 px-1.5 py-1 xl:top-[3px] xl:gap-2">
+              <ArrowLeft className="h-3 w-3 shrink-0 text-faint" />
+              <span className="min-w-0 leading-[1.2]">
+                <span className="block truncate text-[11px] font-semibold text-cream xl:text-[12px]">
+                  {panel.flowName}
+                </span>
+                <span className="block truncate text-[11px] text-faint">{counts}</span>
+              </span>
+            </span>
+
+            {/* A BARRA DE FERRAMENTAS, na pílula escura. Recolhida aos ícones
+                abaixo de `xl`: os oito continuam lá, na mesma ordem. */}
+            {/* Os oito rótulos em 11px somam 358px: com o ícone, o respiro entre
+                eles e a moldura, a pílula mede 519 e a área do editor tem 530.
+                Daí os números miúdos abaixo (gap de 5, ícone de 11, `left-1`) —
+                são MEDIDOS, não escolha de estilo: com `gap-[9px]` a pílula dava
+                572 e "Apagar" saía cortado pela borda. */}
+            <span className="absolute top-[37px] left-1 flex items-center gap-[5px] rounded-[10px] bg-ink-950/90 px-1 py-1 xl:top-[41px]">
+              {panel.tools.map((tool, index) => {
+                const Icone = TOOL_ICONS[index];
+                return (
+                  <Fragment key={tool}>
+                    {index === 2 ? <span className="h-3 w-px shrink-0 bg-line" /> : null}
                     <span
-                      key={category.name}
-                      className="flex h-6 items-center gap-2 rounded-[8px] px-2 text-[11px] text-muted"
+                      className={`flex shrink-0 items-center gap-[3px] ${
+                        TOOLS_OFF.includes(index) ? "text-cream/25" : "text-muted"
+                      }`}
                     >
-                      <span className="min-w-0 truncate">{category.name}</span>
-                      <span className="tnum ml-auto shrink-0 text-faint">
-                        {category.items.length}
+                      <Icone className="h-[11px] w-[11px] shrink-0" />
+                      <span className="hidden text-[11px] leading-none whitespace-nowrap xl:block">
+                        {tool}
                       </span>
                     </span>
-                  ))}
-                </span>
-                <span className="mt-auto text-[11px] font-medium text-brand">
-                  {panel.blocksCount}
-                </span>
-              </div>
+                  </Fragment>
+                );
+              })}
+            </span>
 
-              <FlowCanvas />
-              <FlowStack />
-            </div>
+            {/* O botão da barra de blocos, FECHADA — como no print. */}
+            <span className="absolute top-[60px] left-2 flex items-center gap-1 rounded-[8px] bg-ink-950/85 px-1.5 py-[3px] text-muted xl:top-[65px]">
+              <PanelLeft className="h-3 w-3 shrink-0" />
+              <span className="hidden text-[11px] leading-none xl:block">{panel.nodesPanel}</span>
+            </span>
 
-            <p className="text-[11px] font-medium text-brand xl:hidden">{panel.blocksCount}</p>
+            {/* O aviso flutuante, acima do rodapé. Fora da tela estreita: com
+                310px de canvas a pílula cobriria dois nós inteiros da última
+                fileira, e ela é um aviso passageiro — não vale um nó. */}
+            <span className="absolute right-2 bottom-[38px] hidden items-center gap-1 rounded-full border border-line bg-ink-900 px-2 py-[3px] text-[11px] leading-none text-cream xl:flex">
+              <Check className="h-3 w-3 shrink-0 stroke-[3] text-emerald-400" />
+              {panel.draftSaved}
+            </span>
+
+            {/* O RODAPÉ do editor. */}
+            <span className="absolute inset-x-0 bottom-0 flex h-[26px] items-center gap-2 border-t border-line bg-ink-950 px-2 xl:h-[34px]">
+              <span className="min-w-0 truncate text-[11px] font-semibold text-cream">
+                {countsNew}
+              </span>
+              <span className="ml-auto flex shrink-0 items-center gap-2">
+                <span className="hidden items-center gap-1 text-[11px] leading-none text-muted sm:flex">
+                  <History className="h-3 w-3 shrink-0" />
+                  {panel.history}
+                </span>
+                <span className="flex items-center gap-1 rounded-full bg-brand px-2 py-1 text-[11px] leading-none font-semibold text-ink-950">
+                  <CloudUpload className="h-3 w-3 shrink-0" />
+                  {panel.publish}
+                </span>
+              </span>
+            </span>
           </StepLayer>
 
-          {/* PASSO 03 — a tela de Pagamentos */}
+          {/* ================= PASSO 03 — a tela de Financeiro ================= */}
           <StepLayer active={step === 2} className="flex flex-col gap-2.5 p-3 xl:gap-3 xl:p-4">
             <div className="flex items-baseline gap-2">
-              <p className={SCREEN}>{panel.screens[2]}</p>
+              <p className={SCREEN}>{screen}</p>
               {/* A garantia nomeia os DOIS SLOTS abaixo, não a tabela: é a
                   conta da processadora que é sua, e o reserva é dela. */}
               <p className={`${LABEL} ml-auto truncate`}>{payments.guarantees[0].term}</p>
@@ -226,14 +419,14 @@ export function WonePanel({ step, className = "" }: { step: number; className?: 
               {/* Dois slots: o principal no ar e o reserva em espera. Os nomes
                   das processadoras são as duas que o extrato de Análises já
                   nomeia; o termo do reserva é a garantia de Pagamentos. */}
-              <span className="flex flex-col justify-center gap-0.5 rounded-field bg-ink-900 px-3 py-1.5 xl:py-2">
+              <span className={`flex flex-col justify-center gap-0.5 px-3 py-1.5 xl:py-2 ${CARD}`}>
                 <span className={LABEL}>{demo.gatewayMain}</span>
                 <span className={`flex items-center gap-1.5 font-medium text-cream ${BODY}`}>
                   <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-400" />
                   {mainGateway}
                 </span>
               </span>
-              <span className="flex flex-col justify-center gap-0.5 rounded-field bg-ink-900 px-3 py-1.5 xl:py-2">
+              <span className={`flex flex-col justify-center gap-0.5 px-3 py-1.5 xl:py-2 ${CARD}`}>
                 <span className={`${LABEL} truncate`}>{payments.guarantees[1].term}</span>
                 <span className={`flex items-center gap-1.5 text-faint ${BODY}`}>
                   <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-cream/25" />
@@ -328,10 +521,10 @@ export function WonePanel({ step, className = "" }: { step: number; className?: 
             </div>
           </StepLayer>
 
-          {/* PASSO 04 — a tela de Vendas */}
+          {/* ================= PASSO 04 — a tela de Dashboard ================= */}
           <StepLayer active={step === 3} className="flex flex-col gap-2.5 p-3 xl:gap-3 xl:p-4">
             <div className="flex items-center gap-2">
-              <p className={SCREEN}>{panel.screens[3]}</p>
+              <p className={SCREEN}>{screen}</p>
               <Chip tone="brand" className="ml-auto shrink-0">
                 {pixConfirmed}
               </Chip>
@@ -398,5 +591,19 @@ export function WonePanel({ step, className = "" }: { step: number; className?: 
         </div>
       </div>
     </div>
+  );
+}
+
+/** Um dos quatro botões redondos da direita da barra superior. */
+function TopButton({ Icon, badge }: { Icon: LucideIcon; badge?: string }) {
+  return (
+    <span className="relative flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-[7px] border border-line bg-ink-900 xl:h-5 xl:w-5">
+      <Icon className="h-3 w-3 text-muted" />
+      {badge ? (
+        <span className="absolute -top-1 -right-1 flex h-[14px] min-w-[14px] items-center justify-center rounded-full bg-brand px-[3px] text-[11px] leading-none font-semibold text-ink-950">
+          {badge}
+        </span>
+      ) : null}
+    </span>
   );
 }
