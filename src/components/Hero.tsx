@@ -354,11 +354,12 @@ export function Hero() {
             planeta, sem nunca cruzá-la.
             A coluna muda com a largura porque o espaço livre muda: a 1440 os
             rótulos de São Paulo e Buenos Aires ocupam o pé ESQUERDO do disco, e
-            o ticket vai para o lado direito dele (x 520, com 26px de folga até
-            o chip da Argentina); abaixo de 1420 não há rótulo nenhum, e ele
+            o ticket vai para o lado direito dele (x 512 a 1440: a coluna do
+            ticket e do rótulo do palco começa depois do chip de Buenos Aires,
+            que termina em x 500 — era 442 e o rótulo cobria o chip); abaixo de 1420 não há rótulo nenhum, e ele
             volta para a esquerda, longe da coluna de texto, que ali está mais
             perto. No celular fica no pé do disco, centrado. */}
-        <div className="pointer-events-auto absolute bottom-0 left-1/2 w-[340px] -translate-x-1/2 lg:w-[380px] min-[1024px]:bottom-[158px] min-[1024px]:left-[60px] min-[1024px]:translate-x-0 min-[1280px]:left-[120px] min-[1400px]:left-[520px]">
+        <div className="pointer-events-auto absolute bottom-0 left-1/2 w-[340px] -translate-x-1/2 lg:w-[380px] min-[1024px]:bottom-[158px] min-[1024px]:left-[calc((100vw-min(100vw,80rem))/2+2rem+28px)] min-[1024px]:translate-x-0 min-[1280px]:left-[calc((100vw-min(100vw,80rem))/2+2rem+88px)] min-[1400px]:left-[calc((100vw-min(100vw,80rem))/2+2rem+400px)]">
           <div className="mb-2 flex items-center justify-between gap-3">
             {/* "CHECKOUT INTERNACIONAL · SIMULAÇÃO": a ficção se declara onde o
                 dado fictício está — em cima do ticket, que é quem mostra valor.

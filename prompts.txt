@@ -819,3 +819,28 @@ opacidade. me traga 3d das placas e capriche na disposicao dessa sessao.
 [85] 2026-10-15
 ===============================================================================
 a pulseira esta atravessando a imagem do pulso. melhore isso
+
+
+===============================================================================
+[86] 2026-10-15
+===============================================================================
+hero ficou muito para a esquerda da tela (inicio com o globo). centralize
+
+
+===============================================================================
+[87] 2026-10-15
+===============================================================================
+e o globo esta ultrapassando por tras do carrossel "por onde cada venda passa"
+
+
+===============================================================================
+[88] 2026-10-15
+===============================================================================
+tira esse fundo opaco das placas e o fundo branco das placas
+
+
+===============================================================================
+[89] 2026-10-15
+===============================================================================
+diminua o tamanho: placas, dorso. o pulso esta otimo, melhore o shape do dorso,
+deixe mais atletico/atraente
