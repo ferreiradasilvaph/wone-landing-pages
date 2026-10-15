@@ -76,6 +76,24 @@
   background-size: 34px 34px;
 }
 
+/* A GRADE ACOMPANHA O AFASTAMENTO. De `xl` para cima quem está à vista é a
+   variante `full`, recuada para 85% (ver `.hiw-afasta`), e a grade é a régua
+   que diz a que distância se está: mantida em 34px, o desenho leria como nós
+   menores no mesmo papel, e não como um passo atrás. 34 × 0,85 = 28,9. */
+@media (min-width: 1280px) {
+  .hiw-grade {
+    background-size: 29px 29px;
+  }
+}
+
+/* O AFASTAMENTO do fluxo — a camada que recua arestas e nós juntos (o porquê
+   longo está no `FlowCanvas`). Estático: não é animação, não entra na
+   coreografia da seção e nada tem a ver com movimento reduzido. */
+.hiw-afasta {
+  transform: scale(0.85);
+  transform-origin: 50% 50%;
+}
+
 /* O brilho é o único laranja difuso da página, e existe porque está no print: o
    canvas do editor recebe luz de cima. Sem blur e sem halo — é um degradê
    radial de 16% caindo a zero em 75% do raio. */

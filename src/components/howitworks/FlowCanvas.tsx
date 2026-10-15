@@ -259,6 +259,24 @@ export function FlowCanvas({ variant }: { variant: "full" | "mini" }) {
 
   return (
     <div className="absolute inset-0 overflow-hidden">
+      {/* O AFASTAMENTO (pedido do diretor, 15/10: "tirar um pouco o zoom, deixar
+          mais longe, pq os blocos e tudo mais está com uma sensação de
+          proximidade muito grande").
+
+          O fluxo ocupava 502 dos 530px do canvas — 14px de margem de cada lado,
+          que é o enquadramento de quem está com o zoom no talo. Esta camada
+          recua TUDO (arestas e nós juntos, no mesmo sistema de coordenadas) para
+          85% a partir do centro: o desenho passa a 427px e sobram ~51px de grade
+          vazia de cada lado, que é o que o olho lê como distância.
+
+          Por que uma escala e não números menores nas tabelas: as posições de
+          `FULL` são um orçamento fechado (cabeçalho, barra, três fileiras,
+          rodapé) e cada curva foi medida contra ele. Uma escala move as duas
+          camadas pelo mesmo fator e não desfaz nenhuma dessas contas.
+
+          Só na variante `full`: a `mini` do celular já É a vista de longe (só
+          cabeçalhos, sem corpo), e encolhê-la de novo apagaria os rótulos. */}
+      <div className={full ? "hiw-afasta absolute inset-0" : "contents"}>
       <svg className="absolute inset-0 h-full w-full" aria-hidden>
         <defs>
           {/* A setinha da chegada. `userSpaceOnUse` para ela não crescer com a
@@ -385,6 +403,7 @@ export function FlowCanvas({ variant }: { variant: "full" | "mini" }) {
           </span>
         )),
       )}
+      </div>
     </div>
   );
 }
