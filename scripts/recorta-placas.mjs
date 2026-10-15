@@ -33,16 +33,27 @@
  *
  *   face medida (as quatro):  x 48…426,  y 40…616   →  378 × 576
  *
- * `INSET` tira 2,5% de cada lado disso. Não é margem de segurança abstrata: o
- * bisel desenhado REFRATA a arte para dentro por alguns pixels (dá para ver a
- * faixa "WONE BOT" fantasma repetida na borda esquerda do 500K), e sem o inset
- * esse fantasma entraria no recorte e apareceria como uma listra no acrílico de
- * verdade, que já tem o bisel dele.
+ * `INSET_Y` tira 2,5% de cima e de baixo disso. Não é margem de segurança
+ * abstrata: o bisel desenhado REFRATA a arte para dentro por alguns pixels (dá
+ * para ver a faixa "WONE BOT" fantasma repetida na borda esquerda do 500K), e
+ * sem o inset esse fantasma entraria no recorte e apareceria como uma listra no
+ * acrílico de verdade, que já tem o bisel dele.
  *
- *   recorte final:  left 57, top 54, 360 × 548  (proporção 0,657)
+ * `INSET_X` é MAIOR (3,2%) e a razão é medida, não gosto. Nas quatro
+ * ilustrações, as colunas x 48…59 são a ARESTA INTERNA DO BISEL DESENHADO — um
+ * fio cinza OPACO (alfa 255, RGB perto de 120) que o limiar de tinta deixa
+ * passar inteiro. Com os 2,5% de antes o recorte começava em x 57 e levava dois
+ * terços desse fio junto: uma listra clara vertical em toda a borda esquerda da
+ * arte, visível na captura sobre o chão escuro. Em 3,2% o recorte começa em
+ * x 60, depois do fio, e o que encosta na borda passa a ser a própria faixa
+ * laranja — que é o que precisa sangrar até a quina do bloco (veja `FACE` em
+ * `AwardPlaque3D.tsx`).
+ *
+ *   recorte final:  left 60, top 54, 354 × 548  →  708 × 1096 em 2×
+ *   (proporção 0,646)
  *
  * A proporção é a mesma nas quatro, que é o que o código 3D precisa: o plano da
- * arte tem uma janela fixa dentro do bloco e nenhum marco pode esticar.
+ * arte tem um quadro fixo na face do bloco e nenhum marco pode esticar.
  *
  * A PERSPECTIVA, QUE FICA
  *
@@ -85,9 +96,30 @@
  * a mais de cem níveis de cada um. Nada do que é tinta chega perto do limiar, e
  * nada do que é papel passa dele.
  *
+ * A REAMOSTRAGEM EM 2×, E POR QUE ELA VEM ANTES DA BINARIZAÇÃO
+ *
+ * A face do bloco mede uns 600 px na tela em dpr 2 (caixa de 600 CSS px, a
+ * placa ocupando dois terços dela, vezes dois do retina). O recorte tinha
+ * 360 × 548: a arte chegava ESTICADA quase 2× na horizontal, e esticar é
+ * exatamente o que o filtro bilinear não disfarça — a diagonal do numeral e o
+ * contorno da raposa saíam moles.
+ *
+ * Então o recorte é reamostrado a 2× (lanczos3, que é o kernel com lóbulos
+ * negativos: ele devolve a borda com o contraste que um bilinear perde)
+ * ANTES de binarizar. A ordem importa: binarizar primeiro e ampliar depois
+ * só duplicaria cada degrau da serra. Ampliando antes, o limiar cai sobre o
+ * alfa INTERPOLADO e a borda da tinta nasce com o dobro da resolução —
+ * 708 × 1096, uma amostra por pixel de tela em dpr 2, com folga.
+ *
+ * O preço é o arquivo: quatro vezes mais pixels. Medido, é menos do que parece
+ * — o WebP paga por DETALHE, não por área, e esta arte é desenho chapado: com
+ * `quality` 92 e `alphaQuality` 100 os quatro ficam entre 65 e 89 KB, menos da
+ * metade dos 150 KB que a página aceita por arte. (Em 88 iam a 55…73 KB; a
+ * folga não compensava abrir mão da compressão mais fiel.)
+ *
  * A BORDA, E POR QUE ELA É SUAVIZADA DEPOIS DE BINARIZADA
  *
- * Binarizar e parar aí dá uma serra: a 360 px de largura, um contorno diagonal
+ * Binarizar e parar aí dá uma serra: a 708 px de largura, um contorno diagonal
  * vira degraus de um pixel que o mipmap só faz piorar. Então o alfa é
  * binarizado PRIMEIRO (para o limiar ficar exatamente onde o histograma manda,
  * sem a sombra do desenho puxando a borda para dentro) e suavizado DEPOIS, com
@@ -127,6 +159,7 @@
  */
 
 import { mkdirSync, existsSync } from "node:fs";
+import { stat } from "node:fs/promises";
 import { dirname, isAbsolute, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
@@ -142,8 +175,22 @@ const MARCOS = ["10k", "100k", "500k", "1m"];
  */
 const FACE = { left: 48, top: 40, right: 426, bottom: 616 };
 
-/** Quanto se tira de cada lado da face medida, para o bisel não entrar. */
-const INSET = 0.025;
+/** Quanto se tira de cima e de baixo da face medida, para o bisel não entrar. */
+const INSET_Y = 0.025;
+/**
+ * E quanto se tira dos LADOS — maior, por causa do fio cinza opaco da aresta
+ * interna do bisel desenhado (x 48…59 nas quatro). Veja o cabeçalho.
+ */
+const INSET_X = 0.032;
+
+/**
+ * Quantas vezes o recorte é ampliado antes de virar máscara (veja o cabeçalho).
+ *
+ * Dois, e não quatro: em dpr 2 a face do bloco ocupa uns 600 px de tela, e
+ * 708 × 1096 já dá mais de uma amostra de textura por pixel. Quatro seria peso
+ * de download sem um pixel a mais na tela.
+ */
+const ESCALA = 2;
 
 /**
  * O limiar que separa tinta de papel, no canal alfa (veja o cabeçalho).
@@ -153,7 +200,15 @@ const INSET = 0.025;
  */
 const LIMIAR = 128;
 
-/** Quantos pixels a cor da tinta é empurrada para dentro do vazio. */
+/**
+ * Quantos pixels a cor da tinta é empurrada para dentro do vazio.
+ *
+ * Continua em dois mesmo depois do recorte dobrar de lado (veja `ESCALA`):
+ * quem decide este número não é o tamanho da imagem, é a largura da suavização
+ * que vem depois — um passe de média 3×3, um pixel. Dois pixels de cor
+ * empurrada cobrem esse um com folga, e empurrar mais só espalharia a cor da
+ * tinta por onde ninguém vai ver.
+ */
 const SANGRIA = 2;
 
 /**
@@ -255,8 +310,8 @@ if (!existsSync(PASTA)) mkdirSync(PASTA, { recursive: true });
 
 const larguraFace = FACE.right - FACE.left;
 const alturaFace = FACE.bottom - FACE.top;
-const dx = Math.round(larguraFace * INSET);
-const dy = Math.round(alturaFace * INSET);
+const dx = Math.round(larguraFace * INSET_X);
+const dy = Math.round(alturaFace * INSET_Y);
 
 const RECORTE = {
   left: FACE.left + dx,
@@ -267,6 +322,7 @@ const RECORTE = {
 
 console.log(
   `recorte: left ${RECORTE.left} top ${RECORTE.top} ${RECORTE.width}×${RECORTE.height}` +
+    ` → ${RECORTE.width * ESCALA}×${RECORTE.height * ESCALA} em ${ESCALA}×` +
     ` (proporção ${(RECORTE.width / RECORTE.height).toFixed(3)})`,
 );
 
@@ -276,6 +332,16 @@ for (const marco of MARCOS) {
 
   const { data, info } = await sharp(entrada)
     .extract(RECORTE)
+    /* 2× ANTES de binarizar (veja o cabeçalho): o limiar passa a cair sobre o
+       alfa interpolado e a borda da tinta nasce com o dobro da resolução. O
+       `fit: "fill"` é só para dizer que a proporção não muda — os dois lados
+       são multiplicados pelo mesmo `ESCALA`. */
+    .resize({
+      width: RECORTE.width * ESCALA,
+      height: RECORTE.height * ESCALA,
+      kernel: "lanczos3",
+      fit: "fill",
+    })
     .ensureAlpha()
     .raw()
     .toBuffer({ resolveWithObject: true });
@@ -308,11 +374,17 @@ for (const marco of MARCOS) {
   await sharp(data, { raw: { width: w, height: h, channels: 4 } })
     /* `alphaQuality` cheio: a cor pode perder um fio na compressão, a FORMA não
        — um artefato no canal alfa não borra um tom, abre um buraco no meio de
-       uma letra. */
+       uma letra.
+
+       `quality` fica em 92 mesmo com o recorte dobrado de lado (veja `ESCALA`):
+       medidos, os quatro arquivos vão a 65…89 KB, menos da metade do teto de
+       150 KB por arte. Desenho chapado comprime por detalhe, não por área. */
     .webp({ quality: 92, alphaQuality: 100, effort: 6 })
     .toFile(saida);
 
+  const { size } = await stat(saida);
   console.log(
-    `  ${marco} → ${saida}  (${((100 * tinta) / n).toFixed(1)}% de tinta)`,
+    `  ${marco} → ${saida}  ${w}×${h}  ${(size / 1024).toFixed(0)} KB` +
+      `  (${((100 * tinta) / n).toFixed(1)}% de tinta)`,
   );
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Canvas, useFrame } from "@react-three/fiber";
+import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Environment, Lightformer } from "@react-three/drei";
 import { useReducedMotion } from "motion/react";
 import { arte } from "@/lib/arte";
@@ -24,6 +24,15 @@ import {
   type Mesh,
   type Texture,
 } from "three";
+/* As linhas grossas vêm dos exemplos do próprio three (nada novo no
+   `package.json`): `lineBasicMaterial` desenha SEMPRE um pixel de dispositivo,
+   porque o WebGL ignora `gl.lineWidth` desde o core profile — num retina isso é
+   meio pixel de CSS, e meio pixel serrilha. O `LineSegments2` desenha cada
+   aresta como um QUADRILÁTERO em espaço de tela, com largura em pixels de CSS e
+   as bordas suavizadas pelo MSAA do canvas (`antialias: true`). */
+import { LineMaterial } from "three/examples/jsm/lines/LineMaterial.js";
+import { LineSegments2 } from "three/examples/jsm/lines/LineSegments2.js";
+import { LineSegmentsGeometry } from "three/examples/jsm/lines/LineSegmentsGeometry.js";
 
 /**
  * O bloco de acrílico.
@@ -64,28 +73,45 @@ const BISEL = 0.12;
 const CANTO = 0.11;
 
 /**
- * A janela em que a arte impressa cabe, sobre a face frontal.
+ * A FACE PLANA do bloco — e, desde 15/10, o quadro inteiro da impressão.
  *
- * A face útil do bloco mede `w − 2·BISEL` por `h − 2·BISEL` (1,82 × 2,66), e a
- * janela fica em 84% da altura dela. A diferença não é margem de segurança: é
- * a MOLDURA DE CRISTAL, e desde 15/10 ela é a ÚNICA coisa que prova
- * transparência.
+ * O `ExtrudeGeometry` encolhe a silhueta em `BISEL` de cada lado antes de fechar
+ * a tampa, então a face plana mede `w − 2·BISEL` por `h − 2·BISEL` = 1,82 × 2,66.
+ * `FOLGA_FACE` tira um centésimo de cada lado disso: é o bastante para o plano
+ * da tinta nunca esbarrar na primeira faceta do chanfro (que já começa a recuar
+ * em z) e pouco o bastante para não abrir faixa nenhuma a olho — um centésimo
+ * de cena é 1,1 px na caixa de 560.
  *
- * Houve uma versão em que a arte vinha com o fundo recortado e só a tinta
- * ficava: a ideia era que o acrílico aparecesse por trás de cada letra. Não
- * funcionou — vidro no meio de uma figura passa por reflexo da própria figura,
- * e o que se viu foi a arte flutuando no escuro. Agora a impressão é OPACA e
- * tem papel marfim (veja `scripts/recorta-placas.mjs`), como na ilustração que
- * o dono aprovou; a prova de vidro mudou de lugar e vive na faixa limpa em
- * volta dela, no bisel e nas laterais, onde o aro do pódio e o halo do fundo
- * aparecem TORCIDOS.
+ * O QUE ISTO SUBSTITUIU, E POR QUE
  *
- * Em 84% da altura a arte mede 1,47 × 2,23 (a proporção 0,657 do recorte manda
- * na largura) e sobram 0,21 de cristal em cima e embaixo e 0,18 dos lados — e é
- * na faixa de baixo que o arco de trás do aro passa, cortado e deslocado pela
- * refração.
+ * Havia aqui uma `JANELA` de 84% da face, e os 16% restantes eram uma "moldura
+ * de cristal" deliberada. O veredito do dono em 15/10 matou a ideia: "as faixas
+ * laranja acabam antes da borda do bloco". E ele está certo — na ilustração que
+ * ele aprovou as barras laranja e a faixa WONE BOT correm ATÉ A QUINA da face
+ * impressa; pará-las a 84% não é uma moldura, é um erro de impressão.
+ *
+ * A moldura não some com isso: ela mudou de lugar e agora é o BISEL — 0,12 de
+ * acrílico limpo em volta, que na captura mede 10 px do lado que foge da câmera
+ * e 20 do lado que vem (a guinada de repouso abre o chanfro direito e fecha o
+ * esquerdo), e é onde uma peça de verdade tem cristal nu. E a transparência
+ * continua inteira — a tinta é recortada, e por cada vazio dela se vê o chão da
+ * seção, o aro e o pódio.
+ *
+ * A SANGRIA
+ *
+ * A arte do recorte tem proporção 0,646 e a face tem 0,682: a arte é mais
+ * estreita que a face. Encaixada pela ALTURA (que é onde ela já chega inteira),
+ * sobram 2,6% da largura de cada lado — e é aí que entra a sangria de
+ * `encaixaNaFace`: com `ClampToEdgeWrapping`, a textura amostrada fora de
+ * [0,1] devolve a COLUNA DA BORDA repetida. Onde a borda do recorte é faixa
+ * laranja, a faixa segue até a quina; onde é vazio, nada é desenhado. É o
+ * mesmo truque da margem de sangria de uma gráfica, e pelo mesmo motivo.
  */
-const JANELA = { w: 1.6, h: 2.234 };
+const FOLGA_FACE = 0.01;
+const FACE = {
+  w: PLAQUE.w - BISEL * 2 - FOLGA_FACE * 2,
+  h: PLAQUE.h - BISEL * 2 - FOLGA_FACE * 2,
+};
 
 /**
  * Quanto a impressão fica À FRENTE da face frontal — e esta é A CORREÇÃO DE
@@ -280,6 +306,203 @@ let ARESTAS: EdgesGeometry | null = null;
 function arestasDoBloco() {
   if (!ARESTAS) ARESTAS = new EdgesGeometry(blocoAcrilico(), ARESTA_LIMIAR);
   return ARESTAS;
+}
+
+/**
+ * As mesmas quinas, em geometria de FITA — uma instância por aresta, que o
+ * `LineSegments2` expande em quadrilátero no espaço de tela.
+ *
+ * Construída uma vez, como a malha: `fromEdgesGeometry` só copia o array de
+ * posições do `EdgesGeometry`, e nada aqui depende de prop nenhuma.
+ */
+let LINHAS: LineSegmentsGeometry | null = null;
+
+function linhasDoBloco() {
+  if (!LINHAS) LINHAS = new LineSegmentsGeometry().fromEdgesGeometry(arestasDoBloco());
+  return LINHAS;
+}
+
+/**
+ * A ESPESSURA DO FIO, em pixels de CSS.
+ *
+ * Não é "um pixel" por acaso: 1,4. O `lineBasicMaterial` que estava aqui antes
+ * desenhava um pixel de DISPOSITIVO (o WebGL ignora `gl.lineWidth`), e num
+ * retina isso é meio pixel de CSS — fino demais para ser um fio de luz e, sem
+ * nenhuma suavização, serrilhado em toda diagonal. Em 1,4 px de CSS o fio tem
+ * corpo, e como o `LineSegments2` desenha um quadrilátero de verdade, quem
+ * suaviza a borda dele é o MSAA do canvas.
+ */
+const LINHA_PX = 1.4;
+
+/**
+ * As duas forças da aresta: a de trás e a da frente.
+ *
+ * Todas as quinas desenhadas com a mesma opacidade davam um ARAME — as arestas
+ * do fundo do bloco chegavam à tela tão acesas quanto as da frente, e o olho,
+ * que lê linha clara como "perto", via a peça virada do avesso.
+ *
+ * Num acrílico de verdade a quina de trás é vista ATRAVÉS de meio centímetro de
+ * material e chega mais fraca. Aqui isso vira duas passadas sobre a mesma
+ * geometria: `fraca` desenha todas as quinas, `forte` repassa só as que estão à
+ * frente do corpo do bloco (veja o pré-passe de profundidade, lá no JSX). Nas
+ * da frente as duas somam, e a conta de mistura dá 0,895 — um fio a mais de
+ * brilho que os 0,8 de antes, contra os 0,3 do que está atrás.
+ */
+const ARESTA_FRACA = 0.3;
+const ARESTA_FORTE = 0.85;
+
+/**
+ * A CASCA DE FRESNEL: o clareado das rasantes.
+ *
+ * Um acrílico real não reflete igual em todo lugar. A refletância de Schlick
+ * sobe de 4% de frente para quase 100% na rasante, e é por isso que, numa foto
+ * de produto, o bisel e as duas laterais do bloco SEMPRE aparecem mais claros
+ * que o meio da face — mesmo sem nenhuma luz apontada para eles. O bloco daqui
+ * não tinha esse degrau: `envMapIntensity` dá o reflexo do estúdio, mas não dá
+ * a curva.
+ *
+ * Então vem uma casca: a MESMA geometria, com um shader que só calcula
+ * `(1 − N·V)³` e soma creme quente por cima. Expoente 3 e não 5 (o de Schlick)
+ * porque 5 concentra tudo nos últimos graus e some; 3 abre a curva o bastante
+ * para o chanfro inteiro responder quando o bloco balança os ±7°.
+ *
+ * `k` em 0,35 é o teto do efeito: na face frontal, que olha quase de frente,
+ * `N·V` fica em 0,96 e o acréscimo é de 6 centésimos de milésimo — nada, que é
+ * o que tem de ser, porque qualquer véu ali é regressão. Nas laterais `N·V` cai
+ * a 0,28 e o acréscimo vai a 0,13: um clareado, não um halo.
+ *
+ * O creme é o mesmo da família do estúdio (#FFF3DF). Branco puro no meio de luz
+ * quente lê como azulado — é a mesma razão do `BRANCO` lá de cima.
+ */
+const FRESNEL = { cor: "#FFF3DF", k: 0.35, expoente: 3 };
+
+const FRESNEL_VERT = /* glsl */ `
+  varying vec3 vNormal;
+  varying vec3 vVista;
+  void main() {
+    vec4 mv = modelViewMatrix * vec4(position, 1.0);
+    vNormal = normalize(normalMatrix * normal);
+    /* O olho está na origem do espaço de visão, então a direção para ele é
+       simplesmente o oposto da posição do vértice. */
+    vVista = -mv.xyz;
+    gl_Position = projectionMatrix * mv;
+  }
+`;
+
+const FRESNEL_FRAG = /* glsl */ `
+  uniform vec3 cor;
+  uniform float forca;
+  varying vec3 vNormal;
+  varying vec3 vVista;
+  void main() {
+    float rasante = 1.0 - max(dot(normalize(vNormal), normalize(vVista)), 0.0);
+    float a = pow(rasante, ${FRESNEL.expoente}.0) * forca;
+    /* A mistura aditiva já multiplica pelo alfa; o RGB sai cru. */
+    gl_FragColor = vec4(cor, a);
+    /* Os dois includes existem porque um ShaderMaterial não ganha conversão de
+       espaço de cor de graça: sem o segundo, o creme (que o Color guarda em
+       linear) iria para um alvo sRGB sem conversão e sairia escuro. Com
+       toneMapped falso o primeiro vira um bloco vazio — está aqui para que
+       ligar o tone mapping um dia não quebre em silêncio. */
+    #include <tonemapping_fragment>
+    #include <colorspace_fragment>
+  }
+`;
+
+/**
+ * A VARREDURA DE LUZ: o reflexo de estúdio que atravessa a face.
+ *
+ * O que falta a um bloco parado não é brilho, é EVENTO. Numa vitrine de
+ * verdade, quem passa em frente ao acrílico vê a chapa do estúdio correr pela
+ * face — e é esse movimento, mais do que qualquer gradiente fixo, que diz
+ * "isto é polido".
+ *
+ * `ciclo` 7 s porque o ciclo da própria cena é 5,8 s (veja `TROCA`): um número
+ * que não divide o outro mantém a varredura caindo em momentos diferentes do
+ * rodízio, e ela nunca vira parte do compasso. `travessia` 1,2 s é a duração de
+ * um gesto — abaixo disso lê como piscada, acima como animação.
+ *
+ * `pico` 0,15 na mistura aditiva — e a primeira medida foi 0,18, com uma faixa
+ * larga. Na captura aquilo virou uma MANCHA CINZA cobrindo meia face: sobre o
+ * cristal vazio (onde se vê o chão a 18 de luminância) a soma levava o pixel a
+ * 64, e o que o olho leu foi véu, que é exatamente a palavra que o dono já usou
+ * três vezes nesta seção. Reflexo de estúdio não é neblina: é um RISCO. Então a
+ * faixa estreitou (veja as gaussianas de `mapaDaVarredura`) e o pico desceu —
+ * agora o núcleo tem uns 12 px na tela, a aba uns 38, e sobre o vazio o creme
+ * chega a 56. Vê-se passar; não se vê parar.
+ *
+ * `inicio` e `curso` são o deslocamento da textura, e os números saem de uma
+ * conta. A textura cobre DUAS vezes a largura da face (`repeat.x` 0,5), então
+ * o centro da faixa (que mora em u = 0,5) cai na face em
+ * `x = 2·(0,5 − offset)`. Para a faixa nascer fora do quadro à esquerda
+ * (x = −0,4) e morrer fora à direita (x = 1,4), o deslocamento vai de 0,7 a
+ * −0,2: `inicio` 0,7, `curso` 0,9. Nas duas pontas o que a face amostra é a
+ * coluna preta da borda da textura, e nada é somado.
+ */
+const VARREDURA = { ciclo: 7, travessia: 1.2, pico: 0.15, inicio: 0.7, curso: 0.9 };
+
+/** A faixa de luz, desenhada uma vez em `DataTexture` (como as outras daqui). */
+let VARREDURA_MAPA: DataTexture | null = null;
+
+function mapaDaVarredura() {
+  if (VARREDURA_MAPA) return VARREDURA_MAPA;
+
+  const N = 256;
+  const M = 128;
+  const dados = new Uint8Array(N * M * 4);
+
+  /* A inclinação da faixa, em unidades de u por unidade de v. Com `repeat.x`
+     0,5 um passo de 0,267 em u é meia largura de face ao longo da altura
+     inteira — uns 20° da vertical na tela, que é a inclinação de um softbox de
+     estúdio visto de frente. */
+  const INCLINACAO = 0.267;
+
+  for (let y = 0; y < M; y++) {
+    const v = y / (M - 1);
+    const centro = 0.5 + INCLINACAO * (v - 0.5);
+    for (let x = 0; x < N; x++) {
+      const u = x / (N - 1);
+      const d = u - centro;
+      /* Duas gaussianas: a larga é o derramado do softbox, a estreita é o
+         núcleo. Somadas com pesos que fecham em 1 no centro.
+
+         Os sigmas saem de uma conta na tela, não do olho: a textura cobre duas
+         larguras de face, e a face tem uns 222 px na caixa de 560 — então um
+         sigma de 1 em u vale 444 px. Em 0,085 e 0,028 a aba fica em 38 px e o
+         núcleo em 12, que é um RISCO atravessando um quarto da face. (Os
+         primeiros números, 0,19 e 0,055, davam 84 e 24 px: aquilo cobria meia
+         placa de cinza e lia como véu — veja `VARREDURA`.) */
+      const larga = Math.exp(-((d / 0.085) ** 2));
+      const nucleo = Math.exp(-((d / 0.028) ** 2));
+      /* E uma janela que zera as duas bordas da textura: é a coluna da borda
+         que o `ClampToEdgeWrapping` repete enquanto a faixa está fora do
+         quadro, e ela tem de ser preto cravado para a soma não acender nada. */
+      const janela =
+        Math.min(1, Math.max(0, (u - 0.04) / 0.04)) *
+        Math.min(1, Math.max(0, (0.96 - u) / 0.04));
+      const g = (0.38 * larga + 0.62 * nucleo) * janela;
+      const i = (y * N + x) * 4;
+      dados[i] = Math.round(255 * g);
+      dados[i + 1] = Math.round(246 * g);
+      dados[i + 2] = Math.round(228 * g);
+      dados[i + 3] = 255;
+    }
+  }
+
+  const textura = new DataTexture(dados, N, M, RGBAFormat);
+  textura.colorSpace = SRGBColorSpace;
+  textura.minFilter = LinearFilter;
+  textura.magFilter = LinearFilter;
+  /* Gradiente puro, sem detalhe: mipmap só gastaria memória. */
+  textura.generateMipmaps = false;
+  textura.wrapS = ClampToEdgeWrapping;
+  textura.wrapT = ClampToEdgeWrapping;
+  /* Meia textura por vez: é a folga em que a faixa entra e sai do quadro. */
+  textura.repeat.set(0.5, 1);
+  textura.needsUpdate = true;
+
+  VARREDURA_MAPA = textura;
+  return textura;
 }
 
 /**
@@ -567,17 +790,49 @@ function mapaDaSombra() {
  * Tamanho de um plano que mostra uma textura inteira, no estilo
  * `object-fit: contain`: a imagem nunca é cortada nem esticada — quem muda de
  * proporção é o plano.
+ *
+ * Serve às FOTOS das joias, que têm proporções diferentes entre si e não podem
+ * ser cortadas. A arte da placa não passa mais por aqui: o plano dela é fixo
+ * (`FACE`) e quem se ajusta é a textura, por sangria (veja `encaixaNaFace`).
  */
 function planeSize(
   texture: Texture,
-  maxW = JANELA.w,
-  maxH = JANELA.h,
+  maxW: number,
+  maxH: number,
 ): [number, number] {
   const image = texture.image as { width: number; height: number } | undefined;
   if (!image?.width || !image?.height) return [maxW, maxH];
 
   const ratio = image.width / image.height;
   return ratio > maxW / maxH ? [maxW, maxW / ratio] : [maxH * ratio, maxH];
+}
+
+/**
+ * Encaixa uma arte na face do bloco pela ALTURA, sangrando a largura.
+ *
+ * O plano da tinta tem o tamanho da face e não muda; quem se ajusta é a matriz
+ * de UV da textura. `repeat.x = proporçãoDaFace / proporçãoDaArte` passa de 1
+ * quando a arte é mais estreita que a face, e o `offset` centra o que sobra —
+ * com isso a amostragem sai de [0,1] nas duas beiradas e, por
+ * `ClampToEdgeWrapping`, devolve a coluna da borda repetida. A faixa laranja
+ * que morria no corte segue até a quina; o vazio segue vazio.
+ *
+ * (Se um dia a arte vier MAIS LARGA que a face, a mesma conta dá `repeat.x`
+ * menor que 1 e o excedente é cortado em vez de sangrado — que é o
+ * comportamento certo para o outro lado do erro.)
+ *
+ * Idempotente de propósito: é chamada no corpo do render, a cada quadro, sobre
+ * texturas que vêm de um cache compartilhado.
+ */
+function encaixaNaFace(texture: Texture) {
+  const image = texture.image as { width: number; height: number } | undefined;
+  if (!image?.width || !image?.height) return;
+
+  const escala = FACE.w / FACE.h / (image.width / image.height);
+  if (texture.repeat.x === escala) return;
+
+  texture.repeat.set(escala, 1);
+  texture.offset.set((1 - escala) / 2, 0);
 }
 
 /* --------------------------------------------------------------------------
@@ -983,6 +1238,11 @@ function afina(texture: Texture) {
      arte aparece reduzida a quase metade na tela, e sem mipmap o numeral
      cintila a cada grau de balanço. */
   texture.generateMipmaps = true;
+  /* E a borda GRAMPEADA, que também é o padrão e aqui é regra: é dela que sai a
+     sangria da arte na face (veja `encaixaNaFace`) — fora de [0,1] a amostragem
+     devolve a coluna da borda em vez de dar a volta pela outra ponta. */
+  texture.wrapS = ClampToEdgeWrapping;
+  texture.wrapT = ClampToEdgeWrapping;
   if (texture.anisotropy !== ANISO) {
     texture.anisotropy = ANISO;
     texture.needsUpdate = true;
@@ -1100,15 +1360,80 @@ function Plaque({
   const matSaindoVerso = useRef<MeshBasicMaterial>(null);
   /** A sombra de contato, que só aparece com a placa sobre o pódio. */
   const matSombra = useRef<MeshBasicMaterial>(null);
+  /** A faixa de luz que atravessa a face (veja `VARREDURA`). */
+  const varredura = useRef<Mesh>(null);
+  const matVarredura = useRef<MeshBasicMaterial>(null);
   const fade = useRef(0);
 
   const geometria = useMemo(() => blocoAcrilico(), []);
-  const arestas = useMemo(() => arestasDoBloco(), []);
   const mascara = useMemo(() => mascaraDissolucao(), []);
   const sombra = useMemo(() => mapaDaSombra(), []);
+  const brilho = useMemo(() => mapaDaVarredura(), []);
   const tom = useMemo(() => tomDoAcrilico(accent), [accent]);
   /* O quadro e o posto da joia vestida desta foto (veja `vestida`). */
   const vest = useMemo(() => vestida(photo), [photo]);
+
+  /* AS DUAS PASSADAS DE ARESTA.
+     Construídas à mão e não em JSX porque `LineSegments2` e `LineMaterial` não
+     são elementos que o r3f conheça: declará-los pediria um `extend` global e a
+     declaração de tipos que vem com ele. Dois objetos, uma geometria só — é a
+     mesma fita de quinas desenhada duas vezes, com opacidades diferentes. */
+  const linhas = useMemo(() => {
+    const comum = {
+      color: 0xfff6e0,
+      linewidth: LINHA_PX,
+      /* Largura em pixels de tela, não em unidades de cena: a quina de um
+         acrílico não engorda quando a peça se aproxima. */
+      worldUnits: false,
+      transparent: true,
+      depthWrite: false,
+      toneMapped: false,
+      /* Desligado de propósito. Com `alphaToCoverage` o alfa vira COBERTURA de
+         amostras, e uma linha a 0,3 sairia pontilhada em 30% das amostras em
+         vez de translúcida. Sem ele o quadrilátero é geometria comum e quem
+         suaviza a borda é o MSAA do canvas, que já está ligado. */
+      alphaToCoverage: false,
+    };
+    const fraca = new LineMaterial({ ...comum, opacity: ARESTA_FRACA });
+    const forte = new LineMaterial({ ...comum, opacity: ARESTA_FORTE });
+    const fita = linhasDoBloco();
+    return {
+      fraca,
+      forte,
+      atras: new LineSegments2(fita, fraca),
+      frente: new LineSegments2(fita, forte),
+    };
+  }, []);
+
+  /* O `LineMaterial` converte a largura em pixels para espaço de clipe usando o
+     tamanho do canvas — sem isto a linha nasce com a largura errada e muda
+     sozinha quando a janela muda. O tamanho é o de CSS (que é o que o material
+     espera), então o fio tem 1,4 px em qualquer `dpr`. */
+  const tela = useThree((estado) => estado.size);
+  useEffect(() => {
+    linhas.fraca.resolution.set(tela.width, tela.height);
+    linhas.forte.resolution.set(tela.width, tela.height);
+  }, [linhas, tela.width, tela.height]);
+
+  /* Os dois materiais nascem aqui e não no r3f (`dispose={null}` nos
+     `primitive`), então é daqui que eles saem. */
+  useEffect(
+    () => () => {
+      linhas.fraca.dispose();
+      linhas.forte.dispose();
+    },
+    [linhas],
+  );
+
+  /* Os uniformes da casca de Fresnel: um objeto só, para o material não ser
+     reconstruído a cada quadro. */
+  const fresnel = useMemo(
+    () => ({
+      cor: { value: new Color(FRESNEL.cor) },
+      forca: { value: FRESNEL.k },
+    }),
+    [],
+  );
 
   /* Arte nova em cena: a dissolução recomeça do zero. */
   useEffect(() => {
@@ -1146,6 +1471,32 @@ function Plaque({
       matSombra.current.opacity = SOMBRA.forca * perto * perto;
     }
 
+    /* A VARREDURA DE LUZ (veja `VARREDURA`): a faixa do estúdio atravessando a
+       face a cada 7 s.
+
+       Só `offset` de textura e `opacity` — nenhuma geometria se mexe, nenhum
+       material recompila. Fora da travessia o plano sai do laço de desenho pelo
+       `visible`, e com movimento reduzido (ou com a cena pausada, que é o mesmo
+       `spin`) ele nem chega a aparecer: a face volta a ser só reflexo parado. */
+    if (varredura.current && matVarredura.current) {
+      const fase = spin ? (state.clock.elapsedTime % VARREDURA.ciclo) / VARREDURA.travessia : 2;
+      const passando = fase <= 1;
+      varredura.current.visible = passando;
+      if (passando) {
+        /* `suave` nas duas pontas: a faixa entra e sai desacelerando, como um
+           reflexo que acompanha alguém passando em frente à vitrine.
+
+           O mapa vem do próprio material e não da variável do render: é a mesma
+           textura, e assim o que se mexe quadro a quadro é só o que está
+           pendurado na cena. */
+        const mapa = matVarredura.current.map;
+        if (mapa) mapa.offset.x = VARREDURA.inicio - VARREDURA.curso * suave(fase);
+        /* E um seno na opacidade, para a faixa nascer e morrer no escuro em vez
+           de aparecer cravada na borda do quadro. */
+        matVarredura.current.opacity = VARREDURA.pico * Math.sin(Math.PI * fase);
+      }
+    }
+
     /* A arte que sai se desfaz pela máscara (veja `mascaraDissolucao`): o
        limiar varre a metade de cima da escala, que é onde a máscara vive. */
     fade.current = Math.min(1, fade.current + delta / CROSSFADE_S);
@@ -1172,6 +1523,14 @@ function Plaque({
      (um fio acima do topo do pódio) sai a conta abaixo — e ela é feita aqui, e
      não a olho, porque dois dos três números mudaram no mesmo dia. */
   const sombraY = (PODIO_TOPO + 0.012 + ENCAIXE) / PECA;
+
+  /* A sangria da arte na face (veja `encaixaNaFace`): a matriz de UV de cada
+     textura, ajustada no corpo do render porque é aqui que se sabe que a imagem
+     já chegou. Idempotente e de duas comparações — mais barato que um efeito,
+     que só rodaria DEPOIS do primeiro quadro e deixaria um quadro com a arte
+     fora de escala. */
+  if (art.curr) encaixaNaFace(art.curr);
+  if (art.prev) encaixaNaFace(art.prev);
 
   return (
     <>
@@ -1317,7 +1676,32 @@ function Plaque({
             />
           </mesh>
 
-          {/* AS ARESTAS, EM FIO DE CREME.
+          {/* A CASCA DE FRESNEL (veja `FRESNEL`): o clareado das rasantes.
+
+              Mesma geometria do bloco, meio milímetro de shader. Soma creme na
+              proporção `(1 − N·V)³`, que é quase zero de frente e sobe no bisel
+              e nas laterais — a curva que um acrílico fundido tem e que o
+              `envMapIntensity` sozinho não dá.
+
+              `depthWrite` falso (não pode esconder nada) e `depthTest`
+              LIGADO, que é o que mantém a tinta limpa: a impressão é opaca e já
+              escreveu profundidade antes, então a casca não soma um fóton sobre
+              ela. `renderOrder` 2 a põe depois do corpo do vidro e antes de
+              tudo o que vem a seguir. */}
+          <mesh geometry={geometria} renderOrder={2}>
+            <shaderMaterial
+              uniforms={fresnel}
+              vertexShader={FRESNEL_VERT}
+              fragmentShader={FRESNEL_FRAG}
+              transparent
+              blending={AdditiveBlending}
+              depthWrite={false}
+              toneMapped={false}
+              side={FrontSide}
+            />
+          </mesh>
+
+          {/* AS ARESTAS, EM FIO DE CREME — agora em duas forças.
 
               Com o corpo em 12% de opacidade, a silhueta do bloco quase
               desaparece sobre o chão escuro — e o que o olho precisa para ler
@@ -1332,21 +1716,58 @@ function Plaque({
               um polígono visível.
 
               Creme e não branco: o estúdio desta cena é quente (veja os
-              `Lightformer`), e um fio neutro no meio dele lê como azulado. */}
-          <lineSegments geometry={arestas} renderOrder={2}>
-            <lineBasicMaterial
-              color="#FFF6E0"
+              `Lightformer`), e um fio neutro no meio dele lê como azulado.
+
+              PRIMEIRA PASSADA — todas as quinas, fracas.
+
+              Com `depthTest` LIGADO, e não desligado: o corpo do vidro não
+              escreve profundidade, então ele não esconde linha nenhuma, mas a
+              TINTA e a JOIA escondem — e devem. Uma aresta de trás que cruza o
+              numeral tem de passar POR TRÁS dele; desenhada por cima, viraria um
+              risco no meio da impressão. Então o que sobra aqui é exatamente o
+              que um acrílico mostra: a quina do fundo aparecendo pelos vazios da
+              tinta. */}
+          <primitive object={linhas.atras} renderOrder={4} dispose={null} />
+
+          {/* O PRÉ-PASSE DE PROFUNDIDADE — o molde que decide quais quinas estão
+              na frente.
+
+              Desenha o bloco só no buffer de profundidade (`colorWrite` falso:
+              nenhum pixel de cor sai daqui) para que a passada forte das arestas
+              possa se testar contra o CORPO do vidro.
+
+              E ele é `transparent` de propósito, o que parece contrassenso num
+              passe que não escreve cor. É o que o põe na fila dos
+              transparentes, DEPOIS do pódio, do aro, da sombra e da joia — que
+              já foram desenhados e já estão na tela. Fosse opaco, o three o
+              desenharia na primeira fila e o molde passaria a esconder tudo o
+              que está ATRÁS do cristal: o arco do aro, o tampo do pódio, a joia
+              na travessia. Ou seja, o avesso da regra desta seção. Aqui ele
+              chega tarde, só a tempo de servir à linha, e some com o quadro.
+
+              `polygonOffset` empurra o molde um fio para longe da câmera. As
+              quinas estão EM CIMA da superfície, e sem esse empurrão metade
+              delas perderia o teste de profundidade contra a própria face em que
+              se apoia — o cintilar clássico de contorno sobre malha. */}
+          <mesh geometry={geometria} renderOrder={5}>
+            <meshBasicMaterial
+              colorWrite={false}
               transparent
-              /* 0,8 e não 0,7: medido sobre o chão da seção (18 de luminância),
-                 0,7 punha as arestas da direita em 178 e as da esquerda em 191 —
-                 o portão pede 180 nas da frente. Em 0,8 a conta dá
-                 0,8·250 + 0,2·18 = 204, e as duas famílias passam com folga sem
-                 que o fio vire um contorno desenhado. */
-              opacity={0.8}
-              toneMapped={false}
-              depthWrite={false}
+              depthWrite
+              polygonOffset
+              polygonOffsetFactor={2}
+              polygonOffsetUnits={2}
+              side={FrontSide}
             />
-          </lineSegments>
+          </mesh>
+
+          {/* SEGUNDA PASSADA — só as quinas que o molde deixa passar, fortes.
+
+              O que está à frente do corpo acende por inteiro (as duas passadas
+              somam e a mistura dá 0,895); o que está atrás ficou nos 0,3 da
+              primeira. É daí que vem a profundidade: a aresta da frente é um
+              fio de luz, a de trás é um fio de vidro. */}
+          <primitive object={linhas.frente} renderOrder={6} dispose={null} />
 
           {/* A ARTE IMPRESSA, na face.
 
@@ -1357,18 +1778,20 @@ function Plaque({
               reclamou em 15/10. Na passada normal ela chega à tela como está no
               arquivo.
 
-              Ela ocupa 84% da face (veja `JANELA`), e os 16% restantes são a
-              moldura de cristal: é por ali, pelo bisel e pelas duas faces
-              laterais que o pódio e o halo aparecem refratados. Impressão opaca
-              no meio, vidro na borda — que é como o acrílico com impressão UV da
-              ilustração funciona.
+              E ela ocupa a FACE INTEIRA (veja `FACE`), não mais os 84% de uma
+              janela: as barras laranja e a faixa WONE BOT correm até a quina,
+              como na ilustração que o dono aprovou. A moldura de cristal não
+              sumiu — mudou de lugar e agora é o bisel de 0,12 em volta, que é
+              onde uma peça de verdade tem acrílico nu. A transparência tampouco:
+              a tinta é recortada, e por cada vazio dela se veem o chão da seção,
+              o aro e o pódio.
 
               O verso é um segundo plano, espelhado, para o giro não mostrar o
               bloco oco por trás. */}
           {art.curr && (
             <>
               <mesh position={[0, 0, arteZ]}>
-                <planeGeometry args={planeSize(art.curr)} />
+                <planeGeometry args={[FACE.w, FACE.h]} />
                 {/* SÓ A TINTA — recortada por `alphaTest` e FORA da passada de
                     transmissão.
 
@@ -1417,7 +1840,7 @@ function Plaque({
                   cursor até passar dos 90°, e existe para que, se isso
                   acontecer, não se veja a tinta de trás para a frente. */}
               <mesh position={[0, 0, -arteZ]} rotation={[0, Math.PI, 0]}>
-                <planeGeometry args={planeSize(art.curr)} />
+                <planeGeometry args={[FACE.w, FACE.h]} />
                 <meshBasicMaterial
                   map={art.curr}
                   toneMapped={false}
@@ -1428,11 +1851,46 @@ function Plaque({
             </>
           )}
 
+          {/* A VARREDURA DE LUZ (veja `VARREDURA`): o reflexo do estúdio
+              passando pela face a cada 7 s.
+
+              Três milésimos à frente da tinta — pela mesma razão de
+              `ARTE_FRENTE`, e com a mesma folga: é reflexo NA superfície, e tem
+              de somar por cima da impressão como soma por cima do cristal vazio.
+
+              Quem anda não é o plano, é o `offset` da textura: nada de
+              geometria para clipar na borda da face, nada de material
+              recompilando, e a faixa sai cortada exatamente na quina porque o
+              plano acaba ali. `blending` aditivo com um mapa preto fora da
+              faixa — preto somado é nada, então o resto da face continua
+              intacto.
+
+              `visible` nasce falso: no primeiro quadro (e com movimento
+              reduzido) a face é só reflexo parado, e quem decide o contrário é o
+              `useFrame`, nunca o primeiro render. */}
+          <mesh
+            ref={varredura}
+            position={[0, 0, arteZ + ARTE_FRENTE]}
+            renderOrder={3}
+            visible={false}
+          >
+            <planeGeometry args={[FACE.w, FACE.h]} />
+            <meshBasicMaterial
+              ref={matVarredura}
+              map={brilho}
+              transparent
+              opacity={0}
+              blending={AdditiveBlending}
+              depthWrite={false}
+              toneMapped={false}
+            />
+          </mesh>
+
           {/* A arte que sai, um fio à frente da que entra, se desfazendo. */}
           {art.prev && (
             <>
               <mesh ref={saindoFrente} position={[0, 0, arteZ + 0.006]}>
-                <planeGeometry args={planeSize(art.prev)} />
+                <planeGeometry args={[FACE.w, FACE.h]} />
                 <meshBasicMaterial
                   ref={matSaindoFrente}
                   map={art.prev}
@@ -1449,7 +1907,7 @@ function Plaque({
                 position={[0, 0, -arteZ - 0.006]}
                 rotation={[0, Math.PI, 0]}
               >
-                <planeGeometry args={planeSize(art.prev)} />
+                <planeGeometry args={[FACE.w, FACE.h]} />
                 <meshBasicMaterial
                   ref={matSaindoVerso}
                   map={art.prev}
