@@ -23,8 +23,15 @@ const CELULA =
  * `prefers-reduced-motion`, a regra global de globals.css congela a animação
  * (a cópia que fica à vista é completa).
  *
- * O rótulo não anda: ele é a frase que abre a faixa e fica fixo à esquerda,
- * com o próprio fundo por cima do trilho que passa.
+ * O RÓTULO SAIU DA TELA em 15/10, a pedido do dono ("remova o escrito 'por onde
+ * cada venda passa' e deixe apenas o carrossel com as integrações"). Ele era uma
+ * célula fixa à esquerda, com o próprio fundo por cima do trilho — e era também
+ * o único ponto da faixa que não andava, o que cortava o carrossel em dois.
+ *
+ * A frase não foi apagada, mudou de natureza: vira o `aria-label` da faixa.
+ * Sem ela, quem usa leitor de tela ouviria nove nomes de marca soltos entre o
+ * hero e a próxima seção, sem nada dizendo o que são. O dicionário continua com
+ * a chave, e quem já a tinha na tela — ninguém mais — não a perde.
  */
 export function IntegrationBand({
   title,
@@ -36,10 +43,11 @@ export function IntegrationBand({
   className?: string;
 }) {
   return (
-    <div className={`h-11 w-full border-y border-line bg-ink-900${className ? ` ${className}` : ""}`}>
+    <div
+      aria-label={title}
+      className={`h-11 w-full border-y border-line bg-ink-900${className ? ` ${className}` : ""}`}
+    >
       <div className="relative flex h-full overflow-hidden">
-        <span className={`${CELULA} t-label relative z-10 bg-ink-900`}>{title}</span>
-
         <div className="band-marquee flex h-full w-max hover:[animation-play-state:paused]">
           {[0, 1].map((copia) => (
             <div key={copia} aria-hidden={copia === 1} className="flex h-full shrink-0">

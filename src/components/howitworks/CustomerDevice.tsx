@@ -32,7 +32,7 @@ const HORA = "21:47";
  * inteira era o 1px da borda. Terminada por aspas, a classe é extraída.
  */
 const CHASSI =
-  "rounded-device relative border border-[rgba(255,255,227,0.18)] bg-gradient-to-b from-ink-750 via-ink-850 to-ink-900 p-[5px]";
+  "apa-chassi apa-respira rounded-device relative border border-[rgba(255,255,227,0.18)] p-[5px]";
 
 /**
  * O carimbo de hora no canto de uma bolha. 11px é o piso de dentro do mockup —
@@ -157,8 +157,12 @@ export function CustomerDevice({ step, className = "" }: { step: number; classNa
             </span>
           </div>
 
-          {/* Ilha dinâmica, com o furo da câmera recuado à direita */}
-          <span className="absolute top-[7px] left-1/2 flex h-[18px] w-[68px] -translate-x-1/2 items-center justify-end rounded-full bg-black pr-[8px]">
+          {/* Ilha dinâmica, com o furo da câmera recuado à direita, e o
+              ALTO-FALANTE à esquerda dela — um fio de 1,5px, que é o detalhe que
+              faltava para a peça ler como aparelho e não como moldura com uma
+              cápsula preta colada em cima. */}
+          <span className="absolute top-[7px] left-1/2 flex h-[18px] w-[68px] -translate-x-1/2 items-center justify-between rounded-full bg-black pr-[8px] pl-[9px]">
+            <span className="h-[1.5px] w-[13px] rounded-full bg-ink-750" />
             <span className="h-1.5 w-1.5 rounded-full bg-ink-800" />
           </span>
 
@@ -297,10 +301,13 @@ export function CustomerDevice({ step, className = "" }: { step: number; classNa
           {/* Barra de gesto */}
           <span className="absolute bottom-1.5 left-1/2 h-1 w-20 -translate-x-1/2 rounded-full bg-cream/25" />
 
-          {/* A luz de vidro, por último para pegar a tela inteira. Não recebe
-              ponteiro e não escurece nada: é 7% de creme apagando em 40% da
-              altura (ver `.hiw-vidro`). */}
-          <span className="hiw-vidro pointer-events-none absolute inset-0" />
+          {/* O VIDRO, por último para pegar a tela inteira. Duas camadas numa
+              só (ver `.apa-vidro`): a varredura clara que desce do canto
+              superior esquerdo e o escurecimento do pé. É a segunda que mudou
+              em 15/10 — sem ela a tela terminava numa cor chapada, e o que
+              denuncia vidro numa foto de produto é justamente a borda inferior
+              ficar mais densa que o meio. */}
+          <span className="apa-vidro absolute inset-0" />
         </div>
       </div>
     </div>

@@ -2474,21 +2474,27 @@ export default function AwardPlaque3D({
 }) {
   const reduced = useReducedMotion();
 
-  /* `dpr` limitado: em telas retina o custo de preencher o canvas com um
-     material transmissivo cresce rápido — e no celular ele era o suficiente
-     para a placa andar aos tropeços. O componente só roda no cliente
-     (`ssr: false`), então ler a largura aqui é seguro.
+  /* `dpr`: dois em todo lugar desde 15/10 — e no celular isso é uma CORREÇÃO,
+     não um ajuste fino. O dono: "a resolução das placas no mobile está
+     horrível".
 
-     O teto do desktop subiu de 1,5 para 2 depois de medir: com o canvas à
-     vista, dez amostras de 1 s de `requestAnimationFrame` deram 143 fps de
-     mediana a 1440×900 em 1,5 e 141 em 2 — e os portões são 55 no desktop e 30
-     no celular. 2 é o `devicePixelRatio` de um retina inteiro, e é na diagonal
-     do numeral que a diferença aparece. O celular fica em 1: lá o gargalo é o
-     alvo da transmissão, não a nitidez da letra. */
-  const dpr = useMemo<[number, number]>(
-    () => (window.innerWidth < 640 ? [1, 1] : [1, 2]),
-    [],
-  );
+     O teto de 1 no celular existia por causa do `transmission`: o material
+     refrativo copiava a cena num alvo próprio a cada quadro, e em tela retina
+     esse alvo sozinho fazia a placa andar aos tropeços. A transmissão SAIU em
+     15/10 (o vidro agora é por alfa — veja o bloco do material), e com ela o
+     gargalo: a cena ficou em 13 chamadas de desenho e 0,7 ms de mediana por
+     quadro contra os 33 que 30 fps dão de orçamento. Mantido em 1, o que
+     sobrava era só o defeito: um telefone de 3x desenhava o numeral e a raposa
+     com um terço dos pixels da tela e os entregava esticados — exatamente a
+     serrilha que o dono viu.
+
+     Dois, e não três: 2 é o `devicePixelRatio` de um retina inteiro e já põe a
+     diagonal do numeral acima do que o olho separa a um palmo de distância; 3
+     dobraria de novo a área a preencher para devolver uma diferença que não se
+     vê. O componente só roda no cliente (`ssr: false`), então a leitura da
+     largura aqui é segura — e, agora que o número é o mesmo dos dois lados, ela
+     some. */
+  const dpr = useMemo<[number, number]>(() => [1, 2], []);
 
   const art = useArtPair(print);
   const fotos = useArtPair(photo || undefined);

@@ -149,7 +149,7 @@ export function OperationStage({ show }: { show: StepShow }) {
 
              A altura é a mesma nos quatro passos (as camadas do `StepLayer` são
              absolutas), então o relógio pode rodar sem mover um pixel: CLS 0. */
-          className="h-[280px] w-full sm:h-[330px] xl:absolute xl:top-[38px] xl:left-16 xl:h-[432px] xl:w-[640px] xl:[transform:rotateY(-12deg)_rotateX(3deg)]"
+          className="apa-respira-painel h-[280px] w-full sm:h-[330px] xl:absolute xl:top-[38px] xl:left-16 xl:h-[432px] xl:w-[640px] xl:[transform:rotateY(-12deg)_rotateX(3deg)]"
         />
 
         {/* Um fio por eixo: o eixo do movimento muda de breakpoint, e nem

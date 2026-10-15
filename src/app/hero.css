@@ -47,7 +47,14 @@
    sozinho e nada cruza a faixa.
    -------------------------------------------------------------------------- */
 .hero-cena {
-  --globo: 440px;
+  /* No celular o lado é o MENOR entre 440px e 90% da largura da janela — e os
+     90% não são enfeite: a caixa do disco é centrada por left/margem
+     negativa, e o que passar da tela é cortado nos DOIS lados pelo clip do
+     body. Com 440 cravado, um telefone de 390px perdia
+     30px de planeta de cada lado, e um de 360 perdia 40 (bug relatado pelo dono
+     em 15/10). Com a trava, o disco encolhe junto com o aparelho e nunca
+     encosta na borda: 351px num 390, 324 num 360, 288 num 320. */
+  --globo: min(440px, 90vw);
   /* O painel de fatos e os dois respiros da cena de 1400+. */
   --painel: 13rem;
   --respiro: 2.5rem;

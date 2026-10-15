@@ -1,0 +1,124 @@
+/* ==========================================================================
+   O APARELHO DA SALA DE OPERAÇÃO — acabamento e respiração
+
+   Mora à parte do `howitworks.css` por um motivo de oficina, não de desenho:
+   em 15/10 dois trabalhos corriam ao mesmo tempo no mesmo arquivo, e separar
+   o que é do aparelho do que é do canvas do editor evitou os dois se
+   atropelarem. Se um dia os dois forem de um dono só, isto aqui volta para lá.
+
+   Tudo o que há neste arquivo é `transform`, `opacity` e degradê estático:
+   nenhum blur, nenhum halo — a página não tem nenhum dos dois.
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   A RESPIRAÇÃO (pedido do dono, 15/10: "deixe os celulares em como funciona se
+   mexendo, levemente").
+
+   Levemente é a palavra, e ela virou número: 2,5px de sobe-e-desce e 0,35° de
+   inclinação, em 7 segundos. É menos que a espessura da moldura do aparelho —
+   o olho não vê um objeto andando, vê que a cena está viva, que é a diferença
+   entre uma foto e uma vitrine.
+
+   Por que 2,5px e não mais: o fio laranja que liga o painel ao aparelho é um
+   `<path>` de coordenadas fixas e a ponta dele encosta na borda esquerda do
+   aparelho. Com o aparelho flutuando, a ponta precisa ficar ENTERRADA sob a
+   moldura (veja o `GEO` do `StageWire`, que a levou 6px para dentro): 2,5px de
+   curso cabem nessa margem com folga, 6px não cabiam.
+
+   Os dois objetos da cena respiram em CONTRATEMPO — o aparelho começa em 0 e o
+   painel, 3,5s depois, com metade da amplitude e sem inclinação (ele é a peça
+   pesada da composição, e uma mesa que balança lê como erro). É o contratempo
+   que faz a sala parecer habitada em vez de os dois subirem juntos como um
+   elevador.
+
+   `will-change` de propósito ausente: são duas camadas que já estão em
+   composição por causa da perspectiva do palco, e marcá-las de novo só
+   reservaria memória de GPU sem trocar um quadro.
+   -------------------------------------------------------------------------- */
+
+@keyframes apa-respira {
+  0%,
+  100% {
+    translate: 0 0;
+    rotate: 0deg;
+  }
+  50% {
+    translate: 0 -2.5px;
+    rotate: 0.35deg;
+  }
+}
+
+@keyframes apa-respira-painel {
+  0%,
+  100% {
+    translate: 0 0;
+  }
+  50% {
+    translate: 0 -1.2px;
+  }
+}
+
+/* `translate`/`rotate` como propriedades INDIVIDUAIS, e não dentro de um
+   `transform`: as duas peças já carregam um `transform` de perspectiva escrito
+   no JSX (`rotateY(14deg) rotateX(2deg)` no aparelho, `rotateY(-12deg)` no
+   painel), e uma animação de `transform` apagaria esse giro no primeiro quadro.
+   As propriedades individuais se COMPÕEM com ele: o navegador aplica
+   translate → rotate → transform, nessa ordem, e o giro da cena sobrevive. */
+.apa-respira {
+  animation: apa-respira 7s ease-in-out infinite;
+}
+
+.apa-respira-painel {
+  animation: apa-respira-painel 7s ease-in-out 3.5s infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .apa-respira,
+  .apa-respira-painel {
+    animation: none;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   O ACABAMENTO DA MOLDURA
+
+   Três coisas que um aparelho de verdade tem e o nosso não tinha: a banda
+   lateral do chassi mais clara que o dorso (é metal, e metal pega luz na
+   quina), o VINCO escuro entre o chassi e o vidro, e o alto-falante acima da
+   ilha. Nenhuma delas é um efeito: são três degradês de duas paradas.
+   -------------------------------------------------------------------------- */
+
+/* A banda de metal: claro nas duas bordas verticais, escuro no meio. É o que
+   dá ao chassi a leitura de um aro, e não de um retângulo pintado. As paradas
+   são duras (mesma cor repetida) nas pontas para a quina acender num fio, e não
+   numa rampa larga. */
+.apa-chassi {
+  background-image:
+    linear-gradient(
+      90deg,
+      rgba(255, 255, 227, 0.22) 0%,
+      rgba(255, 255, 227, 0.05) 2.5%,
+      transparent 9%,
+      transparent 91%,
+      rgba(255, 255, 227, 0.05) 97.5%,
+      rgba(255, 255, 227, 0.2) 100%
+    ),
+    linear-gradient(180deg, var(--ink-750) 0%, var(--ink-850) 52%, var(--ink-900) 100%);
+}
+
+/* O VIDRO. Duas camadas numa só: a varredura clara que desce do canto superior
+   esquerdo (a janela do estúdio) e o escurecimento do pé, que é o que impede a
+   tela de ler como um retângulo de cor chapada. A varredura para em 46% porque
+   é onde o cabeçalho do chat acaba — abaixo disso ela competiria com as bolhas.
+   `pointer-events: none` porque isto é uma camada por cima do conteúdo. */
+.apa-vidro {
+  pointer-events: none;
+  background-image:
+    linear-gradient(
+      152deg,
+      rgba(255, 255, 227, 0.09) 0%,
+      rgba(255, 255, 227, 0.035) 24%,
+      transparent 46%
+    ),
+    linear-gradient(0deg, rgba(0, 0, 0, 0.28) 0%, transparent 18%);
+}

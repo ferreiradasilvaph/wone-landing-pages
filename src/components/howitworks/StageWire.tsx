@@ -23,7 +23,8 @@ import { STEP_COUNT } from "./useStepShow";
      (700, 254) — meio da borda direita VISÍVEL do painel (que corre de x=701
                   no alto a x=682 embaixo). É a lateral do monitor, onde um cabo
                   entraria.
-     (834,  69) — borda esquerda visível do aparelho na altura do CABEÇALHO do
+     (840,  69) — SEIS PIXELS DENTRO da borda esquerda visível do aparelho (que
+     está em 834), na altura do CABEÇALHO do
                   chat, não no meio da tela.
 
    POR QUE NO CABEÇALHO: é por ali que a notícia entra — por cima da conversa,
@@ -42,9 +43,9 @@ const GEO = {
   x: {
     w: 1216,
     h: 560,
-    d: "M 700 254 C 754 258, 790 70, 834 69",
+    d: "M 700 254 C 754 258, 792 70, 840 69",
     from: [700, 254],
-    to: [834, 69],
+    to: [840, 69],
   },
   y: {
     w: 24,
