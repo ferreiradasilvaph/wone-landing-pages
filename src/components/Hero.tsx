@@ -217,7 +217,7 @@ export function Hero() {
       data-section="topo"
       className="relative flex min-h-[100svh] flex-col overflow-x-clip bg-ink-950"
     >
-      <div className="mx-auto w-full max-w-7xl px-4 pt-24 sm:px-6 lg:flex lg:flex-1 lg:flex-col lg:px-8 lg:pt-28 min-[1400px]:max-w-[74rem]">
+      <div className="mx-auto w-full max-w-7xl px-4 pt-24 sm:px-6 lg:flex lg:flex-1 lg:flex-col lg:px-8 lg:pt-28 min-[1400px]:max-w-[78rem]">
         <div className="grid gap-x-8 gap-y-12 lg:grid-cols-12">
           {/* A COLUNA DE TEXTO começa na coluna 6 de 12 — x 627 numa janela de
               1440 —, e o disco de 760px termina em x 730: a borda esquerda do
@@ -231,11 +231,11 @@ export function Hero() {
               a trilha (a largura mínima automática de um item é o `min-content`
               dele), e num grid de uma coluna só — o celular — isso contamina a
               outra. */}
-          <div className="relative z-10 min-w-0 lg:col-span-7 lg:col-start-6 min-[1400px]:flex min-[1400px]:items-start min-[1400px]:gap-x-8">
+          <div className="relative z-10 min-w-0 lg:col-span-7 lg:col-start-6 min-[1400px]:ml-12 min-[1400px]:flex min-[1400px]:items-start min-[1400px]:gap-x-10">
           {/* A partir de 1400px o texto cede a faixa da direita ao painel de fatos
               (pedido do dono, 15/10). O h1 continua na mesma caixa e nas mesmas
               três linhas: só o lead encolhe um pouco, de 31 para 26rem. */}
-          <div className="min-w-0 min-[1400px]:max-w-[24rem] min-[1400px]:shrink-0">
+          <div className="min-w-0 min-[1400px]:max-w-[23rem] min-[1400px]:shrink-0">
             {/* O mesmo `.t-kicker` de toda seção, com o traço de 24×1. Abaixo de
                 `sm` a cobertura dos sete países não cabe numa linha de 13px, e
                 a versão curta entra no lugar. */}
@@ -308,7 +308,7 @@ export function Hero() {
               benefícios. Só fatos que a página já afirma. */}
           <aside
             aria-label={hero.aside.title}
-            className="ent-sobe mt-10 rounded-card bg-ink-900 p-5 [--ent-atraso:450ms] min-[1400px]:mt-11 min-[1400px]:w-[14rem] min-[1400px]:shrink-0"
+            className="ent-sobe mt-10 rounded-card bg-ink-900 p-5 [--ent-atraso:450ms] min-[1400px]:mt-11 min-[1400px]:w-[13rem] min-[1400px]:shrink-0"
           >
             <p className="t-label">{hero.aside.title}</p>
             <ul className="mt-4 space-y-3">
@@ -380,7 +380,7 @@ export function Hero() {
             que termina em x 500 — era 442 e o rótulo cobria o chip); abaixo de 1420 não há rótulo nenhum, e ele
             volta para a esquerda, longe da coluna de texto, que ali está mais
             perto. No celular fica no pé do disco, centrado. */}
-        <div className="pointer-events-auto absolute bottom-0 left-1/2 w-[340px] -translate-x-1/2 lg:w-[380px] min-[1024px]:bottom-[158px] min-[1024px]:left-[calc((100vw-min(100vw,80rem))/2+2rem+28px)] min-[1024px]:translate-x-0 min-[1280px]:left-[calc((100vw-min(100vw,80rem))/2+2rem+88px)] min-[1400px]:left-[calc((100vw-min(100vw,74rem))/2+2rem+400px)]">
+        <div className="pointer-events-auto absolute bottom-0 left-1/2 w-[340px] -translate-x-1/2 lg:w-[380px] min-[1024px]:bottom-[158px] min-[1024px]:left-[calc((100vw-min(100vw,80rem))/2+2rem+28px)] min-[1024px]:translate-x-0 min-[1280px]:left-[calc((100vw-min(100vw,80rem))/2+2rem+88px)] min-[1400px]:left-[calc((100vw-min(100vw,78rem))/2+2rem+400px)]">
           <div className="mb-2 flex items-center justify-between gap-3">
             {/* "CHECKOUT INTERNACIONAL · SIMULAÇÃO": a ficção se declara onde o
                 dado fictício está — em cima do ticket, que é quem mostra valor.

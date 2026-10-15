@@ -884,3 +884,10 @@ uma linha do tempo em cada um, a baixo das imagens das placas) coloque em cima
 ===============================================================================
 la no footer, nas integracoes. troque os icones das integracoes por pontinhos
 laranjas...
+
+
+===============================================================================
+[96] 2026-10-15
+===============================================================================
+de um leve espacamento entre o globo, texto principal do hero e informacoes
+adjacentes...
