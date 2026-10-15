@@ -50,18 +50,30 @@
     acabar. E ela se desfaz depressa, em 110 unidades: esticada, deixava o
     punho translucido e a placa do fecho aparecia atraves do braco.
 
-    A imagem e montada em tres camadas, e a ordem importa: o braco atras, a
-    foto, e o braco de novo na frente, recortado no arco de baixo do vao. E o
-    que poe o aro de tras atras do punho e o de perto na frente. Os dois
-    recortes de compor.html partem do mesmo arco, entao nenhum pedaco do
-    braco e pintado duas vezes.
+    A imagem e montada em duas camadas: o braco inteiro e, por cima, a foto
+    da pulseira com um FURO onde o punho passa na frente do aro de tras. O
+    furo e a intersecao da #silhueta daqui com o semiplano acima do eixo
+    maior da elipse do aro — numa elipse que e a projecao de um circulo, o
+    eixo maior e a linha de profundidade constante, e o que esta acima dele e
+    a metade do aro mais longe da camera. Fora da silhueta a corrente de tras
+    continua a vista, e tem de continuar: a pulseira e mais larga que o
+    punho, entao as duas pontas de tras sobram ao lado do braco.
 
-    O vao foi medido na propria foto: elipse de centro (406, 421) e raios
-    281,6 x 75,6 no sistema local, antes da ampliacao. A foto entra no quadro
-    final em x 64,9..824,9 / y 284..742,3, com o centro do vao em (446, 526).
+    A elipse foi medida no alfa da propria foto (1015x612) por tres caminhos
+    que batem — momentos da regiao cheia, diametros conjugados e o perfil de
+    altura: centro (520, 324,3), semi-eixos 527 x 258, eixo maior a -11,62
+    graus. A foto entra no quadro final em x 64,9..824,9 / y 284..742,3, o
+    que poe o centro do aro em (454,3, 526,9).
+
+    Antes o corte era uma reta HORIZONTAL em y 526, com um arco deitado: nas
+    duas pontas o lado de tras do aro sobrava dela — descia 60px abaixo na
+    esquerda, subia outro tanto na direita — e nessas faixas a corrente de
+    tras era pintada por cima do punho. Era a pulseira atravessando o braco.
 
     O braco e desenhado na vertical e deitado pelo `rotate` do grupo — mexer
-    num dos dois pede recalcular o outro.
+    num dos dois pede recalcular o outro. E o transform do grupo esta copiado
+    em `PULSEIRA.posto` de compor.html, que precisa dele para por a silhueta
+    no lugar antes de furar a foto: mexer aqui pede mexer la.
   -->
   <defs>
     <!--

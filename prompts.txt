@@ -844,3 +844,10 @@ tira esse fundo opaco das placas e o fundo branco das placas
 ===============================================================================
 diminua o tamanho: placas, dorso. o pulso esta otimo, melhore o shape do dorso,
 deixe mais atletico/atraente
+
+
+===============================================================================
+[90] 2026-10-15
+===============================================================================
+chat, as placas 3d devem ser transparentes, sem esse fundo preto, preciso que
+elas sejam transparentes, meu amigo....

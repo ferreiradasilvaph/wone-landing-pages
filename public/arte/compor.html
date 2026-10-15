@@ -74,7 +74,7 @@ async function silhuetaDe(svg, id) {
      longo de duas Bezier que sobem do bail, passam por cima do trapezio e
      somem atras do pescoco. Os elos sao os reais, da foto; so o caminho e
      novo. A escala da fita e a MESMA do pingente, entao o calibre da corrente
-     sai certo por construcao: 15,5 de metal, que no peito de 548 da cerca de
+     sai certo por construcao: 15,5 de metal, que no peito de 574 da cerca de
      1,1 cm — corrente cubana grossa, como a da foto.
 
    POR QUE A CORRENTE SOME NO CANTO. Ela e recortada pelo corpo MENOS o
@@ -101,7 +101,7 @@ const COLAR = {
      tirante quatro vezes mais comprido do que ela. */
   fita: { ax: 450, ay: 215.8, incl: -0.3335, L: 230, T: 96, u0: 77, per: 98 },
 
-  largura: 152,        // do pingente, no quadro de 1000 — 27,7% do peito (548)
+  largura: 152,        // do pingente, no quadro de 1000 — 26,5% do peito (574)
   centro: [500, 523],  // esterno: entre as claviculas e a linha dos peitorais
 
   /* o tirante direito, em Bezier cubica, do bail ate dentro do pescoco. O
@@ -114,20 +114,80 @@ const COLAR = {
   tirante: [[504, 452], [532, 372], [704, 336], [612, 168]],
 
   /* o pescoco, no mesmo contorno do #silhueta: os dois lados e o arco de tras
-     do corte. A corrente e recortada POR FORA dele. */
-  pescoco: "M364 226 C 364 180 366 140 372 60"
-    + " A 128 36 0 0 1 628 60 C 634 140 636 180 636 226 Z",
+     do corte. A corrente e recortada POR FORA dele.
+
+     Acompanhou a passada de shape de 15/10 (ombro mais alto, torso em V): o
+     pescoco encolheu de 272 para 270 na base, o corte de 256 para 248, e a
+     BASE subiu de 226 para 206, porque e ali que o trapezio novo comeca. E o
+     unico trecho do contorno que vive em copia aqui — o resto vem do
+     #silhueta —, entao ele e o unico que precisa ser mexido a mao quando o
+     desenho muda. */
+  pescoco: "M365 206 C 366 170 370 130 376 60"
+    + " A 124 36 0 0 1 624 60 C 630 130 633 170 635 206 Z",
 
   sombra: { dx: 6, dy: 7, borrao: 7, opacidade: 0.36 },
 };
 
-/* O recorte da foto da PULSEIRA so vale acima dela. Ele existe para cortar as
-   duas pontas soltas e nada mais. */
-const ARCO = "L 727.6 526 A 281.6 75.6 0 0 1 164.4 526 L -400 526 Z";
-const ACIMA = "M-400 -600 L 1600 -600 L 1600 526 " + ARCO;
-const ABAIXO = "M-400 2200 L 1600 2200 L 1600 526 " + ARCO;
-
 const TUDO = "M-500 -500 L 1600 -500 L 1600 2300 L -500 2300 Z";
+
+/* ===================================================================
+   A PULSEIRA DO 100K, refeita em 15/10 a pedido do dono: "a pulseira esta
+   atravessando a imagem do pulso. melhore isso".
+
+   O QUE ESTAVA ERRADO. O corte entre o que fica na frente do punho e o que
+   fica atras dele era uma reta HORIZONTAL em y 526, com um arco eliptico
+   deitado. Mas o aro da foto nao esta deitado: ele e uma elipse INCLINADA.
+   Na ponta esquerda o lado de tras do aro desce ate 60px abaixo daquela
+   reta e na direita sobe outro tanto acima dela — e nessas duas faixas a
+   corrente de tras era pintada POR CIMA do punho. E isso que lia como a
+   pulseira atravessando o braco.
+
+   A ELIPSE, medida no alfa de /images/pulseira-100k.webp (1015x612) por
+   tres caminhos independentes que batem entre si:
+     - momentos de segunda ordem da regiao cheia (o aro mais o vao):
+       centro (516,9, 325,9), eixo maior a -11,57 graus;
+     - diametros conjugados — a reta dos pontos medios das cordas verticais
+       (y = -0,1553x + 404,9, rms 7,9) cruzada com a das horizontais:
+       centro (521,5, 323,9), eixo maior a -11,60 graus;
+     - perfil de altura h(x) = H0*sqrt(1-((x-cx)/W0)^2): centro (521, 323,9),
+       W0 518,5 / H0 262,4, eixo maior a -11,67 graus.
+   Fica: centro (520, 324,3), semi-eixos 527 x 258, eixo maior -11,62 graus.
+   No quadro final (a foto entra em x 64,9..824,9 / y 284..742,3, escala
+   0,7488) isso da centro (454,3, 526,9) e inclinacao -0,2057.
+
+   O CORTE. Numa elipse que e a projecao de um circulo, o EIXO MAIOR e a
+   linha de profundidade constante: o que esta acima dele e a metade LONGE
+   da camera — aqui, a que passa por tras do punho. Entao a foto e furada
+   exatamente na intersecao de
+       (a silhueta do punho e da mao)  com  (o semiplano acima do eixo maior)
+   e so ali. Fora da silhueta a corrente de tras continua a vista, e ela
+   aparece mesmo: a pulseira e mais larga que o punho, entao as duas pontas
+   de tras sobram ao lado do braco. Dentro da silhueta ela some, que e o que
+   um aro faz quando da a volta por tras.
+
+   POR QUE FURAR A FOTO E NAO REPINTAR O BRACO. Antes a arte entrava duas
+   vezes, metade abaixo e metade acima da foto, com dois recortes
+   complementares para nenhum pedaco ser pintado em dobro — o braco tem
+   sombras e realces translucidos, e pinta-los duas vezes dobra a opacidade
+   deles. Com um recorte que acompanha a silhueta isso ficaria fragil demais
+   (a borda do corte corre justamente em cima do fio de luz da borda do
+   braco). Agora a arte e pintada UMA vez, inteira, e quem perde pedaco e a
+   foto. O resultado na tela e o mesmo e nao ha emenda possivel no braco.
+
+   A margem e o borrao existem para a borda do corte nao serrar o metal: a
+   silhueta e dilatada 1,5px antes de furar, e a mascara entra com 1px de
+   borrao, entao a corrente desaparece por tras do fio de luz da borda do
+   braco em vez de encostar nele com um degrau duro.
+   =================================================================== */
+const PULSEIRA = {
+  eixo: { x: 454.3, y: 526.9, incl: -0.2057 },
+  margem: 1.5,  // dilatacao da silhueta, em px do quadro final
+  borrao: 1,    // suavizacao da borda do corte, em px
+
+  /* o mesmo transform que pulso.svg aplica ao desenho — mexer la pede mexer
+     aqui, senao a silhueta que fura a foto nao e mais a do braco */
+  posto: [[-61.5, -0.25], 1.25, -22, [406, 421]],
+};
 
 const log = (s) => (document.getElementById("log").textContent += s + "\n");
 
@@ -257,10 +317,59 @@ function montaColar(foto, peca, busto) {
   return { tela: c, escala, quadro: [qx, qy, foto.width * escala, foto.height * escala] };
 }
 
+/* O que o punho tapa: a silhueta do braco — no mesmo transform com que
+   pulso.svg a desenha — cortada pelo semiplano acima do eixo maior do aro.
+   Branco onde a foto tem de sumir. */
+function oQuePunhoTapa(peca, punho) {
+  const K = PULSEIRA;
+  const [desloca, escala, giro, pivo] = K.posto;
+  const c = tela(peca.w, peca.h);
+  const x = c.getContext("2d");
+
+  const y = (u) => K.eixo.y + K.eixo.incl * (u - K.eixo.x);
+  x.clip(new Path2D("M-500 " + y(-500) + " L 1600 " + y(1600)
+                    + " L 1600 -900 L -500 -900 Z"));
+
+  x.translate(desloca[0], desloca[1]);
+  x.scale(escala, escala);
+  x.translate(pivo[0], pivo[1]);
+  x.rotate((giro * Math.PI) / 180);
+  x.translate(-pivo[0], -pivo[1]);
+
+  const p = new Path2D(punho);
+  x.fillStyle = x.strokeStyle = "#fff";
+  x.lineWidth = (2 * K.margem) / escala;  // meio traco de dilatacao para cada lado
+  x.fill(p);
+  x.stroke(p);
+  return c;
+}
+
+/* O braco inteiro, uma vez so, e por cima a foto da pulseira com um furo
+   onde o punho passa na frente do aro de tras. */
+function montaPulseira(x, arte, foto, peca, punho) {
+  const K = PULSEIRA;
+  const [fx, fy, fw, fh] = peca.quadro;
+  x.drawImage(arte, 0, 0, peca.w, peca.h);
+
+  const c = tela(peca.w, peca.h);
+  const f = c.getContext("2d");
+  f.drawImage(foto, fx, fy, fw, fh);
+  f.globalCompositeOperation = "destination-out";
+  f.filter = "blur(" + K.borrao + "px)";
+  f.drawImage(oQuePunhoTapa(peca, punho), 0, 0);
+  x.drawImage(c, 0, 0);
+
+  const ang = (Math.atan(K.eixo.incl) * 180) / Math.PI;
+  return "eixo do aro por (" + K.eixo.x + ", " + K.eixo.y + ") a "
+    + ang.toFixed(2) + " graus; foto furada pela silhueta acima dele"
+    + " (margem " + K.margem + "px, borrao " + K.borrao + "px)";
+}
+
 (async () => {
   /* A silhueta do corpo vem do desenho, entao PECAS so pode ser montado
      aqui dentro: antes dela chegar nao ha com o que recortar a foto. */
   const BUSTO = await silhuetaDe("/arte/dorso.svg", "silhueta");
+  const PUNHO = await silhuetaDe("/arte/pulso.svg", "silhueta");
 
   const PECAS = [
     {
@@ -279,7 +388,7 @@ function montaColar(foto, peca, busto) {
         x.restore();
         x.drawImage(colar.tela, 0, 0);
         return "pingente " + COLAR.largura + " de largura ("
-          + (COLAR.largura / 548 * 100).toFixed(1) + "% do peito 548)"
+          + (COLAR.largura / 574 * 100).toFixed(1) + "% do peito 574)"
           + "  escala da foto " + colar.escala.toFixed(4)
           + "  quadro " + colar.quadro.map((v) => v.toFixed(1)).join(", ");
       },
@@ -288,11 +397,9 @@ function montaColar(foto, peca, busto) {
       nome: "pulseira-100k-vestida.webp", w: 970, h: 1465,
       arte: "/arte/pulso.svg", foto: "/images/pulseira-100k.webp",
       quadro: [64.9, 284, 760, 458.3],
-      camadas: [
-        { o: "arte", recorte: ABAIXO },
-        { o: "foto" },
-        { o: "arte", recorte: ACIMA },
-      ],
+      desenha(x, arte, foto, peca) {
+        return montaPulseira(x, arte, foto, peca, PUNHO);
+      },
     },
   ];
 
@@ -304,22 +411,7 @@ function montaColar(foto, peca, busto) {
     ]);
     const c = tela(peca.w, peca.h);
     const x = c.getContext("2d");
-    let nota = "";
-
-    if (peca.desenha) {
-      nota = peca.desenha(x, arte, foto, peca);
-    } else {
-      const [fx, fy, fw, fh] = peca.quadro;
-      for (const camada of peca.camadas) {
-        x.save();
-        /* varios recortes se somam por intersecao, que e como o canvas
-           empilha clip() */
-        for (const r of [camada.recorte].flat()) if (r) x.clip(new Path2D(r));
-        if (camada.o === "arte") x.drawImage(arte, 0, 0, peca.w, peca.h);
-        else x.drawImage(foto, fx, fy, fw, fh);
-        x.restore();
-      }
-    }
+    const nota = peca.desenha(x, arte, foto, peca);
 
     const url = c.toDataURL("image/webp", 0.92);
     for (const alvo of ["g", "p"]) {
