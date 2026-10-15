@@ -959,7 +959,7 @@ export function HeroGlobe({
           370px de largura), e quem nomeia o país é a `StageStatus`. */}
       <div
         ref={caixa}
-        className="absolute top-1/2 left-1/2 -mt-[210px] -ml-[210px] h-[420px] w-[420px] min-[1024px]:top-[64px] min-[1024px]:left-[calc((100vw-min(100vw,80rem))/2+2rem-10px)] min-[1024px]:mt-0 min-[1024px]:ml-0 min-[1024px]:h-[min(500px,100svh_-_300px)] min-[1024px]:w-[min(500px,100svh_-_300px)] min-[1280px]:top-[48px] min-[1280px]:left-[calc((100vw-min(100vw,80rem))/2+2rem+4px)] min-[1280px]:h-[min(600px,100svh_-_310px)] min-[1280px]:w-[min(600px,100svh_-_310px)] min-[1400px]:top-[36px] min-[1400px]:left-[calc((100vw-min(100vw,80rem))/2+2rem-36px)] min-[1400px]:h-[min(680px,100svh_-_320px)] min-[1400px]:w-[min(680px,100svh_-_320px)]"
+        className="absolute top-1/2 left-1/2 -mt-[210px] -ml-[210px] h-[420px] w-[420px] min-[1024px]:top-[64px] min-[1024px]:left-[calc((100vw-min(100vw,80rem))/2+2rem-10px)] min-[1024px]:mt-0 min-[1024px]:ml-0 min-[1024px]:h-[min(500px,100svh_-_300px)] min-[1024px]:w-[min(500px,100svh_-_300px)] min-[1280px]:top-[48px] min-[1280px]:left-[calc((100vw-min(100vw,80rem))/2+2rem+4px)] min-[1280px]:h-[min(600px,100svh_-_310px)] min-[1280px]:w-[min(600px,100svh_-_310px)] min-[1400px]:top-[36px] min-[1400px]:left-[calc((100vw-min(100vw,74rem))/2+2rem-12px)] min-[1400px]:h-[min(560px,100svh_-_320px)] min-[1400px]:w-[min(560px,100svh_-_320px)]"
       >
         {/* Oceano e atmosfera: CSS, pintados no servidor. É o que faz o planeta
             existir antes de o JavaScript montar a nuvem. */}
