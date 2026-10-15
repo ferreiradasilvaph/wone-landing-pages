@@ -901,3 +901,32 @@ no titulo da sessao previa de premios... troque o titulo por "o que te espera"
 e inove esse titulo. para nao ficar parecido, pois ao clicar em "premios" na
 barra de pesquisa. vai direcionar o usuario ate a sessao la de baixo...
 oticamente e visualmente isso nao fica legal. funcionalmente tbm...
+
+
+===============================================================================
+[98] 2026-10-15
+===============================================================================
+o 3d nas placas ficou bom. mas sei que voce pode melhorar. me entregue algo
+impecavel
+
+
+===============================================================================
+[99] 2026-10-15
+===============================================================================
+seja mais criativo em "o que vem com a wone" coloque efeitos visuais e se
+necessario, o espaco que ficou a baixo dessa div pode ser preenchido tbm, com
+mais detalhes e riqueza de informacoes (se cabivel, usei animacoes criativas,
+funcionais e interativas)
+
+
+===============================================================================
+[100] 2026-10-15
+===============================================================================
+jogue o globo mais para a esquerda
+
+
+===============================================================================
+[101] 2026-10-15
+===============================================================================
+de um efeito mais bonitinho quando recarregar a pagina, nas informacoes
+adicionais a direita do hero
