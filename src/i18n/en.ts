@@ -69,15 +69,50 @@ export const en: Content = {
       ],
       srIntro: "Globe with the simulated checkout in seven countries:",
     },
+    /* Os seis fatos viraram fileiras com detalhe e micro-visual; veja `pt.ts`.
+       `kind` é valor de máquina — ele escolhe o desenho, não o texto, e por
+       isso é o MESMO nos dois idiomas. Os ISO das moedas também não se
+       traduzem. */
     aside: {
       title: "What comes with Wone",
+      more: "See all features",
       items: [
-        "Billing in 7 countries, in each local currency",
-        "PIX, card, SPEI, Nequi and MB WAY at checkout",
-        "Single-use invite delivered in chat within seconds",
-        "Three payment confirmation paths",
-        "Funnel editor with 28 blocks, 4 of them AI",
-        "Our own integrations — no middleman, tailored fees",
+        {
+          kind: "countries",
+          label: "Billing in 7 countries",
+          detail: "Your customer pays in their own currency.",
+          extra: ["BRL", "ARS", "MXN", "COP", "USD", "EUR", "GBP"],
+        },
+        {
+          kind: "methods",
+          label: "The local payment method",
+          detail: "Checkout opens with what they already use.",
+          extra: ["PIX", "Card", "SPEI", "Nequi", "MB WAY"],
+        },
+        {
+          kind: "invite",
+          label: "Single-use invite",
+          detail: "Delivered in chat, seconds after the payment.",
+          extra: ["Your invite: t.me/+…", "~3 s"],
+        },
+        {
+          kind: "confirm",
+          label: "Three confirmation paths",
+          detail: "Each one independent.",
+          extra: ["Webhook", "Reconciliation", "Chat button"],
+        },
+        {
+          kind: "blocks",
+          label: "Funnel editor with 28 blocks",
+          detail: "You drag blocks, no code.",
+          extra: ["4 of them AI"],
+        },
+        {
+          kind: "own",
+          label: "Our own integrations",
+          detail: "No Stripe in the middle.",
+          extra: ["0 middlemen", "fee set per operation"],
+        },
       ],
     },
   },

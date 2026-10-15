@@ -6,6 +6,7 @@ import { useContent } from "@/i18n";
 import { useOnScreen } from "@/lib/useOnScreen";
 import { CtaButton } from "./CtaButton";
 import { chipDe, metodoDe, precoDe } from "./hero/paises";
+import { HeroFacts } from "./hero/HeroFacts";
 import { HeroGlobe } from "./hero/HeroGlobe";
 import { StageStatus } from "./hero/StageStatus";
 import { IntegrationBand } from "./IntegrationBand";
@@ -91,6 +92,17 @@ export function Hero() {
    */
   const [ativo, setAtivo] = useState(0);
   const ativoRef = useRef(0);
+  /**
+   * A BATIDA do mesmo relógio, para o painel de fatos.
+   *
+   * É um contador que só cresce, e não um segundo índice: o painel tem seis
+   * fileiras e o globo sete países, então um índice compartilhado prenderia um
+   * ao tamanho do outro. Com a batida, cada um faz o seu módulo e os dois
+   * continuam andando no MESMO passo de 3 s — um relógio por viewport, que é a
+   * regra. Nasce em 0 no servidor e no primeiro render do cliente: o painel sai
+   * do HTML com a primeira fileira acesa, sem esperar o React.
+   */
+  const [batida, setBatida] = useState(0);
   /** Só depois do primeiro avanço do relógio é que alguma coisa pode animar. */
   const [started, setStarted] = useState(false);
   const [paused, setPaused] = useState(false);
@@ -155,6 +167,7 @@ export function Hero() {
         if (cancelado) return;
         ativoRef.current = (ativoRef.current + 1) % paises.length;
         setAtivo(ativoRef.current);
+        setBatida((passos) => passos + 1);
         setStarted(true);
         agenda(INTERVALO);
       }, espera);
@@ -173,6 +186,13 @@ export function Hero() {
 
   /** Só anima depois do primeiro avanço, e nunca com movimento reduzido. */
   const animado = started && !reduced;
+  /**
+   * Os quatro freios num booleano só, lido pelo globo E pelo painel de fatos:
+   * se o relógio não anda, o fio de progresso do painel não pode fingir que
+   * anda. Antes esta expressão vivia solta no JSX do globo; tendo dois
+   * leitores, ela passa a ter nome.
+   */
+  const andando = !paused && !reduced && !tabHidden && naTela;
 
   const pais = paises[ativo];
   /**
@@ -305,20 +325,30 @@ export function Hero() {
               Abaixo de 1400 ele desce para baixo dos botões; acima, senta ao lado
               do h1, alinhado ao topo dele (mt-11 = kicker + o respiro do título).
               Entra na coreografia da home como o último degrau antes dos
-              benefícios. Só fatos que a página já afirma. */}
+              benefícios. Só fatos que a página já afirma.
+
+              A lista virou o `HeroFacts`, que percorre as seis fileiras no
+              passo do relógio daqui e desenha o fato ativo logo abaixo (pedido
+              do dono de 15/10: "seja mais criativo... o espaço que ficou abaixo
+              dessa div pode ser preenchido"). O `<aside>`, o rótulo e a caixa
+              continuam sendo deste arquivo — a largura de 13rem e a entrada de
+              450ms não mudaram. */}
           <aside
             aria-label={hero.aside.title}
             className="ent-sobe mt-10 rounded-card bg-ink-900 p-5 [--ent-atraso:450ms] min-[1400px]:mt-11 min-[1400px]:w-[13rem] min-[1400px]:shrink-0"
           >
             <p className="t-label">{hero.aside.title}</p>
-            <ul className="mt-4 space-y-3">
-              {hero.aside.items.map((item) => (
-                <li key={item} className="flex gap-3 text-[14px] leading-5 text-muted">
-                  <span aria-hidden className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-brand" />
-                  <span>{item}</span>
-                </li>
-              ))}
-            </ul>
+            <HeroFacts
+              facts={hero.aside.items}
+              moreLabel={hero.aside.more}
+              batida={batida}
+              /* A primeira batida do hero é mais longa que as outras; o fio de
+                 progresso do painel precisa saber disso para não acabar antes
+                 do passo. */
+              duracaoMs={batida === 0 ? PRIMEIRA_ESPERA : INTERVALO}
+              running={andando}
+              reduced={reduced}
+            />
           </aside>
           </div>
         </div>
@@ -360,7 +390,7 @@ export function Hero() {
           pins={pins}
           activeIndex={ativo}
           animated={animado}
-          running={!paused && !reduced && !tabHidden && naTela}
+          running={andando}
         />
 
         {/* O TICKET, a etiqueta de ficção e o controle do palco, num bloco só —

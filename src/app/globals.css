@@ -955,3 +955,176 @@ html.wone-entrando .ent-surge {
   animation: band-marquee 36s linear infinite;
   will-change: transform;
 }
+
+/* --------------------------------------------------------------------------
+   O PAINEL DE FATOS DO HERO (HeroFacts) — "O que vem com a Wone"
+
+   Quatro animações curtas, todas em `transform`/`opacity` (a única exceção é a
+   cor de fundo dos quadradinhos da grade de blocos, que é chapada e não anima).
+   Nenhuma delas roda em laço: cada uma dispara UMA vez, quando o nó nasce — e o
+   nó nasce quando o item ativo troca, porque o React o remonta por `key`. O
+   `facts-fio` é a única que se repete, e por recomeço, não por `infinite`: um
+   nó novo a cada batida do relógio do hero.
+
+   Quem decide se elas entram é o componente: com `prefers-reduced-motion` ele
+   não põe nenhuma destas classes, e o elemento nasce no estado final — que é o
+   estado normal dele, já que todas usam `both`. A regra global de movimento
+   reduzido lá acima é a segunda rede, não a primeira.
+   -------------------------------------------------------------------------- */
+
+/* O fio de progresso sob a fileira ativa: 1px laranja preenchendo no tempo da
+   batida. `--facts-dur` vem do componente porque a PRIMEIRA batida do hero é
+   mais longa (3,6 s, o tempo de ler a tela inteira antes da primeira troca) —
+   um fio cravado em 3 s chegaria ao fim e esperaria 600 ms parado, dizendo que
+   o passo já acabou quando ele ainda não acabou. `linear` porque é tempo: toda
+   curva aqui mentiria sobre quanto falta. */
+@keyframes facts-fio {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+.facts-fio {
+  transform-origin: left;
+  animation: facts-fio var(--facts-dur, 3000ms) linear both;
+}
+
+/* A troca de detalhe: o conteúdo do item que sai some e o que entra sobe 4px.
+   250 ms é o teto para não competir com a leitura — o painel troca a cada 3 s,
+   e uma entrada longa estaria sempre no meio do caminho. */
+@keyframes facts-entra {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.facts-entra {
+  animation: facts-entra 0.25s var(--ent-ease) both;
+}
+
+/* Bandeiras, chips, bolha de chat: entram em fileira, com `--facts-atraso`
+   escalonado pelo componente. 3px de curso só para a fileira se ler como
+   sequência, e não como seis coisas aparecendo juntas. */
+@keyframes facts-surge {
+  from {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.facts-surge {
+  animation: facts-surge 0.3s var(--ent-ease) var(--facts-atraso, 0ms) both;
+}
+
+/* O que ACENDE: os três pontos das vias de confirmação e os 28 quadradinhos do
+   editor. Escala do centro, porque ponto que sobe parece outro ponto. */
+@keyframes facts-acende {
+  from {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.facts-acende {
+  animation: facts-acende 0.28s var(--ent-ease) var(--facts-atraso, 0ms) both;
+}
+
+/* O traço que cresce: o das integrações próprias e o do contador do convite.
+   Origem à esquerda, como todo preenchimento da página. */
+@keyframes facts-cresce {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+.facts-cresce {
+  transform-origin: left;
+  animation: facts-cresce 0.6s var(--ent-ease) var(--facts-atraso, 0ms) both;
+}
+
+/* --------------------------------------------------------------------------
+   A ENTRADA DO PAINEL — a escada das seis fileiras (pedido do dono, 15/10:
+   "dê um efeito mais bonitinho quando recarregar a página, nas informações
+   adicionais à direita do hero")
+
+   Mesmo porteiro da home: tudo aqui depende de `html.wone-entrando`, a classe
+   que o script síncrono do `<head>` põe no `<html>` antes da primeira pintura —
+   e que ele NÃO põe com `prefers-reduced-motion`. Sem a classe nada casa e o
+   painel nasce pronto, exatamente como o servidor o pintou: nenhuma destas
+   regras pode ser o que torna o conteúdo visível.
+
+   O atraso de cada peça vem por `--ent-atraso`, escrito no próprio nó pelo
+   `HeroFacts` (450 + i·50 ms na fileira, +80 ms no ponto dela, 800 ms no
+   detalhe e no link). A última animação fecha em 1.180 ms, dentro do 1,2 s que
+   o dono pediu de entrada total.
+   -------------------------------------------------------------------------- */
+
+/* A fileira sobe 8px e aparece. É a `<li>`, não o botão: ela já é a caixa
+   posicionada (o fio de progresso é absoluto dentro dela), então a animação não
+   cria contexto novo nem mexe com o alvo de 44px. */
+@keyframes facts-ent-linha {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+html.wone-entrando .facts-ent-linha {
+  animation: facts-ent-linha 0.4s var(--ent-ease) var(--ent-atraso, 0ms) both;
+}
+
+/* O ponto laranja ACENDE: nasce em escala zero e passa um fio de pixel do
+   tamanho final antes de assentar — é a curva com overshoot que o dono pediu, e
+   a única do site que passa de 1. Quem recebe a classe é a CAIXA de 18px do
+   ponto, nunca o ponto: no item ativo o ponto já carrega um `scaleX(3)` seu, e
+   duas animações na mesma propriedade terminariam com o `fill-mode` desta
+   segurando a outra para fora do ar. */
+@keyframes facts-ent-ponto {
+  from {
+    transform: scale(0);
+  }
+  to {
+    transform: scale(1);
+  }
+}
+
+html.wone-entrando .facts-ent-ponto {
+  animation: facts-ent-ponto 0.4s cubic-bezier(0.2, 0.9, 0.3, 1.3) var(--ent-atraso, 0ms) both;
+}
+
+/* O detalhe e o link do rodapé entram por último, e mais contidos: 6px e
+   opacidade. O detalhe é a única peça do painel com altura cravada, e por isso
+   a que menos pode se mover — o que estiver abaixo dele na página não pode
+   sentir a entrada. */
+@keyframes facts-ent-base {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+html.wone-entrando .facts-ent-base {
+  animation: facts-ent-base 0.4s var(--ent-ease) var(--ent-atraso, 0ms) both;
+}

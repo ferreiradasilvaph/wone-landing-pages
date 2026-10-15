@@ -1,4 +1,86 @@
 /**
+ * UM FATO DO PAINEL DO HERO (`hero.aside.items`), o único item do dicionário
+ * com tipo escrito à mão.
+ *
+ * O motivo é o `kind`: ele escolhe o micro-visual que o `HeroFacts` desenha
+ * (bandeiras, chips, bolha de chat, pontos, grade de blocos, traço), e dentro
+ * do literal de `pt` a inferência o largaria para `string` — aí o `switch` do
+ * componente deixaria de ser exaustivo e um `kind` escrito errado só apareceria
+ * na tela, não no build. Com a união literal, trocar "blocks" por "bloks"
+ * quebra o `tsc`.
+ *
+ * `extra` são as etiquetas do micro-visual, NA ORDEM em que ele as desenha, e o
+ * que elas significam é por `kind` (cada bloco do `HeroFacts` documenta as
+ * suas). Nenhuma delas é número novo: todas repetem o que outra seção da página
+ * já afirma.
+ */
+export type HeroFact = {
+  kind: "countries" | "methods" | "invite" | "confirm" | "blocks" | "own";
+  /** O que a fileira mostra na lista — a linha clicável de 14px. */
+  label: string;
+  /** Uma ou duas linhas de 13px na área de detalhe, abaixo da lista. */
+  detail: string;
+  extra?: string[];
+};
+
+/**
+ * Os seis fatos, fora do literal de `pt` por causa do tipo acima (é o `const`
+ * anotado que mantém `kind` como união). O conteúdo pertence a
+ * `hero.aside.items` e se lê junto do resto do hero.
+ */
+const HERO_FACTS: HeroFact[] = [
+  {
+    kind: "countries",
+    label: "Cobrança em 7 países",
+    detail: "O cliente paga na moeda do país dele.",
+    /* Os ISO das moedas da tabela de Pagamentos, na ordem dos pinos do globo —
+       e são iguais nos dois idiomas, porque ISO não se traduz. */
+    extra: ["BRL", "ARS", "MXN", "COP", "USD", "EUR", "GBP"],
+  },
+  {
+    kind: "methods",
+    label: "O método de pagamento de lá",
+    detail: "O checkout abre com o que ele já usa.",
+    /* Um por país, os mesmos de `payments.table.countries`. */
+    extra: ["PIX", "Cartão", "SPEI", "Nequi", "MB WAY"],
+  },
+  {
+    kind: "invite",
+    label: "Convite de uso único",
+    detail: "Entregue no chat, segundos depois do pagamento.",
+    /* Primeiro a linha da bolha de chat, depois o rótulo do contador. O "…" é
+       o link encurtado de propósito: convite real não entra em página. */
+    extra: ["Seu convite: t.me/+…", "~3 s"],
+  },
+  {
+    kind: "confirm",
+    /* Os detalhes são CURTOS por medida, não por gosto: a área de detalhe do
+       painel tem altura cravada (116px) e, nos 168px úteis de 13rem, cada
+       detalhe tem duas linhas de ~24 caracteres antes de o micro-visual deste
+       item (três fileiras) não caber mais. Daí "Independentes entre si." em vez
+       de repetir os três nomes, que os pontos abaixo já dizem. */
+    label: "Três vias de confirmação",
+    detail: "Independentes entre si.",
+    /* Os três caminhos, na ordem em que os pontos acendem. */
+    extra: ["Webhook", "Reconciliação", "Botão no chat"],
+  },
+  {
+    kind: "blocks",
+    label: "Editor de funil com 28 blocos",
+    detail: "Você arrasta blocos, sem código.",
+    /* A legenda dos quatro quadradinhos laranja da grade 7×4. */
+    extra: ["4 de IA"],
+  },
+  {
+    kind: "own",
+    label: "Integrações próprias",
+    detail: "Sem Stripe no meio do caminho.",
+    /* As duas linhas que o traço sublinha. */
+    extra: ["0 intermediários", "taxa definida por operação"],
+  },
+];
+
+/**
  * Conteúdo em português. É a fonte da verdade: o tipo `Content` sai daqui e
  * `en.ts` precisa satisfazê-lo, então um campo novo adicionado aqui quebra o
  * build até ser traduzido — é de propósito.
@@ -126,17 +208,20 @@ export const pt = {
      * O painel de fatos ao lado do título (pedido do dono, 15/10: "adicione
      * informações ao lado direito no hero"). Só o que a página já afirma em
      * outras seções — nenhum número novo.
+     *
+     * 15/10, segunda rodada: os seis itens deixaram de ser frases de uma linha
+     * e viraram FILEIRAS que o relógio do hero percorre, cada uma com detalhe e
+     * micro-visual próprios (`HeroFacts`). O que era uma frase longa demais
+     * para 13rem de largura agora é rótulo curto + detalhe, e o que a frase só
+     * dizia (os sete ISO, os cinco métodos, as três vias, os 28 blocos) o
+     * painel também DESENHA. Os textos estão em `HERO_FACTS`, no topo do
+     * arquivo.
      */
     aside: {
       title: "O que vem com a Wone",
-      items: [
-        "Cobrança em 7 países, na moeda de cada um",
-        "PIX, cartão, SPEI, Nequi e MB WAY no checkout",
-        "Convite de uso único entregue no chat em segundos",
-        "Três vias de confirmação do pagamento",
-        "Editor de funil com 28 blocos, 4 de IA",
-        "Integrações próprias — sem intermediário, taxas sob medida",
-      ],
+      /** Rodapé do painel: o único link daqui, para a seção de Recursos. */
+      more: "Ver todos os recursos",
+      items: HERO_FACTS,
     },
   },
 

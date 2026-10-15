@@ -930,3 +930,10 @@ jogue o globo mais para a esquerda
 ===============================================================================
 de um efeito mais bonitinho quando recarregar a pagina, nas informacoes
 adicionais a direita do hero
+
+
+===============================================================================
+[102] 2026-10-15
+===============================================================================
+chat, na sessao de plataforma, em: "7 paises, moeda local" os paises devem ser
+os mesmos do checkout internacional
