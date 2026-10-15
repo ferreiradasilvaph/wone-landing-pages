@@ -961,3 +961,18 @@ o painel de fluxo deve ficar 100% parecido com o real
 [106] 2026-10-15
 ===============================================================================
 desca um pouco o globo, esta muito encostado na barra de tarefas
+
+
+===============================================================================
+[107] 2026-10-15
+===============================================================================
+melhore o visual do globo e joga ele mais para a esquerda da tela, jogue as
+info adicionais mais para a direita e melhore a aparencia do texto "Venda pelo
+Telegram no automatico"
+
+
+===============================================================================
+[108] 2026-10-15
+===============================================================================
+entao, por hora, melhore a aparencia e disposicao do celular na onde ficam os
+fluxos em "comom funciona"

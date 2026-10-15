@@ -37,11 +37,18 @@ import {
 
    O QUE É CANVAS E O QUE É CSS
 
-   Oceano e atmosfera são CSS (`.globe-sea`, `.globe-air`): custam zero por
-   quadro e, mais importante, estão pintados no HTML do servidor — o planeta
-   existe antes de o JavaScript rodar, e os pontos apenas pousam nele. O canvas
-   nasce vazio e transparente. Nenhum `opacity-0`, nenhuma entrada animada:
-   regra dura do hero.
+   A régua é esta: o que GIRA é canvas, o que não gira é CSS.
+
+   Oceano, halo, limbo e fio de atmosfera são CSS (`.globe-sea`, `.globe-halo`,
+   `.globe-limbo`, `.globe-air`, em `src/app/hero.css`): custam zero por quadro
+   e, mais importante, estão pintados no HTML do servidor — o planeta existe
+   antes de o JavaScript rodar, e os pontos apenas pousam nele. Pagar o halo e
+   o limbo em dois gradientes radiais POR QUADRO seria comprar movimento que
+   eles não têm: nenhum dos dois depende do ângulo.
+   A trama do mar, ao contrário, é canvas — ela gira, e é dela que vem a
+   sensação de bola em vez de disco recortado.
+   O canvas nasce vazio e transparente. Nenhum `opacity-0`, nenhuma entrada
+   animada: regra dura do hero.
 
    O CUSTO
 
@@ -108,6 +115,23 @@ const PASSO_MS = 27;
 const EUROPEUS = new Set(["EUR", "GBP"]);
 /** Quanto dura o laranja cheio na perna que chega à Europa, em ms. */
 const FLASH_MS = 1000;
+
+/**
+ * O COMETA e o PULSO (pedido do dono, 15/10: "quando um país acende, um cometa
+ * curto percorre o arco" e "anel de pulso no pino ativo").
+ *
+ * Os dois leem o MESMO carimbo de hora do flash da rede (`acendeuEm`), e por
+ * isso não têm como discordar sobre quando o país acendeu. Os dois também só
+ * existem com o laço de pé: fora de `xl`, ou com qualquer freio puxado
+ * (pausado, movimento reduzido, aba oculta, fora da tela), o globo é
+ * redesenhado UMA vez por troca e uma animação de 1,4 s num quadro só seria um
+ * piscar aleatório — que é exatamente o que o portão de movimento proíbe.
+ */
+const COMETA_MS = 1400;
+const PULSO_MS = 600;
+/** Quadros de cauda do cometa, e o quanto cada um fica para trás na perna. */
+const COMETA_CAUDA = 4;
+const COMETA_PASSO = 0.028;
 
 /** Raio angular, em radianos, do núcleo e da borda do tingimento (500/1.100 km). */
 const NUCLEO = 500 / 6371;
@@ -371,8 +395,17 @@ export function HeroGlobe({
   /** Ângulos do último quadro: o arco congela a posição do pino na ativação. */
   const angulo = useRef({ yaw: 0, pitch: 0 });
   const ativo = useRef(activeIndex);
-  /** Instante em que o país da vez acendeu: é o relógio do flash da rede. */
-  const acendeuEm = useRef(0);
+  /**
+   * Instante em que o país da vez acendeu: é o relógio do flash da rede, do
+   * cometa e do pulso do pino.
+   *
+   * Nasce em −1e9, e não em 0 ou em `performance.now()`: com 0 a conta
+   * `now - acendeuEm` daria o tempo de vida da PÁGINA, que numa carga rápida
+   * cabe dentro dos 600 ms do pulso — e o pino piscaria na entrada, que é
+   * justamente o que a regra do hero proíbe. Com −1e9 nada dispara antes da
+   * primeira troca de verdade.
+   */
+  const acendeuEm = useRef(-1e9);
 
   /** O arco do pino até o aparelho. `null` até o relógio trocar de país. */
   const [arco, setArco] = useState<{ code: string; d: string } | null>(null);
@@ -434,6 +467,10 @@ export function HeroGlobe({
      O carimbo de hora vai junto, e é o relógio do flash da rede: a perna que
      chega a Lisboa ou a Londres acende em laranja cheio por 1 s a partir daqui. */
   useEffect(() => {
+    /* A comparação não é zelo: na montagem (e na remontagem dupla do modo
+       estrito, em desenvolvimento) o país não mudou — ele apenas começou a
+       existir. Carimbar a hora ali acenderia cometa e pulso na primeira tela. */
+    if (ativo.current === activeIndex) return;
     ativo.current = activeIndex;
     acendeuEm.current = performance.now();
   }, [activeIndex]);
@@ -470,6 +507,13 @@ export function HeroGlobe({
 
     /** Celular: nuvem pela metade, dpr 1, sem pino e sem laço. */
     const celular = modo === "celular";
+    /**
+     * O laço está de pé? É a condição do movimento que depende de TEMPO — o
+     * flash da rede, o cometa e o pulso do pino. Fora dela o globo é um quadro
+     * parado, e o que não pode animar não anima: nada de meia volta congelada
+     * na tela quando o dono aperta "pausar".
+     */
+    const emLaco = modo === "laco" && running;
 
     /* Arma a onda — uma vez por entrada, e só onde ela cabe.
        Quem diz se é celular aqui é o `matchMedia`, e NÃO o `modo`: `modo` nasce
@@ -578,11 +622,26 @@ export function HeroGlobe({
      * da projeção (`rede()`, uma vez); aqui só se gira, projeta e traça — um
      * `stroke` para as quatro.
      */
-    function malha(cy: number, sy: number, cp: number, sp: number) {
+    function malha(
+      cy: number,
+      sy: number,
+      cp: number,
+      sp: number,
+      desde: number,
+    ) {
       const g = geo.current!;
       const R = g.raio;
       const pts = rede();
       const n = REDE_PASSOS + 1;
+
+      /** Gira e projeta um vetor da base. `z2 <= 0` é o outro lado da bola. */
+      const projeta = (x: number, y: number, z: number) => {
+        const x1 = cy * x + sy * z;
+        const z1 = -sy * x + cy * z;
+        const y2 = cp * y - sp * z1;
+        const z2 = sp * y + cp * z1;
+        return { sx: R + x1 * R, sv: R - y2 * R, z2 };
+      };
 
       /** Traça as pernas que passam no filtro, numa cor e num alfa só. */
       const traca = (
@@ -635,11 +694,8 @@ export function HeroGlobe({
          quadro só seria um piscar aleatório. */
       const ativoCode = lista[ativo.current] ?? "";
       const europeuAtivo = EUROPEUS.has(ativoCode);
-      const desde = performance.now() - acendeuEm.current;
       const flash =
-        europeuAtivo && modo === "laco" && desde < FLASH_MS
-          ? 1 - desde / FLASH_MS
-          : 0;
+        europeuAtivo && emLaco && desde < FLASH_MS ? 1 - desde / FLASH_MS : 0;
       const naPerna = (perna: [string, string]) =>
         perna[0] === ativoCode || perna[1] === ativoCode;
       const tocaEuropa = (perna: [string, string]) =>
@@ -650,6 +706,81 @@ export function HeroGlobe({
       traca((perna) => !tocaEuropa(perna) && !acesa(perna), 0.14);
       traca((perna) => tocaEuropa(perna) && !acesa(perna), 0.3);
       if (flash > 0) traca(acesa, 0.3 + 0.7 * flash, 1.5);
+
+      /* O COMETA. A perna é a que SAI do país da vez — e cada um dos sete
+         aparece exatamente uma vez como origem no anel, então a escolha é
+         determinística: um país, um destino, sem sorteio.
+         A cabeça anda de ponta a ponta em 1,4 s, e atrás dela vêm três pontos
+         nas posições de 1, 2 e 3 quadros antes (0,028 da perna cada, que é o
+         que a cabeça anda num quadro de 30 fps). São quatro `fill` de um arco:
+         o custo é o mesmo de quatro pontos da nuvem, que tem 5.102.
+         A interpolação é LINEAR entre dois pontos vizinhos da polilinha que já
+         está montada — não se refaz grande-círculo nenhum por quadro. */
+      if (!emLaco || desde >= COMETA_MS) return;
+      const perna = REDE_PERNAS.findIndex(([de]) => de === ativoCode);
+      if (perna < 0) return;
+
+      const avanco = desde / COMETA_MS;
+      /* Some no fim do trajeto em vez de apagar de repente. */
+      const vida = 1 - avanco * avanco;
+      for (let q = 0; q < COMETA_CAUDA; q += 1) {
+        const u = avanco - q * COMETA_PASSO;
+        if (u < 0) continue;
+        const f = u * REDE_PASSOS;
+        const s0 = Math.min(REDE_PASSOS, f | 0);
+        const s1 = Math.min(REDE_PASSOS, s0 + 1);
+        const w = f - s0;
+        const i0 = (perna * n + s0) * 3;
+        const i1 = (perna * n + s1) * 3;
+        const p = projeta(
+          pts[i0] + (pts[i1] - pts[i0]) * w,
+          pts[i0 + 1] + (pts[i1 + 1] - pts[i0 + 1]) * w,
+          pts[i0 + 2] + (pts[i1 + 2] - pts[i0 + 2]) * w,
+        );
+        if (p.z2 <= 0) continue;
+        const cauda = 1 - q / COMETA_CAUDA;
+        ctx!.beginPath();
+        ctx!.arc(p.sx, p.sv, (0.9 + 1.5 * cauda) * cauda, 0, TAU);
+        ctx!.globalAlpha = Math.min(1, 0.95 * cauda * cauda * vida) * g.ganho;
+        /* Creme na cabeça, como o pino: é o mesmo gesto chegando. */
+        ctx!.fillStyle = q === 0 ? PAIS_NUCLEO : COSTA;
+        ctx!.fill();
+      }
+    }
+
+    /**
+     * A TRAMA DO MAR: a espiral esparsa de `mar()`, girada e projetada como os
+     * outros pontos, num `fill` só. Sem balde e sem cor própria — o que cai
+     * para o limbo é o RAIO, pelo mesmo fator de volume da terra firme (o
+     * desenho de um ponto de 1,2px a 0,6px perde três quartos da área, e a
+     * suavização faz o resto do trabalho de alfa).
+     */
+    function trama(cy: number, sy: number, cp: number, sp: number) {
+      const g = geo.current!;
+      const R = g.raio;
+      const pts = mar();
+      ctx!.beginPath();
+      for (let i = 0; i < MAR_PONTOS; i += g.salto) {
+        const x = pts[i * 3];
+        const y = pts[i * 3 + 1];
+        const z = pts[i * 3 + 2];
+        const x1 = cy * x + sy * z;
+        const z1 = -sy * x + cy * z;
+        const y2 = cp * y - sp * z1;
+        const z2 = sp * y + cp * z1;
+        if (z2 <= 0.06) continue;
+        const r = 1.15 * (0.52 + 0.48 * z2);
+        const sx = R + x1 * R;
+        const sv = R - y2 * R;
+        ctx!.moveTo(sx + r, sv);
+        ctx!.arc(sx, sv, r, 0, TAU);
+      }
+      /* 0,07 e não 0,10: a 0,10 a trama disputava com os continentes, que são
+         do MESMO laranja — o mar lia como terra rala. Ela tem de estar lá
+         quando se procura e sumir quando se lê o mapa. */
+      ctx!.globalAlpha = 0.07 * g.ganho;
+      ctx!.fillStyle = LARANJA;
+      ctx!.fill();
     }
 
     function desenha(yaw: number, pitch: number) {
@@ -683,8 +814,11 @@ export function HeroGlobe({
         ctx!.restore();
       };
 
+      const desde = performance.now() - acendeuEm.current;
+
       ctx!.clearRect(0, 0, g.lado, g.lado);
       sob(() => grade(cy, sy, cp, sp));
+      sob(() => trama(cy, sy, cp, sp));
 
       const atual = ativo.current;
       let n = 0;
@@ -703,17 +837,37 @@ export function HeroGlobe({
         let lit = (-0.55 * x1 + 0.62 * y2 + 0.56 * z2) * 0.55 + 0.45;
         lit = lit < 0 ? 0 : lit > 1 ? 1 : lit;
 
+        /* VOLUME (pedido do dono, 15/10). `z2` É o cosseno do ângulo ao centro
+           do disco — o ponto é unitário —, então este fator vale 1 no meio da
+           bola e 0,62 no limbo, e multiplica ALFA e RAIO. É o que separa uma
+           esfera de um adesivo: no limbo os pontos se amontoam pelo
+           encurtamento da projeção, e sem a queda eles ficariam MAIS densos do
+           que o centro, não menos.
+           O 0,62 de piso (e não 0,55) é compensação medida: o fator médio sobre
+           o disco é 0,87, então ele tira ~13% de brilho do planeta inteiro — a
+           rampa de alfa logo abaixo devolve esses 13% no termo da luz. */
+        const vol = 0.62 + 0.38 * z2;
+        /* REALCE DE ESTÚDIO: no quadrante que a luz de cima-à-esquerda pega, o
+           ponto sobe um degrau de brilho e ganha raio. É um `if` por ponto, e
+           não um expoente — a 5.102 pontos a 30 fps, a diferença é medida. */
+        const realce = lit > 0.74 ? (lit - 0.74) * 1.4 : 0;
+
         const t = dados.tingimento[i];
         let balde: number;
         if (t > 0.02) {
-          /* Os quatro países: creme, e o da vez com meio passo a mais. */
-          const s = t * (dados.pais[i] === atual ? 1.6 : 1);
+          /* Os sete países: creme, e o da vez com meio passo a mais. A queda
+             até o limbo é mais branda aqui (0,75–1,0 contra 0,62–1,0): são
+             eles que carregam a informação da tela, e a Europa inteira, que
+             mora a 0,85 de `z2`, não pode perder o degrau que o dono pediu. */
+          const s = t * (dados.pais[i] === atual ? 1.6 : 1) * (0.75 + 0.25 * z2);
           balde = 7 + (s >= 1.2 ? 2 : s >= 0.6 ? 1 : 0);
         } else {
           /* Queda do alfa até o limbo: é o que evita a linha dura na borda. */
           const u = z2 >= 0.18 ? 1 : z2 / 0.18;
           const alfa =
-            (0.06 + 0.28 * lit + dados.ac[i]) * (u * u * (3 - 2 * u));
+            (0.06 + 0.32 * lit + 0.1 * realce + dados.ac[i]) *
+            (u * u * (3 - 2 * u)) *
+            vol;
           balde = (alfa * 13.04) | 0;
           if (balde > 5) balde = 5;
           /* A costa só vira laranja claro onde há luz: um fio claro no lado da
@@ -732,11 +886,14 @@ export function HeroGlobe({
 
         trab.x[n] = R + x1 * R;
         trab.y[n] = py;
-        /* Os países ganham 18% de raio além do alfa: é o que faz os quatro
-           acesos ficarem legíveis contra uma terra que agora é toda laranja. */
+        /* Os países ganham 18% de raio além do alfa: é o que faz os sete
+           acesos ficarem legíveis contra uma terra que agora é toda laranja.
+           O `vol` entra também aqui: o ponto do limbo não é só mais fraco, é
+           MENOR — e é esse par que dá a curvatura. */
         trab.r[n] =
           dados.rb[i] *
-          (0.72 + 0.4 * lit) *
+          (0.72 + 0.4 * lit + 0.12 * realce) *
+          vol *
           (balde % BALDES >= 7 ? 1.18 : 1);
         trab.b[n] = balde;
         usados |= 1 << balde;
@@ -768,13 +925,24 @@ export function HeroGlobe({
 
       /* A rede POR CIMA da terra: embaixo de 5.102 pontos de laranja ela
          desaparece, e ligar as quatro capitais é o que a imagem tem a dizer. */
-      sob(() => malha(cy, sy, cp, sp));
+      sob(() => malha(cy, sy, cp, sp, desde));
       ctx!.globalAlpha = 1;
 
       /* Os pinos: `transform` com o DESLOCAMENTO a partir da posição de
          repouso que o servidor escreveu em `left/top`. Em t = 0 ele é (0,0),
          então nada salta quando o laço assume. Composto, sem layout. */
       if (!celular) {
+        /* O PULSO do pino da vez (pedido do dono, 15/10): um anel que nasce no
+           ponto e se abre em 600 ms, UMA vez por troca. Só raio e alfa — nem
+           cor, nem deslocamento, nem escala de nó nenhum. Ele é desenhado aqui,
+           no canvas, e não em CSS como o anel do `CountryTag`, por um motivo de
+           verdade: no canvas ele nasce na coordenada PROJETADA do país, que
+           continua andando com o balanço do planeta; o anel de CSS mora no
+           alfinete e por isso só pode pulsar onde o alfinete já está.
+           O `hero-ping` do `CountryTag` segue existindo abaixo de 1280, onde
+           não há laço para animar isto. */
+        const pulso = emLaco && desde < PULSO_MS ? desde / PULSO_MS : -1;
+
         for (let j = 0; j < g.repouso.length; j += 1) {
           const el = alfinetes.current[j];
           if (!el) continue;
@@ -784,9 +952,20 @@ export function HeroGlobe({
           const y2 = cp * y - sp * z1;
           const z2 = sp * y + cp * z1;
           el.hidden = z2 < 0;
-          const dx = R + x1 * R - g.repouso[j].x;
-          const dy = R - y2 * R - g.repouso[j].y;
-          el.style.transform = `translate3d(${dx.toFixed(1)}px, ${dy.toFixed(1)}px, 0)`;
+          const px = R + x1 * R;
+          const py2 = R - y2 * R;
+          el.style.transform = `translate3d(${(px - g.repouso[j].x).toFixed(1)}px, ${(py2 - g.repouso[j].y).toFixed(1)}px, 0)`;
+
+          if (pulso < 0 || j !== atual || z2 < 0) continue;
+          /* Saída rápida e chegada mansa, a mesma leitura do resto do palco. */
+          const e = 1 - (1 - pulso) * (1 - pulso) * (1 - pulso);
+          ctx!.beginPath();
+          ctx!.arc(px, py2, 4 + 26 * e, 0, TAU);
+          ctx!.globalAlpha = 0.5 * (1 - pulso) * g.ganho;
+          ctx!.strokeStyle = LARANJA;
+          ctx!.lineWidth = 1.5;
+          ctx!.stroke();
+          ctx!.globalAlpha = 1;
         }
       }
 
@@ -935,34 +1114,30 @@ export function HeroGlobe({
 
   return (
     <div aria-hidden className="pointer-events-none absolute inset-0">
-      {/* A CAIXA DO GLOBO: tamanho CRAVADO por breakpoint, sempre absoluta —
-          CLS zero por construção, porque nada aqui participa do fluxo.
-          Desde 15/10 ela mede a METADE ESQUERDA DA JANELA, e não um pedaço de
-          coluna: o pai desta camada é a seção inteira, então `left` conta da
-          borda da janela, e o disco sangra por ela. A conta de cada degrau tem
-          duas pontas presas — a borda esquerda da coluna de texto (x 445 a
-          1024, 552 a 1280, 632 a 1440) e o pino mais a oeste, a Cidade do
-          México, que mora a 9,5% da caixa:
-            · o limbo leste termina 74–88px DEPOIS do início do texto, que é o
-              "levemente por cima" do pedido;
-            · o pino do México sobra 23–32px dentro da tela, com folga para a
-              excursão do balanço (±1,5°) e do recuo (±2,5°).
-          Os degraus são `min-[]` arbitrários, e não `lg:`/`xl:`, porque o
-          Tailwind emite os arbitrários ANTES dos nomeados: com `lg:left` e
-          `min-[1400px]:left` na mesma classe, o `lg` venceria a 1440 (medido —
-          o disco não saía do lugar). Em arbitrários, a ordem é a numérica.
-          O corte de cima é 1400 e não 1440 porque quem o avalia é a LARGURA DE
-          LAYOUT: numa janela de 1440 com barra de rolagem clássica sobram
-          1430px, e um `min-[1440px]` nunca valeria na medida que o dono usa.
-          No celular ela fica centrada no bloco de 420px que vem depois dos
-          botões: lá não há pino nem rótulo (sete caixas de texto não cabem em
-          370px de largura), e quem nomeia o país é a `StageStatus`. */}
-      <div
-        ref={caixa}
-        className="absolute top-1/2 left-1/2 -mt-[210px] -ml-[210px] h-[420px] w-[420px] min-[1024px]:top-[100px] min-[1024px]:left-[calc((100vw-min(100vw,80rem))/2+2rem-22px)] min-[1024px]:mt-0 min-[1024px]:ml-0 min-[1024px]:h-[min(500px,100svh_-_336px)] min-[1024px]:w-[min(500px,100svh_-_336px)] min-[1280px]:top-[84px] min-[1280px]:left-[calc((100vw-min(100vw,80rem))/2+2rem-20px)] min-[1280px]:h-[min(600px,100svh_-_346px)] min-[1280px]:w-[min(600px,100svh_-_346px)] min-[1400px]:top-[72px] min-[1400px]:left-[calc((100vw-min(100vw,78rem))/2+2rem-44px)] min-[1400px]:h-[min(540px,100svh_-_356px)] min-[1400px]:w-[min(540px,100svh_-_356px)]"
-      >
-        {/* Oceano e atmosfera: CSS, pintados no servidor. É o que faz o planeta
-            existir antes de o JavaScript montar a nuvem. */}
+      {/* A CAIXA DO GLOBO: tamanho CRAVADO por degrau, sempre absoluta — CLS
+          zero por construção, porque nada aqui participa do fluxo.
+
+          A GEOMETRIA SAIU DAQUI em 15/10 e foi para `.hero-globo`, em
+          `src/app/hero.css`. Dois motivos, nenhum deles estético:
+            · o lado do globo era quatro números espalhados (altura, largura e,
+              agora, a trilha da grade da cena e o recuo do texto) e precisava
+              ser UM: é a variável `--globo`, declarada na seção;
+            · o Tailwind emite as variantes arbitrárias ANTES das nomeadas, e
+              `lg:` vencia `min-[1400px]:` na mesma classe (medido: o disco não
+              saía do lugar). Fora das camadas do Tailwind esse empate não
+              existe.
+          Desde 15/10 o disco ENCOSTA na borda esquerda do conteúdo em vez de
+          sangrar para fora dela: com o texto no meio da cena, sangrar deixou de
+          ter função. No celular a caixa fica centrada no bloco de 420px que vem
+          depois dos botões — lá não há pino nem rótulo (sete caixas de texto
+          não cabem em 370px), e quem nomeia o país é a `StageStatus`. */}
+      <div ref={caixa} className="hero-globo">
+        {/* Halo, oceano e atmosfera: CSS, pintados no servidor. É o que faz o
+            planeta existir antes de o JavaScript montar a nuvem — e é também
+            onde o custo deles é ZERO por quadro, que é o que permite ter os
+            três sem tocar nos 30 fps do laço. O halo vem primeiro porque mora
+            para FORA do disco (`inset: -28px`); o oceano o cobre no miolo. */}
+        <span className="globe-halo block" />
         <span className="globe-sea absolute inset-0 block" />
         <span className="globe-air absolute inset-0 block" />
 
@@ -982,6 +1157,12 @@ export function HeroGlobe({
 
         {/* A terra firme. Vazio e transparente até o primeiro quadro. */}
         <canvas ref={tela} className="absolute inset-0 h-full w-full" />
+
+        {/* O LIMBO POR DENTRO: os últimos 6% do raio escurecem até 35% de
+            preto. Vem DEPOIS do canvas de propósito — é dos pontos que ele
+            precisa tirar peso, e é isso que faz o disco virar bola. Também é
+            CSS, e também custa zero por quadro: ele não gira. */}
+        <span className="globe-limbo block" />
 
         {/* Os pinos. Abaixo de `lg` não existem (globo atrás do aparelho).
             Na entrada eles aparecem DEPOIS da onda (700 ms), e só em
@@ -1045,6 +1226,41 @@ function alvo(code: string): [number, number, number] {
     ALVOS.set(code, v);
   }
   return v;
+}
+
+/* ----------------------------------------------------------- a trama do mar */
+
+/**
+ * A TRAMA DO MAR (pedido do dono, 15/10: "uma trama de pontos de mar muito
+ * fraca, para o disco ler inteiro e não só os continentes").
+ *
+ * É a MESMA espiral de Fibonacci da terra firme — `amostra()`, a função que o
+ * gerador e o cliente já compartilham —, só que com 900 candidatos em vez de
+ * 26 mil e sem máscara nenhuma: ela cobre a esfera inteira, oceano e
+ * continente. Os pontos que caem em terra ficam debaixo dos 5.102 pontos
+ * laranja, que são muito mais fortes, e somem.
+ *
+ * POR QUE NO CANVAS, e não em CSS como o halo e o limbo: a trama GIRA. Ela é a
+ * única das três coisas novas do planeta que depende do ângulo — é dela que
+ * vem a sensação de bola girando no meio do oceano vazio. Custa 900 pontos a
+ * mais por quadro (+0,4 ms sobre 2,2), e eles entram num `fill` só.
+ */
+const MAR_PONTOS = 900;
+
+let MAR: Float32Array | null = null;
+
+function mar(): Float32Array {
+  if (MAR) return MAR;
+  const out = new Float32Array(MAR_PONTOS * 3);
+  for (let i = 0; i < MAR_PONTOS; i += 1) {
+    const { lat, lon } = amostra(i, MAR_PONTOS);
+    const [x, y, z] = baseVector(lat, lon);
+    out[i * 3] = x;
+    out[i * 3 + 1] = y;
+    out[i * 3 + 2] = z;
+  }
+  MAR = out;
+  return MAR;
 }
 
 /* ------------------------------------------------------------------ a rede */

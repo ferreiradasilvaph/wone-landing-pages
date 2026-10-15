@@ -1,0 +1,286 @@
+/* ==========================================================================
+   O HERO — A CENA DE ABERTURA: GLOBO | TEXTO | PAINEL
+
+   Este arquivo é só do hero, e nasceu em 15/10 com o pedido do dono: "melhore
+   o visual do globo e joga ele mais para a esquerda da tela, jogue as info
+   adicionais mais para a direita e melhore a aparência do texto 'Venda pelo
+   Telegram no automático'".
+
+   POR QUE UM ARQUIVO À PARTE, e não mais trinta utilitários no JSX: a cena
+   tem três peças ancoradas em CONTAS — a caixa do globo, a linha de controle e
+   a grade de três trilhas —, e as contas precisam ler o MESMO número. Com
+   classes do Tailwind espalhadas, o lado do globo aparecia em quatro lugares
+   (altura, largura, trilha da grade, recuo do texto) e divergia ao primeiro
+   ajuste. Aqui o lado é UMA variável, `--globo`, e todo o resto a lê.
+
+   Há um segundo motivo, e é mecânico: o Tailwind emite as variantes arbitrárias
+   (`min-[1400px]:`) ANTES das nomeadas (`lg:`), então `lg:col-start-6` vencia
+   um `min-[1400px]:col-start-1` na mesma classe — o bug que os comentários do
+   `HeroGlobe` já descreviam. As regras daqui vivem FORA das camadas do Tailwind
+   (o `@import` deste arquivo vem logo depois do dele, e nada aqui está em
+   `@layer`), então ganham de qualquer utilitário sem depender de ordem.
+
+   A RÉGUA HORIZONTAL. Tudo se mede a partir da borda do CONTEÚDO do container
+   — `calc((100% - min(100%, <largura>)) / 2 + 2rem)`, onde 2rem é o `px-8`.
+   É `100%` e não `100vw` de propósito: a camada do palco é `absolute inset-0`
+   da seção, então `100%` é a largura de LAYOUT (sem a barra de rolagem) e a
+   conta cai no mesmo pixel da borda do container. Com `100vw` o globo nascia
+   5px à direita do texto numa janela com barra clássica — a conta antiga.
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   O LADO DO GLOBO, por degrau de largura. É a única fonte: a caixa, a trilha
+   da grade e a centralização no celular leem esta variável.
+
+   O teto cresceu de 540 para 560px em 1400+ (o container foi de 78 para 88rem
+   e sobrou corredor), e o piso continua sendo a ALTURA da janela: `100svh -
+   356px` são o cabeçalho de 65px, o respiro de cima e a faixa de integrações
+   com a fileira de benefícios no pé. Numa janela de 1440×800 o globo encolhe
+   para 444px sozinho e nada cruza a faixa.
+   -------------------------------------------------------------------------- */
+.hero-cena {
+  --globo: 420px;
+  /* O painel de fatos e os dois respiros da cena de 1400+. */
+  --painel: 13rem;
+  --respiro: 2.5rem;
+  /* A caixa de texto: 29rem porque "Telegram no" mede 444px no título de 80px
+     (medido no navegador, com a Geist e o entreletra de −0,04em) e 29rem dá
+     464 — 20px de folga para a fonte de fallback. Abaixo de 1400 quem manda
+     continua sendo a coluna da grade de 12. */
+  --texto: 29rem;
+}
+
+@media (min-width: 1024px) {
+  .hero-cena {
+    --globo: min(500px, 100svh - 336px);
+  }
+}
+
+@media (min-width: 1280px) {
+  .hero-cena {
+    --globo: min(600px, 100svh - 346px);
+  }
+}
+
+@media (min-width: 1400px) {
+  .hero-cena {
+    --globo: min(560px, 100svh - 356px);
+  }
+}
+
+/* --------------------------------------------------------------------------
+   A CAIXA DO GLOBO — tamanho cravado por degrau, sempre absoluta: CLS zero por
+   construção, porque nada aqui participa do fluxo.
+
+   No celular ela é centrada no bloco de 500px que vem depois dos botões, por
+   MARGEM negativa e não por `translate`: o nó não anima, e margem não cria
+   camada de composição.
+   A partir de `lg` ela encosta na borda esquerda do CONTEÚDO — é o pedido do
+   dono ("joga ele mais para a esquerda"): antes ela sangrava 20–44px para fora
+   da coluna, para caber ao lado de um texto que começava na metade da tela.
+   Com o texto no meio da cena, sangrar deixou de ter função: o globo abre a
+   leitura exatamente onde a página abre.
+   -------------------------------------------------------------------------- */
+.hero-globo {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: var(--globo);
+  height: var(--globo);
+  margin-top: calc(var(--globo) * -0.5);
+  margin-left: calc(var(--globo) * -0.5);
+}
+
+@media (min-width: 1024px) {
+  .hero-globo {
+    top: 100px;
+    left: calc((100% - min(100%, 80rem)) / 2 + 2rem);
+    margin: 0;
+  }
+}
+
+@media (min-width: 1280px) {
+  .hero-globo {
+    top: 84px;
+  }
+}
+
+@media (min-width: 1400px) {
+  .hero-globo {
+    /* 72px: o cabeçalho tem 65 e o disco não o encosta. */
+    top: 72px;
+    left: calc((100% - min(100%, 88rem)) / 2 + 2rem);
+  }
+}
+
+/* --------------------------------------------------------------------------
+   A ATMOSFERA — CSS, e não canvas, pela MESMA razão de o oceano já ser CSS
+   (`.globe-sea`): custa zero por quadro e está pintada no HTML do servidor.
+   O pedido do dono era "um halo externo laranja muito suave e um escurecimento
+   interno junto ao limbo"; nenhum dos dois gira com o planeta, então pagá-los
+   em dois gradientes radiais por quadro (≈650 mil pixels a 30 fps, sobre um
+   laço que custa 2,2 ms) seria comprar movimento que não existe.
+
+   HALO: a caixa é `inset: -28px`, então o raio dela é R+28 e
+   `calc(100% - 28px)` cai EXATAMENTE no limbo, em qualquer tamanho de globo —
+   sem repetir a conta do raio. O miolo chapado fica escondido debaixo do
+   oceano, que é opaco.
+   -------------------------------------------------------------------------- */
+.globe-halo {
+  position: absolute;
+  inset: -28px;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle closest-side,
+    rgba(255, 119, 0, 0.12) 0 calc(100% - 28px),
+    rgba(255, 119, 0, 0.05) calc(100% - 17px),
+    rgba(255, 119, 0, 0) 100%
+  );
+}
+
+/* O limbo por DENTRO: os últimos 6% do raio escurecem até 35% de preto. É o
+   que dá curvatura ao disco — sem ele os pontos da borda têm o mesmo peso dos
+   do centro e a bola lê como adesivo. Vem DEPOIS do canvas no DOM, para pegar
+   os pontos; `closest-side` faz 100% valer R (e não a diagonal). */
+.globe-limbo {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle closest-side,
+    rgba(0, 0, 0, 0) 0 94%,
+    rgba(0, 0, 0, 0.35) 100%
+  );
+}
+
+/* --------------------------------------------------------------------------
+   A LINHA DE CONTROLE do palco (rótulo + status + pausar).
+
+   Ancorada pelo PÉ, nunca pelo topo: a altura do hero é a da janela, e com
+   `top` cravado ela caía sobre a fileira de benefícios numa tela de 800px. Os
+   158px são a fileira mais a faixa, medidos.
+   A partir de `lg` ela passa a dividir a borda esquerda com o globo e com a
+   primeira coluna de benefícios: três peças, uma régua só.
+   -------------------------------------------------------------------------- */
+.hero-controle {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  width: 340px;
+  translate: -50% 0;
+}
+
+@media (min-width: 1024px) {
+  .hero-controle {
+    bottom: 158px;
+    left: calc((100% - min(100%, 80rem)) / 2 + 2rem);
+    width: 380px;
+    translate: none;
+  }
+}
+
+@media (min-width: 1400px) {
+  .hero-controle {
+    left: calc((100% - min(100%, 88rem)) / 2 + 2rem);
+  }
+}
+
+/* --------------------------------------------------------------------------
+   A CENA DE 1400+ : TRÊS TRILHAS OCUPANDO A TELA
+
+   `var(--globo) | 1fr | var(--painel)`, com `--respiro` entre elas. A primeira
+   trilha não tem conteúdo: ela é o LUGAR do globo, que é camada de fundo e não
+   participa da grade — e é por isso que ela mede exatamente o lado dele. Como
+   a trilha começa na borda do conteúdo e o globo também, as duas bordas são a
+   mesma linha, em qualquer largura e em qualquer altura de janela.
+
+   O texto fica CENTRADO na trilha do meio (`margin-inline: auto`), e não colado
+   num dos lados: a 1440 isso dá 64px de ar de cada lado — a mesma distância do
+   limbo e do painel —, e é o que faz as três peças lerem como uma cena só em
+   vez de três colunas.
+   -------------------------------------------------------------------------- */
+@media (min-width: 1400px) {
+  .hero-linha {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: var(--globo) minmax(0, 1fr) var(--painel);
+    column-gap: var(--respiro);
+    align-items: start;
+  }
+
+  .hero-texto {
+    grid-column: 2;
+    max-width: var(--texto);
+    margin-inline: auto;
+  }
+
+  .hero-painel {
+    grid-column: 3;
+    width: 100%;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   O TÍTULO — "mais presença", pedido do dono
+
+   Sem gradiente em texto, sem glow, sem contorno (as três regras dele). O que
+   sobra para dar presença é o que a tipografia tem: TAMANHO, PESO e AR.
+   A partir de 1400 o h1 sobe de 62 para 80px, ganha o peso 700 e fecha o
+   entreletra em −0,04em com 0,92 de entrelinha — as três linhas passam a ser
+   um bloco, não três frases soltas.
+
+   `h1.hero-titulo` e não `.hero-titulo`: a especificidade 0,1,1 ganha de
+   `.t-display` (0,1,0) sem depender de qual arquivo o bundler põe primeiro.
+   `.t-display` continua dona do tipo, da cor e de todas as outras larguras —
+   abaixo de 1400 nada aqui casa e o título é exatamente o de hoje.
+   -------------------------------------------------------------------------- */
+@media (min-width: 1400px) {
+  h1.hero-titulo {
+    font-size: 5rem;
+    line-height: 0.92;
+    letter-spacing: -0.04em;
+    font-weight: 700;
+  }
+}
+
+/* O SUBLINHADO da palavra laranja.
+
+   É um pseudo-elemento: não entra na caixa do texto, não desloca uma linha, e
+   não toca no `<h1>`, que é o elemento de LCP no celular.
+   `width: fit-content` é o que faz o traço medir a PALAVRA e não a coluna — a
+   regra `.ent-linha > span { display: block }` existe para a janela de recorte
+   da entrada e deixaria o traço com 464px.
+   Sem `html.wone-entrando` (JS desligado, movimento reduzido) ele nasce
+   desenhado: o estado final é o padrão, e quem anima é só a classe. */
+@media (min-width: 1024px) {
+  .hero-sublinha {
+    position: relative;
+    width: fit-content;
+  }
+
+  .hero-sublinha::after {
+    content: "";
+    position: absolute;
+    inset-inline: 0;
+    bottom: 0.02em;
+    height: 2px;
+    background: var(--brand);
+    transform-origin: left center;
+  }
+
+  /* 760ms é onde a escada do título termina (160 de atraso + 600 de animação):
+     o traço entra quando a última linha acaba de assentar, e leva 900ms para
+     atravessar a palavra. Só `transform`, no compositor. */
+  html.wone-entrando .hero-sublinha::after {
+    animation: hero-sublinha 0.9s var(--ent-ease) 760ms both;
+  }
+}
+
+@keyframes hero-sublinha {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}

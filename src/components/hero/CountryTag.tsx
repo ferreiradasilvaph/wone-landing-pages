@@ -80,7 +80,14 @@ export function CountryTag({
       />
 
       {/* O anel, só no país da vez: montar é animar, e ele só existe enquanto
-          aquele país está ativo — uma volta por ativação, nunca em laço. */}
+          aquele país está ativo — uma volta por ativação, nunca em laço.
+
+          `xl:hidden` desde 15/10, e não é zelo: a partir de 1280 quem pulsa é o
+          CANVAS (`HeroGlobe`, 600 ms de raio e alfa), que desenha o anel na
+          coordenada PROJETADA do país — ela continua andando com o balanço do
+          planeta, e este anel aqui, que mora no alfinete, não. Abaixo de 1280 o
+          globo é redesenhado uma vez por troca e não há laço para animar nada:
+          lá este continua sendo o único pulso. Um por largura, nunca dois. */}
       {active && animated ? (
         <span
           key={code}
@@ -88,7 +95,7 @@ export function CountryTag({
              encontra Lisboa e Londres do outro lado do Atlântico, que é o que o
              dono pediu em 15/10. O `key` continua sendo o país — montar é
              animar, uma volta por ativação. */
-          className={`hero-ping absolute top-1/2 left-1/2 rounded-full ring-2 ring-brand ${
+          className={`hero-ping absolute top-1/2 left-1/2 rounded-full ring-2 ring-brand xl:hidden ${
             sempre ? "-mt-6 -ml-6 h-12 w-12" : "-mt-[18px] -ml-[18px] h-9 w-9"
           }`}
         />

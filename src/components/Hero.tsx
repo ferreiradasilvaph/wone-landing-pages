@@ -235,27 +235,38 @@ export function Hero() {
       ref={secao}
       id="topo"
       data-section="topo"
-      className="relative flex min-h-[100svh] flex-col overflow-x-clip bg-ink-950"
+      className="hero-cena relative flex min-h-[100svh] flex-col overflow-x-clip bg-ink-950"
     >
-      <div className="mx-auto w-full max-w-7xl px-4 pt-24 sm:px-6 lg:flex lg:flex-1 lg:flex-col lg:px-8 lg:pt-28 min-[1400px]:max-w-[78rem]">
+      {/* `hero-cena` é quem declara `--globo` (ver `hero.css`): o lado do globo
+          em cada degrau de largura, lido pela caixa do planeta E pela trilha da
+          grade de 1400+. Uma conta, dois leitores — e por isso eles não podem
+          divergir. */}
+      {/* 88rem a partir de 1400 (eram 78): é a virada de 15/10 — o dono pediu o
+          globo mais à esquerda e o painel mais à direita, e as duas pontas só
+          cabem se o conteúdo ocupar a tela. A 1440 o conteúdo vai de x 43 a
+          1387; a 1920, de 283 a 1627. */}
+      <div className="mx-auto w-full max-w-7xl px-4 pt-24 sm:px-6 lg:flex lg:flex-1 lg:flex-col lg:px-8 lg:pt-28 min-[1400px]:max-w-[88rem]">
         <div className="grid gap-x-8 gap-y-12 lg:grid-cols-12">
-          {/* A COLUNA DE TEXTO começa na coluna 6 de 12 — x 627 numa janela de
-              1440 —, e o disco de 760px termina em x 730: a borda esquerda do
-              texto entra ~100px POR CIMA do planeta, que é o pedido ("texto
-              levemente por cima"). Quem garante que ele fique por cima é o
-              `z-10` daqui contra o palco, que é camada de fundo; e quem garante
-              que nenhum pino ou rótulo caia debaixo da leitura é a geometria do
-              globo (os dois pinos europeus, os mais a leste, param em x 492, e
-              os rótulos deles abrem para a ESQUERDA).
+          {/* A LINHA DA CENA.
+
+              Entre 1024 e 1399 ela continua sendo a coluna 6–12 da grade de
+              12: o globo ocupa a metade esquerda e o texto entra alguns pixels
+              por cima do disco, como era.
+              A partir de 1400 ela vira a cena inteira (`.hero-linha`, em
+              `hero.css`): três trilhas — o lugar do globo, o corredor do texto
+              e o painel —, da borda esquerda à borda direita do conteúdo. O
+              texto deixa de encostar no planeta e passa a ter 64px de ar de
+              cada lado; o globo deixa de sangrar para fora da coluna.
               `min-w-0` não é zelo: sem ele um item de grade pode ficar MAIOR que
               a trilha (a largura mínima automática de um item é o `min-content`
               dele), e num grid de uma coluna só — o celular — isso contamina a
               outra. */}
-          <div className="relative z-10 min-w-0 lg:col-span-7 lg:col-start-6 min-[1400px]:ml-12 min-[1400px]:flex min-[1400px]:items-start min-[1400px]:gap-x-10">
-          {/* A partir de 1400px o texto cede a faixa da direita ao painel de fatos
-              (pedido do dono, 15/10). O h1 continua na mesma caixa e nas mesmas
-              três linhas: só o lead encolhe um pouco, de 31 para 26rem. */}
-          <div className="min-w-0 min-[1400px]:max-w-[23rem] min-[1400px]:shrink-0">
+          <div className="hero-linha relative z-10 min-w-0 lg:col-span-7 lg:col-start-6">
+          {/* O BLOCO DE TEXTO. Centrado na trilha do meio a partir de 1400, com
+              29rem de teto: é a medida que segura "Telegram no" numa linha só
+              com o título de 80px (444px medidos no navegador). O lead fica em
+              26rem para não esticar a linha de leitura junto. */}
+          <div className="hero-texto min-w-0">
             {/* O mesmo `.t-kicker` de toda seção, com o traço de 24×1. Abaixo de
                 `sm` a cobertura dos sete países não cabe numa linha de 13px, e
                 a versão curta entra no lugar. */}
@@ -272,7 +283,7 @@ export function Hero() {
                 home sobe cada linha de dentro dela — e isso não mexe no LCP:
                 continua UM `<h1>`, na mesma caixa de 34rem, com as mesmas três
                 linhas de 0,97 de entrelinha, pintado pelo servidor. */}
-            <h1 className="t-display mt-6 max-w-[34rem] text-cream">
+            <h1 className="t-display hero-titulo mt-6 max-w-[34rem] text-cream">
               {hero.titleLines.map((linha, index) => (
                 <span
                   key={linha}
@@ -282,16 +293,22 @@ export function Hero() {
                 </span>
               ))}
               {/* A palavra laranja é a última linha, e fecha a escada do
-                  título em 160 + 600 = 760 ms. */}
+                  título em 160 + 600 = 760 ms — que é exatamente onde o
+                  SUBLINHADO (`.hero-sublinha`, em `hero.css`) começa a ser
+                  desenhado, da esquerda para a direita, em 900ms. O traço é
+                  pseudo-elemento: não entra na caixa do texto e não toca no
+                  `<h1>`, que é o LCP do celular. */}
               <span className="ent-linha [--ent-atraso:160ms]">
-                <span className="text-brand">{hero.titleAccent}</span>
+                <span className="hero-sublinha text-brand">
+                  {hero.titleAccent}
+                </span>
               </span>
             </h1>
 
             {/* O lead vem fatiado do dicionário: os trechos em objeto são os dois
                 momentos que ganham peso (o método de pagamento e a entrada no
                 canal). Nada mais muda de peso na primeira dobra. */}
-            <p className="t-lead ent-sobe mt-6 max-w-[31rem] text-pretty [--ent-atraso:300ms]">
+            <p className="t-lead ent-sobe mt-6 max-w-[31rem] text-pretty [--ent-atraso:300ms] min-[1400px]:max-w-[26rem]">
               {hero.lead.map((trecho, index) =>
                 typeof trecho === "string" ? (
                   <Fragment key={index}>{trecho}</Fragment>
@@ -322,8 +339,14 @@ export function Hero() {
           </div>
 
           {/* O PAINEL DE FATOS: a informação que o dono pediu ao lado do título.
-              Abaixo de 1400 ele desce para baixo dos botões; acima, senta ao lado
-              do h1, alinhado ao topo dele (mt-11 = kicker + o respiro do título).
+              Abaixo de 1400 ele desce para baixo dos botões; acima, senta na
+              TERCEIRA TRILHA da cena — encostado na borda direita do conteúdo,
+              que é o "jogue as info adicionais mais para a direita" do pedido de
+              15/10 (a 1440 ele vai de x 1179 a 1387). A largura agora é a da
+              trilha (`--painel`, 13rem, em `hero.css`), não um `w-[13rem]`
+              solto: quem mede a cena mede o painel junto.
+              O `mt-11` continua: é o degrau que alinha o topo do painel ao
+              respiro do título (kicker + mt-6).
               Entra na coreografia da home como o último degrau antes dos
               benefícios. Só fatos que a página já afirma.
 
@@ -335,7 +358,7 @@ export function Hero() {
               450ms não mudaram. */}
           <aside
             aria-label={hero.aside.title}
-            className="ent-sobe mt-10 rounded-card bg-ink-900 p-5 [--ent-atraso:450ms] min-[1400px]:mt-11 min-[1400px]:w-[13rem] min-[1400px]:shrink-0"
+            className="hero-painel ent-sobe mt-10 rounded-card bg-ink-900 p-5 [--ent-atraso:450ms] min-[1400px]:mt-11"
           >
             <p className="t-label">{hero.aside.title}</p>
             <HeroFacts
@@ -393,24 +416,20 @@ export function Hero() {
           running={andando}
         />
 
-        {/* O TICKET, a etiqueta de ficção e o controle do palco, num bloco só —
-            e é de propósito: as três peças são a legenda do planeta, e andam
-            juntas quando a largura muda.
+        {/* A LINHA DE CONTROLE do palco: a etiqueta de ficção, o status do país
+            da vez e o "pausar", num bloco só — as três são a legenda do
+            planeta, e andam juntas quando a largura muda.
 
-            O bloco é ancorado pelo PÉ (`bottom`), nunca pelo topo: a altura do
-            hero é a da janela, e com `top` cravado o ticket caía em cima da
-            fileira de benefícios numa tela de 800px e sobrava no meio do nada
-            numa de 1.200. Os 158px são a altura da fileira de benefícios mais a
-            faixa, medidos — é o que põe o ticket encostado nela, por cima do
-            planeta, sem nunca cruzá-la.
-            A coluna muda com a largura porque o espaço livre muda: a 1440 os
-            rótulos de São Paulo e Buenos Aires ocupam o pé ESQUERDO do disco, e
-            o ticket vai para o lado direito dele (x 512 a 1440: a coluna do
-            ticket e do rótulo do palco começa depois do chip de Buenos Aires,
-            que termina em x 500 — era 442 e o rótulo cobria o chip); abaixo de 1420 não há rótulo nenhum, e ele
-            volta para a esquerda, longe da coluna de texto, que ali está mais
-            perto. No celular fica no pé do disco, centrado. */}
-        <div className="pointer-events-auto absolute bottom-0 left-1/2 w-[340px] -translate-x-1/2 lg:w-[380px] min-[1024px]:bottom-[158px] min-[1024px]:left-[calc((100vw-min(100vw,80rem))/2+2rem+28px)] min-[1024px]:translate-x-0 min-[1280px]:left-[calc((100vw-min(100vw,80rem))/2+2rem+88px)] min-[1400px]:left-[calc((100vw-min(100vw,78rem))/2+2rem+400px)]">
+            A geometria mora em `.hero-controle` (`hero.css`), junto com a da
+            caixa do globo: as duas leem a MESMA borda de conteúdo, e desde
+            15/10 compartilham a borda esquerda com a primeira coluna de
+            benefícios — três peças, uma régua. Ela é ancorada pelo PÉ
+            (`bottom: 158px`, a fileira de benefícios mais a faixa, medidos) e
+            nunca pelo topo: a altura do hero é a da janela, e com `top` cravado
+            ela caía sobre a fileira numa tela de 800px.
+            Nenhum rótulo de pino disputa esse espaço: a 1440 os chips de São
+            Paulo e Buenos Aires terminam em y 596, e a linha começa em 695. */}
+        <div className="hero-controle pointer-events-auto">
           <div className="mb-2 flex items-center justify-between gap-3">
             {/* "CHECKOUT INTERNACIONAL · SIMULAÇÃO": a ficção se declara onde o
                 dado fictício está — em cima do ticket, que é quem mostra valor.
