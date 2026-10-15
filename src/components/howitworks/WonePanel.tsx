@@ -70,8 +70,11 @@ export function WonePanel({ step, className = "" }: { step: number; className?: 
     <div
       /* Moldura fina de ink-700 e o MESMO rim de 1px em creme a 8% que separa o
          vidro da moldura no aparelho: é o que faz as duas peças lerem como
-         objetos da mesma sala, uma de três quartos e outra de frente. */
-      className={`flex flex-col overflow-hidden rounded-[14px] border border-ink-700 bg-ink-950 shadow-[inset_0_0_0_1px_rgba(255,255,227,0.06)]${
+         objetos da mesma sala, uma de três quartos e outra de frente.
+         O espaço antes do `${` não é estilo: colada na interpolação, a classe
+         do rim não era extraída pelo varredor do Tailwind e o rim nunca existiu
+         (achado de 15/10, o mesmo bug do `p-[5px]` do aparelho). */
+      className={`flex flex-col overflow-hidden rounded-[14px] border border-ink-700 bg-ink-950 shadow-[inset_0_0_0_1px_rgba(255,255,227,0.06)] ${
         className ? ` ${className}` : ""
       }`}
     >

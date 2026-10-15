@@ -23,6 +23,14 @@ import type { ReactNode } from "react";
  *
  * 350 ms é o tempo da travessia de painel que a página já usa (`.panel-swap`,
  * em Análises), na mesma curva do site.
+ *
+ * `data-hiw-on` é o GATILHO das animações de dentro da camada (o "digitando" do
+ * passo 02, a entrada da bolha, o "pop" do cartão de aprovado — todas em
+ * `howitworks.css`). Com as quatro camadas sempre montadas, uma animação de
+ * entrada escrita solta rodaria uma vez só, na montagem da página. Presa ao
+ * atributo, o `animation-name` vai de `none` a um nome a cada ativação, e é a
+ * troca do nome que RECOMEÇA a animação — sem `key`, que remontaria o nó e
+ * mataria a travessia de 350 ms acima (nó novo nasce em `opacity-100`).
  */
 export function StepLayer({
   active,
@@ -35,6 +43,7 @@ export function StepLayer({
 }) {
   return (
     <div
+      data-hiw-on={active ? "1" : "0"}
       className={`absolute inset-0 transition-[opacity,transform] duration-[350ms] ease-[cubic-bezier(0.16,1,0.3,1)] ${
         active ? "opacity-100" : "translate-y-2 opacity-0"
       }${className ? ` ${className}` : ""}`}

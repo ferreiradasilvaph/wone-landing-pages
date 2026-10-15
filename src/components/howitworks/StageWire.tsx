@@ -16,15 +16,35 @@ import { STEP_COUNT } from "./useStepShow";
    24×56 centrada, caminho reto.
 
    As coordenadas nascem das posições dos objetos em `OperationStage` — mexer
-   num mexe no outro.
+   num mexe no outro. E nascem MEDIDAS: com os dois objetos em perspectiva, a
+   caixa que o CSS escreve não é a que aparece. Os dois pontos abaixo saíram de
+   `getBoundingClientRect` depois da transformação:
+
+     (700, 254) — meio da borda direita VISÍVEL do painel (que corre de x=701
+                  no alto a x=682 embaixo). É a lateral do monitor, onde um cabo
+                  entraria.
+     (834,  69) — borda esquerda visível do aparelho na altura do CABEÇALHO do
+                  chat, não no meio da tela.
+
+   POR QUE NO CABEÇALHO: é por ali que a notícia entra — por cima da conversa,
+   antes da primeira bolha. O fio ligado ao meio da lateral (como estava)
+   apontava para o meio de uma tela que, no passo 01, está vazia: ele terminava
+   em lugar nenhum. A alternativa era a altura da primeira bolha (y≈130), mais
+   suave de curva; perdeu porque a bolha muda de passo para passo e o cabeçalho
+   não — o ponto de chegada do fio não pode andar.
+
+   A CURVA sai horizontal do painel com 4px de barriga (o peso do cabo) e chega
+   horizontal no aparelho: os 137px de vão entre os dois deixam de ser vazio e
+   passam a ser o caminho. O casco da cúbica fica inteiro dentro de x 700..834 e
+   y 69..258 — nada encosta na borda do card.
    -------------------------------------------------------------------------- */
 const GEO = {
   x: {
     w: 1216,
     h: 560,
-    d: "M 676 262 C 744 262, 816 288, 884 288",
-    from: [676, 262],
-    to: [884, 288],
+    d: "M 700 254 C 754 258, 790 70, 834 69",
+    from: [700, 254],
+    to: [834, 69],
   },
   y: {
     w: 24,

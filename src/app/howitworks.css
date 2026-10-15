@@ -1,0 +1,166 @@
+/* ==========================================================================
+   A SALA DE OPERAÇÃO — "Como funciona"
+
+   Nasceu em 15/10 com o segundo pedido do dono sobre a seção: "melhore a
+   aparência e disposição do celular na onde ficam os fluxos em 'como
+   funciona'". O que havia era um aparelho CHAPADO e de frente ao lado de um
+   painel em três quartos (recorte colado), moldura lisa, e um chat que no passo
+   01 ficava 60% vazio — a tela lia como caixa preta, não como conversa.
+
+   POR QUE UM ARQUIVO À PARTE, e não mais utilitários no JSX (mesmo motivo do
+   `hero.css`): o que entra aqui é TEXTURA e TEMPO — dois fundos desenhados em
+   degradê e quatro animações encadeadas (digitando → bolha → pop). Degradê e
+   `@keyframes` não cabem numa classe de utilitário sem virar uma linha
+   ilegível, e o encadeamento precisa que os atrasos leiam o MESMO número: os
+   900 ms do "digitando" são o atraso de entrada da oferta, e isso tem de estar
+   escrito num lugar só.
+
+   O GATILHO DAS ANIMAÇÕES é `[data-hiw-on="1"]`, posto pelo `StepLayer` na
+   camada ATIVA. As quatro camadas de cada objeto ficam sempre montadas (é o que
+   crava a altura e dá CLS 0), então uma animação de entrada escrita solta
+   rodaria uma vez só, na montagem da página, e nunca mais. Com o gatilho, o
+   `animation-name` vai de `none` a um nome a cada vez que o passo ativa — e
+   trocar o nome é o que RECOMEÇA a animação, sem `key`, sem remontar nó e sem
+   perder a travessia de 350 ms do `StepLayer` (que um `key` cancelaria, porque
+   nó novo nasce já em `opacity-100`).
+
+   As regras ficam FORA das camadas do Tailwind (este arquivo é importado por
+   `globals.css` logo depois do `@import "tailwindcss"`), então ganham de
+   qualquer utilitário sem precisar de `!important`.
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   TEXTURAS DA TELA DO APARELHO
+   -------------------------------------------------------------------------- */
+
+/* O PAPEL DE PAREDE do chat. É o que resolve o passo 01, em que a conversa tem
+   duas bolhas no pé e sobram ~220px de tela: com o preto chapado aquilo lia
+   como caixa vazia; com a trama de pontos lê como uma conversa que ainda vai
+   encher. 4,5% de creme em pontos de 1px a cada 14px — no limiar do visível,
+   que é o ponto: textura, não enfeite. */
+.hiw-papel {
+  background-image: radial-gradient(rgba(255, 255, 227, 0.045) 1px, transparent 1px);
+  background-size: 14px 14px;
+}
+
+/* A LUZ DE VIDRO no canto superior esquerdo da tela. Um degradê só, sem blur e
+   sem glow (a página inteira não tem brilho: separa por tom). 7% de creme
+   apagando em 40% da altura é o reflexo que diz "isto é vidro, e está virado
+   para a luz do palco" — e é o que impede que a tela, agora em perspectiva,
+   leia como um retângulo preto recortado. */
+.hiw-vidro {
+  background-image: linear-gradient(
+    158deg,
+    rgba(255, 255, 227, 0.07) 0%,
+    rgba(255, 255, 227, 0) 40%
+  );
+}
+
+/* --------------------------------------------------------------------------
+   O TEMPO DA CONVERSA
+
+   Nenhum texto novo entrou no dicionário para isto: o que anima é a ORDEM em
+   que o que já existe aparece. Só `opacity` e `transform`.
+   -------------------------------------------------------------------------- */
+
+/* PASSO 02 — "digitando". Em repouso é invisível: quem o acende é a animação da
+   camada ativa, e o último quadro dela é `opacity: 0` de novo. É isso que
+   impede o indicador de reaparecer durante os 350 ms em que a camada sai (o
+   `animation-name` volta a `none` na saída, e o estado de repouso tem de ser o
+   estado final, não o inicial). */
+.hiw-digitando {
+  opacity: 0;
+}
+
+[data-hiw-on="1"] .hiw-digitando {
+  animation: hiw-digitando 1.05s linear both;
+}
+
+/* 85% de 1,05 s = 892 ms: o indicador fica ~900 ms e some em 150. */
+@keyframes hiw-digitando {
+  0%,
+  85% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+/* Os três pontos pulsando. O atraso de cada um vai numa regra TAMBÉM presa ao
+   gatilho porque `animation:` é atalho — a mesma especificidade com a regra do
+   pai zeraria o `animation-delay`. */
+[data-hiw-on="1"] .hiw-ponto {
+  animation: hiw-ponto 900ms ease-in-out infinite;
+}
+[data-hiw-on="1"] .hiw-ponto:nth-child(2) {
+  animation-delay: 150ms;
+}
+[data-hiw-on="1"] .hiw-ponto:nth-child(3) {
+  animation-delay: 300ms;
+}
+
+@keyframes hiw-ponto {
+  0%,
+  100% {
+    opacity: 0.3;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* A bolha da oferta entra DEPOIS do "digitando" — os mesmos 900 ms de atraso,
+   250 ms de travessia. `both` segura o primeiro quadro (invisível) durante a
+   espera; sem ele a oferta apareceria inteira e o indicador seria mentira. */
+[data-hiw-on="1"] .hiw-bolha-entra {
+  animation: hiw-bolha-entra 250ms var(--ease-out-expo) 900ms both;
+}
+
+@keyframes hiw-bolha-entra {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* PASSO 04 — o cartão de aprovado chega com um "pop" de 4%. É o único movimento
+   do desfecho, e ele nasce 120 ms depois da troca de camada para cair JUNTO com
+   a faísca que volta do aparelho para o painel. */
+[data-hiw-on="1"] .hiw-pop {
+  animation: hiw-pop 200ms var(--ease-out-expo) 120ms both;
+}
+
+@keyframes hiw-pop {
+  from {
+    transform: scale(0.96);
+  }
+  to {
+    transform: none;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Movimento reduzido: NADA anima.
+
+   A regra global de `globals.css` zera a DURAÇÃO, mas não o ATRASO — e aqui o
+   atraso é o que conta a história (900 ms). Com a duração zerada e o atraso de
+   pé, a oferta ficaria quase um segundo invisível. Então, aqui, a animação sai
+   inteira: o repouso de cada peça já é o estado final (indicador escondido,
+   bolha visível, cartão em escala 1).
+   -------------------------------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  [data-hiw-on="1"] .hiw-digitando,
+  [data-hiw-on="1"] .hiw-ponto,
+  [data-hiw-on="1"] .hiw-ponto:nth-child(2),
+  [data-hiw-on="1"] .hiw-ponto:nth-child(3),
+  [data-hiw-on="1"] .hiw-bolha-entra,
+  [data-hiw-on="1"] .hiw-pop {
+    animation: none;
+  }
+}

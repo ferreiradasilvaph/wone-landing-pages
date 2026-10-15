@@ -32,12 +32,28 @@ const FLOOR =
  *     1px a 78% da altura e um chão de ink-850 abrindo dela para baixo. Não é
  *     halo nem brilho: é a matéria do piso, e é ela que faz os dois objetos
  *     terem CHÃO em vez de flutuarem. Cada um ganha uma elipse de contato.
- *  2. PERSPECTIVA DE CSS, ZERO WEBGL. `perspective: 1600px` no palco e a tela
- *     grande girada em `rotateY(-12deg) rotateX(3deg)`: ela fica de três
- *     quartos, voltada para o centro, enquanto o aparelho fica de frente. São
- *     dois objetos de naturezas diferentes, e é isso que impede a leitura de
- *     "duas caixas iguais". A página continua com um canvas só, o da vitrine de
- *     Premiações.
+ *  2. PERSPECTIVA DE CSS, ZERO WEBGL. `perspective: 1600px` no palco, a tela
+ *     grande girada em `rotateY(-12deg) rotateX(3deg)` e o aparelho em
+ *     `rotateY(14deg) rotateX(2deg)`: os dois ficam de três quartos, VIRADOS UM
+ *     PARA O OUTRO, como duas peças da mesma sala. A página continua com um
+ *     canvas só, o da vitrine de Premiações.
+ *
+ *     O aparelho estava de FRENTE, e era o que o dono viu em 15/10 ("melhore a
+ *     aparência e disposição do celular"): um retângulo chapado colado ao lado
+ *     de um objeto em perspectiva lê como recorte, não como coisa no espaço.
+ *     Ele também estava longe — 221px de vão morto entre a ponta do fio e a
+ *     borda dele. Virando e aproximando, o vão caiu para 137 e virou o lugar
+ *     por onde o fio corre.
+ *
+ *     AS POSIÇÕES SÃO MEDIDAS, NÃO ESTIMADAS. Com perspectiva, a caixa que o
+ *     CSS escreve não é a que aparece: o aparelho em `left: 828` tem a borda
+ *     esquerda visível em 833 e a direita em 1089; o painel em `left: 64` abre
+ *     de 88 a 701. Todo número deste arquivo (elipses de contato e as duas
+ *     pontas do fio, em `StageWire`) sai dessas medidas, tiradas com
+ *     `getBoundingClientRect` DEPOIS da transformação — e é por isso que o
+ *     aparelho tem 520px de altura e não os 540 que o desenho pedia: a
+ *     projeção o estica para 531 e, com a elipse de contato embaixo, 540 passaria
+ *     do pé do card (`overflow-hidden` cortaria a quina).
  *  3. A PERSPECTIVA SÓ A PARTIR DE `xl`. De 1280px de viewport para cima o
  *     container mede exatamente 1216px, então as posições dos objetos e o
  *     caminho do fio podem ser escritos em px — é o que faz o `offset-path` da
@@ -94,13 +110,18 @@ export function OperationStage({ show }: { show: StepShow }) {
       >
         {/* As elipses de contato, só onde existe perspectiva: embaixo de `xl` os
             objetos estão de frente e empilhados, e sombra de contato ali seria
-            uma mancha cinza sem chão para assentar. */}
+            uma mancha cinza sem chão para assentar.
+
+            Cada uma fica sob a BORDA DE BAIXO PROJETADA do seu objeto, que é
+            inclinada: a do painel corre de (88, 447) a (698, 464) e a do
+            aparelho de (840, 539) a (1089, 528). A elipse é centrada na média
+            dessas alturas. */}
         <span
-          className="absolute top-[446px] left-[56px] hidden h-[26px] w-[600px] xl:block"
+          className="absolute top-[446px] left-[88px] hidden h-[26px] w-[600px] xl:block"
           style={{ background: CONTACT, borderRadius: "50%" }}
         />
         <span
-          className="absolute top-[520px] left-[874px] hidden h-[22px] w-[280px] xl:block"
+          className="absolute top-[522px] left-[839px] hidden h-[22px] w-[250px] xl:block"
           style={{ background: CONTACT, borderRadius: "50%" }}
         />
 
@@ -109,7 +130,12 @@ export function OperationStage({ show }: { show: StepShow }) {
           /* As alturas do celular e do tablet são o ORÇAMENTO da seção, não um
              palpite: a 412 a seção inteira tem de caber em 1.900px, e o palco
              empilhado (painel + fio + aparelho) é o maior bloco dela. */
-          className="h-[280px] w-full sm:h-[330px] xl:absolute xl:top-[54px] xl:left-8 xl:h-[400px] xl:w-[640px] xl:[transform:rotateY(-12deg)_rotateX(3deg)]"
+          /* O painel andou 32px para a direita (era `left-8`) junto com a
+             aproximação do aparelho: fechar o vão entre os dois sem mexer no
+             painel deixaria 150px de chão morto na direita do palco. Com os
+             dois deslocados, a composição fica com 88px de margem à esquerda e
+             127 à direita — centrada, com o peso do painel puxando um pouco. */
+          className="h-[280px] w-full sm:h-[330px] xl:absolute xl:top-[54px] xl:left-16 xl:h-[400px] xl:w-[640px] xl:[transform:rotateY(-12deg)_rotateX(3deg)]"
         />
 
         {/* Um fio por eixo: o eixo do movimento muda de breakpoint, e nem
@@ -119,7 +145,13 @@ export function OperationStage({ show }: { show: StepShow }) {
 
         <CustomerDevice
           step={active}
-          className="h-[360px] w-[240px] sm:h-[400px] xl:absolute xl:top-[30px] xl:left-[888px] xl:h-[500px] xl:w-[250px]"
+          /* 250×500 em `left: 888`, de frente → 270×520 em `left: 828`, virado
+             para o centro. Cresce 8% e chega 55px mais perto do painel; a
+             projeção devolve 256×531 visíveis, de (833, 8) a (1089, 539) — tudo
+             dentro dos 1216×560 do card. Abaixo de `xl` nada disso vale: ali
+             ele empilha de frente, com as mesmas alturas de antes (o orçamento
+             da seção a 412 não mudou). */
+          className="h-[360px] w-[240px] sm:h-[400px] xl:absolute xl:top-3 xl:left-[828px] xl:h-[520px] xl:w-[270px] xl:[transform:rotateY(14deg)_rotateX(2deg)]"
         />
 
         <StageWire axis="x" step={active} className="hidden xl:block" />
