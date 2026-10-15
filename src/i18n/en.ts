@@ -69,6 +69,17 @@ export const en: Content = {
       ],
       srIntro: "Globe with the simulated checkout in seven countries:",
     },
+    aside: {
+      title: "What comes with Wone",
+      items: [
+        "Billing in 7 countries, in each local currency",
+        "PIX, card, SPEI, Nequi and MB WAY at checkout",
+        "Single-use invite delivered in chat within seconds",
+        "Three payment confirmation paths",
+        "Funnel editor with 28 blocks, 4 of them AI",
+        "Our own integrations — no middleman, tailored fees",
+      ],
+    },
   },
 
   integrations: {

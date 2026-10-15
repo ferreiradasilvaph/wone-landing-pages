@@ -122,6 +122,22 @@ export const pt = {
       /** Abre o resumo; o resto da frase é montado dos sete países. */
       srIntro: "Globo com o checkout simulado em sete países:",
     },
+    /**
+     * O painel de fatos ao lado do título (pedido do dono, 15/10: "adicione
+     * informações ao lado direito no hero"). Só o que a página já afirma em
+     * outras seções — nenhum número novo.
+     */
+    aside: {
+      title: "O que vem com a Wone",
+      items: [
+        "Cobrança em 7 países, na moeda de cada um",
+        "PIX, cartão, SPEI, Nequi e MB WAY no checkout",
+        "Convite de uso único entregue no chat em segundos",
+        "Três vias de confirmação do pagamento",
+        "Editor de funil com 28 blocos, 4 de IA",
+        "Integrações próprias — sem intermediário, taxas sob medida",
+      ],
+    },
   },
 
   /**

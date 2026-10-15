@@ -231,7 +231,11 @@ export function Hero() {
               a trilha (a largura mínima automática de um item é o `min-content`
               dele), e num grid de uma coluna só — o celular — isso contamina a
               outra. */}
-          <div className="relative z-10 min-w-0 lg:col-span-7 lg:col-start-6">
+          <div className="relative z-10 min-w-0 lg:col-span-7 lg:col-start-6 min-[1400px]:flex min-[1400px]:items-start min-[1400px]:gap-x-8">
+          {/* A partir de 1400px o texto cede a faixa da direita ao painel de fatos
+              (pedido do dono, 15/10). O h1 continua na mesma caixa e nas mesmas
+              três linhas: só o lead encolhe um pouco, de 31 para 26rem. */}
+          <div className="min-w-0 min-[1400px]:max-w-[26rem] min-[1400px]:shrink-0">
             {/* O mesmo `.t-kicker` de toda seção, com o traço de 24×1. Abaixo de
                 `sm` a cobertura dos sete países não cabe numa linha de 13px, e
                 a versão curta entra no lugar. */}
@@ -295,6 +299,27 @@ export function Hero() {
                 {hero.ctaSecondary}
               </TextLink>
             </div>
+          </div>
+
+          {/* O PAINEL DE FATOS: a informação que o dono pediu ao lado do título.
+              Abaixo de 1400 ele desce para baixo dos botões; acima, senta ao lado
+              do h1, alinhado ao topo dele (mt-11 = kicker + o respiro do título).
+              Entra na coreografia da home como o último degrau antes dos
+              benefícios. Só fatos que a página já afirma. */}
+          <aside
+            aria-label={hero.aside.title}
+            className="ent-sobe mt-10 rounded-card bg-ink-900 p-5 [--ent-atraso:450ms] min-[1400px]:mt-11 min-[1400px]:w-[15.5rem] min-[1400px]:shrink-0"
+          >
+            <p className="t-label">{hero.aside.title}</p>
+            <ul className="mt-4 space-y-3">
+              {hero.aside.items.map((item) => (
+                <li key={item} className="flex gap-3 text-[14px] leading-5 text-muted">
+                  <span aria-hidden className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-brand" />
+                  <span>{item}</span>
+                </li>
+              ))}
+            </ul>
+          </aside>
           </div>
         </div>
 

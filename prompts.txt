@@ -857,3 +857,10 @@ elas sejam transparentes, meu amigo....
 [91] 2026-10-15
 ===============================================================================
 chat o popup de pagamento aprovado, no hero, voce pode retirar
+
+
+===============================================================================
+[92] 2026-10-15
+===============================================================================
+bom dia, adicione informacoes (plausiveis) ao lado direito no hero (ao lado de
+"venda pelo telegram no automatico"
