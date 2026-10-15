@@ -891,3 +891,13 @@ laranjas...
 ===============================================================================
 de um leve espacamento entre o globo, texto principal do hero e informacoes
 adjacentes...
+
+
+===============================================================================
+[97] 2026-10-15
+===============================================================================
+no titulo da sessao previa de premios... troque o titulo por "o que te espera"
+... na verdade, seja criativo, baseado em todas as informacoes que lhe passei
+e inove esse titulo. para nao ficar parecido, pois ao clicar em "premios" na
+barra de pesquisa. vai direcionar o usuario ate a sessao la de baixo...
+oticamente e visualmente isso nao fica legal. funcionalmente tbm...

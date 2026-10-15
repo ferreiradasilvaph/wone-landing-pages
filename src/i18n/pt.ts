@@ -1043,9 +1043,14 @@ export const pt = {
    * onde ela está, que é o trabalho de um prefácio.
    */
   awardsPreface: {
-    kicker: "Prêmios",
-    title: "Cada marco vira um troféu na sua casa.",
-    lead: "Do primeiro $10,000 ao primeiro milhão: quatro marcos de faturamento no Telegram, e o item físico de cada um. A vitrine completa está mais abaixo.",
+    /* O kicker deixou de ser "Prêmios" em 15/10: com o mesmo rótulo da vitrine,
+       o visitante tomava o prefácio pela seção que o nav promete — e, ao clicar
+       em "Prêmios", via a página passar por cima de um bloco com o mesmo título
+       para parar noutro. Agora o prefácio anuncia um PERCURSO (o que te espera),
+       e a vitrine continua dona do nome. */
+    kicker: "O que te espera",
+    title: "O caminho até o milhão tem quatro paradas. Todas chegam na sua porta.",
+    lead: "Cada marco de faturamento no Telegram tem um troféu de acrílico e um item do marco: um pin, uma pulseira, um colar, um anel de ouro 18k. A vitrine completa está mais abaixo.",
     link: "Ver a vitrine",
   },
 

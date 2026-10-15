@@ -758,9 +758,9 @@ export const en: Content = {
 
   /** O prefácio da vitrine; os quatro marcos vêm de `awards.items`. */
   awardsPreface: {
-    kicker: "Awards",
-    title: "Every milestone becomes a trophy at your door.",
-    lead: "From the first $10,000 to the first million: four revenue milestones on Telegram, and the physical item for each. The full showcase is further down.",
+    kicker: "What's ahead",
+    title: "The road to a million has four stops. Every one of them ships to your door.",
+    lead: "Each revenue milestone on Telegram comes with an acrylic trophy and the milestone's item: a pin, a bracelet, a necklace, an 18k gold ring. The full showcase is further down.",
     link: "See the showcase",
   },
 
