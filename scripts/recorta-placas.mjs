@@ -53,47 +53,62 @@
  * resolver um erro que ninguém vê. Está registrado aqui porque foi uma
  * escolha, não um esquecimento.
  *
- * POR QUE A SAÍDA TEM ALFA, E POR QUE ELE É BINÁRIO
+ * POR QUE A SAÍDA É SÓ A TINTA, COM ALFA
  *
- * O bloco agora é acrílico CRISTAL: o pódio, o chão e a joia ao lado têm de
- * aparecer ATRAVÉS dele. Para isso a arte impressa não pode cobrir a face
- * inteira — só a tinta (a raposa, o numeral, a faixa "WONE BOT", o laranja)
- * fica, e o resto da face vira vidro limpo.
+ * Esta é a quarta tentativa, e as três primeiras erraram pelos três lados.
  *
- * A primeira versão deste script ACHATAVA o papel translúcido sobre um
- * quase-preto. O bloco saiu lendo como uma laje preta polida: não havia um
- * pixel por onde ver através. O dono, 14/10: "as imagens das placas têm de ser
- * 3d e transparentes".
+ * A primeira ACHATAVA o papel translúcido sobre um quase-preto: o bloco saía
+ * lendo como laje preta polida, sem um pixel por onde ver através. A segunda
+ * binarizava o alfa, mas a arte ia para DENTRO do bloco — e o que está dentro
+ * só se vê pela passada de transmissão, que devolve um mipmap borrado. A
+ * terceira compunha a tinta sobre um marfim opaco: a face virava um cartão de
+ * papel, e o veredito do dono em 15/10 foi direto — "tira esse fundo opaco das
+ * placas e o fundo branco das placas".
  *
- * O alfa da ilustração é BIMODAL — medido nas quatro, dentro do recorte:
+ * Agora: SÓ A TINTA (a raposa, o numeral, a faixa WONE BOT, as barras
+ * laranja), com canal alfa, impressa na FACE FRONTAL do bloco (veja
+ * `ARTE_FRENTE` em `AwardPlaque3D.tsx`). Onde não há tinta não há nada — e por
+ * esses vazios se vê o cristal, o bisel aceso do outro lado e o chão escuro da
+ * vitrine atrás. É assim que um acrílico com impressão UV de verdade funciona:
+ * a tinta é uma camada fina sobre a peça, não um papel colado dentro dela.
  *
- *   alfa 16…31 (papel translúcido, (234,233,233))   32…47% dos pixels
- *   alfa 240…255 (tinta: raposa, numeral, laranja)  42…55%
- *   o meio (48…239), que é borda e sombra           ~5…8%
+ * A SEPARAÇÃO É POR ALFA, E O HISTOGRAMA ENTREGA ONDE CORTAR
  *
- * Então o corte é limpo: `CORTE_ALFA` a meio caminho joga o papel para zero e
- * a tinta para 255, sem meio-termo. O papel é justamente a área de "branco
- * gelo" que daria leitura de acrílico FOSCO — e fosco é o oposto do que se
- * pediu. Vai embora inteiro.
+ * Contados os 317 mil pixels de cada ilustração, em faixas de 16:
  *
- * O ALFA TEM DE SER BINÁRIO, e não só "preservado", por dois motivos:
+ *   alfa 16…31  (o papel translúcido)          22…34% dos pixels
+ *   alfa 240…255 (a tinta)                     31…42%
+ *   o meio                                     o resto: borda, sombra e as
+ *                                              curvas finas do desenho de fundo
  *
- * 1. O `three` NÃO desenha objetos transparentes na passada de transmissão
- *    (`renderTransmissionPass` chama `renderObjects(opaqueObjects, …)`): uma
- *    arte com `transparent: true` sumiria de dentro do bloco. O plano da arte
- *    entra como material OPACO com `alphaTest` — e `alphaTest` não mistura
- *    nada: o fragmento passa inteiro ou é descartado. Alfa intermediário no
- *    arquivo não viraria borda macia, viraria só um limiar arbitrário.
- * 2. Com 0 e 255 cravados, o mipmap de um nível menor guarda a COBERTURA da
- *    tinta naquele tile, e `alphaTest` em 0,5 corta em "metade coberto" — que é
- *    o contorno certo em qualquer distância. Com o alfa original (papel em 25,
- *    tinta em 255) a média de um tile meio a meio dá 140, acima de qualquer
- *    limiar útil: a arte engordaria em borrões conforme a placa se afasta.
+ * O corte em 128 — os ~50% que o dono pediu — cai no vale entre os dois picos,
+ * a mais de cem níveis de cada um. Nada do que é tinta chega perto do limiar, e
+ * nada do que é papel passa dele.
  *
- * O RGB dos pixels descartados fica como estava (nada de `flatten`): o filtro
- * bilinear ainda amostra a cor dos vizinhos na borda, e vizinho branco de papel
- * é melhor que vizinho preto — preto daria uma linha escura em volta de cada
- * letra.
+ * A BORDA, E POR QUE ELA É SUAVIZADA DEPOIS DE BINARIZADA
+ *
+ * Binarizar e parar aí dá uma serra: a 360 px de largura, um contorno diagonal
+ * vira degraus de um pixel que o mipmap só faz piorar. Então o alfa é
+ * binarizado PRIMEIRO (para o limiar ficar exatamente onde o histograma manda,
+ * sem a sombra do desenho puxando a borda para dentro) e suavizado DEPOIS, com
+ * um único passe de média 3×3 — o que põe a travessia de 0 a 255 em um pixel,
+ * com a curva cruzando os 50% em cima da borda original.
+ *
+ * Esse um pixel é o que o `alphaTest` de 0,5 da cena corta, e é também o que o
+ * `alphaToCoverage` usa para desenhar a borda sem serra onde há MSAA.
+ *
+ * O SANGRAMENTO DE COR
+ *
+ * O pixel transparente ao lado de um opaco ainda carrega uma cor — e no
+ * original essa cor é o papel QUASE BRANCO. Com a borda suavizada, o shader
+ * interpola entre a tinta e esse branco, e cada letra ganha uma franja clara: a
+ * mesma franja que o olho leu como "fundo branco" na versão anterior. Então,
+ * antes de suavizar, a cor da tinta é empurrada dois pixels para dentro da
+ * região vazia (veja `sangra`), e a franja passa a ser da cor da própria tinta.
+ *
+ * O WebP com alfa é gravado com `alphaQuality: 100`: o canal de forma é o que
+ * menos pode ser comprimido com perda — um artefato ali não borra uma cor,
+ * recorta um buraco.
  *
  * O QUE ESTE SCRIPT NÃO FAZ
  *
@@ -131,14 +146,93 @@ const FACE = { left: 48, top: 40, right: 426, bottom: 616 };
 const INSET = 0.025;
 
 /**
- * O limiar do corte, em bytes de alfa.
+ * O limiar que separa tinta de papel, no canal alfa (veja o cabeçalho).
  *
- * 128 é o meio exato da escala e cai no vale entre os dois picos medidos (papel
- * até 47, tinta a partir de 240), com folga dos dois lados: nenhum dos quatro
- * marcos tem massa perto daqui. O `alphaTest` do material no 3D tem de ser o
- * mesmo meio (0,5) — é o par que faz o contorno certo em qualquer distância.
+ * Os ~50% que o dono pediu em 15/10, e o histograma concorda: é o vale entre o
+ * pico do papel (alfa 16…31) e o pico da tinta (240…255).
  */
-const CORTE_ALFA = 128;
+const LIMIAR = 128;
+
+/** Quantos pixels a cor da tinta é empurrada para dentro do vazio. */
+const SANGRIA = 2;
+
+/**
+ * Empurra a cor dos pixels com tinta para dentro da região vazia.
+ *
+ * Sem isto, o pixel vazio ao lado de uma letra guarda a cor do papel QUASE
+ * BRANCO do original, e a suavização de um pixel da borda interpola a tinta
+ * contra esse branco: cada contorno ganha uma franja clara — a mesma franja que
+ * o dono leu como "fundo branco". Com a sangria, a interpolação acontece entre a
+ * tinta e ela mesma.
+ *
+ * O alfa NÃO é tocado aqui: a máscara `dentro` é fotografada antes de cada passe
+ * e só a cor viaja. Dois passes bastam porque a suavização que vem depois é de
+ * um pixel só.
+ */
+function sangra(rgba, w, h, dentro) {
+  const vizinhos = [-1, 1, -w, w, -w - 1, -w + 1, w - 1, w + 1];
+  let atual = dentro;
+
+  for (let passe = 0; passe < SANGRIA; passe++) {
+    const proximo = atual.slice();
+    for (let p = 0; p < w * h; p++) {
+      if (atual[p]) continue;
+      let n = 0;
+      let r = 0;
+      let g = 0;
+      let b = 0;
+      const x = p % w;
+      for (const d of vizinhos) {
+        const q = p + d;
+        if (q < 0 || q >= w * h || !atual[q]) continue;
+        /* Não deixa o vizinho "dar a volta" pela outra ponta da linha. */
+        if (Math.abs((q % w) - x) > 1) continue;
+        const i = q * 4;
+        r += rgba[i];
+        g += rgba[i + 1];
+        b += rgba[i + 2];
+        n++;
+      }
+      if (!n) continue;
+      const i = p * 4;
+      rgba[i] = Math.round(r / n);
+      rgba[i + 1] = Math.round(g / n);
+      rgba[i + 2] = Math.round(b / n);
+      proximo[p] = 1;
+    }
+    atual = proximo;
+  }
+}
+
+/**
+ * Suaviza uma máscara binária em um pixel: média 3×3, um passe.
+ *
+ * Um passe de média sobre 0/255 põe a travessia inteira num pixel e cruza os
+ * 50% exatamente em cima da borda binarizada — que é onde o `alphaTest` da cena
+ * vai cortar. Mais passes engordariam a borda e comeriam as pernas finas do
+ * desenho.
+ */
+function suaviza(mascara, w, h) {
+  const saida = new Uint8Array(w * h);
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      let soma = 0;
+      let n = 0;
+      for (let dy = -1; dy <= 1; dy++) {
+        const yy = y + dy;
+        if (yy < 0 || yy >= h) continue;
+        for (let dx = -1; dx <= 1; dx++) {
+          const xx = x + dx;
+          if (xx < 0 || xx >= w) continue;
+          soma += mascara[yy * w + xx];
+          n++;
+        }
+      }
+      saida[y * w + x] = Math.round(soma / n);
+    }
+  }
+  return saida;
+}
 
 async function carregaSharp() {
   const bruto = process.env.WONE_SHARP ?? "sharp";
@@ -186,33 +280,39 @@ for (const marco of MARCOS) {
     .raw()
     .toBuffer({ resolveWithObject: true });
 
-  /* O corte, nos bytes crus. Não há operador do sharp para "binarize o alfa":
-     `threshold` mexe nos canais de cor e `boolean` pede uma segunda imagem.
-     São 197 mil pixels, uma vez por década. */
+  const { width: w, height: h } = info;
+  const n = w * h;
+
+  /* 1. Binariza: o que é tinta fica, o que é papel some. */
+  const dentro = new Uint8Array(n);
   let tinta = 0;
-  for (let i = 3; i < data.length; i += 4) {
-    if (data[i] >= CORTE_ALFA) {
-      data[i] = 255;
+  for (let p = 0; p < n; p++) {
+    if (data[p * 4 + 3] >= LIMIAR) {
+      dentro[p] = 1;
       tinta++;
-    } else {
-      data[i] = 0;
     }
   }
 
-  await sharp(data, {
-    raw: { width: info.width, height: info.height, channels: 4 },
-  })
-    /* `alphaQuality: 100` é o que importa aqui: no WebP o alfa é um plano
-       separado, e em 100 ele sai SEM PERDA — o corte binário chega inteiro na
-       textura, que é de onde vem o contorno do numeral. A cor sobe de 90 para
-       95 porque o contorno de cada letra tem 2 px na tela e em 90 o encoder
-       deixava franja; `lossless` nos quatro canais também serviria e custava
-       100 kB por marco contra 38. */
-    .webp({ quality: 95, alphaQuality: 100, effort: 6 })
+  /* 2. Empurra a cor da tinta para dentro do vazio, para a borda suavizada não
+        interpolar contra o branco do papel (veja `sangra`). */
+  sangra(data, w, h, dentro);
+
+  /* 3. Suaviza a máscara em um pixel e grava-a de volta no canal alfa. */
+  const mascara = suaviza(
+    Uint8Array.from(dentro, (v) => (v ? 255 : 0)),
+    w,
+    h,
+  );
+  for (let p = 0; p < n; p++) data[p * 4 + 3] = mascara[p];
+
+  await sharp(data, { raw: { width: w, height: h, channels: 4 } })
+    /* `alphaQuality` cheio: a cor pode perder um fio na compressão, a FORMA não
+       — um artefato no canal alfa não borra um tom, abre um buraco no meio de
+       uma letra. */
+    .webp({ quality: 92, alphaQuality: 100, effort: 6 })
     .toFile(saida);
 
   console.log(
-    `  ${marco} → ${saida}` +
-      `  (${((100 * tinta) / (info.width * info.height)).toFixed(1)}% de tinta)`,
+    `  ${marco} → ${saida}  (${((100 * tinta) / n).toFixed(1)}% de tinta)`,
   );
 }

@@ -23,7 +23,12 @@ export function AwardsSection() {
         lead={awards.lead}
       />
 
-      <div className="mt-10 lg:mt-14">
+      {/* 40px e não os 56 de antes: o palco passou de 480 para 600px em 15/10
+          ("capriche na disposição dessa sessão") e a seção inteira cresceu com
+          ele. O vão entre o cabeçalho e a vitrine é o único lugar de onde dá
+          para tirar altura sem encolher o objeto — o ritmo vertical da página
+          vem de `--secao-y` e não se mexe por uma seção. */}
+      <div className="mt-10 lg:mt-10">
         <AwardsShowcase />
       </div>
     </Section>

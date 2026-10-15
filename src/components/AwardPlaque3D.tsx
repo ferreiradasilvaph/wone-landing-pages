@@ -6,11 +6,14 @@ import { Environment, Lightformer } from "@react-three/drei";
 import { useReducedMotion } from "motion/react";
 import { arte } from "@/lib/arte";
 import {
+  AdditiveBlending,
   ClampToEdgeWrapping,
   Color,
   DataTexture,
   DoubleSide,
+  EdgesGeometry,
   ExtrudeGeometry,
+  FrontSide,
   LinearFilter,
   MeshBasicMaterial,
   RGBAFormat,
@@ -29,85 +32,145 @@ import {
  * decide quanto o objeto ocupa da caixa quadrada do canvas e a caixa não pode
  * mudar de tamanho (CLS 0). `d` é a espessura, e agora ela é geometria de
  * verdade, não um número que ninguém via.
+ *
+ * `d` SUBIU DE 0,40 PARA 0,52 em 15/10, com o pedido do dono de "me traga 3d
+ * das placas". A espessura só existe para quem a vê: com o bloco em repouso a
+ * −16° de guinada (veja `REPOUSO`), a face lateral direita projeta
+ * `d·sen 16° = 0,143` de largura na tela, uns 33 px na caixa de 600 — uma
+ * FAIXA, que lê como bloco. Em 0,40 eram 25 px, e com o antigo repouso em zero
+ * eram zero na metade do tempo. O preço é a `ESPESSURA_OPTICA` subir junto, e
+ * com ela a torção na moldura: também isso é o pedido.
  */
-const PLAQUE = { w: 2.06, h: 2.9, d: 0.4 };
+const PLAQUE = { w: 2.06, h: 2.9, d: 0.52 };
 
 /**
  * O bisel das bordas, em unidades de cena.
  *
- * Pequeno de propósito: num bloco de 2,06 × 2,9 um chanfro de 7,5 cm é o que uma
+ * Pequeno de propósito: num bloco de 2,06 × 2,9 um chanfro de 9 cm é o que uma
  * fresa de verdade tira do canto de uma peça de acrílico fundido. É esse
  * chanfro que acende quando a placa gira — a face frontal é plana e devolve a
  * luz sempre igual, o bisel é que pisca.
+ *
+ * Subiu de 0,075 para 0,09 e daí para 0,12 em 15/10, olhando a ilustração que o
+ * dono aprovou: nela o chanfro é uma FAIXA branca larga em volta da face, não um
+ * fio. Na tela, na caixa de 600 px, 0,12 dá dezesseis pixels de aresta acesa —
+ * o bastante para o branco do bisel ler como um contorno de luz em vez de um
+ * antialias, e para a lâmina de acrílico aparecer EM VOLTA da impressão (que
+ * desde 15/10 está colada por fora, veja `ARTE_FRENTE`): é no bisel, na moldura
+ * e nas laterais que a transparência passa a morar.
  */
-const BISEL = 0.075;
+const BISEL = 0.12;
 /** Raio dos cantos da silhueta: arredondado, mas ainda um retângulo. */
 const CANTO = 0.11;
 
 /**
- * A janela em que a arte impressa cabe, dentro da face frontal.
+ * A janela em que a arte impressa cabe, sobre a face frontal.
  *
- * A face útil do bloco mede `w − 2·BISEL` por `h − 2·BISEL` (1,91 × 2,75), e a
- * janela fica em 78% da altura dela. A diferença não é margem de segurança: é
- * a MOLDURA DE CRISTAL. A arte entra com o fundo recortado (veja `ALFA_TINTA`),
- * então o que não é tinta já é vidro — mas vidro no meio de uma figura passa
- * por reflexo da própria figura. É a faixa limpa contornando a arte, com o aro
- * do pódio e o halo do fundo aparecendo TORCIDOS atrás dela, que diz na
- * primeira olhada que o bloco é transparente.
+ * A face útil do bloco mede `w − 2·BISEL` por `h − 2·BISEL` (1,82 × 2,66), e a
+ * janela fica em 84% da altura dela. A diferença não é margem de segurança: é
+ * a MOLDURA DE CRISTAL, e desde 15/10 ela é a ÚNICA coisa que prova
+ * transparência.
  *
- * Desceu de 84% quando o aro de luz entrou no pódio: a moldura só prova vidro
- * se houver moldura bastante para a deformação caber. Em 78% sobram 0,30 de
- * cristal em cima e embaixo e 0,25 dos lados — e é na faixa de baixo que o arco
- * de trás do aro passa, cortado e deslocado pela refração.
+ * Houve uma versão em que a arte vinha com o fundo recortado e só a tinta
+ * ficava: a ideia era que o acrílico aparecesse por trás de cada letra. Não
+ * funcionou — vidro no meio de uma figura passa por reflexo da própria figura,
+ * e o que se viu foi a arte flutuando no escuro. Agora a impressão é OPACA e
+ * tem papel marfim (veja `scripts/recorta-placas.mjs`), como na ilustração que
+ * o dono aprovou; a prova de vidro mudou de lugar e vive na faixa limpa em
+ * volta dela, no bisel e nas laterais, onde o aro do pódio e o halo do fundo
+ * aparecem TORCIDOS.
+ *
+ * Em 84% da altura a arte mede 1,47 × 2,23 (a proporção 0,657 do recorte manda
+ * na largura) e sobram 0,21 de cristal em cima e embaixo e 0,18 dos lados — e é
+ * na faixa de baixo que o arco de trás do aro passa, cortado e deslocado pela
+ * refração.
  */
-const JANELA = { w: 1.49, h: 2.14 };
+const JANELA = { w: 1.6, h: 2.234 };
 
 /**
- * Quanto a arte fica atrás da face frontal: a espessura que passa na frente dela.
+ * Quanto a impressão fica À FRENTE da face frontal — e esta é A CORREÇÃO DE
+ * 15/10.
  *
- * Subiu de 0,02 para 0,07 porque dois centésimos não aparecem. É esta lâmina
- * que, vista de esguelha quando o bloco balança, mostra a arte AFUNDADA no
- * acrílico em vez de impressa na superfície — a borda da figura ganha um degrau
- * de vidro na frente, e é o degrau que dá profundidade. Com `d` em 0,40 o miolo
- * tem 0,25 de folga, então os dois planos (frente e verso) ficam a 0,11 um do
- * outro, longe de qualquer briga de z.
+ * Veredito do dono: "está muito ruim as placas na sessão prêmios… tire essa
+ * opacidade". A arte estava DENTRO do bloco, 0,17 atrás da face. Dentro do
+ * bloco ela só podia ser vista pela passada de transmissão, e a passada de
+ * transmissão não devolve a cena atrás do vidro: devolve um MIPMAP dela,
+ * escolhido pelo `roughness` do material —
+ *
+ *     sigma = π·r²/(1+r);  lod = log2(largura) + log2(sigma)
+ *
+ * — e amostrar reduzido é, literalmente, borrar. Some a isso o alvo da
+ * transmissão rodar a meia resolução no celular e o resultado medido era o que
+ * se vê em `.playwright-mcp/pr-crop.png`: a raposa pastosa e o numeral "100K"
+ * virado mancha pálida. Não havia valor de `roughness` que resolvesse — abaixar
+ * até zero mata o reflexo largo que faz o bloco existir sobre fundo escuro.
+ *
+ * Então a impressão SAIU do cristal e foi para cima dele: três milésimos à
+ * frente da face, desenhada na passada NORMAL, com `meshBasicMaterial` e
+ * `toneMapped` falso. O que chega à tela é o arquivo, pixel por pixel, com
+ * anisotropia e mipmap — opaco, nítido e saturado, que é o pedido.
+ *
+ * Três milésimos e não três centésimos: é o bastante para não haver briga de z
+ * com a face (a 0,52 de espessura, a precisão do depth buffer ali é de ordens
+ * de grandeza menor) e pouco o bastante para a impressão continuar lendo como
+ * tinta NA superfície, e não como um adesivo levantado — vista de esguelha, com
+ * o bloco a 23° de guinada, essa folga projeta 0,001 na tela: nada.
+ *
+ * O acrílico não perdeu nada com isso. O que ele refrata deixou de ser a
+ * impressão (que ele estragava) e passou a ser o fundo da vitrine, o aro do
+ * pódio e o halo — na moldura em volta da arte, no bisel de 0,12 e nas duas
+ * faces laterais, que é onde se olha para saber se um bloco é de vidro.
  */
-const ARTE_FUNDO = 0.07;
+const ARTE_FRENTE = 0.003;
 
 /**
- * O limiar que separa a tinta do vazio, na arte impressa.
+ * O piso da escala em que a máscara de dissolução vive.
  *
- * `scripts/recorta-placas.mjs` grava a arte com ALFA BINÁRIO: 255 na tinta (a
- * raposa, o numeral, a faixa "WONE BOT", o laranja) e 0 no papel translúcido
- * que a ilustração tinha em volta. Meio exato, 0,5, é o par do corte que o
- * script faz em 128 — e no mipmap, onde o alfa vira a COBERTURA de tinta do
- * tile, cortar em "metade coberto" é o que mantém o contorno no lugar conforme
- * a placa se afasta.
- *
- * `alphaTest` e não `transparent`: o `three` não desenha transparentes na
- * passada de transmissão (`renderTransmissionPass` só varre os opacos), e uma
- * arte transparente sumiria de dentro do próprio bloco.
+ * Nada a ver com a arte, que desde 15/10 é OPACA e não tem canal alfa (veja
+ * `scripts/recorta-placas.mjs`): este número é só o fundo do intervalo em que a
+ * máscara da troca de marco é desenhada, e o par dele é o `alphaTest` que varre
+ * esse intervalo quadro a quadro. Não parte de zero de propósito — `alphaTest`
+ * cruzando o zero muda o define `USE_ALPHATEST` e RECOMPILA o shader.
  */
-const ALFA_TINTA = 0.5;
+const DISSOLVE_PISO = 0.5;
+
+/* --------------------------------------------------------------------------
+   A POSE DE REPOUSO
+
+   Pedido do dono, 15/10: "me traga 3d das placas". Um bloco de frente para a
+   câmera é um retângulo: a espessura existe na geometria e não chega ao olho.
+   O repouso deixou de ser zero.
+
+   `yaw` negativo gira o lado DIREITO na direção da câmera — a normal (1,0,0)
+   vira (cos16°, 0, sen16°) = (0,96, 0, 0,28), com componente em +z: a face
+   lateral direita fica visível o tempo inteiro, e com ela o bisel vertical
+   daquele lado, que é o fio branco que a `Environment` acende. O balanço de ±7°
+   nunca chega a zero (vai de −9° a −23°), então não existe um instante em que o
+   bloco se achate.
+
+   `pitch` negativo inclina o topo para trás: é a pose em que uma placa fica
+   apoiada num pódio, e é ela que mostra o bisel de BAIXO, que a câmera baixa
+   (veja a `camera` do Canvas) já estava olhando por fora.
+   -------------------------------------------------------------------------- */
+const REPOUSO = { yaw: -0.279, pitch: -0.07, balanco: 0.122 };
 
 /**
- * A espessura que o acrílico diz ter à luz — maior que a geométrica, de
- * propósito.
+ * Quanto a PEÇA (bloco, arte e sombra) encolheu no quadro.
  *
- * `thickness` é o caminho que o raio refratado percorre dentro do sólido. Com
- * o valor geométrico (0,40) o desvio nas quinas é de poucos pixels e o bloco
- * passa por uma lâmina. Em 0,55 o bisel distorce visivelmente o que está atrás
- * dele — é o que denuncia vidro de verdade — sem que a face frontal, onde o
- * raio entra quase reto, desloque a arte um fio sequer.
+ * Pedido do dono, 15/10, depois de ver o palco de 600px: "diminua o tamanho:
+ * placas, dorso. o pulso está ótimo".
  *
- * Subiu para 0,86 quando o aro de luz entrou no pódio e o halo no fundo (veja
- * `AURA`). Antes disso não havia o que torcer: o acrílico refratava escuro
- * sobre escuro e o deslocamento, por maior que fosse, não tinha contorno que o
- * denunciasse. Com uma linha clara atrás, o desvio vira o efeito — o arco do
- * aro entra no vidro e sai de lugar, e é esse degrau que o olho lê como sólido
- * transparente.
+ * É uma `scale` no grupo da placa, e NÃO uma câmera mais afastada, porque as
+ * duas coisas não encolhem o mesmo conjunto: afastar a câmera encolheria também
+ * a joia vestida, e o pulso do 100K é justamente o que ele disse estar no
+ * tamanho certo. Com a escala, a placa recua 15% e o pulso fica onde está.
+ *
+ * O pódio acompanha a placa (os números do `PODIO`, do `ARO`, da `BORDA` e da
+ * `SOMBRA` já vêm multiplicados por 0,85): "mantenha o pódio proporcional" é o
+ * pedido, e uma base do tamanho de ontem debaixo de uma placa 15% menor seria um
+ * pires grande demais.
  */
-const ESPESSURA_OPTICA = 0.86;
+const PECA = 0.85;
 
 /** Quanto dura a passagem de uma arte para a outra, em segundos. */
 const CROSSFADE_S = 0.55;
@@ -181,11 +244,15 @@ function blocoAcrilico() {
     bevelThickness: BISEL,
     bevelSize: BISEL,
     bevelOffset: 0,
-    /* Dois anéis de bisel, não vinte: o chanfro tem de ser uma quina que
+    /* Três anéis de bisel, não vinte: o chanfro tem de ser uma quina que
        acende, não uma borda macia que some. O `ExtrudeGeometry` sai sem índice
        e calcula normal por triângulo, então cada faixa do bisel é uma faceta
-       plana — o facetado do dicionário vem daqui, de graça. */
-    bevelSegments: 2,
+       plana — o facetado do dicionário vem daqui, de graça.
+       Subiu de dois para três quando o bisel foi a 0,12: com dois anéis num
+       chanfro largo, cada faceta cobria 22° de normal e a aresta acendia em
+       dois degraus visíveis. Com três, as normais caem a 11°, 34° e 56° da
+       face, e o fio branco corre pela quina em vez de pular. */
+    bevelSegments: 3,
     curveSegments: 8,
   });
 
@@ -198,35 +265,48 @@ function blocoAcrilico() {
 }
 
 /**
+ * O limiar, em graus, acima do qual duas faces vizinhas viram uma ARESTA.
+ *
+ * Vinte graus separa o que é quina do que é curva. Os três anéis do bisel estão
+ * a uns 22° um do outro e entram — é a quina acesa que se quer. Os oito
+ * segmentos de cada canto arredondado estão a 11° e ficam de fora, senão o
+ * contorno do bloco sairia desenhado como um polígono.
+ */
+const ARESTA_LIMIAR = 20;
+
+/** As quinas do bloco, construídas uma vez e reusadas (como a geometria). */
+let ARESTAS: EdgesGeometry | null = null;
+
+function arestasDoBloco() {
+  if (!ARESTAS) ARESTAS = new EdgesGeometry(blocoAcrilico(), ARESTA_LIMIAR);
+  return ARESTAS;
+}
+
+/**
  * A máscara que desfaz a arte que sai.
  *
  * POR QUE NÃO É UM CROSSFADE DE OPACIDADE
  *
- * O `three` NÃO desenha objetos transparentes na passada de transmissão: o
- * alvo que o acrílico refrata é renderizado só com os opacos
- * (`renderTransmissionPass` chama `renderObjects(opaqueObjects, …)`). Uma arte
- * com `transparent: true` sumiria de dentro do bloco durante o meio segundo da
- * transição — a cada 5,8 s o troféu piscaria vazio.
+ * Duas artes meio transparentes, uma sobre a outra, somam-se: por meio segundo
+ * veem-se as duas raposas ao mesmo tempo, e o numeral de um marco atravessado
+ * pelo do outro. É o que uma impressão nunca faz.
  *
- * `alphaTest` resolve sem sair do bucket dos opacos: o material continua
- * opaco, e o que desaparece são fragmentos descartados um a um. Esta textura é
- * o mapa que diz a ORDEM do descarte — uma rampa na diagonal somada a um ruído
+ * `alphaTest` resolve: o que desaparece são fragmentos descartados um a um, e
+ * cada pixel está inteiramente numa arte ou inteiramente na outra. Esta textura
+ * é o mapa que diz a ORDEM do descarte — uma rampa na diagonal somada a um ruído
  * suave, então a arte velha se desfaz numa onda irregular e a nova aparece por
  * baixo.
  *
  * POR QUE OS VALORES VIVEM EM [0,5 … 1] E NÃO EM [0 … 1]
  *
- * O shader multiplica: `diffuseColor.a = map.a * alphaMap.g`. O `map.a` agora é
- * o recorte da tinta (0 ou 1, veja `ALFA_TINTA`) e tem de continuar sendo
- * cortado em 0,5 — se o limiar partisse de 0,001 para dissolver, os pixels de
- * cobertura parcial do mipmap (`a` ≈ 0,2) passariam, e a arte que sai apareceria
- * com a borda inchada pelo meio segundo da transição.
+ * O shader multiplica: `diffuseColor.a = map.a * alphaMap.g`. A arte é opaca
+ * (`map.a` = 1), então quem manda é só esta máscara, e o limiar varre o
+ * intervalo em que ela foi desenhada: sai de 0,501 (quase tudo passa) e sobe
+ * até 1,001 (nada passa).
  *
- * Com a máscara ocupando a metade de cima da escala, as duas contas cabem num
- * limiar só: ele sai de 0,501 (tinta inteira passa, cobertura parcial não) e
- * sobe até 1,001 (nada passa). Não parte de zero também porque `alphaTest`
- * cruzando o zero muda o define `USE_ALPHATEST` e RECOMPILA o shader, e
- * recompilar a cada quadro é o jeito mais caro possível de fazer isto.
+ * A escala começa na metade e não em zero porque `alphaTest` cruzando o zero
+ * muda o define `USE_ALPHATEST` e RECOMPILA o shader — e recompilar a cada
+ * quadro é o jeito mais caro possível de fazer isto.
  *
  * (A leitura é no canal verde: `alphamap_fragment` faz `diffuseColor.a *=
  * texture2D(alphaMap, …).g`. Por isso RGBA com os três canais iguais, e não
@@ -276,7 +356,7 @@ function mascaraDissolucao() {
       const rampa = 0.78 * v + 0.22 * u;
       const onda = Math.min(1, Math.max(0, 0.74 * rampa + 0.26 * ruido(u, v)));
       /* Metade de cima da escala: veja o cabeçalho. */
-      const valor = ALFA_TINTA + (1 - ALFA_TINTA) * onda;
+      const valor = DISSOLVE_PISO + (1 - DISSOLVE_PISO) * onda;
       const i = (y * N + x) * 4;
       const byte = Math.round(valor * 255);
       dados[i] = byte;
@@ -301,173 +381,80 @@ function mascaraDissolucao() {
 }
 
 /**
- * O tom do miolo do acrílico, a partir do `accent` do marco.
+ * O tom do vidro, a partir do `accent` do marco.
  *
- * O `accent` cru NÃO serve de `attenuationColor`. A conta do three é
- * `-log(cor) / distancia`: um canal em zero vira coeficiente infinito e some
- * por completo, por mais fino que seja o bloco. O laranja da marca (#FF7700)
- * tem azul zero — medido na tela, o 1M saía com o creme do numeral em amarelo
- * limão e a raposa escurecida, porque o acrílico tinha comido o azul inteiro
- * da arte atrás dele.
+ * O `accent` cru não serve: ele é a cor do MATERIAL do troféu no dicionário —
+ * bronze no 10K, cristal no 100K, ouro no 500K, o laranja da marca no 1M —, e
+ * num corpo que cobre a face inteira do objeto essa cor chapada vira um filtro
+ * colorido por cima da impressão. Medido quando o bloco ainda usava
+ * `attenuationColor`: o 1M saía com o creme do numeral em amarelo-limão.
  *
- * Puxado para perto do branco, o mesmo tom vira o que se queria: um fio de cor
- * no vidro. A `DISTANCIA` curta (da ordem da espessura) é o que mantém esse
- * fio visível — com a atenuação medida em unidades de cena, uma distância
- * grande num bloco de 0,40 não tingiria nada.
+ * Puxado 96% na direção do branco, o mesmo tom vira o que se queria: um sopro
+ * de cor no vidro, do tipo que só se percebe comparando um prêmio com o outro.
+ * Com os 12% de opacidade do corpo (veja o material do bloco), o que chega à
+ * tela é um décimo disso — o marco tinge o vidro, não a arte.
  *
- * Em 0,9 (era 0,78) desde que a moldura virou cristal: ali a luz atravessa sem
- * tinta na frente, e o tingimento, que antes só se via como um véu sobre a arte
- * escura, passou a pintar a moldura inteira. Cristal quase incolor com um
- * sopro do marco é o alvo — não um filtro colorido.
+ * O branco de destino é QUENTE (#FFFBF4), não o 255 puro: o estúdio desta cena
+ * é creme (veja os `Lightformer`), e um vidro neutro no meio de luz quente lê
+ * como azulado.
  */
-const ACRILICO_TOM = 0.9;
-const ACRILICO_DISTANCIA = 1.5;
-const BRANCO = /*@__PURE__*/ new Color("#ffffff");
+const ACRILICO_TOM = 0.96;
+const BRANCO = /*@__PURE__*/ new Color("#fffbf4");
 
 function tomDoAcrilico(accent: string) {
   return new Color(accent).lerp(BRANCO, ACRILICO_TOM);
 }
 
 /* --------------------------------------------------------------------------
-   O que fica ATRÁS do bloco — e por que sem isso ele nunca ia parecer vidro
+   O que fica ATRÁS do bloco — e por que agora é QUASE NADA
 
-   Olhar do dono, 14/10, depois de o acrílico já estar fisicamente correto: "o
-   bloco ainda lê como uma laje escura". Estava certo, e o material não tinha
-   culpa. Um sólido TRANSPARENTE mostra o que está atrás dele; atrás dele havia
-   o chão preto da vitrine. Transparência perfeita sobre o nada devolve o nada —
-   e o nada, com um contorno em volta, é exatamente o desenho de uma laje.
+   Houve aqui um plano de fundo: `AURA`, um halo claro de 11 × 9 em z = −2,6,
+   com um gradiente elíptico quente desenhado em `DataTexture`. Ele existia por
+   um motivo honesto: um sólido transparente sobre o nada devolve o nada, e o
+   bloco lia como laje escura.
 
-   Vidro não se vê: vê-se o que ele DEFORMA. Então entraram duas coisas claras
-   atrás do bloco, e é delas que a transparência passa a ser evidente:
+   O dono matou a ideia em 15/10, junto com o papel marfim da impressão: "tira
+   esse fundo opaco das placas e o fundo branco das placas". E ele estava certo
+   duas vezes. Enquanto a arte era um retângulo OPACO no meio da face, o cristal
+   só tinha a moldura em volta para provar que era cristal, e a moldura precisava
+   de um campo claro atrás — daí o halo. Com a impressão recortada em tinta, o
+   vazio ENTRE as letras virou vidro: há cristal entre cada perna da raposa e
+   dentro de cada "0" do numeral, e a prova de transparência passou a estar no
+   meio da peça, onde o olho já estava olhando.
 
-   - `AURA`, um halo de luz no fundo da vitrine — o softbox de trás da foto de
-     produto. Dá à moldura de cristal um campo claro para mostrar, em vez do
-     preto que ela mostrava.
-   - o ARO no topo do pódio (veja `ARO`): uma linha fina e clara cujo
-     arco de trás passa POR DENTRO do bloco. Linha reta que entra no vidro e sai
-     deslocada é a prova mais barata e mais honesta de refração que existe.
+   Aí o halo deixou de ajudar e passou a atrapalhar: era uma mancha clara de
+   quase um terço do quadrado, e tudo o que se via pelos vazios da tinta era ela.
+   O fundo agora é o `--floor` da seção, sem um plano sequer — o canvas é
+   limpo com a cor da seção (veja `fundoDaSecao`, que continua: ela também é o
+   que impede o three de limpar o alvo da transmissão com branco a 50%).
+
+   Do que ficou atrás do bloco, sobrou o que o dono deixou passar: o aro de luz
+   do pódio (veja `ARO`), cujo arco de trás atravessa o cristal. Linha clara
+   que entra no vidro e sai deslocada é a prova mais barata e mais honesta de
+   refração que existe, e ela cabe num fio de 7 centésimos.
    -------------------------------------------------------------------------- */
-
-/**
- * O halo do fundo: onde fica, quanto mede e qual é o claro dele.
- *
- * `z` atrás de tudo (a joia dos cantos vive em −0,6), e o plano é MAIOR que o
- * tronco da câmera naquela profundidade — a meia-altura visível em z = −2,6 é
- * (7,3 + 2,6)·tan 19° = 3,41, e o plano vai a ±4,5. Isso não é folga por
- * desencargo: é o que garante que a borda do plano NUNCA apareça. Se
- * aparecesse, qualquer diferença de um bit entre o `base` daqui e a cor com que
- * o canvas é limpo viraria um retângulo visível no meio da seção.
- *
- * `centro` é um carvão QUENTE, não o `ink-800` frio: a vitrine inteira é
- * `--floor` (#110f0e), que já puxa para o marrom, e um halo azulado no meio
- * dela lia como mancha. Cinco vezes a luminância do chão é o bastante para a
- * moldura de cristal ter o que mostrar e pouco para a seção continuar escura —
- * medido na captura a 1440, o halo chega a 79 de luminância contra os 15 do
- * `--floor`, e some antes da borda do canvas.
- */
-const AURA = {
-  centro: "#5d4e40",
-  z: -2.6,
-  w: 11,
-  h: 9,
-  /* O miolo do halo, em fração do plano: elipse um pouco mais alta que larga,
-     com o centro ligeiramente abaixo do meio — é atrás do BLOCO que ele precisa
-     estar, e o bloco desce 0,2 no encaixe do pódio. */
-  raioX: 0.28,
-  raioY: 0.32,
-  centroY: 0.54,
-};
-
-/** Um halo por cor de fundo. Na prática, um. */
-const AURAS = new Map<string, DataTexture>();
-
-/**
- * O gradiente do halo, em bytes sRGB.
- *
- * A mistura é feita em sRGB de propósito, e não no espaço linear de trabalho do
- * three: em linear, dois tons escuros se misturam por um meio bem mais claro
- * que o olho espera, e o halo ganhava um degrau pálido na metade do caminho.
- * Aqui o valor em k = 0 é o `base` BYTE A BYTE — o mesmo número que o
- * `setClearColor` escreve —, então não há emenda possível entre o plano e o
- * resto do canvas.
- */
-function auraDoFundo(base: string) {
-  const pronta = AURAS.get(base);
-  if (pronta) return pronta;
-
-  const N = 128;
-  const hexBase = new Color(base).getHex(SRGBColorSpace);
-  const hexCentro = new Color(AURA.centro).getHex(SRGBColorSpace);
-  const canal = (hex: number, i: number) => (hex >> (16 - i * 8)) & 255;
-
-  const dados = new Uint8Array(N * N * 4);
-  for (let y = 0; y < N; y++) {
-    for (let x = 0; x < N; x++) {
-      const dx = (x / (N - 1) - 0.5) / AURA.raioX;
-      const dy = (y / (N - 1) - AURA.centroY) / AURA.raioY;
-      const r = Math.sqrt(dx * dx + dy * dy);
-      const q = Math.min(1, Math.max(0, 1 - r));
-      /* Suavizada duas vezes: uma rampa linear deixa um anel visível onde o
-         halo termina, e o anel denuncia o truque. */
-      const k = q * q * q * (q * (q * 6 - 15) + 10);
-      const i = (y * N + x) * 4;
-      for (let c = 0; c < 3; c++) {
-        const b = canal(hexBase, c);
-        dados[i + c] = Math.round(b + (canal(hexCentro, c) - b) * k);
-      }
-      dados[i + 3] = 255;
-    }
-  }
-
-  const textura = new DataTexture(dados, N, N, RGBAFormat);
-  textura.colorSpace = SRGBColorSpace;
-  textura.minFilter = LinearFilter;
-  textura.magFilter = LinearFilter;
-  textura.generateMipmaps = false;
-  textura.wrapS = ClampToEdgeWrapping;
-  textura.wrapT = ClampToEdgeWrapping;
-  textura.needsUpdate = true;
-
-  AURAS.set(base, textura);
-  return textura;
-}
-
-/**
- * O aro de luz no topo do pódio.
- *
- * Raio um fio menor que a meia-largura do bloco (1,03), então o aro corre por
- * TRÁS dele em vez de contorná-lo: o arco da frente aparece abaixo da aresta de
- * baixo do bloco, o arco de trás entra no cristal. Com a câmera em y = 0 e o
- * pódio em −1,57, o arco de trás projeta-se por volta de y = −1,34 na face do
- * bloco — abaixo da janela da arte, bem no meio da faixa limpa de cristal. É
- * ali que a refração tem palco.
- *
- * `meshBasicMaterial` sem tone mapping: é uma luz embutida na base, não uma
- * superfície iluminada, e tem de sair da tela com o creme que está escrito
- * aqui. Opaco também importa — a passada de transmissão só desenha opacos, e um
- * aro transparente sumiria justamente de dentro do vidro, que é onde ele serve.
- */
-const ARO = { raio: [0.99, 1.056] as const, cor: "#F7E2BE" };
 
 /**
  * A cor de fundo da seção que hospeda o canvas, lida do próprio DOM.
  *
- * POR QUE O CANVAS DEIXOU DE SER TRANSPARENTE
+ * POR QUE O CANVAS É PINTADO E NÃO TRANSPARENTE
  *
- * Com `alpha` ligado e o fundo limpo em transparente, o `three` limpa o ALVO
- * DA TRANSMISSÃO com branco a 50% (está no `renderTransmissionPass`: "if
- * (_currentClearAlpha < 1) setClearColor(0xffffff, 0.5)"). O acrílico então
- * refrata um branco leitoso em toda a moldura onde não há arte atrás — o bloco
- * saía parecendo vidro fosco de banheiro, e a arte dentro dele, lavada.
+ * Não é o fundo que o `--floor` já dá: é a mesma cor, no mesmo lugar. O que ela
+ * resolve é o CANAL ALFA.
  *
- * Limpando com a cor da seção e alfa 1, o alvo da transmissão recebe a MESMA
- * cor, e o que se vê através do acrílico é o chão escuro da vitrine — que é o
- * que está atrás do troféu de verdade.
+ * A face do bloco soma o reflexo em vez de cobrir o que está atrás (veja o
+ * material do bloco). Mistura aditiva soma TAMBÉM NO ALFA — e num canvas limpo
+ * com alfa zero, quem está "atrás" é a página, pelo compositor do navegador:
+ * `resultado = canvasRGB + páginaRGB·(1 − canvasA)`. A face então subia o alfa
+ * do canvas para perto de 1 com um RGB quase preto (o reflexo é fraco), e o
+ * chão da seção parava de aparecer: medido, o miolo do bloco saía a 5 de
+ * luminância contra os 18 do chão em volta. O vidro virava um buraco — mais
+ * escuro que o fundo, que é o avesso de transparente.
  *
- * A cor não é constante escrita aqui: é lida do primeiro ancestral com fundo
- * próprio. O retângulo do canvas passa a ser opaco, mas pintado exatamente da
- * cor que já estava ali — invisível na página, e sem repetir o token `--floor`
- * num segundo lugar, onde ele poderia ficar para trás.
+ * Limpando o canvas com a cor da seção e alfa 1, a soma acontece sobre um fundo
+ * de verdade dentro do próprio WebGL, e o compositor não tem mais nada a
+ * decidir. A cor não é constante escrita aqui: é lida do primeiro ancestral com
+ * fundo próprio, então o token `--floor` continua morando num lugar só.
  */
 function fundoDaSecao(canvas: HTMLCanvasElement) {
   let no: HTMLElement | null = canvas.parentElement;
@@ -481,6 +468,99 @@ function fundoDaSecao(canvas: HTMLCanvasElement) {
   }
   /* Nenhum ancestral pintado: o chão da vitrine, que é onde esta cena vive. */
   return "#110f0e";
+}
+
+/**
+ * O aro de luz no topo do pódio.
+ *
+ * Raio um fio menor que a silhueta do bloco (0,876 de meia-largura depois de
+ * `PECA`, 0,892 projetados com a guinada de repouso), então o aro corre por TRÁS
+ * dele em vez de contorná-lo: o arco da frente aparece abaixo da aresta de baixo
+ * do bloco, o arco de trás entra no cristal, pela faixa limpa de baixo. É ali que
+ * a refração tem palco — e desde que o halo do fundo saiu, é a única prova de
+ * refração que sobrou nesta cena.
+ *
+ * Os números são os mesmos de antes multiplicados por `PECA`: o aro é do pódio,
+ * que vive FORA do grupo em escala, então ele não encolhe sozinho.
+ *
+ * `meshBasicMaterial` sem tone mapping: é uma luz embutida na base, não uma
+ * superfície iluminada, e tem de sair da tela com o creme que está escrito
+ * aqui. Opaco também importa — a passada de transmissão só desenha opacos, e um
+ * aro transparente sumiria justamente de dentro do vidro, que é onde ele serve.
+ */
+const ARO = { raio: [0.841, 0.898] as const, cor: "#F7E2BE" };
+
+/**
+ * A BORDA DE LUZ do pódio: o segundo aro, na quina de cima do cilindro.
+ *
+ * Pedido de 15/10 ("o pódio um pouco mais largo e com a borda de luz"). O aro
+ * de dentro existe para ser REFRATADO; este existe para DESENHAR o pódio: um
+ * fio claro na quina onde a tampa encontra a saia, que é o que separa a base do
+ * chão escuro da vitrine sem precisar de uma régua. Mais fraco que o de dentro,
+ * e a 1,5 px de espessura na caixa de 600 — um fio, não um anel.
+ *
+ * 1,037 é o `topo` do `PODIO` (declarado lá embaixo, depois deste): mexeu lá,
+ * mexa aqui — um fio de luz que não cai na quina é um anel solto na tampa.
+ */
+const BORDA = { raio: [1.007, 1.037] as const, cor: "#C9B193" };
+
+/**
+ * A SOMBRA DE CONTATO: a elipse escura que o bloco deixa no pódio.
+ *
+ * Sem ela o troféu PAIRA. O vão que o dono pediu entre a placa e o pódio
+ * (`ENCAIXE`) resolveu um problema e criou outro: dois objetos separados por ar,
+ * sobre um disco iluminado por igual, não têm como dizer qual está sobre qual.
+ * A mancha escura embaixo é o que amarra os dois — é a única pista de que
+ * existe um corpo acima do pódio, e o olho a lê antes de qualquer reflexo.
+ *
+ * Deitada no pódio e NÃO no `group` dele: a sombra acompanha a PLACA, que
+ * reveza os postos com a joia vestida. Quando a placa sai do pódio a sombra sai
+ * junto, e some por `opacity` conforme o bloco se afasta do eixo da base (veja
+ * o `useFrame` de `Plaque`) — sombra em cima do nada seria a mancha flutuante
+ * que ela veio desmentir.
+ *
+ * `w` maior que `h` porque é uma projeção: um bloco de 2,06 de largura visto de
+ * cima deixa no chão uma elipse larga e rasa, achatada pelo ângulo da luz
+ * principal.
+ */
+const SOMBRA = { w: 2.35, h: 0.95, forca: 0.72, alcance: 0.95 };
+
+/** A textura da sombra, construída uma vez: preta, com alfa em elipse macia. */
+let SOMBRA_MAPA: DataTexture | null = null;
+
+function mapaDaSombra() {
+  if (SOMBRA_MAPA) return SOMBRA_MAPA;
+
+  const N = 64;
+  const dados = new Uint8Array(N * N * 4);
+  for (let y = 0; y < N; y++) {
+    for (let x = 0; x < N; x++) {
+      const dx = (x / (N - 1) - 0.5) * 2;
+      const dy = (y / (N - 1) - 0.5) * 2;
+      const r = Math.min(1, Math.sqrt(dx * dx + dy * dy));
+      /* O núcleo da sombra é mais escuro que a borda e a queda é de quinta
+         ordem, como a do halo: uma rampa linear deixa um anel visível onde a
+         mancha termina, e o anel denuncia que aquilo é um decalque. */
+      const q = 1 - r;
+      const k = q * q * q * (q * (q * 6 - 15) + 10);
+      const i = (y * N + x) * 4;
+      dados[i] = 0;
+      dados[i + 1] = 0;
+      dados[i + 2] = 0;
+      dados[i + 3] = Math.round(k * 255);
+    }
+  }
+
+  const textura = new DataTexture(dados, N, N, RGBAFormat);
+  textura.minFilter = LinearFilter;
+  textura.magFilter = LinearFilter;
+  textura.generateMipmaps = false;
+  textura.wrapS = ClampToEdgeWrapping;
+  textura.wrapT = ClampToEdgeWrapping;
+  textura.needsUpdate = true;
+
+  SOMBRA_MAPA = textura;
+  return textura;
 }
 
 /**
@@ -538,8 +618,19 @@ const ITEM_SPOTS: {
  * cada uma ocupa um de cada vez. A troca é o que amarra as duas numa cena só
  * — paradas lado a lado, elas eram dois cartazes pendurados no mesmo quadro;
  * revezando o mesmo par de lugares, viram duas peças de uma coisa só.
+ *
+ * APERTARAM em 15/10, de ±1,25 para ±1,02, e quem mandou foi a câmera. Com ela a
+ * 6,4 (veja o `Canvas`), a meia-largura visível em z = 0 caiu de 2,51 para 2,21.
+ * Nos postos antigos o pódio saía pela borda esquerda e a placa pela direita —
+ * foi o que a primeira captura mostrou.
+ *
+ * Com a peça em `PECA` as contas sobraram: o bloco girado projeta 0,892, o busto
+ * do 500K (já em 0,80) projeta 0,96 e o pódio 1,122, então no posto da direita o
+ * mais largo dos três chega a 2,01 contra os 2,21 do quadro. A troca anda 2,05 —
+ * mais que a largura inteira da placa: continua sendo inconfundivelmente uma
+ * troca de lugar.
  */
-const POSTO = { esq: -1.2, dir: 1.3 };
+const POSTO = { esq: -1.0, dir: 1.05 };
 
 const ITEM_SOLO: (typeof ITEM_SPOTS)[number] = {
   pos: [POSTO.dir, 0.04, -0.25],
@@ -630,8 +721,26 @@ const FOTO_SOLO = { w: 2.42, h: 3.6 };
  *
  * O topo é um número que outra coisa precisa saber — a foto da joia vestida tem
  * de parar ACIMA dele —, então ele sai daqui e não de um `-1.72` repetido.
+ *
+ * Alargou em 15/10 ("capriche na disposição dessa sessão"), de 1,15/1,30 para
+ * 1,22/1,32 — e depois ENCOLHEU com a placa: estes 1,037/1,122 são aqueles
+ * mesmos números multiplicados por `PECA` (0,85), porque o segundo pedido do dia
+ * foi "diminua o tamanho: placas" com o pódio proporcional.
+ *
+ * O bloco tem 1,03 de meia-largura, 0,876 depois da escala, e girado a −23°
+ * projeta 0,892; o topo em 1,037 deixa 0,145 de cada lado — base, não pires —, e
+ * a borda de luz (a `BORDA`) ganha a quina onde correr sem encostar na silhueta
+ * do cristal.
+ *
+ * E ficou MAIS BAIXO e mais achatado (0,221 de altura em y = −1,58, contra 0,30
+ * em −1,72). Não é gosto: com a câmera mais perto e abaixo do eixo, a quina da
+ * frente da base é o ponto mais próximo da lente em toda a cena, e o tronco de
+ * visão ali é estreito — nos números antigos ela caía 8% ABAIXO da borda de
+ * baixo do quadrado. Emagrecendo e descendo o cilindro, a base inteira cabe no
+ * quadro com a quina da frente a 4,8% do fundo. É nessa linha que o horizonte de
+ * 1px da `AwardsShowcase` é desenhado — mexeu aqui, mexa lá.
  */
-const PODIO = { y: -1.72, altura: 0.3, topo: 1.15, base: 1.3 };
+const PODIO = { y: -1.58, altura: 0.221, topo: 1.037, base: 1.122 };
 const PODIO_TOPO = PODIO.y + PODIO.altura / 2;
 
 /**
@@ -640,12 +749,23 @@ const PODIO_TOPO = PODIO.y + PODIO.altura / 2;
  * O bloco tem 2,9 de altura centrado na origem (base em −1,45) e o topo do
  * pódio está em −1,57. Numa versão anterior ele afundava 0,2 na base, para o
  * aro iluminado passar por trás do cristal; o dono pediu em 14/10 o contrário
- * — "afaste um pouco (talvez um margin-padding) a placa do pódio" —, então o
- * grupo sobe: valor negativo aqui levanta o bloco, e a base dele fica a 0,26
- * do topo do pódio (0,12 de vão mais os 0,14 da subida). O aro continua
- * visível por baixo da aresta, agora inteiro.
+ * — "afaste um pouco (talvez um margin-padding) a placa do pódio" — e repetiu
+ * em 15/10, "afaste o pódio com (margin:padding) para baixo em alguns pixels
+ * (não muitos)".
+ *
+ * Valor negativo aqui levanta o bloco. Com o pódio em −1,58 e 0,221 de altura, o
+ * topo dele está em −1,4695; o bloco, já em escala `PECA`, tem 1,2325 de
+ * meia-altura, e −0,033 põe a base dele a 0,27 do topo do pódio. "Alguns, não
+ * muitos" é isto: o bastante para o olho ver ar entre as duas peças, pouco o
+ * bastante para o bloco continuar POUSADO no pódio em vez de pairar sobre ele —
+ * e é a SOMBRA DE CONTATO (veja `SOMBRA`), que nasceu junto com esse vão, que
+ * faz o olho ler "apoiado" em vez de "flutuando".
+ *
+ * O aro de luz não se mexe (ele é do pódio, e o pódio ficou onde estava), mas o
+ * arco de trás sobe no enquadramento junto com a aresta de baixo do cristal e
+ * continua entrando na moldura — que é o que ele existe para fazer.
  */
-const ENCAIXE = -0.14;
+const ENCAIXE = -0.033;
 
 /**
  * O quadro da joia vestida, por fotografia.
@@ -661,19 +781,32 @@ const ENCAIXE = -0.14;
  * atravessava o cilindro. Era disso que o dono reclamou em 14/10: "o pulso está
  * passando por dentro da imagem do pódio".
  *
- * Em 0,73 a foto mede 1,74 × 2,63 e cabe ao lado do bloco (2,06 de largura) com
- * folga. O `y` vem da conta, não do olho:
+ * Em 0,73 a foto media 1,74 × 2,63 — ainda da altura do bloco inteiro, e o dono
+ * voltou ao assunto em 15/10: "diminua o pulso". Em 0,58 ela mede 1,40 × 2,09,
+ * uns 72% da altura da placa: um antebraço ao lado do troféu, que é a proporção
+ * que a cena quer dizer, e não um segundo cartaz do mesmo tamanho.
  *
- *   PODIO_TOPO (−1,57) + FOLGA (0,34) + metade da altura (1,314) + o flutuar
- *   (FLOAT.sobe, 0,085) = 0,169
+ * O `y` vem da conta, não do olho:
  *
- * A folga era 0,12; o dono pediu em 14/10 mais ar entre o pulso e o pódio,
- * o mesmo vão que a placa ganhou.
+ *   PODIO_TOPO (−1,57) + FOLGA (0,34) + metade da altura (1,044) + o flutuar
+ *   (FLOAT.sobe, 0,085) = −0,101
  *
  * — a parcela do flutuar porque a peça sobe e desce no ar, e a base não pode
- * encostar no pódio nem no ponto mais baixo do movimento.
+ * encostar no pódio nem no ponto mais baixo do movimento. A FOLGA continua em
+ * 0,34, que é o ar que o dono pediu em 14/10 entre o pulso e o pódio: encolher
+ * a foto não é motivo para ela descer.
  */
-const VESTIDA_ESCALA: Record<string, number> = { "pulseira-100k-vestida": 0.73 };
+const VESTIDA_ESCALA: Record<string, number> = {
+  "pulseira-100k-vestida": 0.58,
+  /* O dorso do 500K, 15/10: "diminua o tamanho: placas, dorso. o pulso está
+     ótimo". No teto cheio a foto media 2,40 × 3,60 — mais ALTA que o bloco
+     inteiro (2,9) e, depois de a placa encolher para `PECA`, meio metro de cena
+     mais alta que ela. Dois objetos lado a lado em que o acessório é maior que o
+     troféu dizem a coisa errada. Em 0,80 o busto fica em 1,92 × 2,88, uns 17%
+     acima da placa em altura e com a mesma meia-largura: um par, não uma
+     disputa. O pulso NÃO muda — ele é o que estava certo. */
+  "colar-500k-vestido": 0.8,
+};
 /** Quanto a base da foto fica acima do topo do pódio, no mínimo. */
 const FOLGA_PODIO = 0.34;
 
@@ -941,7 +1074,6 @@ function Plaque({
   accent,
   art,
   fotos,
-  fundo,
   photo,
   worn,
   spin,
@@ -950,8 +1082,6 @@ function Plaque({
   accent: string;
   art: { prev: Texture | null; curr: Texture | null };
   fotos: { prev: Texture | null; curr: Texture | null };
-  /** A cor com que o canvas é limpo: é nela que o halo do fundo se dissolve. */
-  fundo: string;
   /** O caminho da foto em cena: é dele que sai o quadro da joia vestida. */
   photo?: string;
   /** A joia é vestida: aparece uma vez só, ao lado da placa. */
@@ -968,12 +1098,15 @@ function Plaque({
   /** E os materiais deles, onde o limiar da dissolução sobe quadro a quadro. */
   const matSaindoFrente = useRef<MeshBasicMaterial>(null);
   const matSaindoVerso = useRef<MeshBasicMaterial>(null);
+  /** A sombra de contato, que só aparece com a placa sobre o pódio. */
+  const matSombra = useRef<MeshBasicMaterial>(null);
   const fade = useRef(0);
 
   const geometria = useMemo(() => blocoAcrilico(), []);
+  const arestas = useMemo(() => arestasDoBloco(), []);
   const mascara = useMemo(() => mascaraDissolucao(), []);
+  const sombra = useMemo(() => mapaDaSombra(), []);
   const tom = useMemo(() => tomDoAcrilico(accent), [accent]);
-  const halo = useMemo(() => auraDoFundo(fundo), [fundo]);
   /* O quadro e o posto da joia vestida desta foto (veja `vestida`). */
   const vest = useMemo(() => vestida(photo), [photo]);
 
@@ -984,12 +1117,14 @@ function Plaque({
 
   useFrame((state, delta) => {
     if (group.current) {
-      /* ±14°: o bastante para a lateral e o bisel entrarem e saírem da luz —
-         é aí que a espessura aparece —, e pouco o bastante para a face
-         impressa nunca sair de frente para quem lê. */
-      const sway = spin ? Math.sin(state.clock.elapsedTime * 0.45) * 0.245 : 0;
-      group.current.rotation.y = sway + state.pointer.x * 0.28;
-      group.current.rotation.x = -state.pointer.y * 0.14;
+      /* A pose de repouso (veja `REPOUSO`) mais um balanço de ±7° que nunca
+         chega a zero: a guinada passeia entre −9° e −23°, então a face lateral
+         direita e o bisel ficam acesos o tempo inteiro e a face impressa nunca
+         sai de frente para quem lê. O cursor empurra menos que antes (0,2 em vez
+         de 0,28) porque agora ele soma a uma pose que já é oblíqua. */
+      const sway = spin ? Math.sin(state.clock.elapsedTime * 0.45) * REPOUSO.balanco : 0;
+      group.current.rotation.y = REPOUSO.yaw + sway + state.pointer.x * 0.2;
+      group.current.rotation.x = REPOUSO.pitch - state.pointer.y * 0.12;
     }
 
     /* O outro lado do rodízio. Quando não há joia vestida para revezar, a
@@ -1000,10 +1135,21 @@ function Plaque({
       palco.current.position.z = lugar.z;
     }
 
+    /* A sombra de contato só existe sobre o pódio (veja `SOMBRA`): some
+       conforme a placa se afasta do eixo da base, e volta quando ela retorna.
+       O pódio fica no posto da esquerda quando há joia vestida para revezar, e
+       no meio quando não há. */
+    if (matSombra.current) {
+      const eixo = worn ? POSTO.esq : 0;
+      const longe = Math.abs((palco.current?.position.x ?? eixo) - eixo);
+      const perto = Math.max(0, 1 - longe / SOMBRA.alcance);
+      matSombra.current.opacity = SOMBRA.forca * perto * perto;
+    }
+
     /* A arte que sai se desfaz pela máscara (veja `mascaraDissolucao`): o
        limiar varre a metade de cima da escala, que é onde a máscara vive. */
     fade.current = Math.min(1, fade.current + delta / CROSSFADE_S);
-    const limiar = ALFA_TINTA + 0.001 + (1 - ALFA_TINTA) * fade.current;
+    const limiar = DISSOLVE_PISO + 0.001 + (1 - DISSOLVE_PISO) * fade.current;
     if (matSaindoFrente.current) matSaindoFrente.current.alphaTest = limiar;
     if (matSaindoVerso.current) matSaindoVerso.current.alphaTest = limiar;
     const aindaSaindo = fade.current < 1;
@@ -1011,87 +1157,211 @@ function Plaque({
     if (saindoVerso.current) saindoVerso.current.visible = aindaSaindo;
   });
 
-  /* A face frontal do bloco e o lugar da arte dentro dele. */
-  const faceZ = PLAQUE.d / 2 - BISEL;
-  const arteZ = faceZ - ARTE_FUNDO;
+  /* Onde a impressão fica: um fio À FRENTE da face (veja `ARTE_FRENTE`).
+
+     A face frontal plana do `ExtrudeGeometry` está em z = +d/2 — o bisel ocupa
+     `BISEL` em cada ponta da extrusão e o miolo é `d − 2·BISEL`, então o bloco
+     fecha exatamente em `d` e, centrado, vai de −d/2 a +d/2. (O cálculo antigo
+     subtraía o bisel de novo e punha a arte 0,17 atrás da face: era metade do
+     borrão.) */
+  const arteZ = PLAQUE.d / 2 + ARTE_FRENTE;
+  /* A sombra de contato, em coordenadas do `palco`.
+
+     O grupo está em `-ENCAIXE` e tem `scale` `PECA`, então um filho em `y` local
+     chega ao mundo em `-ENCAIXE + y·PECA`. Invertendo para o ponto que interessa
+     (um fio acima do topo do pódio) sai a conta abaixo — e ela é feita aqui, e
+     não a olho, porque dois dos três números mudaram no mesmo dia. */
+  const sombraY = (PODIO_TOPO + 0.012 + ENCAIXE) / PECA;
 
   return (
     <>
-      {/* O HALO DO FUNDO (veja `AURA`).
-
-          Fora do `group` que balança: ele é a sala, não o objeto. Girando junto
-          com o bloco, o claro do meio andaria pela tela e o truque apareceria.
-
-          `toneMapped` falso para a borda do halo bater byte a byte com a cor de
-          limpeza do canvas, e sem `depthWrite` porque não há nada atrás dele
-          para esconder — é o fundo. */}
-      <mesh position={[0, 0, AURA.z]} renderOrder={-1}>
-        <planeGeometry args={[AURA.w, AURA.h]} />
-        <meshBasicMaterial map={halo} toneMapped={false} depthWrite={false} />
-      </mesh>
-
       <group ref={group}>
         {/* O troféu — bloco, arte e o que anda com eles quando a placa reveza o
             quadro com a joia vestida. O pódio ficou de fora: ele não sai do
             lugar. A posição aqui é a do primeiro quadro e a de quem pediu menos
-            movimento; o resto do tempo quem manda é o rodízio, lá em cima. */}
-        <group ref={palco} position={[worn ? POSTO.esq : 0, -ENCAIXE, 0]}>
-          {/* O bloco de acrílico.
+            movimento; o resto do tempo quem manda é o rodízio, lá em cima.
 
-              `ior` 1,49 é o índice de refração do PMMA — o acrílico de verdade.
-              `transmission` 1 com `thickness` (veja `ESPESSURA_OPTICA`) faz a luz
-              ATRAVESSAR o bloco e sair torta nas quinas, que é o que distingue
-              um sólido transparente de um vidro desenhado. `roughness` 0,03 e
-              `clearcoat` 1 são a superfície polida de fábrica.
+            `scale` em `PECA`: a peça inteira — bloco, arte e sombra — encolheu
+            15% em 15/10, a pedido do dono ("diminua o tamanho: placas, dorso. o
+            pulso está ótimo"). A ESCALA e não a câmera, porque afastar a câmera
+            encolheria junto a joia vestida, e o pulso do 100K é justamente o que
+            ele disse estar no tamanho certo. O pódio encolheu com a placa (os
+            números do `PODIO` já vêm multiplicados), que é o que mantém a
+            proporção entre os dois. */}
+        <group
+          ref={palco}
+          position={[worn ? POSTO.esq : 0, -ENCAIXE, 0]}
+          scale={PECA}
+        >
+          {/* A SOMBRA DE CONTATO (veja `SOMBRA`): deitada no topo do pódio,
+              andando com a placa e sumindo quando ela sai da base.
 
-              `attenuationColor` tinge o miolo de leve, e por caminho óptico:
-              quanto mais acrílico a luz atravessa, mais cor pega. O bronze do
-              10K, o cristal quase incolor do 100K, o ouro do 500K e o laranja do
-              1M saem do material, não de um filtro por cima — pálidos, pelo
-              motivo que `tomDoAcrilico` explica.
-
-              O MESMO MATERIAL NO CELULAR, E POR QUÊ
-
-              A transmissão é cara: re-renderiza a cena opaca inteira num alvo
-              próprio e refaz os mipmaps dele a cada quadro. A saída prevista era
-              uma variante barata abaixo de 1024 — sem transmissão, com o bloco
-              translúcido comum. Duas coisas desaconselharam:
-
-              1. A MEDIDA não pediu. Contagem de `requestAnimationFrame` por
-                 segundo com o canvas à vista, no Chrome do Playwright, dez
-                 amostras de 1 s: 144 fps de mediana a 412×915 COM transmissão, e
-                 143 a 1440×900. Os portões são 30 e 55.
-              2. As duas variantes baratas testadas ficaram piores, e de formas
-                 opostas: branco a 28% de opacidade virou uma lâmina leitosa
-                 cinza sobre o chão escuro (mistura normal escurece o que está
-                 embaixo, e embaixo está a arte); mistura aditiva com difusa
-                 preta sumiu com o bloco e deixou só uns fios nas quinas.
-
-              O que degrada em tela pequena é a RESOLUÇÃO do alvo de transmissão,
-              não o material (veja `onCreated`): metade dos pixels num canvas que
-              já é de 247 px, com o mesmo acrílico. */}
-          <mesh geometry={geometria}>
-            <meshPhysicalMaterial
-              color="#ffffff"
-              metalness={0}
-              roughness={0.03}
-              transmission={1}
-              thickness={ESPESSURA_OPTICA}
-              ior={1.49}
-              clearcoat={1}
-              clearcoatRoughness={0.04}
-              envMapIntensity={5.6}
-              specularIntensity={1}
-              attenuationColor={tom}
-              attenuationDistance={ACRILICO_DISTANCIA}
+              `rotation` em x de −90° deita o plano; a `scale` em y dele é, por
+              isso, a PROFUNDIDADE da elipse, não a altura. `depthWrite` falso e
+              `renderOrder` alto para a mancha pousar sobre a tampa do pódio sem
+              disputar o depth buffer com ela a doze milésimos de distância. */}
+          <mesh
+            position={[0, sombraY, 0]}
+            rotation={[-Math.PI / 2, 0, 0]}
+            renderOrder={1}
+          >
+            <planeGeometry args={[SOMBRA.w, SOMBRA.h]} />
+            <meshBasicMaterial
+              ref={matSombra}
+              map={sombra}
+              transparent
+              opacity={SOMBRA.forca}
+              depthWrite={false}
+              toneMapped={false}
             />
           </mesh>
 
-          {/* A ARTE IMPRESSA, por dentro.
+          {/* O BLOCO DE VIDRO — por transparência de verdade, não por
+              transmissão.
 
-              Dois centésimos atrás da face frontal: é essa lâmina de acrílico na
-              frente da arte que o olho lê como espessura. Colada por fora seria
-              um adesivo — foi exatamente disso que o dono reclamou.
+              VEREDITO DO DONO, 15/10, na terceira volta: "as placas 3d devem ser
+              transparentes, sem esse fundo preto, preciso que elas sejam
+              transparentes".
+
+              Ele estava descrevendo um defeito do `transmission`, não um defeito
+              de ajuste, e a razão é estrutural. `transmission` não deixa a luz
+              passar: ele COPIA a cena opaca num alvo próprio e amostra esse alvo
+              deslocado pela refração. Atrás do bloco, nesta vitrine, há o chão
+              `--floor` — um quase-preto. Então o que o acrílico "deixava passar"
+              era, por construção, um retângulo preto, e nenhum valor de
+              `thickness`, `ior` ou `roughness` muda isso: a cor que entra é a cor
+              que sai. Era preto por fora e preto por dentro, com um contorno
+              claro em volta, que é o desenho de uma laje.
+
+              Agora o corpo é VIDRO POR ALFA: `transparent` com `opacity` baixa.
+              O que se vê através dele não é uma cópia — é o próprio pixel que já
+              estava no framebuffer, o chão da seção, o pódio, o aro. Sem
+              refração, sim: um bloco plano de 2 × 2,9 por 0,52 de espessura
+              desloca pouco mesmo no mundo real, e o que denuncia vidro numa peça
+              dessas não é a torção, é o REFLEXO — o softbox na face, o fio aceso
+              na quina — que o `clearcoat` continua dando por cima da
+              transparência.
+
+              DUAS OPACIDADES, E É DELA QUE VEM A ESPESSURA
+
+              O `ExtrudeGeometry` sai com dois grupos: o 0 são as tampas (a face
+              da frente e a de trás), o 1 são as paredes laterais e o bisel. Dois
+              materiais, então:
+
+              - a FRENTE em 0,12: é por ela que se olha, e é ela que tem de
+                sumir. Qualquer coisa acima disso e a tinta impressa passa a ter
+                um véu por cima;
+              - a LATERAL e o BISEL em 0,28: é a espessura. Num vidro de verdade
+                o raio que entra pela lateral atravessa 2 metros de material e o
+                que entra pela face atravessa 0,5 — a borda SEMPRE lê mais densa
+                que o meio, e é isso que faz o olho ver um sólido em vez de uma
+                película. `envMapIntensity` maior na lateral pela mesma razão: é
+                lá que o estúdio tem de acender.
+
+              `depthWrite` falso nos dois: um corpo transparente não pode esconder
+              o que vem depois dele no bucket dos transparentes (a joia que
+              atravessa o quadro, a sombra no pódio). O `depthTest` fica — é ele
+              que mantém a tinta impressa, que é OPACA e foi desenhada antes, por
+              cima do vidro em vez de debaixo dele.
+
+              `color` sai de `tomDoAcrilico`: o bronze do 10K, o cristal quase
+              incolor do 100K, o ouro do 500K e o laranja do 1M, todos puxados
+              para perto do branco. Com 12% de opacidade o que sobra é um sopro —
+              que é exatamente o que um acrílico fundido tingido faz com a luz. */}
+          <mesh geometry={geometria}>
+            <meshPhysicalMaterial
+              attach="material-0"
+              /* A FACE SÓ SOMA O REFLEXO — não cobre nada.
+
+                 Com mistura normal a 12%, a face frontal fazia
+                 `resultado = vidro·0,12 + fundo·0,88`: um véu cinza uniforme
+                 sobre o chão da seção, de 45 de luminância contra os 18 do
+                 fundo. Medido e visto, aquilo é PELÍCULA, não vidro — e foi a
+                 terceira vez que o dono usou a palavra "opaco".
+
+                 Aditiva com difusa preta resolve pelo princípio certo: o que uma
+                 lâmina de acrílico faz na direção da câmera é REFLETIR uns 4% do
+                 estúdio e deixar passar o resto. Então ela SOMA o reflexo e não
+                 tira nada do que está atrás — o chão continua sendo o chão, a
+                 tinta impressa continua intacta, e o que aparece é só a varredura
+                 clara do softbox atravessando a face. É esse gradiente, e não uma
+                 cor de corpo, que diz "tem vidro aqui".
+
+                 `envMapIntensity` 3 porque agora o reflexo é tudo o que esta face
+                 tem; `clearcoat` espalha o softbox numa faixa macia em vez de um
+                 ponto. */
+              color="#000000"
+              metalness={0}
+              roughness={0.04}
+              clearcoat={1}
+              clearcoatRoughness={0.06}
+              envMapIntensity={3}
+              transparent
+              opacity={0.9}
+              blending={AdditiveBlending}
+              depthWrite={false}
+              side={FrontSide}
+            />
+            <meshPhysicalMaterial
+              attach="material-1"
+              color={tom}
+              metalness={0}
+              roughness={0.04}
+              clearcoat={1}
+              clearcoatRoughness={0.06}
+              envMapIntensity={4}
+              transparent
+              opacity={0.28}
+              depthWrite={false}
+              side={FrontSide}
+            />
+          </mesh>
+
+          {/* AS ARESTAS, EM FIO DE CREME.
+
+              Com o corpo em 12% de opacidade, a silhueta do bloco quase
+              desaparece sobre o chão escuro — e o que o olho precisa para ler
+              "peça de vidro" é justamente a QUINA, que num acrílico real
+              concentra a luz e vira um fio branco.
+
+              `EdgesGeometry` com 20° de limiar desenha só as quinas de verdade:
+              os quatro cantos da face, as duas arestas de cada bisel e as
+              verticais das laterais. As facetas do chanfro ficam a 22° uma da
+              outra (três anéis em 67,5°) e entram; os oito segmentos de cada
+              canto arredondado ficam a 11° e não entram — senão o contorno viraria
+              um polígono visível.
+
+              Creme e não branco: o estúdio desta cena é quente (veja os
+              `Lightformer`), e um fio neutro no meio dele lê como azulado. */}
+          <lineSegments geometry={arestas} renderOrder={2}>
+            <lineBasicMaterial
+              color="#FFF6E0"
+              transparent
+              /* 0,8 e não 0,7: medido sobre o chão da seção (18 de luminância),
+                 0,7 punha as arestas da direita em 178 e as da esquerda em 191 —
+                 o portão pede 180 nas da frente. Em 0,8 a conta dá
+                 0,8·250 + 0,2·18 = 204, e as duas famílias passam com folga sem
+                 que o fio vire um contorno desenhado. */
+              opacity={0.8}
+              toneMapped={false}
+              depthWrite={false}
+            />
+          </lineSegments>
+
+          {/* A ARTE IMPRESSA, na face.
+
+              Três milésimos À FRENTE da face frontal — veja `ARTE_FRENTE` para
+              o porquê longo. O curto: dentro do bloco ela só podia ser vista
+              pela passada de transmissão, que devolve um MIPMAP da cena atrás do
+              vidro; era daí que vinham o borrão e a "opacidade" de que o dono
+              reclamou em 15/10. Na passada normal ela chega à tela como está no
+              arquivo.
+
+              Ela ocupa 84% da face (veja `JANELA`), e os 16% restantes são a
+              moldura de cristal: é por ali, pelo bisel e pelas duas faces
+              laterais que o pódio e o halo aparecem refratados. Impressão opaca
+              no meio, vidro na borda — que é como o acrílico com impressão UV da
+              ilustração funciona.
 
               O verso é um segundo plano, espelhado, para o giro não mostrar o
               bloco oco por trás. */}
@@ -1099,30 +1369,62 @@ function Plaque({
             <>
               <mesh position={[0, 0, arteZ]}>
                 <planeGeometry args={planeSize(art.curr)} />
-                {/* Opaco de propósito (`transparent` fica falso): o acrílico
-                    refrata só o que a passada de transmissão desenha, e ela
-                    desenha só opacos.
+                {/* SÓ A TINTA — recortada por `alphaTest` e FORA da passada de
+                    transmissão.
 
-                    Sem luz, também de propósito. A cena tem um refletor laranja
-                    da marca e um ambiente quente — eles existem para ACENDER O
-                    ACRÍLICO, e um material iluminado aqui dentro os receberia na
+                    A arte vem do recorte COM canal alfa (veja
+                    `scripts/recorta-placas.mjs`): tinta onde há desenho, nada
+                    onde havia o papel. É o pedido literal do dono em 15/10 —
+                    "tira esse fundo opaco das placas e o fundo branco das
+                    placas" — e é por esses vazios que o cristal aparece.
+
+                    `alphaTest` 0,5 é o mesmo limiar em que o recorte binarizou:
+                    o que tem tinta sai 100% opaco, o que não tem não sai. Não
+                    existe meio-termo, que é o que leria como "opacidade".
+
+                    E OPACO, sem `transparent` — que é o que mantém a tinta
+                    limpa agora que o bloco é vidro por alfa. Opaco, este plano é
+                    desenhado ANTES do bloco e escreve profundidade; o bloco, que
+                    vem depois no bucket dos transparentes, tem `depthTest` e é
+                    REJEITADO em cada pixel de tinta. A impressão não recebe nem
+                    os 12% de véu do corpo nem o reflexo do verniz: chega à tela
+                    exatamente como está no arquivo.
+
+                    (Houve uma versão `transparent` aqui, e ela existia para tirar
+                    a tinta do alvo da passada de transmissão — onde o bloco
+                    refratava uma cópia borrada da própria arte, o fantasma
+                    cinzento que a captura daquela passada mostrava. Sem
+                    transmissão não há alvo, não há cópia e não há fantasma.)
+
+                    Sem luz, de propósito. A cena tem um refletor laranja da
+                    marca e um ambiente quente — eles existem para ACENDER O
+                    ACRÍLICO, e um material iluminado aqui receberia os dois na
                     tinta: medido na tela, o creme do numeral virava amarelo e a
                     raposa sumia no laranja. Tinta impressa não tem brilho
-                    próprio; quem reage à luz é o bloco na frente dela, e é dele
-                    que vem o volume.
+                    próprio; quem reage à luz é o bloco sob ela.
 
-                    E `alphaTest` (veja `ALFA_TINTA`) é o que deixa o bloco ser
-                    CRISTAL: a arte vem com o papel translúcido recortado, e aqui
-                    cada fragmento fora da tinta é descartado — sem sair do bucket
-                    dos opacos, então a arte continua valendo para a passada de
-                    transmissão e, por onde não há tinta, o que se vê através do
-                    bloco é o pódio e o chão, refratados. */}
-                <meshBasicMaterial map={art.curr} alphaTest={ALFA_TINTA} />
+                    `toneMapped` FALSO: o r3f liga `ACESFilmicToneMapping` por
+                    padrão, e o ACES puxa 1,0 para 0,8 — o laranja #FF7700 da
+                    faixa chegava à tela lavado. Fora do tone mapping a tinta sai
+                    como foi escrita, que é o ponto de uma impressão. */}
+                <meshBasicMaterial
+                  map={art.curr}
+                  toneMapped={false}
+                  alphaTest={0.5}
+                />
               </mesh>
+              {/* O verso, espelhado: só aparece se alguém girar o bloco com o
+                  cursor até passar dos 90°, e existe para que, se isso
+                  acontecer, não se veja a tinta de trás para a frente. */}
               <mesh position={[0, 0, -arteZ]} rotation={[0, Math.PI, 0]}>
                 <planeGeometry args={planeSize(art.curr)} />
-                <meshBasicMaterial map={art.curr} alphaTest={ALFA_TINTA} />
+                <meshBasicMaterial
+                  map={art.curr}
+                  toneMapped={false}
+                  alphaTest={0.5}
+                />
               </mesh>
+
             </>
           )}
 
@@ -1134,11 +1436,12 @@ function Plaque({
                 <meshBasicMaterial
                   ref={matSaindoFrente}
                   map={art.prev}
+                  toneMapped={false}
                   alphaMap={mascara}
-                  /* Começa no corte da tinta e sobe daí (veja
+                  /* Começa no piso da máscara e sobe daí (veja
                      `mascaraDissolucao`); nunca cruza o zero, que mudaria o
                      define `USE_ALPHATEST` e recompilaria o shader. */
-                  alphaTest={ALFA_TINTA + 0.001}
+                  alphaTest={DISSOLVE_PISO + 0.001}
                 />
               </mesh>
               <mesh
@@ -1150,8 +1453,9 @@ function Plaque({
                 <meshBasicMaterial
                   ref={matSaindoVerso}
                   map={art.prev}
+                  toneMapped={false}
                   alphaMap={mascara}
-                  alphaTest={ALFA_TINTA + 0.001}
+                  alphaTest={DISSOLVE_PISO + 0.001}
                 />
               </mesh>
             </>
@@ -1166,27 +1470,36 @@ function Plaque({
             deixa a troca legível — é contra ele que se vê a placa sair e a joia
             chegar. */}
         <group position={[worn ? POSTO.esq : 0, 0, 0]}>
-          {/* O corpo da base. Subiu de #0a0a0d e ganhou `envMapIntensity`: ele é
-              o que se vê ATRAVÉS do bloco na faixa de baixo, e preto atrás de
-              vidro continua sendo preto. Em #16151b com as ripas do estúdio
-              refletindo nele, o cilindro passa a ter um lado claro e outro
-              escuro — e é esse contraste, torcido pela refração, que a moldura de
-              cristal mostra. */}
+          {/* O corpo da base: um disco escuro, e só.
+
+              Enquanto o bloco usava transmissão, este cilindro tinha outro
+              trabalho — era o que se via ATRAVÉS do acrílico na faixa de baixo,
+              e um pódio preto deixava a moldura preta. Daí ele ter subido de
+              #0a0a0d e ganhado brilho. Com o vidro por alfa, o que se vê através
+              do bloco é o próprio chão da seção, e o pódio voltou a ser o que
+              ele é na vitrine: a base contra a qual a placa se destaca. Escuro,
+              portanto. Quem desenha a silhueta dele é a `BORDA`, na quina. */}
           <mesh position={[0, PODIO.y, 0]}>
             <cylinderGeometry args={[PODIO.topo, PODIO.base, PODIO.altura, 48]} />
             <meshStandardMaterial
-              color="#16151b"
-              /* `roughness` alta e `envMapIntensity` baixa, e não o contrário: a
-                 tampa do pódio é um disco HORIZONTAL, e horizontal é exatamente
-                 a orientação que espelha a ripa de cima — a que mais subiu para
-                 acender o bisel. Em 0,26 de rugosidade a tampa virava uma chapa
-                 branca estourada, mais clara que o troféu — e a culpa não é do
-                 `color`, é do FRESNEL: a câmera vê a tampa a 12° da rasante, e a
-                 12° o Schlick sobe de F0 = 0,016 para 0,34, vinte vezes. Em 0,3
-                 de `envMapIntensity` o disco volta a ser uma base iluminada (uns
-                 110 de luminância) em vez da fonte de luz da cena. */
-              metalness={0.75}
-              roughness={0.6}
+              color="#17161c"
+              /* NÃO É METAL, e esta foi a correção final do pódio.
+
+                 Com `metalness` alto a tampa media 212 de luminância — mais
+                 clara que a placa (45 no vidro, 84 na lateral) e doze vezes o
+                 chão. A culpa não era do `envMapIntensity`, já em 0,012: era o
+                 FRESNEL. A tampa é um disco HORIZONTAL visto a 12° da rasante, e
+                 a 12° o Schlick leva a refletância de 0,09 para 0,37 — quatro
+                 vezes. Metal naquele ângulo é um espelho, e o espelho pegava o
+                 refletor principal da cena inteiro.
+
+                 Dielétrico fosco não tem esse salto: com `metalness` 0 o F0 cai
+                 de 0,09 para os 0,04 de um plástico, e `roughness` 0,85 espalha
+                 o que sobra por um hemisfério inteiro em vez de devolvê-lo num
+                 ponto. O pódio volta a ser o que tem de ser — uma base escura
+                 com um fio de luz na quina —, e o olho vai primeiro ao troféu. */
+              metalness={0}
+              roughness={0.85}
               envMapIntensity={0.3}
             />
           </mesh>
@@ -1198,6 +1511,15 @@ function Plaque({
           >
             <ringGeometry args={[ARO.raio[0], ARO.raio[1], 72]} />
             <meshBasicMaterial color={ARO.cor} toneMapped={false} side={DoubleSide} />
+          </mesh>
+
+          {/* A BORDA DE LUZ na quina do pódio (veja `BORDA`). */}
+          <mesh
+            position={[0, PODIO_TOPO + 0.004, 0]}
+            rotation={[-Math.PI / 2, 0, 0]}
+          >
+            <ringGeometry args={[BORDA.raio[0], BORDA.raio[1], 96]} />
+            <meshBasicMaterial color={BORDA.cor} toneMapped={false} side={DoubleSide} />
           </mesh>
         </group>
 
@@ -1316,57 +1638,33 @@ export default function AwardPlaque3D({
     [],
   );
 
-  /**
-   * O quanto do canvas o alvo da transmissão recebe.
-   *
-   * `transmission` custa uma RE-RENDERIZAÇÃO da cena opaca inteira num alvo
-   * próprio, mais os mipmaps dele, a cada quadro — de longe a conta mais cara
-   * desta cena. Esta é a válvula: metade dos pixels abaixo de 1024, resolução
-   * cheia acima.
-   *
-   * É aqui que o celular economiza, e não no material. O que o acrílico
-   * refrata é a ARTE, com o numeral e a faixa "WONE BOT": em 0,7 no desktop o
-   * texto já saía pastoso, e o fps não mudava — então lá fica cheio. No
-   * celular a caixa inteira do canvas tem 247 px e metade disso ainda sobra
-   * para o que se enxerga num telefone.
-   *
-   * Lido uma vez, como o `dpr`: girar o telefone no meio da visita não vale
-   * uma troca de alvo.
-   */
-  const escalaTransmissao = useMemo(
-    () => (window.innerWidth < 1024 ? 0.5 : 1),
-    [],
-  );
-
   const art = useArtPair(print);
   const fotos = useArtPair(photo || undefined);
-
-  /**
-   * A cor com que o canvas é limpo, descoberta no `onCreated` (veja
-   * `fundoDaSecao`) e guardada porque o halo do fundo precisa dela para se
-   * dissolver sem emenda (veja `AURA`).
-   *
-   * O palpite inicial é o `--floor` da vitrine, que é onde esta cena vive — e
-   * é por isso que, na esmagadora maioria das vezes, este `setFundo` não
-   * provoca render nenhum: o valor que chega é o mesmo que já está aqui.
-   */
-  const [fundo, setFundo] = useState("#110f0e");
 
   return (
     <Canvas
       dpr={dpr}
-      camera={{ position: [0, 0, 7.3], fov: 38 }}
+      /* MAIS BAIXA E MAIS PERTO, pedido de 15/10 ("capriche na disposição").
+         O bloco tem 2,9 de altura; a 7,3 de distância com fov 38° a altura
+         visível em z = 0 era 2·tan(19°)·7,3 = 5,03, e a placa ocupava 58% da
+         caixa. Em 6,4 ela vai a 66% — a 6,0 daria os 70% redondos, e não cabe:
+         quem decide a distância mínima não é a placa, é a QUINA DA FRENTE DO
+         PÓDIO, que está a 1,42 de raio, ou seja quase um metro e meio mais perto
+         da câmera que o bloco. Ali o tronco de visão é estreito, e antes de 6,4
+         a base do pódio sai cortada pela borda de baixo do quadrado.
+
+         E 0,42 abaixo do eixo: o r3f aponta a câmera para a origem quando não se
+         dá `rotation` a ela (está no `createDefaultCamera`), então descer o olho
+         é uma tomada de BAIXO para cima de verdade — a que mostra o bisel
+         inferior e a espessura do bloco por fora, e a que dá ao troféu o porte
+         de quem está num pódio. Mais que isso e a tampa do pódio começa a se
+         fechar em elipse, escondendo o aro que atravessa o cristal. */
+      camera={{ position: [0, -0.42, 6.4], fov: 38 }}
       gl={{ antialias: true, alpha: true }}
       onCreated={({ gl }) => {
-        /* Veja `escalaTransmissao`. */
-        gl.transmissionResolutionScale = escalaTransmissao;
-        /* O fundo da seção, opaco (veja `fundoDaSecao`). Guardado em hexa
-           normalizado — o DOM devolve "rgb(17, 15, 14)" e o palpite daqui é
-           "#110f0e": sem normalizar, duas grafias da MESMA cor fariam um
-           render e um halo a mais, por nada. */
-        const cor = fundoDaSecao(gl.domElement);
-        gl.setClearColor(cor, 1);
-        setFundo(`#${new Color(cor).getHexString(SRGBColorSpace)}`);
+        /* O chão da seção, pintado no canvas (veja `fundoDaSecao`): é o que dá
+           à face aditiva do vidro um fundo de verdade para somar. */
+        gl.setClearColor(fundoDaSecao(gl.domElement), 1);
         /* A anisotropia desta GPU, para as artes (veja `ANISO`). As que já
            estiverem em cache recebem o ajuste agora; as próximas, no `afina`
            do `loadArt`. */
@@ -1418,65 +1716,142 @@ export default function AwardPlaque3D({
         <Lightformer intensity={1.6} color="#FFF4E8" position={[3.5, 5, 4]} scale={7} />
         <Lightformer intensity={1.3} color={accent} position={[-5, -1, -3]} scale={9} />
         <Lightformer intensity={0.5} color="#20202a" position={[0, -5, 2]} scale={12} />
-        {/* A chapa larga em frente ao bloco, e por que ela existe.
+        {/* O SOFTBOX. A chapa larga em frente ao bloco, acima e à esquerda.
+
+            É a luz mais importante da cena, e foi ela que faltou até 15/10.
 
             Um sólido transparente contra um fundo escuro, com nada atrás dele,
             fica PRETO — a transmissão devolve o mesmo quase-nada que já estava
-            em volta, e o bloco lê como laje polida. Quem desmente isso, numa
-            foto de produto, é o SOFTBOX: a chapa branca na frente da peça, que
-            a face de acrílico reflete como um gradiente claro de cima a baixo.
-            É esse gradiente, mais claro que a página, que diz "tem vidro aqui"
-            antes de qualquer refração.
+            em volta, e o bloco lê como laje polida. O que desmente isso numa
+            foto de produto não é a refração nem o bisel: é o REFLEXO CLARO
+            GRANDE que a chapa branca do estúdio deixa na face. É ele, mais
+            claro que a página, que diz "tem vidro aqui" antes de qualquer
+            outra coisa.
 
-            Fria e fraca de propósito: é reflexo de estúdio, não iluminação da
-            arte — a arte está atrás da face e não recebe luz nenhuma. */}
+            Antes estava em 0,6 e numa cor fria (#C8D2F0): um sopro azulado que
+            não aparecia na medida nem na tela. Agora é branco-quente, e o par
+            dela é o `clearcoatRoughness` do acrílico — a rugosidade do verniz
+            espalha esta chapa numa FAIXA macia que atravessa a face e lambe o
+            bisel, em vez de devolvê-la como um ponto que só existe num ângulo.
+            Os dois juntos são o que faz o bloco existir sobre o fundo escuro.
+
+            Quente e não fria porque o resto do estúdio é creme (as ripas, o rim
+            de trás): uma chapa azul no meio deles sai lendo como mancha, não
+            como luz.
+
+            ENCOLHEU E SAIU MAIS DO EIXO em 15/10, e aqui a conta importa. A face
+            frontal é PLANA: com o bloco em repouso a −16° de guinada, ela
+            devolve para a câmera a direção R ≈ (−0,53, −0,07, 0,85) — uma só,
+            para a face inteira. A chapa antiga (7 × 6 a 6,2 de distância)
+            cobria 59° de céu e R caía bem no meio dela: o resultado era a face
+            REFLETINDO A CHAPA DE PONTA A PONTA, e a moldura de cristal lendo
+            como plástico branco. Medido: 121 de luminância à esquerda, 138 em
+            cima, 142 embaixo — cinza claro uniforme, que é o avesso de vidro.
+
+            Em 4,6 × 3,6 a 6,8, a chapa cobre 36° e o centro dela fica 28° de R:
+            o reflexo passa a entrar pela BORDA, e a face ganha o gradiente que
+            faltava — claro no alto à esquerda, escuro embaixo à direita. É no
+            escuro que a transparência aparece, porque é lá que o que está atrás
+            do bloco finalmente vence o reflexo. */}
         <Lightformer
-          intensity={0.6}
+          intensity={2.3}
+          color="#FFFDF8"
+          position={[-3.5, 3.7, 4.6]}
+          scale={[4.6, 3.6, 1]}
+        />
+        {/* E um fio frio no outro canto de cima, só para o reflexo não ser de
+            uma cor só: vidro de verdade pega o estúdio inteiro, e dois tons na
+            mesma face é o que separa reflexo de pintura. Fraco de propósito. */}
+        <Lightformer
+          intensity={0.9}
           color="#C8D2F0"
-          /* Fora de eixo, e não centrada: centrada ela lava a face inteira por
-             igual e o bloco vira um cartão cinza. Deslocada para cima e para a
-             esquerda, o reflexo atravessa a face em diagonal — claro de um
-             canto, escuro do outro —, e é o gradiente que faz o olho ler
-             superfície polida. */
-          position={[-2.1, 1.9, 5.4]}
-          scale={[6.5, 5.5, 1]}
+          position={[3.0, 2.6, 4.8]}
+          scale={[3.6, 3.2, 1]}
         />
 
         {/* AS RIPAS DAS ARESTAS VERTICAIS, no equador e um fio atrás: creme de
             um lado, laranja da marca do outro. Estreitas em z (0,5) porque é
             essa medida que vira a espessura do fio na quina, e altas em y (5,6)
-            porque a aresta tem 2,9 e o fio não pode acabar antes dela. */}
+            porque a aresta tem 2,9 e o fio não pode acabar antes dela.
+
+            CAÍRAM DE 70 PARA 12 em 15/10, e as de baixo e as da frente na mesma
+            proporção. Setenta era o que custava acender o bisel por REFLEXO num
+            bloco que tinha `transmission` — a quina devolvia uma fração mínima
+            da luz e era preciso gritar para que ela aparecesse. O preço estava
+            no resto da cena: o pódio, que lê o mesmo ambiente, saía a 228 de
+            luminância, mais claro que o troféu, porque num disco horizontal
+            visto a 12° da rasante o Fresnel sobe a refletância para 0,34 e
+            multiplica tudo o que o estúdio tem.
+
+            Agora a quina é uma LINHA DESENHADA (veja `arestasDoBloco`): o fio
+            branco não depende mais de reflexo nenhum. As ripas voltam ao papel
+            modesto de dar ao vidro o que refletir nas laterais, e a cena inteira
+            desce com elas. */}
         <Lightformer
-          intensity={62}
+          intensity={12}
           color="#FFFBF4"
           position={[-4, 0.35, -0.5]}
           rotation={[0, Math.PI / 2, 0]}
-          scale={[0.5, 5.6, 1]}
+          scale={[1.8, 5.9, 1]}
         />
         <Lightformer
-          intensity={36}
-          color="#FFD9A8"
+          intensity={12}
+          color="#FFE6C4"
           position={[4, -0.15, -0.5]}
           rotation={[0, -Math.PI / 2, 0]}
-          scale={[0.45, 5.2, 1]}
+          scale={[1.8, 5.6, 1]}
         />
         {/* E as duas deitadas, para os biséis horizontais não ficarem cegos.
             Deitadas (`rotation` em x) o `scale` troca de significado: o primeiro
             número é a largura em x, o segundo a profundidade em z — é o segundo
             que tem de ser pequeno. */}
         <Lightformer
-          intensity={40}
+          intensity={13}
           color="#FFFBF4"
-          position={[0, 4, -0.6]}
+          position={[0, 4, -0.78]}
           rotation={[-Math.PI / 2, 0, 0]}
-          scale={[4.8, 0.45, 1]}
+          scale={[5.6, 1.7, 1]}
         />
         <Lightformer
-          intensity={22}
-          color="#FFE9D2"
-          position={[0, -3.8, -0.6]}
+          intensity={13}
+          color="#FFF0DF"
+          position={[0, -3.8, -0.2]}
           rotation={[Math.PI / 2, 0, 0]}
-          scale={[4.8, 0.45, 1]}
+          scale={[5.6, 1.5, 1]}
+        />
+
+        {/* AS DUAS RIPAS DA FRENTE, EM CIMA E EMBAIXO — e por que elas faltavam.
+
+            O bisel tem DOIS anéis de faceta (`bevelSegments` 2), e as normais
+            deles não estão a 45°: estão a uns 22,5° e 67,5° da face. A conta de
+            reflexão (R = 2(N·V)N − V) com a câmera em z = 7,3 dá, para o anel de
+            fora do bisel de baixo,
+
+                N = (0, −0,383, 0,924)  →  R = (0, −0,816, 0,579)
+
+            — ou seja, aquela faixa do chanfro mostra o que está ABAIXO E NA
+            FRENTE, 35° adiante da vertical. Lá não havia nada além da chapa
+            escura do chão (#20202a), e por isso a aresta de baixo media 16 de
+            luminância contra os 160 da de cima: não era falta de intensidade,
+            era luz no lugar errado. As ripas de −3,8 e +4, atrás, acendem o
+            anel de DENTRO; estas acendem o de fora, que é o que a silhueta
+            mostra.
+
+            Estreitas em y (1,1 ⇒ ±8° a 4 de distância) para continuarem sendo
+            fios na quina, e longe o bastante do eixo da câmera (±3,4 em y) para
+            a face frontal, que reflete quase só a direção da câmera, não pegar
+            nada delas. */}
+        <Lightformer
+          intensity={9}
+          color="#FFFBF4"
+          position={[0, 3.4, 2.1]}
+          scale={[5.2, 1.1, 1]}
+        />
+        <Lightformer
+          intensity={9}
+          color="#FFF0DF"
+          position={[0, -3.4, 2.2]}
+          scale={[5.2, 1.1, 1]}
         />
 
         {/* O RIM BRANCO ATRÁS-E-ACIMA.
@@ -1490,14 +1865,14 @@ export default function AwardPlaque3D({
             olho), e devolve um claro à moldura de cristal por refração interna
             quando o bloco balança para um lado. */}
         <Lightformer
-          intensity={9}
+          intensity={4}
           color="#FFFFFF"
           position={[-1, 3.2, -3.4]}
           scale={[5.5, 1.3, 1]}
         />
         {/* O par lateral dele, baixo e atrás, no laranja da marca. */}
         <Lightformer
-          intensity={7}
+          intensity={3}
           color="#FF7700"
           position={[3.6, -0.6, -3.2]}
           scale={[3.4, 3.4, 1]}
@@ -1512,7 +1887,7 @@ export default function AwardPlaque3D({
             Larga e fraca, não é um fio: a lateral é uma superfície, e o que ela
             precisa é de um tom, não de um risco. */}
         <Lightformer
-          intensity={5}
+          intensity={2.5}
           color="#FFF6EA"
           position={[-0.4, 0.3, -5.2]}
           scale={[5.5, 5, 1]}
@@ -1523,7 +1898,6 @@ export default function AwardPlaque3D({
         accent={accent}
         art={art}
         fotos={fotos}
-        fundo={fundo}
         photo={photo}
         worn={worn && Boolean(photo)}
         spin={!reduced}

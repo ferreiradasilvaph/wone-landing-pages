@@ -1,11 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import type { CSSProperties } from "react";
 import dynamic from "next/dynamic";
 import { useContent } from "@/i18n";
 import { useOnScreen } from "@/lib/useOnScreen";
 import { arte } from "@/lib/arte";
-import { SegmentProgress } from "./SegmentProgress";
 import { PauseButton } from "./PauseButton";
 
 /** O three fica fora do bundle inicial e nunca roda no servidor. */
@@ -38,6 +38,18 @@ const CICLO_MS = 5800;
 /** O marco em que a vitrine abre: o 100K (veja o `useState` lá embaixo). */
 const ABERTURA = 1;
 
+/**
+ * Quanto dura o crossfade da ficha ao trocar de marco.
+ *
+ * As quatro fichas ficam as quatro no DOM, empilhadas na MESMA célula da grade
+ * (`[grid-area:1/1]`), e só a do marco ativo está visível. É isso, e não a
+ * duração, que garante CLS zero: a célula tem sempre a altura da ficha mais
+ * alta das quatro, e trocar de marco não mexe num pixel de layout — nem com o
+ * relógio andando sozinho. Trocar isto por `AnimatePresence mode="wait"`
+ * devolveria o salto de altura.
+ */
+const FICHA_MS = 350;
+
 function PlaqueSkeleton() {
   /* Sem pulso: a entrada da página não anima nada, e um esqueleto que pisca é
      movimento sem informação. A caixa do canvas já reserva a altura (aspect
@@ -50,31 +62,36 @@ function PlaqueSkeleton() {
 }
 
 /**
- * A vitrine dos marcos: o numeral do marco, o objeto que chega em casa e a
- * placa em 3D ao lado, sobre o chão quente da seção (`--floor`).
+ * A vitrine dos marcos: o numeral do marco, a ficha do troféu e o palco em 3D
+ * ao lado, sobre o chão quente da seção (`--floor`).
  *
- * O que saiu: a barra de progresso redesenhada a cada 40 ms (com `role=
- * progressbar`, que faz o leitor de tela anunciar "carregando" sobre uma
+ * A DISPOSIÇÃO, refeita em 15/10 com o pedido do dono ("essa sessão é a mais
+ * importante… capriche na disposição dessa sessão"):
+ *
+ *  - o PALCO cresceu de 480 para 560 px a 1440 e passou a ser o assunto. A
+ *    caixa continua `aspect-square` e cravada por breakpoint, porque é ela que
+ *    reserva a altura antes de o three existir — CLS 0;
+ *  - a COLUNA DE TEXTO (cols 1–5) ficou VERTICALMENTE CENTRADA contra o palco,
+ *    e isso sai da grade, não de um `translate`: o palco ocupa as duas linhas,
+ *    o numeral fica na linha 1 com `self-end` e a ficha na linha 2 com
+ *    `self-start`. O CSS reparte a sobra de altura de um item que atravessa
+ *    duas trilhas `auto` IGUALMENTE entre as duas, então o par numeral+ficha
+ *    assenta exatamente no meio do palco — e a ordem do DOM continua sendo a do
+ *    celular (numeral → palco → ficha → rail), que é o que o pedido manda;
+ *  - a ficha virou o que o nome diz: título, linha de marco, subtítulo,
+ *    descrição e, separado por régua, o item físico;
+ *  - a RAIL desceu para a largura inteira da seção, com quatro abas grandes —
+ *    numeral, nome do troféu e o marco em dólar — em vez da fileira de rótulos
+ *    de 13px que havia.
+ *
+ * O que saiu, antes disto: a barra redesenhada a cada 40 ms (com
+ * `role=progressbar`, que faz o leitor de tela anunciar "carregando" sobre uma
  * seleção), os dois halos de 110 e 150px, o card com sombra e degradê por cima
- * do chão, e a pílula "Wone Club" com desfoque flutuando sobre o render. O
- * objeto é a estrela; o resto da seção é fundo e legenda.
+ * do chão, e a pílula "Wone Club" com desfoque flutuando sobre o render.
  *
- * A grade: numeral e legenda ocupam as colunas 1–5 em duas linhas coladas (o
- * numeral mede a linha 1, a legenda vem logo abaixo), e o canvas ocupa as 6–12
- * atravessando as duas — é a linha da legenda que absorve a sobra de altura do
- * objeto, e não a do numeral, que era o vão de 128px entre o número e o texto.
- * A rail fecha a vitrine em largura total.
- *
- * As quatro legendas ficam as quatro no DOM, empilhadas na mesma célula, e só
- * a do marco ativo está visível: a altura da célula passa a ser a da legenda
- * mais alta, então trocar de marco no celular (onde a linha não é esticada
- * pelo canvas) não empurra o resto da página. CLS 0 também com o relógio
- * andando sozinho.
- *
- * A cena 3D (`AwardPlaque3D`) continua intocada no que desenha — geometria,
- * material, câmera, tempos e imagens são os mesmos. O que ela ganhou foi voz:
- * avisa o fim de cada travessia (`onCycle`), e é esse aviso que troca o marco
- * aqui. A vitrine não tem relógio próprio.
+ * A cena 3D (`AwardPlaque3D`) tem relógio próprio e avisa o fim de cada
+ * travessia (`onCycle`); é esse aviso que troca o marco aqui. A vitrine não tem
+ * relógio seu.
  */
 export function AwardsShowcase() {
   const { awards, ui } = useContent();
@@ -98,9 +115,9 @@ export function AwardsShowcase() {
     awards.items.forEach((item) => {
       /* A arte impressa da placa e a foto da joia: as duas entram em cena na
          troca de marco, então as duas precisam já estar no cache quando ela
-         acontecer. Quem é pré-carregado é o `print` — a arte recortada que
-         entra DENTRO do bloco de acrílico —, não o `image`: desde que a placa
-         virou geometria de verdade, a ilustração inteira do troféu só serve de
+         acontecer. Quem é pré-carregado é o `print` — a arte que é impressa na
+         FACE do bloco de acrílico —, não o `image`: desde que a placa virou
+         geometria de verdade, a ilustração inteira do troféu só serve de
          fallback 2D e não é pedida por esta cena. */
       [item.print, item.photo].forEach((src) => {
         if (!src) return;
@@ -210,10 +227,22 @@ export function AwardsShowcase() {
   };
 
   const item = awards.items[active];
+  /* Sem relógio — escolha do visitante, pausa ou movimento reduzido —, o
+     segmento do marco fica cheio em vez de congelar vazio: ele passa a marcar a
+     seleção, não uma contagem. */
+  const correndo = !(pausado || escolhido || reduced);
 
+  /* `grid-cols-1` no celular NÃO é redundante, e a falta dele custou uma
+     captura: sem colunas declaradas, o grid cria uma trilha implícita `auto`, e
+     trilha `auto` é dimensionada pelo MAX-CONTENT dos itens — ela ESTOURA o
+     container em vez de respeitá-lo. A rail tem quatro abas de 11rem mais o
+     botão, 884px de max-content, e era isso que a coluna media a 412: o palco
+     saía 237px à direita e metade dele ficava fora da tela. `grid-cols-1` é
+     `minmax(0, 1fr)` em Tailwind, e o zero do mínimo é exatamente o que impede
+     o estouro. O mesmo vale para a grade empilhada das fichas, lá embaixo. */
   return (
-    <div className="grid gap-x-8 gap-y-8 lg:grid-cols-12 lg:grid-rows-[auto_1fr_auto]">
-      {/* O numeral do marco: o único 700 da página junto com a tese, em largura
+    <div className="grid grid-cols-1 gap-x-8 gap-y-6 sm:gap-y-8 lg:grid-cols-12 lg:gap-y-0">
+      {/* O NUMERAL DO MARCO: o único 700 da página junto com a tese, em largura
           fixa de 4.2ch para que trocar "1M" por "100K" não empurre o texto. O
           teto de largura é a coluna: a 1440 os 4.2ch do corpo de 176px dão
           512px e a coluna tem 488, e o número vazava para dentro do vão.
@@ -223,26 +252,36 @@ export function AwardsShowcase() {
           esse trabalho dentro da cena, nas luzes e no metal. Em 176px, no maior
           elemento da seção, eles trariam três cores que a página não tem para
           um site de duas, e só o 1M cairia no laranja — que aqui significa
-          "ativo" em todo o resto (inclusive no segmento da rail logo abaixo). */}
+          "ativo" em todo o resto (inclusive no segmento da rail logo abaixo).
+
+          `self-end` na linha 1: é metade da centralização vertical da coluna de
+          texto. Veja o cabeçalho do componente. */}
       <p
-        className="tnum max-w-full font-bold leading-[0.85] text-cream lg:col-span-5 lg:col-start-1 lg:row-start-1"
+        className="tnum max-w-full font-bold leading-[0.85] text-cream lg:col-span-5 lg:col-start-1 lg:row-start-1 lg:self-end"
         style={{ fontSize: "clamp(5rem, 14vw, 11rem)", width: "4.2ch" }}
       >
         {item.tier}
       </p>
 
-      {/* A ordem do DOM é a do celular — numeral → placa → legenda → rail —, e
-          no desktop a grade recoloca cada peça: o objeto passa a ocupar a
-          coluna da direita, ao lado do numeral e da legenda. */}
+      {/* O PALCO. A ordem do DOM é a do celular — numeral → palco → ficha →
+          rail —, e no desktop a grade recoloca cada peça: o palco passa a
+          ocupar as colunas 6–12 nas duas linhas, e é a altura dele que a coluna
+          de texto usa de régua. */}
       <div className="lg:col-span-7 lg:col-start-6 lg:row-span-2 lg:row-start-1">
         <div
           ref={stageRef}
-          /* O quadrado do objeto tem teto: nas sete colunas inteiras ele dava
-             696px de altura a 1440 e sozinho respondia por metade da seção (que
-             fechava em 1.312). A 480 o objeto ainda é o maior elemento da
-             vitrine e a coluna da esquerda — numeral mais legenda — passa a ter
-             a mesma altura dele. */
-          className="relative mx-auto aspect-square w-full max-w-[60vw] lg:max-w-[30rem]"
+          /* A caixa do palco é SEMPRE quadrada e cravada por breakpoint — nunca
+             por `vw` —, porque é ela que reserva a altura antes de o three
+             baixar: 380 no celular, 560 a partir de `lg`.
+
+             As sete colunas inteiras dariam 696px a 1440. 600 foi o alvo e
+             mediu-se a seção inteira em 1.244px — acima do teto de 1.200 que ela
+             tem; 560 fecha em 1.204 e continua 17% maior que os 480 de ontem. O
+             que não dá para pagar não é o palco, é o resto: o ritmo vertical da
+             página vem de `--secao-y` (128px em cima e embaixo a 1440) e o H2
+             desta seção ocupa três linhas — 463 dos 1.204 são cabeçalho e
+             respiro, antes de a vitrine começar. */
+          className="relative mx-auto aspect-square w-full max-w-[340px] sm:max-w-[440px] lg:max-w-[560px]"
         >
           {near ? (
             <AwardPlaque3D
@@ -263,36 +302,35 @@ export function AwardsShowcase() {
             <PlaqueSkeleton />
           )}
 
-          {/* Horizonte de 1px na base DO PÓDIO — não no rodapé da caixa, onde
-              ele lia como borda do quadrado.
+          {/* Horizonte de 1px na QUINA DA FRENTE DO PÓDIO — não no rodapé da
+              caixa, onde ele lia como borda do quadrado.
 
-              Os 5% não são palpite: o pódio é um cilindro em y = -1.72 com
-              0.3 de altura e raio 1.3 (`AwardPlaque3D`), então a borda de baixo
-              mais próxima da câmera está em (-1.87, z = 1.3); com a câmera em
-              z = 7.3 e fov 38°, a meia-altura do quadro àquela profundidade é
-              tan(19°)·6 = 2.066, o que põe o ponto a 4,7% do fundo do
-              quadrado — 23px dos 480 a 1440. A fração vale em qualquer
-              largura: a câmera é fixa e a caixa é quadrada, então a cena
-              projeta sempre na mesma fração. */}
-          <span aria-hidden className="absolute inset-x-0 bottom-[5%] h-px bg-cream/12" />
+              Os 4,8% saem da projeção, não do olho: o pódio é um cilindro em
+              y = −1.58 com 0.221 de altura e base 1.122 (`AwardPlaque3D`), então
+              a quina da frente da base está em (−1.69, z = 1.122); com a câmera
+              em (0, −0.42, 6.4) olhando para a origem e fov 38°, esse ponto cai
+              a 4,8% do fundo do quadrado — 27px dos 560 a 1440. A fração vale em
+              qualquer largura: a câmera é fixa e a caixa é quadrada, então a
+              cena projeta sempre na mesma fração. */}
+          <span aria-hidden className="absolute inset-x-0 bottom-[4.8%] h-px bg-cream/12" />
         </div>
       </div>
 
-      {/* As quatro legendas na mesma célula, em crossfade de 350 ms. Trocar por
-          `AnimatePresence mode="wait"` devolveria o salto de altura no celular:
-          lá a linha não é esticada pelo canvas, e as descrições têm tamanhos
-          diferentes. Por transição de CSS também não há relógio novo e o
-          movimento reduzido já é atendido pela regra global. */}
-      <div className="grid lg:col-span-5 lg:col-start-1 lg:row-start-2">
+      {/* A FICHA: as quatro na mesma célula, em crossfade de 350 ms.
+
+          `self-start` na linha 2 — a outra metade da centralização vertical da
+          coluna de texto (veja o cabeçalho). */}
+      <div className="grid grid-cols-1 lg:col-span-5 lg:col-start-1 lg:row-start-2 lg:mt-7 lg:self-start">
         {awards.items.map((entry, indice) => (
           <div
             key={entry.tier}
             aria-hidden={indice !== active}
-            className={`[grid-area:1/1] transition-[opacity,transform] duration-[350ms] ease-[var(--ease-out-expo)] ${
+            className={`[grid-area:1/1] transition-[opacity,transform] ease-[var(--ease-out-expo)] ${
               indice === active
                 ? "opacity-100"
                 : "pointer-events-none translate-y-2 opacity-0"
             }`}
+            style={{ transitionDuration: `${FICHA_MS}ms` }}
           >
             <h3 className="t-h3 text-cream">{entry.title}</h3>
             {/* O marco em dólar é uma linha de rótulo, não parte do título: o
@@ -300,49 +338,169 @@ export function AwardsShowcase() {
             <span className="t-label mt-2 block">{entry.milestoneLine}</span>
 
             <p className="mt-4 text-[15px] font-semibold text-cream">{entry.subtitle}</p>
-            <p className="mt-2 text-[15px] leading-relaxed text-muted">
+            {/* 26rem de medida: a coluna tem 488px a 1440, e um parágrafo de
+                15px correndo os 488 inteiros passa dos 75 caracteres por linha.
+                O teto cai dentro da coluna, não a aperta. */}
+            <p className="mt-2 max-w-[26rem] text-[15px] leading-relaxed text-muted">
               {entry.description}
             </p>
 
-            <div className="mt-8 border-t border-line pt-5">
+            <div className="mt-7 border-t border-line pt-5">
               <span className="t-label block">{awards.physicalItem}</span>
-              <p className="mt-1.5 text-[15px] text-cream">{entry.awardItem}</p>
+              <p className="mt-2 text-[16px] font-medium text-cream">{entry.awardItem}</p>
             </div>
           </div>
         ))}
       </div>
 
-      {/* Rail: indicador e controle na mesma peça, em largura total. As quatro
-          abas são os marcos, e o segmento ativo preenche ao longo do ciclo. */}
-      <div className="flex items-end gap-6 lg:col-span-12 lg:col-start-1 lg:row-start-3">
-        <SegmentProgress
-          /* Remonta a cada vez que a cena começa a contar: a animação de CSS do
-             segmento nasce com o HTML, muito antes do canvas, e sem este
+      {/* A RAIL, em largura total e abaixo do palco. */}
+      <div className="lg:col-span-12 lg:col-start-1 lg:row-start-3 lg:mt-8">
+        <MarcoRail
+          items={awards.items}
+          active={active}
+          onSelect={escolher}
+          /* A barra remonta a cada vez que a cena começa a contar: a animação de
+             CSS do segmento nasce com o HTML, muito antes do canvas, e sem este
              reinício a primeira barra terminava com a cena ainda no meio da
              primeira parada. Daí em diante cada troca já remonta o segmento. */
-          key={epoca}
-          className="min-w-0 flex-1"
-          count={count}
-          active={active}
-          /* Sem relógio — escolha do visitante ou movimento reduzido —, o
-             segmento do marco fica cheio em vez de congelar vazio: ele passa a
-             marcar a seleção, não uma contagem. A pausa por rolagem ou aba
-             oculta continua sendo `relogioParado`, que congela o preenchimento
-             onde está. */
-          durationMs={pausado || escolhido || reduced ? undefined : CICLO_MS}
-          /* Antes do primeiro quadro da cena a barra fica parada no zero: não
-             há relógio nenhum andando ainda. */
+          epoca={epoca}
+          durationMs={correndo ? CICLO_MS : undefined}
+          /* Antes do primeiro quadro da cena a barra fica parada no zero: não há
+             relógio nenhum andando ainda. */
           paused={relogioParado || epoca === 0}
-          onSelect={escolher}
-          tabLabels={awards.items.map((entry) => entry.tier)}
-        />
-        <PauseButton
-          pressed={pausado}
-          onToggle={alternarPausa}
-          labels={{ pause: ui.pause, play: ui.play }}
-          className="mb-2"
+          pause={
+            <PauseButton
+              pressed={pausado}
+              onToggle={alternarPausa}
+              labels={{ pause: ui.pause, play: ui.play }}
+            />
+          }
         />
       </div>
     </div>
+  );
+}
+
+/**
+ * A rail dos quatro marcos: indicador e controle na mesma peça.
+ *
+ * Por que não é o `SegmentProgress` da página: aquele componente serve a outras
+ * três seções e a aba dele é um rótulo de 13px com um fio embaixo. Aqui a aba
+ * passou a ser a FICHA CURTA do marco — numeral, nome do troféu e o marco —,
+ * porque é com ela que o visitante escolhe o que vai aparecer no palco, e um
+ * "500K" solto não diz qual troféu é. Mudar o componente compartilhado para
+ * atender a este caso daria a Recursos, Segurança e Pagamentos três linhas de
+ * texto que nenhuma delas tem.
+ *
+ * O preenchimento do segmento ativo continua sendo o `@keyframes segment-fill`
+ * de `globals.css`, o mesmo de lá: animação de CSS, que roda fora da thread
+ * principal, e `animation-play-state: paused` congela onde está em vez de voltar
+ * a zero. Movimento reduzido não precisa de tratamento — a regra global zera a
+ * duração de toda animação e o segmento nasce cheio.
+ *
+ * No celular a fileira ROLA, com `scroll-snap` em cada aba: quatro fichas de
+ * três linhas não cabem em 412px, e espremê-las levaria o numeral do marco
+ * abaixo do tamanho em que ele se lê. O `PauseButton` sai da rolagem e fica
+ * ancorado à direita, onde o polegar o encontra sempre no mesmo lugar.
+ */
+function MarcoRail({
+  items,
+  active,
+  onSelect,
+  epoca,
+  durationMs,
+  paused,
+  pause,
+}: {
+  items: readonly { tier: string; title: string; milestoneLine: string }[];
+  active: number;
+  onSelect: (indice: number) => void;
+  epoca: number;
+  durationMs?: number;
+  paused?: boolean;
+  pause: React.ReactNode;
+}) {
+  return (
+    <div className="flex items-stretch gap-4 sm:gap-6">
+      {/* `-mx-4 px-4` no celular: a rolagem sangra até o gutter da seção, então
+          a quarta aba não fica cortada por uma borda invisível no meio da tela.
+          A partir de `sm` não há rolagem e as margens negativas somem. */}
+      <div
+        role="tablist"
+        className="-mx-4 flex min-w-0 flex-1 snap-x snap-mandatory gap-4 overflow-x-auto px-4 sm:mx-0 sm:snap-none sm:gap-6 sm:overflow-visible sm:px-0"
+      >
+        {items.map((entry, indice) => {
+          const ativo = indice === active;
+          return (
+            <button
+              key={entry.tier}
+              type="button"
+              role="tab"
+              aria-selected={ativo}
+              onClick={() => onSelect(indice)}
+              /* `pt-4 pb-3` leva o alvo de toque bem além dos 44px sem mexer na
+                 espessura do fio. `w-[11rem]` no celular dá à aba a largura de
+                 uma ficha legível e é o passo do snap; de `sm` em diante as
+                 quatro dividem a linha em partes iguais. */
+              className={`group w-[11rem] shrink-0 snap-start pt-3 pb-2 text-left transition-colors sm:w-auto sm:min-w-0 sm:flex-1 ${
+                ativo ? "text-cream" : "text-faint hover:text-cream"
+              }`}
+            >
+              <span className="tnum block text-[1.5rem] font-semibold leading-none">
+                {entry.tier}
+              </span>
+              <span
+                className={`mt-2 block truncate text-[13px] ${
+                  ativo ? "text-cream" : "text-faint group-hover:text-muted"
+                }`}
+              >
+                {entry.title}
+              </span>
+              <span className="t-label mt-1 block truncate">{entry.milestoneLine}</span>
+              <span className="mt-3 block h-0.5 overflow-hidden rounded-full bg-cream/12">
+                <Preenchimento
+                  key={ativo ? `${epoca}-${active}` : undefined}
+                  estado={indice < active ? "cheio" : ativo ? "correndo" : "vazio"}
+                  durationMs={durationMs}
+                  paused={paused}
+                />
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Alinhado pela base do fio das abas: a rail é uma linha só, e o botão é
+          parte dela. */}
+      <div className="flex shrink-0 items-end pb-2">{pause}</div>
+    </div>
+  );
+}
+
+/** O preenchimento de um segmento da rail. */
+function Preenchimento({
+  estado,
+  durationMs,
+  paused,
+}: {
+  estado: "cheio" | "correndo" | "vazio";
+  durationMs?: number;
+  paused?: boolean;
+}) {
+  if (estado === "vazio") return null;
+  /* Marco já visto, ou seleção sem relógio: o segmento fica cheio. */
+  if (estado === "cheio" || !durationMs) return <span className="block h-full bg-brand" />;
+
+  return (
+    <span
+      className="block h-full origin-left bg-brand"
+      style={
+        {
+          "--dur": `${durationMs}ms`,
+          animation: "segment-fill var(--dur) linear forwards",
+          animationPlayState: paused ? "paused" : "running",
+        } as CSSProperties
+      }
+    />
   );
 }
