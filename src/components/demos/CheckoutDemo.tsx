@@ -31,9 +31,10 @@ const GlobeScene = dynamic(() => import("./GlobeScene"), {
  * Os países, bandeiras, símbolos e métodos de pagamento vêm de
  * `payments.table.countries` — a mesma lista que a seção de Pagamentos usa, para
  * não existirem duas verdades sobre onde a Wone cobra. Daquela lista esta demo
- * mostra os QUATRO PRIMEIROS países e, de cada um, o MÉTODO PRINCIPAL: o
- * porquê de cada corte está nos dois comentários abaixo, e os dois são de
- * altura — a tabela de Pagamentos continua com os sete e com tudo.
+ * mostra OS SETE países (pedido do dono, 15/10: "os países devem ser os mesmos
+ * do checkout internacional") e, de cada um, o MÉTODO PRINCIPAL — o porquê
+ * desse corte está no comentário do método, abaixo; a tabela de Pagamentos
+ * continua com tudo.
  *
  * O designer achou esta demo simples perto das outras, apontando a parte das
  * bandeiras: era uma lista de quatro linhas num canto. Agora a coluna da
@@ -48,19 +49,13 @@ export function CheckoutDemo() {
   const { highlights, payments } = useContent();
   const demo = highlights.demos.checkout;
   const reduced = useReducedMotion();
-  /* OS QUATRO PRIMEIROS, não os sete da tabela. A lista cresceu em 15/10
-     (Equador, Portugal e Reino Unido), mas aqui ela é um seletor de bandeiras
-     de quatro colunas dentro de uma coluna de 15rem: com sete, ele quebra em
-     duas fileiras e a demo passa de 320px para 422 no desktop — e 320 é a
-     altura do esqueleto que segura o lugar enquanto o chunk do globo baixa
-     (`min-h` medido em Highlights). Mais alto que o esqueleto é CLS de volta,
-     que foi caro de tirar. Quem quer a lista inteira tem a tabela da seção de
-     Pagamentos, que é onde ela mora; aqui o ponto é ver o preço mudar de moeda.
-     Se um dia couberem sete, é só tirar o `slice` e remedir o `min-h`. */
-  const countries = useMemo(
-    () => payments.table.countries.slice(0, 4),
-    [payments.table.countries],
-  );
+  /* OS SETE da tabela — os mesmos do checkout internacional do hero. Até 15/10
+     eram só os quatro primeiros, por altura: o seletor de bandeiras tinha
+     quatro colunas numa coluna de 15rem, e sete quebravam em duas fileiras. É
+     o que acontece agora, de propósito (4 + 3, centradas), e o esqueleto que
+     segura o lugar da demo cresceu junto (`min-h` remedido em Highlights) —
+     esqueleto mais baixo que a demo é CLS, e foi caro de tirar. */
+  const countries = payments.table.countries;
 
   const [index, setIndex] = useState(0);
   const country = countries[index];
@@ -101,13 +96,17 @@ export function CheckoutDemo() {
           <p className="mt-0.5 text-[13px] text-faint">{country.methods[0]}</p>
         </div>
 
-        {/* As bandeiras: o seletor. Quatro, lado a lado, do tamanho de bandeira */}
-        <ul className="mt-3.5 grid grid-cols-4 gap-1.5">
+        {/* As bandeiras: o seletor. Sete, do tamanho de bandeira, em duas
+            fileiras centradas (4 + 3): cada botão tem 3,4rem, o que cabe quatro
+            por fileira nos 15rem da coluna com as folgas de 6px, e a fileira de
+            três fica centrada por `justify-center`. O alvo de cada um continua
+            acima dos 44px (54 × 61). */}
+        <ul className="mt-3.5 flex flex-wrap justify-center gap-1.5">
           {countries.map((entry, entryIndex) => {
             const isActive = entryIndex === index;
 
             return (
-              <li key={entry.code}>
+              <li key={entry.code} className="w-[3.4rem]">
                 <button
                   type="button"
                   onClick={() => setIndex(entryIndex)}

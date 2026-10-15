@@ -34,7 +34,7 @@ import { SectionHead } from "./SectionHead";
    Medidas de 14/10 (celular 412 / desktop 1440), com `min-height: 0` aplicado à
    caixa para ler a altura NATURAL da demo montada, nos dois idiomas — e os dois
    deram o mesmo número: entrega 296/204, blocos 818/350, confirmação 585/332,
-   checkout 647/320. Em px, e não em rem, porque é px o que a régua mede e o que
+   checkout 716/389 (sete países desde 15/10, em duas fileiras de bandeiras). Em px, e não em rem, porque é px o que a régua mede e o que
    o texto das demos usa (`text-[13px]`): em rem seria dividir tudo por 16 a
    cada medição, sem ganho nenhum.
    O editor de fluxos troca de desenho em 768px (o `matchMedia` dele), e não em
@@ -88,7 +88,7 @@ const DEMOS = [
   {
     key: "checkout",
     heavy: true,
-    minH: "min-h-[647px] sm:min-h-[320px]",
+    minH: "min-h-[716px] sm:min-h-[389px]",
     Component: dynamic(
       () => import("./demos/CheckoutDemo").then((mod) => mod.CheckoutDemo),
       { ssr: false, loading: DemoSkeleton },
