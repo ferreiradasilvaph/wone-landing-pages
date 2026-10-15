@@ -2,7 +2,6 @@
 
 import { useEffect, useRef } from "react";
 import { useContent } from "@/i18n";
-import { PauseButton } from "@/components/PauseButton";
 import { SegmentProgress } from "@/components/SegmentProgress";
 import { STEP_COUNT, STEP_MS, type StepShow } from "./useStepShow";
 
@@ -41,9 +40,9 @@ import { STEP_COUNT, STEP_MS, type StepShow } from "./useStepShow";
  * não é filho válido de `tablist`.
  */
 export function StepRail({ show }: { show: StepShow }) {
-  const { howItWorks, ui } = useContent();
+  const { howItWorks } = useContent();
   const { steps, demo } = howItWorks;
-  const { active, select, playing, reduced, userPaused, toggleUserPaused } = show;
+  const { active, select, playing, reduced } = show;
 
   const counter = demo.counter.replace("{n}", String(active + 1));
 
@@ -182,11 +181,6 @@ export function StepRail({ show }: { show: StepShow }) {
           paused={!playing}
         />
         <span className="tnum shrink-0 text-[13px] text-faint">{counter}</span>
-        <PauseButton
-          pressed={userPaused}
-          onToggle={toggleUserPaused}
-          labels={{ pause: ui.pause, play: ui.play }}
-        />
       </div>
     </div>
   );

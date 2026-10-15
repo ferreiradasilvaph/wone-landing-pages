@@ -441,7 +441,7 @@ export const en: Content = {
       panel: {
         wordmark: "wone",
         greeting: "Good afternoon,",
-        user: "Pedro",
+        user: "User",
         date: "October 15, 2026",
         notifications: "2",
         avatar: "PC",

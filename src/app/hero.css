@@ -32,14 +32,22 @@
    O LADO DO GLOBO, por degrau de largura. É a única fonte: a caixa, a trilha
    da grade e a centralização no celular leem esta variável.
 
-   O teto cresceu de 540 para 560px em 1400+ (o container foi de 78 para 88rem
-   e sobrou corredor), e o piso continua sendo a ALTURA da janela: `100svh -
-   356px` são o cabeçalho de 65px, o respiro de cima e a faixa de integrações
-   com a fileira de benefícios no pé. Numa janela de 1440×800 o globo encolhe
-   para 444px sozinho e nada cruza a faixa.
+   O teto cresceu de novo em 15/10 ("aumente um pouco o tamanho do globo"), e o
+   número tem um limite DURO: a trilha do meio não pode ficar menor que o bloco
+   de texto, ou o título perde as três linhas. A 1440 o conteúdo tem 1.344px e
+   as outras trilhas comem 288 (respiro 40 + respiro 40 + painel 208), então
+   sobram 1.056 para globo + texto; com o texto em 29rem (464px, a medida de
+   "Telegram no" em 80px mais folga), o globo não pode passar de 592. Ficou em
+   574, que deixa 18px de margem para a fonte de reserva e ainda vale no degrau
+   apertado de 1400 a 1407px, onde o container ainda não chegou aos 88rem.
+   O piso continua sendo a ALTURA da janela: `100svh - 312px` são o cabeçalho
+   de 65px, o respiro de cima e a faixa de integrações com a fileira de
+   benefícios no pé — 44px a menos que antes, medidos na folga que sobrava entre
+   o pé do disco e a fileira. Numa janela de 1440×800 o globo encolhe para 488px
+   sozinho e nada cruza a faixa.
    -------------------------------------------------------------------------- */
 .hero-cena {
-  --globo: 420px;
+  --globo: 440px;
   /* O painel de fatos e os dois respiros da cena de 1400+. */
   --painel: 13rem;
   --respiro: 2.5rem;
@@ -52,19 +60,19 @@
 
 @media (min-width: 1024px) {
   .hero-cena {
-    --globo: min(500px, 100svh - 336px);
+    --globo: min(540px, 100svh - 312px);
   }
 }
 
 @media (min-width: 1280px) {
   .hero-cena {
-    --globo: min(600px, 100svh - 346px);
+    --globo: min(620px, 100svh - 320px);
   }
 }
 
 @media (min-width: 1400px) {
   .hero-cena {
-    --globo: min(560px, 100svh - 356px);
+    --globo: min(574px, 100svh - 312px);
   }
 }
 

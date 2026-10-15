@@ -6,7 +6,6 @@ import { useContent } from "@/i18n";
 import { useOnScreen } from "@/lib/useOnScreen";
 import { Chip } from "./Chip";
 import { SegmentProgress } from "./SegmentProgress";
-import { PauseButton } from "./PauseButton";
 
 /** Intervalo da rotação automática. */
 const AUTOPLAY_MS = 4500;
@@ -381,7 +380,6 @@ export function FeatureCarousel({
   const [focused, setFocused] = useState(false);
   const [tabHidden, setTabHidden] = useState(false);
   const [reduced, setReduced] = useState(false);
-  const [stopped, setStopped] = useState(false);
 
   const [touching, setTouching] = useState(false);
 
@@ -393,7 +391,7 @@ export function FeatureCarousel({
   /* O dedo não tem "hover": no celular o rodízio seguia andando por baixo do
      gesto, e o toque parecia ignorado. Enquanto a mão está no palco, o palco é
      da mão. */
-  const paused = hovering || focused || tabHidden || touching || stopped || !onScreen;
+  const paused = hovering || focused || tabHidden || touching || !onScreen;
   const playing = !reduced && !paused;
 
   /* `useReducedMotion` do motion não serve aqui: este componente é renderizado
@@ -657,12 +655,6 @@ export function FeatureCarousel({
           <button type="button" onClick={() => go(1)} aria-label={features.next} className={seta}>
             <ArrowRight className="h-4 w-4" />
           </button>
-          <PauseButton
-            className="ml-2"
-            pressed={stopped}
-            onToggle={() => setStopped((value) => !value)}
-            labels={{ pause: ui.pause, play: ui.play }}
-          />
         </div>
       </div>
 

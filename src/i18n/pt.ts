@@ -671,7 +671,7 @@ export const pt = {
         wordmark: "wone",
         /** A saudação do centro; o nome vai em laranja, ao lado. */
         greeting: "Boa tarde,",
-        user: "Pedro",
+        user: "Usuário",
         /** A data sob a saudação, desenhada em caixa alta com entreletra largo. */
         date: "15 de outubro de 2026",
         /** O contador do sininho e as iniciais do avatar. */

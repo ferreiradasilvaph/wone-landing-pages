@@ -10,7 +10,6 @@ import { HeroFacts } from "./hero/HeroFacts";
 import { HeroGlobe } from "./hero/HeroGlobe";
 import { StageStatus } from "./hero/StageStatus";
 import { IntegrationBand } from "./IntegrationBand";
-import { PauseButton } from "./PauseButton";
 import { TextLink } from "./TextLink";
 
 /**
@@ -105,7 +104,6 @@ export function Hero() {
   const [batida, setBatida] = useState(0);
   /** Só depois do primeiro avanço do relógio é que alguma coisa pode animar. */
   const [started, setStarted] = useState(false);
-  const [paused, setPaused] = useState(false);
   const [reduced, setReduced] = useState(false);
   const [tabHidden, setTabHidden] = useState(false);
 
@@ -157,7 +155,7 @@ export function Hero() {
    * entrada é nó novo — o que já estava pintado na primeira tela nunca anima.
    */
   useEffect(() => {
-    if (paused || reduced || tabHidden || !naTela) return;
+    if (reduced || tabHidden || !naTela) return;
 
     let cancelado = false;
     let timer = 0;
@@ -182,7 +180,7 @@ export function Hero() {
     /* `started` de propósito fora das dependências: ele só decide a PRIMEIRA
        espera, e pô-lo aqui refaria o relógio no instante em que ele vira true. */
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [paused, reduced, tabHidden, naTela, paises.length]);
+  }, [reduced, tabHidden, naTela, paises.length]);
 
   /** Só anima depois do primeiro avanço, e nunca com movimento reduzido. */
   const animado = started && !reduced;
@@ -192,7 +190,7 @@ export function Hero() {
    * anda. Antes esta expressão vivia solta no JSX do globo; tendo dois
    * leitores, ela passa a ter nome.
    */
-  const andando = !paused && !reduced && !tabHidden && naTela;
+  const andando = !reduced && !tabHidden && naTela;
 
   const pais = paises[ativo];
   /**
@@ -442,14 +440,6 @@ export function Hero() {
               code={pais.code}
               name={pais.name}
               chip={chipDe(pais, precos)}
-            />
-            {/* Rótulos de `ui`, não de `hero` — "pausar"/"retomar" é texto de
-                controle repetido (o carrossel de Recursos e o de Segurança usam
-                os mesmos). */}
-            <PauseButton
-              pressed={paused}
-              onToggle={() => setPaused((valor) => !valor)}
-              labels={{ pause: ui.pause, play: ui.play }}
             />
           </div>
         </div>

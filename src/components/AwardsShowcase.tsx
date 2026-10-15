@@ -6,7 +6,6 @@ import dynamic from "next/dynamic";
 import { useContent } from "@/i18n";
 import { useOnScreen } from "@/lib/useOnScreen";
 import { arte } from "@/lib/arte";
-import { PauseButton } from "./PauseButton";
 
 /** O three fica fora do bundle inicial e nunca roda no servidor. */
 const AwardPlaque3D = dynamic(() => import("./AwardPlaque3D"), {
@@ -190,7 +189,7 @@ export function AwardsShowcase() {
   /* São DOIS motivos para o rodízio parar, e eles não pedem a mesma coisa da
      cena — por isso não cabem no mesmo estado:
 
-     `pausado` é o `PauseButton`. Ele para tudo o que anda aqui: o rodízio de
+     O rodízio para quando o visitante escolhe um marco (`escolhido`), e isso é
      marcos E a cena, que continuava balançando a placa e trocando as peças de
      posto a cada 5,8 s com o botão pressionado. Era o maior movimento da
      seção seguindo em frente embaixo de um controle que prometia o contrário.
@@ -199,7 +198,6 @@ export function AwardsShowcase() {
      quem escolhe o marco é o visitante, e uma vitrine que continuasse andando
      tiraria da tela o que ele acabou de pedir —, mas não congela o objeto:
      ninguém pediu para parar a cena, só para ficar neste marco. */
-  const [pausado, setPausado] = useState(false);
   const [escolhido, setEscolhido] = useState(false);
   const [tabHidden, setTabHidden] = useState(false);
   const [reduced, setReduced] = useState(false);
@@ -251,7 +249,7 @@ export function AwardsShowcase() {
      com a seção escondida ou com a aba em segundo plano. Com a cena no comando,
      os dois primeiros casos já vêm de graça — sem quadro não há aviso —, e este
      `relogioParado` é o que segura a escolha do visitante e a barra da rail. */
-  const relogioParado = pausado || escolhido || tabHidden || !onScreen || arrastando;
+  const relogioParado = escolhido || tabHidden || !onScreen || arrastando;
 
   /* Lido dentro do aviso da cena, que não é recriado a cada render. */
   const travadoRef = useRef(true);
@@ -281,29 +279,18 @@ export function AwardsShowcase() {
     [count],
   );
 
-  /* O primeiro toque numa aba encerra o relógio. O `PauseButton` ao lado volta
+  /* O primeiro toque numa aba encerra o relógio — é assim que o visitante para
      a soltar: "retomar" devolve o rodízio inteiro, não só o movimento da cena. */
   const escolher = (indice: number) => {
     setActive(indice);
     setEscolhido(true);
   };
 
-  const alternarPausa = () => {
-    if (pausado) {
-      setPausado(false);
-      /* Sair da pausa devolve o rodízio: soltar o objeto e deixar os marcos
-         presos onde o visitante os deixou seria metade do que "retomar" diz. */
-      setEscolhido(false);
-    } else {
-      setPausado(true);
-    }
-  };
-
   const item = awards.items[active];
   /* Sem relógio — escolha do visitante, pausa ou movimento reduzido —, o
      segmento do marco fica cheio em vez de congelar vazio: ele passa a marcar a
      seleção, não uma contagem. */
-  const correndo = !(pausado || escolhido || reduced);
+  const correndo = !(escolhido || reduced);
 
   /* `grid-cols-1` no celular NÃO é redundante, e a falta dele custou uma
      captura: sem colunas declaradas, o grid cria uma trilha implícita `auto`, e
@@ -333,13 +320,6 @@ export function AwardsShowcase() {
           /* Antes do primeiro quadro da cena a barra fica parada no zero: não há
              relógio nenhum andando ainda. */
           paused={relogioParado || epoca === 0}
-          pause={
-            <PauseButton
-              pressed={pausado}
-              onToggle={alternarPausa}
-              labels={{ pause: ui.pause, play: ui.play }}
-            />
-          }
         />
       </div>
 
@@ -407,7 +387,7 @@ export function AwardsShowcase() {
                  cena — nada de geometria, material, câmera, tempo ou imagem
                  muda, é o laço de render que para. Trocar de marco pausado
                  ainda redesenha: a mudança de prop invalida um quadro. */
-              visible={onScreen && !pausado}
+              visible={onScreen}
               onCycle={aoCiclo}
               onDrag={aoArrastar}
             />
@@ -686,7 +666,7 @@ function Simulador({
  *
  * No celular a fileira ROLA, com `scroll-snap` em cada aba: quatro fichas de
  * três linhas não cabem em 412px, e espremê-las levaria o numeral do marco
- * abaixo do tamanho em que ele se lê. O `PauseButton` sai da rolagem e fica
+ * abaixo do tamanho em que ele se lê. A rail rola na horizontal e fica
  * ancorado à direita, onde o polegar o encontra sempre no mesmo lugar.
  */
 function MarcoRail({
@@ -696,7 +676,6 @@ function MarcoRail({
   epoca,
   durationMs,
   paused,
-  pause,
 }: {
   items: readonly { tier: string; title: string; milestoneLine: string }[];
   active: number;
@@ -704,7 +683,6 @@ function MarcoRail({
   epoca: number;
   durationMs?: number;
   paused?: boolean;
-  pause: React.ReactNode;
 }) {
   /* As quatro abas, para o teclado poder levar o foco à que ele escolheu. */
   const abas = useRef<(HTMLButtonElement | null)[]>([]);
@@ -825,7 +803,6 @@ function MarcoRail({
 
       {/* Alinhado pela base do fio das abas: a rail é uma linha só, e o botão é
           parte dela. */}
-      <div className="flex shrink-0 items-end pb-2">{pause}</div>
     </div>
   );
 }

@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useContent } from "@/i18n";
 import { useOnScreen } from "@/lib/useOnScreen";
-import { PauseButton } from "./PauseButton";
 import { SegmentProgress } from "./SegmentProgress";
 
 /** Intervalo do avanço automático. O mesmo valor alimenta a barra de progresso. */
@@ -56,7 +55,6 @@ export function SecurityCarousel() {
   const [reduced, setReduced] = useState(false);
   /* O pedido explícito de quem lê: nasce `false` nos dois lados, como os
      outros, para o primeiro render do cliente ser igual ao do servidor. */
-  const [userPaused, setUserPaused] = useState(false);
 
   /* Fora da tela o relógio para: o portão de performance conta UM relógio por
      viewport, e sem isto o de Segurança já corria enquanto o visitante ainda
@@ -64,7 +62,7 @@ export function SecurityCarousel() {
   const blocoRef = useRef<HTMLDivElement>(null);
   const onScreen = useOnScreen(blocoRef, { amount: 0.3 });
 
-  const paused = userPaused || hovering || focused || tabHidden || !onScreen;
+  const paused = hovering || focused || tabHidden || !onScreen;
   const playing = !reduced && !paused;
 
   /* Quanto falta do intervalo atual. */
@@ -275,15 +273,6 @@ export function SecurityCarousel() {
             paused={!playing}
             labelLeft={item.term}
             labelRight={`${active + 1} ${ui.of} ${count}`}
-          />
-          <PauseButton
-            pressed={userPaused}
-            onToggle={() => setUserPaused((valor) => !valor)}
-            labels={{ pause: ui.pause, play: ui.play }}
-            /* Esta seção é o bloco invertido: a pílula padrão (ink-800) teria o
-               tom do próprio fundo, então ela sobe um degrau como as outras
-               superfícies daqui. */
-            className="shrink-0 bg-ink-700!"
           />
         </div>
       </div>
