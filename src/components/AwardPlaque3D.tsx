@@ -1660,6 +1660,18 @@ function Plaque({
               blending={AdditiveBlending}
               depthWrite={false}
               side={FrontSide}
+              /* INVISÍVEL desde 15/10 (quarta volta do dono: "deixa o fundo das
+                 placas transparentes... apenas o fundo das placas"). O reflexo
+                 somado do softbox, por mais que fosse só luz, pintava o miolo
+                 do bloco de um cinza mais claro que o chão — e para o dono o
+                 miolo É o fundo da placa, que tem de ser o chão da seção, nu.
+                 As duas tampas somem (é o grupo 0 inteiro); quem continua
+                 dizendo "vidro" é o que o olho usa de verdade numa peça
+                 dessas: as arestas, o bisel e as laterais em 0,28, a casca de
+                 Fresnel nas rasantes e a varredura de luz que passa de tempos
+                 em tempos. O material fica montado, e não apagado, porque é
+                 um ajuste reversível de uma linha. */
+              visible={false}
             />
             <meshPhysicalMaterial
               attach="material-1"
