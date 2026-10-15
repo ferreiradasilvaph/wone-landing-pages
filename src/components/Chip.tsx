@@ -18,6 +18,14 @@ export type ChipTone = keyof typeof TOM;
  * o destaque deixa de destacar. `ok` e `warn` são estados de produto e só
  * aparecem dentro de mockup ou demo, nunca em texto editorial da página.
  *
+ * `shrink-0` não é zelo: o chip quase sempre é item de uma fila `flex`, e item
+ * de flex encolhe por padrão. Sem ele, "Transferência CVU / CBU" — a etiqueta
+ * mais longa da tabela de Pagamentos — tinha a pílula comprimida 10px abaixo do
+ * próprio texto em QUALQUER largura, e as últimas letras ficavam para fora do
+ * fundo arredondado (medido a 320 e a 768 em 15/10). Com ele a pílula mantém o
+ * tamanho do que diz, e quem resolve a falta de espaço é o `flex-wrap` da fila,
+ * que é o certo: a etiqueta desce de linha inteira em vez de encolher.
+ *
  * `mono` põe o conteúdo em `<code>`, que é o único lugar onde a mono do sistema
  * aparece (regra 2). Dentro do chip ela herda cor e tamanho — ver `.chip code`
  * em globals.css.
@@ -35,7 +43,7 @@ export function Chip({
 }) {
   return (
     <span
-      className={`chip inline-flex h-7 items-center gap-1.5 rounded-full px-3 text-[13px] font-medium ${TOM[tone]}${
+      className={`chip inline-flex h-7 shrink-0 items-center gap-1.5 rounded-full px-3 text-[13px] font-medium ${TOM[tone]}${
         className ? ` ${className}` : ""
       }`}
     >

@@ -574,7 +574,12 @@ function Simulador({
           truncado: é a primeira linha que mudaria de altura se o texto
           quebrasse, e ela muda de conteúdo a cada passo do controle. */}
       <div className="mt-4 flex h-6 items-baseline justify-between gap-3">
-        <label htmlFor="premios-simulador" className="truncate text-[13px] text-muted">
+        {/* Sem `truncate` abaixo de `sm`: a 320px o rótulo pedia 227px e tinha
+            215, e o que se perdia era justamente "no Telegram" — o lugar de que
+            o número fala. Numa linha de 13px ele quebra em duas e ninguém perde
+            nada; dá `sm` em diante cabe inteiro e o corte volta a ser o seguro
+            contra um idioma mais comprido. */}
+        <label htmlFor="premios-simulador" className="text-[13px] text-muted sm:truncate">
           {copy.sliderLabel}
         </label>
         <span className="tnum shrink-0 text-[15px] font-semibold text-cream">
@@ -780,7 +785,12 @@ function MarcoRail({
               >
                 {entry.title}
               </span>
-              <span className="t-label mt-1 block truncate">{entry.milestoneLine}</span>
+              {/* O corte só a partir de `sm`: a 320px as células têm 176px e a
+                  linha do marco pede até 217 ("$1,000,000 em faturamento"), e o
+                  que sumia era a palavra que diz o que o número é. Em duas
+                  linhas de 13px ela cabe, e a célula não muda de altura porque
+                  as quatro crescem juntas. */}
+              <span className="t-label mt-1 block sm:truncate">{entry.milestoneLine}</span>
               {/* Duas caixas, e as duas precisam existir: a de fora leva o
                   `mt-auto` que cola o fio no pé da aba e o `pt-3` que garante os
                   12px de respiro mesmo na aba mais alta da fileira (margem
