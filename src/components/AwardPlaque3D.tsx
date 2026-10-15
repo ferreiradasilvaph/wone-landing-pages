@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Environment, Lightformer } from "@react-three/drei";
 import { useReducedMotion } from "motion/react";
@@ -179,6 +179,137 @@ const DISSOLVE_PISO = 0.5;
    (veja a `camera` do Canvas) já estava olhando por fora.
    -------------------------------------------------------------------------- */
 const REPOUSO = { yaw: -0.279, pitch: -0.07, balanco: 0.122 };
+
+/* --------------------------------------------------------------------------
+   O ARRASTO: a placa na mão de quem olha
+
+   Pedido do dono, 15/10: "deixe essa sessão mais interativa". O balanço de ±7°
+   e o empurrão de 0,2 rad do cursor mostram a peça; eles não a DÃO. Agora o
+   ponteiro pega o bloco: guinada livre (a volta inteira, inclusive o verso, que
+   já existia na cena esperando por isto — veja o plano do verso da arte) e
+   inclinação com teto, porque um troféu que tomba para trás deixa de ser um
+   troféu num pódio.
+
+   Os números, um por um:
+
+   `porPx` — 600 px de tela por volta inteira. O palco tem 560 a 1440 e 340 no
+   celular: uma travessia inteira do quadrado gira quase 360°, que é a relação
+   que o dedo espera de um objeto pousado (abaixo de 400 px/volta o bloco
+   escapa da mão; acima de 900 o arrasto parece preso).
+
+   `pitchPorPx` — metade da guinada, e com `limite` de 18°. Dezoito graus é o
+   quanto a câmera baixa (0,42 em 6,4 de distância, uns 3,8°) mais o que o olho
+   aceita de uma peça apoiada: passando disso aparece o bisel de cima e a peça
+   lê como tampa de mesa, não como placa em pé.
+
+   `vMax` — meia volta por segundo é o teto da velocidade que a inércia herda.
+   Sem teto, um arremesso de 40 px num quadro de 8 ms dá 52 rad/s, e o bloco
+   vira um borrão com a arte estroboscópica.
+
+   `atrito` — e^(−4,5·t): em meio segundo sobra 10% da velocidade, e o percurso
+   total de uma inércia no teto é `vMax/atrito` = 0,7 rad, uns 40°. "Inércia
+   CURTA" é isto: o bastante para a peça ter massa, pouco o bastante para quem
+   soltou não ficar esperando.
+
+   `espera` — 1,5 s parado antes de a mola começar. É o tempo de olhar o que se
+   acabou de girar; menos que isso e o bloco foge de volta antes de o olho
+   chegar ao ângulo novo.
+
+   `mola` — e^(−2,2·t) em direção à pose livre: 95% do caminho em 1,36 s, sem
+   pico e sem repique. Mola de verdade (com massa) passaria do repouso e
+   voltaria, e o repouso daqui não é um ponto: é uma pose que BALANÇA, então
+   qualquer overshoot brigaria com o seno do balanço.
+   -------------------------------------------------------------------------- */
+const GIRO = {
+  porPx: (Math.PI * 2) / 600,
+  pitchPorPx: Math.PI / 600,
+  limite: (18 * Math.PI) / 180,
+  vMax: Math.PI,
+  atrito: 4.5,
+  /** Abaixo disto, em rad/s, o giro está parado e o relógio da espera corre. */
+  vParado: 0.08,
+  espera: 1.5,
+  mola: 2.2,
+  /** Dentro disto (0,35°) a pose é a de repouso e o comando volta à cena. */
+  fim: 0.006,
+};
+
+/**
+ * O estado do arrasto — um objeto mutável, lido e escrito fora do React.
+ *
+ * Mora num `useRef` de `Plaque`, que é quem tem as duas pontas: os ouvintes de
+ * ponteiro (no canvas, por `useThree`) escrevem, e o `useFrame` consome. Não é
+ * estado de React de propósito — um `setState` por `pointermove` daria sessenta
+ * renders por segundo para mover uma rotação que o laço de render já lê a cada
+ * quadro.
+ *
+ * Os deltas do ponteiro entram em `dYaw`/`dPitch` e são consumidos pelo quadro
+ * seguinte, em vez de serem somados direto na pose: entre o `pointerdown` e o
+ * primeiro quadro não se sabe de que ângulo a peça parte (ele vem do balanço e
+ * do cursor), e é o quadro que semeia a pose — veja `semeado`.
+ */
+type Giro = {
+  /** O dedo está no bloco. */
+  ativo: boolean;
+  /** O visitante tem o comando: arrastando, na inércia ou voltando. */
+  mandando: boolean;
+  /** A pose já foi lida da cena neste arrasto. */
+  semeado: boolean;
+  /** A mola do retorno já começou (e o caminho curto já foi escolhido). */
+  molando: boolean;
+  /** Pose em comando, em radianos. */
+  yaw: number;
+  pitch: number;
+  /** O que o ponteiro moveu e o quadro ainda não consumiu. */
+  dYaw: number;
+  dPitch: number;
+  /** Velocidade herdada do gesto, em rad/s. */
+  vYaw: number;
+  vPitch: number;
+  /** Instante (s) em que o giro parou; a espera de `GIRO.espera` conta daqui. */
+  quietoEm: number;
+  /** Toque: o vertical é da página (veja `touch-action` no palco). */
+  toque: boolean;
+  /** Último ponto e instante do ponteiro, para o delta e a velocidade. */
+  x: number;
+  y: number;
+  em: number;
+};
+
+function giroNovo(): Giro {
+  return {
+    ativo: false,
+    mandando: false,
+    semeado: false,
+    molando: false,
+    yaw: REPOUSO.yaw,
+    pitch: REPOUSO.pitch,
+    dYaw: 0,
+    dPitch: 0,
+    vYaw: 0,
+    vPitch: 0,
+    quietoEm: 0,
+    toque: false,
+    x: 0,
+    y: 0,
+    em: 0,
+  };
+}
+
+const presa = (v: number, teto: number) => Math.min(teto, Math.max(-teto, v));
+
+/**
+ * A diferença de ângulo pelo caminho CURTO, em (−π, π].
+ *
+ * Depois de três voltas o `yaw` vale 19 rad e o repouso vale −0,28: uma mola na
+ * diferença crua desgiraria as três voltas de volta, o que é o avesso de "voltar
+ * ao repouso". Normalizando a pose uma vez, no instante em que a mola começa, o
+ * bloco assenta pelo lado mais perto.
+ */
+function curto(d: number) {
+  const volta = Math.PI * 2;
+  return ((((d + Math.PI) % volta) + volta) % volta) - Math.PI;
+}
 
 /**
  * Quanto a PEÇA (bloco, arte e sombra) encolheu no quadro.
@@ -1338,6 +1469,7 @@ function Plaque({
   worn,
   spin,
   reduced,
+  onDrag,
 }: {
   accent: string;
   art: { prev: Texture | null; curr: Texture | null };
@@ -1348,6 +1480,8 @@ function Plaque({
   worn: boolean;
   reduced: boolean;
   spin: boolean;
+  /** O dedo pegou ou soltou o bloco (veja o efeito dos ouvintes). */
+  onDrag?: (arrastando: boolean) => void;
 }) {
   const group = useRef<Group>(null);
   /** A placa, que anda em bloco quando troca de posto — sem o pódio. */
@@ -1415,6 +1549,170 @@ function Plaque({
     linhas.forte.resolution.set(tela.width, tela.height);
   }, [linhas, tela.width, tela.height]);
 
+  /* --------------------------------------------------------------------------
+     O ARRASTO: a placa na mão de quem olha
+
+     O estado mora aqui (veja `Giro`), num ref, e é escrito nos dois lados: pelos
+     ouvintes de ponteiro, abaixo, e pelo `useFrame`, que o consome. Não é estado
+     de React de propósito — um `setState` por `pointermove` daria sessenta
+     renders por segundo para mover uma rotação que o laço de render já lê a cada
+     quadro.
+
+     Os ouvintes são NATIVOS e vão no próprio canvas, não em `onPointerDown` de
+     um mesh: o alvo do gesto é o palco inteiro, inclusive o ar em volta da peça,
+     e exigir que o raio acerte o bloco faria o arrasto falhar justamente nas
+     bordas, onde ele é mais natural. (E por serem nativos, o cursor é escrito no
+     nó — `grab`/`grabbing` — em vez de passar por um render.)
+
+     `setPointerCapture` é o que mantém o gesto vivo quando o ponteiro sai do
+     quadrado; sem ele, arrastar até fora do palco solta a peça no meio do
+     caminho. No toque ele não briga com a rolagem: quem decide isso é o
+     `touch-action: pan-y` do palco (veja `.palco-arrasto` em `globals.css`), e o
+     navegador manda `pointercancel` quando resolve que o gesto é rolagem.
+
+     O CURSOR não é escrito aqui: a mão (`grab`/`grabbing`) sai do `style` do
+     `Canvas`, lá fora, a partir do mesmo aviso de `onDrag` que a vitrine ouve.
+     Escrevê-lo no nó do canvas seria mutar um valor que veio de um hook, e o
+     compilador do React recusa — com razão: o cursor é aparência, e aparência
+     neste projeto mora no render.
+
+     O `invalidate` existe para o laço em `demand` — movimento reduzido, ou a
+     cena pausada —, que não desenha sozinho: um quadro por movimento do
+     ponteiro, nenhum quadro em repouso. Sem ele quem pediu movimento reduzido
+     arrastaria uma imagem congelada.
+     -------------------------------------------------------------------------- */
+  const giroRef = useRef<Giro>(giroNovo());
+  const canvas = useThree((estado) => estado.gl.domElement);
+  const invalidar = useThree((estado) => estado.invalidate);
+
+  useEffect(() => {
+    const giro = giroRef.current;
+
+    const aoPegar = (evento: PointerEvent) => {
+      /* Só o botão principal: o direito abre o menu do navegador e o do meio
+         rola a página, e nenhum dos dois é um gesto de girar. */
+      if (evento.button !== 0) return;
+
+      /* A captura é um BÔNUS, não a condição do gesto: o navegador a recusa
+         (`NotFoundError`) quando o ponteiro não está mais ativo — acontece com
+         caneta que levanta entre o evento e a chamada, e em eventos sintéticos.
+         Sem ela o arrasto continua valendo dentro do quadrado; com ela, também
+         fora. Deixar a exceção subir mataria o gesto inteiro por causa do
+         extra. */
+      try {
+        canvas.setPointerCapture(evento.pointerId);
+      } catch {
+        /* Segue sem captura. */
+      }
+      giro.ativo = true;
+      giro.mandando = true;
+      giro.semeado = false;
+      giro.molando = false;
+      giro.dYaw = 0;
+      giro.dPitch = 0;
+      giro.vYaw = 0;
+      giro.vPitch = 0;
+      giro.toque = evento.pointerType === "touch";
+      giro.x = evento.clientX;
+      giro.y = evento.clientY;
+      giro.em = performance.now();
+
+      onDrag?.(true);
+      invalidar();
+    };
+
+    const aoMover = (evento: PointerEvent) => {
+      if (!giro.ativo) return;
+
+      const dx = evento.clientX - giro.x;
+      const dy = evento.clientY - giro.y;
+      giro.x = evento.clientX;
+      giro.y = evento.clientY;
+
+      /* O piso de 8 ms no intervalo é contra a divisão por quase zero: dois
+         `pointermove` no mesmo milissegundo (acontece com mouse de alta taxa)
+         dariam centenas de rad/s para a inércia herdar. */
+      const agora = performance.now();
+      const dt = Math.max(0.008, (agora - giro.em) / 1000);
+      giro.em = agora;
+
+      const dyaw = dx * GIRO.porPx;
+      giro.dYaw += dyaw;
+      /* A velocidade é uma MÉDIA CORRIDA do gesto (60% do que havia, 40% do
+         evento novo): a instantânea do último evento é ruidosa, e o último
+         evento antes de soltar costuma ser o mais curto de todos — herdá-lo cru
+         fazia a inércia sair quase sempre em zero. */
+      giro.vYaw = presa(giro.vYaw * 0.6 + (dyaw / dt) * 0.4, GIRO.vMax);
+
+      /* No TOQUE o vertical é da página: o `touch-action: pan-y` deixa a rolagem
+         passar, e inclinar o bloco junto faria a peça tombar a cada rolagem que
+         começasse dentro do palco. Com mouse ou caneta o vertical inclina. */
+      if (!giro.toque) {
+        const dpitch = dy * GIRO.pitchPorPx;
+        giro.dPitch += dpitch;
+        giro.vPitch = presa(giro.vPitch * 0.6 + (dpitch / dt) * 0.4, GIRO.vMax);
+      }
+
+      invalidar();
+    };
+
+    const aoSoltar = (evento: PointerEvent) => {
+      if (!giro.ativo) return;
+
+      giro.ativo = false;
+      /* O relógio da espera começa aqui (veja `GIRO.espera`): quem solta parado
+         tem 1,5 s de pose antes de a mola puxar. */
+      giro.quietoEm = performance.now() / 1000;
+      if (reduced) {
+        /* Sem inércia e sem mola: a peça fica onde o dedo a deixou. */
+        giro.vYaw = 0;
+        giro.vPitch = 0;
+      }
+
+      if (canvas.hasPointerCapture(evento.pointerId)) {
+        canvas.releasePointerCapture(evento.pointerId);
+      }
+
+      onDrag?.(false);
+      invalidar();
+    };
+
+    canvas.addEventListener("pointerdown", aoPegar);
+    canvas.addEventListener("pointermove", aoMover);
+    canvas.addEventListener("pointerup", aoSoltar);
+    /* `pointercancel` é o navegador avisando que o gesto virou rolagem (ou que o
+       sistema o tomou); `lostpointercapture` cobre o resto — captura perdida sem
+       `pointerup`, o que acontece quando o nó sai do DOM no meio do gesto. */
+    canvas.addEventListener("pointercancel", aoSoltar);
+    canvas.addEventListener("lostpointercapture", aoSoltar);
+
+    return () => {
+      canvas.removeEventListener("pointerdown", aoPegar);
+      canvas.removeEventListener("pointermove", aoMover);
+      canvas.removeEventListener("pointerup", aoSoltar);
+      canvas.removeEventListener("pointercancel", aoSoltar);
+      canvas.removeEventListener("lostpointercapture", aoSoltar);
+    };
+  }, [canvas, invalidar, onDrag, reduced]);
+
+  /* Marco novo em cena: o comando volta à cena.
+
+     É o que devolve a pose de repouso a quem pediu movimento reduzido — lá a
+     peça fica exatamente onde o dedo a deixou, sem inércia e sem mola, e a troca
+     de marco é o único momento em que ela se recompõe. Trocar de marco NO MEIO
+     do arrasto não tira o bloco da mão: o rodízio já está parado por `onDrag`, e
+     quem chega aqui nesse caso é a escolha do visitante numa aba. */
+  useEffect(() => {
+    const giro = giroRef.current;
+    if (giro.ativo) return;
+    giro.mandando = false;
+    giro.molando = false;
+    giro.vYaw = 0;
+    giro.vPitch = 0;
+    giro.dYaw = 0;
+    giro.dPitch = 0;
+  }, [accent, photo, art.curr]);
+
   /* Os dois materiais nascem aqui e não no r3f (`dispose={null}` nos
      `primitive`), então é daqui que eles saem. */
   useEffect(
@@ -1441,15 +1739,89 @@ function Plaque({
   }, [art.curr]);
 
   useFrame((state, delta) => {
+    const giro = giroRef.current;
+
     if (group.current) {
-      /* A pose de repouso (veja `REPOUSO`) mais um balanço de ±7° que nunca
-         chega a zero: a guinada passeia entre −9° e −23°, então a face lateral
-         direita e o bisel ficam acesos o tempo inteiro e a face impressa nunca
-         sai de frente para quem lê. O cursor empurra menos que antes (0,2 em vez
-         de 0,28) porque agora ele soma a uma pose que já é oblíqua. */
+      /* A POSE LIVRE: a de repouso (veja `REPOUSO`) mais um balanço de ±7° que
+         nunca chega a zero — a guinada passeia entre −9° e −23°, então a face
+         lateral direita e o bisel ficam acesos o tempo inteiro e a face impressa
+         nunca sai de frente para quem lê. O cursor empurra menos que antes (0,2
+         em vez de 0,28) porque agora ele soma a uma pose que já é oblíqua.
+
+         É esta pose que a mola do retorno persegue, e não um par de constantes:
+         perseguir `REPOUSO` cru devolveria o comando à cena num ângulo que o
+         balanço já tinha deixado para trás, e o bloco daria um pulo de até 7° no
+         quadro em que o visitante solta o controle. */
       const sway = spin ? Math.sin(state.clock.elapsedTime * 0.45) * REPOUSO.balanco : 0;
-      group.current.rotation.y = REPOUSO.yaw + sway + state.pointer.x * 0.2;
-      group.current.rotation.x = REPOUSO.pitch - state.pointer.y * 0.12;
+      const livreY = REPOUSO.yaw + sway + state.pointer.x * 0.2;
+      const livreX = REPOUSO.pitch - state.pointer.y * 0.12;
+
+      if (giro.mandando) {
+        /* O ARRASTO. Semeia a pose no primeiro quadro do gesto — de onde a peça
+           parte depende do balanço e do cursor, e só a cena sabe — e consome os
+           deltas que o ponteiro deixou desde o quadro anterior. */
+        if (giro.ativo) {
+          if (!giro.semeado) {
+            giro.yaw = group.current.rotation.y;
+            giro.pitch = group.current.rotation.x;
+            giro.semeado = true;
+          }
+          giro.yaw += giro.dYaw;
+          giro.pitch = presa(giro.pitch + giro.dPitch, GIRO.limite);
+          giro.dYaw = 0;
+          giro.dPitch = 0;
+        } else if (!reduced) {
+          /* SOLTOU: inércia curta, espera, e a mola de volta.
+
+             Com movimento reduzido nada disto roda — o bloco fica exatamente
+             onde o dedo o deixou, e só volta ao repouso quando o marco troca
+             (veja o efeito de reinício, lá embaixo). E com a cena pausada o laço
+             está em `demand`: a inércia não acontece porque não há quadro, e o
+             retorno só se cumpre quando o visitante retoma — que é o
+             comportamento certo para um botão que promete parar tudo. */
+          const freio = Math.exp(-GIRO.atrito * delta);
+          giro.yaw += giro.vYaw * delta;
+          giro.pitch = presa(giro.pitch + giro.vPitch * delta, GIRO.limite);
+          giro.vYaw *= freio;
+          giro.vPitch *= freio;
+
+          /* O relógio da espera é o do navegador, e não `state.clock`: o do
+             three ZERA quando o laço volta de `demand` para `always` (é o que
+             faz a barra da rail remontar, veja `epoca` na `AwardsShowcase`), e
+             um instante de soltura guardado antes de um zero desses ficaria no
+             futuro — a mola nunca começaria. `performance.now` é monótono e não
+             sabe de `frameloop` nenhum. */
+          const agora = performance.now() / 1000;
+          const rodando =
+            Math.abs(giro.vYaw) > GIRO.vParado || Math.abs(giro.vPitch) > GIRO.vParado;
+
+          if (rodando) {
+            giro.quietoEm = agora;
+            giro.molando = false;
+          } else if (agora - giro.quietoEm >= GIRO.espera) {
+            if (!giro.molando) {
+              /* O caminho curto, escolhido uma vez (veja `curto`). */
+              giro.yaw = livreY + curto(giro.yaw - livreY);
+              giro.molando = true;
+              giro.vYaw = 0;
+              giro.vPitch = 0;
+            }
+            const passo = 1 - Math.exp(-GIRO.mola * delta);
+            giro.yaw += (livreY - giro.yaw) * passo;
+            giro.pitch += (livreX - giro.pitch) * passo;
+            if (
+              Math.abs(livreY - giro.yaw) < GIRO.fim &&
+              Math.abs(livreX - giro.pitch) < GIRO.fim
+            ) {
+              giro.mandando = false;
+              giro.molando = false;
+            }
+          }
+        }
+      }
+
+      group.current.rotation.y = giro.mandando ? giro.yaw : livreY;
+      group.current.rotation.x = giro.mandando ? giro.pitch : livreX;
     }
 
     /* O outro lado do rodízio. Quando não há joia vestida para revezar, a
@@ -2073,6 +2445,7 @@ export default function AwardPlaque3D({
   worn = false,
   visible = true,
   onCycle,
+  onDrag,
 }: {
   accent: string;
   /** A arte impressa do marco — recortada, sem o acrílico pintado em volta. */
@@ -2089,6 +2462,15 @@ export default function AwardPlaque3D({
   visible?: boolean;
   /** Fim de cada travessia (veja `Metronome`); a volta 0 é o primeiro quadro. */
   onCycle?: (volta: number) => void;
+  /**
+   * O dedo pegou o bloco (`true`) ou soltou (`false`).
+   *
+   * Quem ouve é a vitrine, por dois motivos: enquanto o visitante gira a peça o
+   * rodízio de marcos PARA — trocar a arte debaixo da mão de quem a está
+   * examinando é tirar da tela justamente o que ele pediu —, e o primeiro
+   * `true` apaga o lembrete "arraste para girar", que já cumpriu o trabalho.
+   */
+  onDrag?: (arrastando: boolean) => void;
 }) {
   const reduced = useReducedMotion();
 
@@ -2111,9 +2493,30 @@ export default function AwardPlaque3D({
   const art = useArtPair(print);
   const fotos = useArtPair(photo || undefined);
 
+  /* O único estado de React do arrasto, e ele existe por causa do CURSOR: a mão
+     fechada tem de aparecer no primeiro pixel de movimento, e cursor é CSS. Dois
+     renders por gesto (pegou, soltou) — e nenhum durante ele, porque quem move a
+     rotação é o laço de render, não o React. O aviso é o mesmo que a vitrine
+     ouve para parar o rodízio. */
+  const [pegando, setPegando] = useState(false);
+  const aoArrastar = useCallback(
+    (ativo: boolean) => {
+      setPegando(ativo);
+      onDrag?.(ativo);
+    },
+    [onDrag],
+  );
+
   return (
     <Canvas
       dpr={dpr}
+      /* A classe é o que leva o `touch-action: pan-y` ao palco — à div que o r3f
+         põe em volta do canvas E ao canvas (veja `.palco-arrasto` em
+         `globals.css`): o arrasto horizontal é da placa, o vertical é da página.
+         O cursor (`grab`/`grabbing`) é escrito no canvas pelos ouvintes, lá
+         dentro, para que a mão fechada apareça sem passar por um render. */
+      className="palco-arrasto"
+      style={{ background: "transparent", cursor: pegando ? "grabbing" : "grab" }}
       /* MAIS BAIXA E MAIS PERTO, pedido de 15/10 ("capriche na disposição").
          O bloco tem 2,9 de altura; a 7,3 de distância com fov 38° a altura
          visível em z = 0 era 2·tan(19°)·7,3 = 5,03, e a placa ocupava 58% da
@@ -2143,7 +2546,6 @@ export default function AwardPlaque3D({
       }}
       // Fora da tela — ou em pausa —, desenha um quadro e para.
       frameloop={reduced || !visible ? "demand" : "always"}
-      style={{ background: "transparent" }}
     >
       <ambientLight intensity={0.6} />
       <directionalLight position={[4, 6, 5]} intensity={2.2} />
@@ -2372,6 +2774,7 @@ export default function AwardPlaque3D({
         worn={worn && Boolean(photo)}
         spin={!reduced}
         reduced={!!reduced}
+        onDrag={aoArrastar}
       />
 
       <Metronome onCycle={onCycle} />

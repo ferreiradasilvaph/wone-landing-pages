@@ -1150,10 +1150,44 @@ export const pt = {
     title: "Aos 10 mil dólares, um pin. No milhão, um anel de ouro 18k.",
     lead: "A cada marco de faturamento no Telegram, o troféu e o item do marco chegam na sua casa. Toque num marco para ver.",
     physicalItem: "Item físico enviado",
+
+    /** O lembrete que some depois do primeiro arrasto no palco 3D. */
+    dragHint: "Arraste para girar",
+
+    /**
+     * O SIMULADOR da vitrine ("quando chega o seu?").
+     *
+     * Ficção declarada: quem renderiza põe `ui.simulation` ao lado do título,
+     * como o hero faz — e a nota diz a conta inteira, em uma linha, para que
+     * nenhum número na tela pareça previsão. A conta é a única coisa que o
+     * componente cunha; os marcos são os `amount` dos itens, logo abaixo.
+     *
+     * `month` e `months` são a mesma frase no singular e no plural, e o `{n}` é
+     * o número de meses — a mesma convenção de `demo.counter`. Sem plural
+     * programático: duas línguas, duas formas, e o dicionário é quem as tem.
+     */
+    simulator: {
+      title: "Quando chega o seu?",
+      sliderLabel: "Seu faturamento por mês no Telegram",
+      note: "Conta simples: o marco dividido pelo que você fatura por mês.",
+      month: "1 mês",
+      months: "{n} meses",
+    },
+
     items: [
       {
         tier: "10K",
         image: "/placas/placa-10k.webp",
+        /**
+         * O marco EM NÚMERO, para a conta do simulador.
+         *
+         * É o mesmo valor que `milestoneLine` escreve em texto, e a repetição é
+         * deliberada: a linha é copy (com o cifrão, a vírgula de milhar e o
+         * "em faturamento" que cada língua escreve do seu jeito) e este é
+         * aritmética. Extrair o número da frase pediria um parser de moeda por
+         * idioma para chegar ao mesmo lugar. Mexeu num, mexa no outro.
+         */
+        amount: 10000,
         /** A arte IMPRESSA, recortada da ilustração por
             `scripts/recorta-placas.mjs`: é ela que entra dentro do bloco de
             acrílico na cena 3D. O `image` acima continua sendo a ilustração
@@ -1164,7 +1198,7 @@ export const pt = {
         /** Vestida — a foto já vem sobre o dorso ou o pulso desenhado — aparece
             uma vez ao lado da placa; solta, repete nos quatro cantos. */
         photoWorn: false,
-        title: "Troféu Bronze 10K",
+        title: "Troféu de Bronze dos 10 mil",
         milestoneLine: "$10,000 em faturamento",
         subtitle: "A primeira escala",
         description:
@@ -1174,11 +1208,12 @@ export const pt = {
       },
       {
         tier: "100K",
+        amount: 100000,
         image: "/placas/placa-100k.webp",
         print: "/placas/arte-100k.webp",
         photo: "/images/pulseira-100k-vestida.webp",
         photoWorn: true,
-        title: "Placa Acrílico 100K",
+        title: "Placa de Cristal dos 100 mil",
         milestoneLine: "$100,000 em faturamento",
         subtitle: "Clube dos 6 dígitos",
         description:
@@ -1188,11 +1223,12 @@ export const pt = {
       },
       {
         tier: "500K",
+        amount: 500000,
         image: "/placas/placa-500k.webp",
         print: "/placas/arte-500k.webp",
         photo: "/images/colar-500k-vestido.webp",
         photoWorn: true,
-        title: "Placa Cerimonial 500K",
+        title: "Placa Cerimonial do Meio Milhão",
         milestoneLine: "$500,000 em faturamento",
         subtitle: "Meio milhão faturado",
         description:
@@ -1202,11 +1238,12 @@ export const pt = {
       },
       {
         tier: "1M",
+        amount: 1000000,
         image: "/placas/placa-1m.webp",
         print: "/placas/arte-1m.webp",
         photo: "/images/anel-1m.webp",
         photoWorn: false,
-        title: "Placa Black Diamond 1M",
+        title: "Placa Black Diamond do Milhão",
         milestoneLine: "$1,000,000 em faturamento",
         subtitle: "Clube dos 7 dígitos",
         description:

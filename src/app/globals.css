@@ -1129,3 +1129,97 @@ html.wone-entrando .facts-ent-ponto {
 html.wone-entrando .facts-ent-base {
   animation: facts-ent-base 0.4s var(--ent-ease) var(--ent-atraso, 0ms) both;
 }
+
+/* --------------------------------------------------------------------------
+   O CONTROLE DE FATURAMENTO do simulador da vitrine (`AwardsShowcase`)
+
+   Um `input[type=range]` nativo — teclado, leitor de tela e toque vêm de graça
+   com ele —, repintado porque o controle do sistema traz a cor de acento do
+   sistema operacional para dentro de uma página de duas cores.
+
+   O ALVO DE TOQUE É A TRILHA INTEIRA: 44px de altura no elemento (o piso do
+   portão de acessibilidade), com o fio de 2px e o polegar de 20px centrados
+   dentro dela. Era o caminho mais honesto que o `::before` invisível, que nos
+   navegadores WebKit não é desenhado para o polegar nativo.
+
+   O preenchimento à esquerda do polegar vem de `--andado`, que o componente
+   escreve no próprio nó: o gradiente é estático a cada valor (nada anima aqui —
+   quem se move é o polegar, pela própria mecânica do controle).
+
+   `-webkit-` e `-moz-` escritos em regras SEPARADAS de propósito: um seletor
+   desconhecido invalida o bloco inteiro no navegador que não o conhece, e um
+   `::-webkit-slider-thumb` na mesma regra do `::-moz-range-thumb` apagaria o
+   polegar num dos dois.
+   -------------------------------------------------------------------------- */
+.slider-faturamento {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 2.75rem;
+  background: transparent;
+  cursor: pointer;
+}
+
+/* O fio: cheio em laranja até onde o polegar chegou, apagado depois dele. */
+.slider-faturamento::-webkit-slider-runnable-track {
+  height: 2px;
+  border-radius: 999px;
+  background: linear-gradient(
+    to right,
+    var(--brand) 0,
+    var(--brand) var(--andado, 0%),
+    var(--line-strong) var(--andado, 0%),
+    var(--line-strong) 100%
+  );
+}
+
+.slider-faturamento::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  background: var(--brand);
+  /* O anel do chão da seção: é o que separa o polegar do fio que passa por
+     baixo dele, sem precisar de sombra. */
+  border: 2px solid var(--floor);
+  /* Metade do polegar menos metade do fio: o 20px fica centrado nos 2px. */
+  margin-top: -9px;
+}
+
+.slider-faturamento::-moz-range-track {
+  height: 2px;
+  border-radius: 999px;
+  background: var(--line-strong);
+}
+
+/* O Firefox tem pseudoelemento próprio para o trecho andado — mais barato que
+   o gradiente, e por isso o `::-moz-range-track` acima fica só com o apagado. */
+.slider-faturamento::-moz-range-progress {
+  height: 2px;
+  border-radius: 999px;
+  background: var(--brand);
+}
+
+.slider-faturamento::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  background: var(--brand);
+  border: 2px solid var(--floor);
+}
+
+/* --------------------------------------------------------------------------
+   O PALCO QUE SE PEGA COM O DEDO (`AwardPlaque3D` dentro da vitrine)
+
+   `pan-y` e não `none`: o arrasto HORIZONTAL é da placa (o navegador não tem o
+   que fazer com ele dentro de um canvas) e o VERTICAL continua sendo da página.
+   Sem isto, metade dos polegares que tentassem rolar a página a partir do palco
+   ficariam presos girando o troféu — e com `none` seria a metade toda.
+
+   A regra entra no canvas E na div que o r3f põe em volta dele: a div é onde os
+   ouvintes do arrasto moram, e o canvas é o nó que o dedo de fato toca.
+   -------------------------------------------------------------------------- */
+.palco-arrasto,
+.palco-arrasto canvas {
+  touch-action: pan-y;
+}

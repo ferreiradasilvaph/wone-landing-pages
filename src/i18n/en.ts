@@ -804,9 +804,20 @@ export const en: Content = {
     title: "At ten thousand dollars, a pin. At a million, an 18k gold ring.",
     lead: "At every revenue milestone on Telegram, the trophy and that milestone's item arrive at your door. Tap a milestone to see it.",
     physicalItem: "Physical item shipped",
+
+    dragHint: "Drag to spin",
+
+    simulator: {
+      title: "When does yours arrive?",
+      sliderLabel: "Your monthly revenue on Telegram",
+      note: "Simple math: the milestone divided by what you make per month.",
+      month: "1 month",
+      months: "{n} months",
+    },
     items: [
       {
         tier: "10K",
+        amount: 10000,
         image: "/placas/placa-10k.webp",
         /** A arte IMPRESSA, recortada da ilustração por
             `scripts/recorta-placas.mjs`: é ela que entra dentro do bloco de
@@ -818,7 +829,7 @@ export const en: Content = {
         /** Vestida — a foto já vem sobre o dorso ou o pulso desenhado — aparece
             uma vez ao lado da placa; solta, repete nos quatro cantos. */
         photoWorn: false,
-        title: "Bronze Trophy 10K",
+        title: "The 10K Bronze Trophy",
         milestoneLine: "$10,000 in revenue",
         subtitle: "The first scale",
         description:
@@ -828,11 +839,12 @@ export const en: Content = {
       },
       {
         tier: "100K",
+        amount: 100000,
         image: "/placas/placa-100k.webp",
         print: "/placas/arte-100k.webp",
         photo: "/images/pulseira-100k-vestida.webp",
         photoWorn: true,
-        title: "100K Acrylic Plaque",
+        title: "The 100K Crystal Plaque",
         milestoneLine: "$100,000 in revenue",
         subtitle: "The 6-figure club",
         description:
@@ -842,11 +854,12 @@ export const en: Content = {
       },
       {
         tier: "500K",
+        amount: 500000,
         image: "/placas/placa-500k.webp",
         print: "/placas/arte-500k.webp",
         photo: "/images/colar-500k-vestido.webp",
         photoWorn: true,
-        title: "500K Ceremonial Plaque",
+        title: "The Half-Million Ceremonial Plaque",
         milestoneLine: "$500,000 in revenue",
         subtitle: "Half a million in revenue",
         description:
@@ -856,11 +869,12 @@ export const en: Content = {
       },
       {
         tier: "1M",
+        amount: 1000000,
         image: "/placas/placa-1m.webp",
         print: "/placas/arte-1m.webp",
         photo: "/images/anel-1m.webp",
         photoWorn: false,
-        title: "1M Black Diamond Plaque",
+        title: "The Million-Dollar Black Diamond Plaque",
         milestoneLine: "$1,000,000 in revenue",
         subtitle: "The 7-figure club",
         description:
