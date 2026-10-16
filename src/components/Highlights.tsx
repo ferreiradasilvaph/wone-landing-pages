@@ -269,14 +269,21 @@ export function Highlights() {
      largura da coluna. A largura por demo e a transição de `max-width` saíram
      — a moldura mudava de tamanho a cada clique e levava a página junto.
 
-     Ele fica alinhado ao ALTO da coluna, na linha do kicker (variante B), e por
-     isso sobra preto embaixo: medido a 1440×900, painel 1027–1369 contra a
-     coluna de texto que vai até 1571 — 202px na aba padrão, 58 em blocos, 85 em
-     confirmação e 90 em checkout. Fica assim de propósito: a espec reserva esse
-     pedaço para a fileira de chips dos 28 blocos ("até lá, nada"), e centrar o
-     painel (`self-center`) o desprenderia da linha do kicker, que é a régua da
-     variante. Não é o buraco do hero: ali o vão ficava entre dois blocos
-     visíveis; aqui é a margem da seção, sem nenhuma borda que a denuncie. */
+     ELE ENCHE A COLUNA (`h-full`), e isso mudou em 16/10.
+
+     Até então ficava alinhado só ao ALTO, na linha do kicker, e sobrava preto
+     embaixo: 202px na aba padrão, 58 em blocos, 85 em confirmação, 90 em
+     checkout. O comentário anterior defendia o vão com três argumentos, e dois
+     deles continuam de pé — o topo TEM de ficar na linha do kicker (é a régua
+     da variante B), e `self-center` o desprenderia dela. O terceiro não: dizia
+     que o vão não tem "nenhuma borda que a denuncie", e tem — o painel é
+     ink-800 sobre ink-850, então o pé dele é uma aresta visível a meia altura
+     de uma coluna de texto que segue até o fim.
+
+     `h-full` atende os três de uma vez: o topo continua na linha do kicker, o
+     pé encosta no pé da coluna de texto, e nada é centrado. De quebra tira o
+     pulo de altura que havia ao trocar de aba — o painel passa a ter a mesma
+     altura nas quatro, porque quem a define agora é a coluna de texto. */
   const painel = (
     <div
       ref={panelRef}
@@ -284,7 +291,7 @@ export function Highlights() {
       id="highlight-panel"
       aria-labelledby={`highlight-tab-${active}`}
       tabIndex={0}
-      className="overflow-hidden rounded-card bg-ink-800"
+      className="flex h-full flex-col overflow-hidden rounded-card bg-ink-800"
     >
       <div className="flex items-start justify-between gap-4 border-b border-line px-5 py-5 sm:px-6">
         <div className="min-w-0">
@@ -301,8 +308,13 @@ export function Highlights() {
           celular). A travessia em `opacity` que havia aqui saiu junto com a
           remontagem: trocar de aba é trocar de `display`, e animar isso só
           atrasaria o que o lead pediu para ver. */}
-      <div className="flex flex-col p-4 sm:p-6">
-        <div className={`flex flex-1 flex-col ${demo.minH}`}>
+      {/* `justify-center`: com o painel enchendo a coluna (`h-full` acima), a
+          demo mais curta das quatro deixaria de sobrar preto na SEÇÃO para
+          sobrar dentro do PRÓPRIO cartão, que é pior - vazio emoldurado se vê
+          mais que vazio solto. Centrada, a demo fica com a mesma folga em cima
+          e embaixo e o cartão lê como moldura, nao como caixa pela metade. */}
+      <div className="flex flex-1 flex-col justify-center p-4 sm:p-6">
+        <div className={`flex flex-1 flex-col justify-center ${demo.minH}`}>
           {nearPanel ? (
             DEMOS.map((item, index) => {
               if (!opened.includes(index)) return null;
@@ -313,7 +325,7 @@ export function Highlights() {
               return (
                 <div
                   key={item.key}
-                  className={index === active ? "flex flex-1 flex-col" : "hidden"}
+                  className={index === active ? "flex flex-1 flex-col justify-center" : "hidden"}
                 >
                   <Demo />
                 </div>
