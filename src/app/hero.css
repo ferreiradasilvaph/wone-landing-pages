@@ -133,7 +133,14 @@
        vezes pela mesma folga - e era o que prendia o disco em 412px numa janela
        de 752, a do dono.
 
-       Os 300 sao medidos, nao escolhidos: o PE DO HERO - a linha "CHECKOUT
+       Os 140 sao os 100 do topo mais 40 de folga para o pe do disco nao
+       encostar no fim da secao - e so valem porque NADA LEGIVEL ficou do lado
+       esquerdo abaixo do disco. Ver `.hero-pe` no fim deste arquivo: a fileira
+       de beneficios e a linha de controle passaram para a metade direita.
+
+       O historico, para ninguem repetir: os 300 sao medidos, nao escolhidos, e
+       eram necessarios enquanto o pe atravessava a tela. O PE DO HERO - a linha
+       "CHECKOUT
        INTERNACIONAL - SIMULACAO" e a fileira de beneficios - comeca em
        `100svh - 286` nesta faixa, e o disco tem de parar antes dele. Tentei 180
        primeiro e o planeta passou POR BAIXO do texto: "7 paises / Moeda local:
@@ -142,7 +149,7 @@
        Os 14px entre 286 e 300 sao o ar para o limbo nao encostar na letra.
        45vw e nao 50: "diminua so um pouco o tamanho do globo", 16/10, depois de
        ver os 50. */
-    --globo: min(45vw, 100svh - 300px);
+    --globo: min(50vw, 100svh - 140px);
     --sangria: calc((100% - min(100%, 80rem)) / 2 + 2rem);
   }
 }
@@ -286,7 +293,53 @@
    Se um dia o texto precisar de ar lateral de novo, o lugar de dar é
    `--respiro`, não `--texto` — encolher o texto tira linha do título.
    -------------------------------------------------------------------------- */
+/* --------------------------------------------------------------------------
+   O PE DO HERO NA METADE DIREITA, a partir de 1400.
+
+   A linha de controle e a fileira de beneficios ocupavam a largura inteira do
+   conteudo, com o planeta passando por baixo. Isso valia enquanto o disco era
+   pequeno; com ele em metade da tela, a primeira coluna da fileira caia em
+   cima do limbo e nao se lia mais.
+
+   As duas passam a comecar onde o TEXTO comeca — `trilha 1 + respiro`, que e a
+   mesma conta da grade —, e a fileira vira uma pilha de tres em vez de tres
+   colunas: em 563px, tres colunas dariam 166 cada e "Moeda local: real, pesos,
+   dolar, euro e libra" sairia em tres linhas. Empilhada ela mede os mesmos
+   ~141px de altura que media em tres colunas, entao o hero nao cresce.
+
+   E o que isto compra: com o lado esquerdo livre de texto, o teto do disco
+   deixou de precisar poupar o pe e subiu de `100svh - 300` para
+   `100svh - 140`. Numa janela de 1536x752 o planeta foi de 452 para 612px.
+   -------------------------------------------------------------------------- */
 @media (min-width: 1400px) {
+  .hero-pe {
+    margin-left: calc(var(--globo) - var(--sangria) + var(--respiro));
+    padding-block: 1.5rem 2rem;
+  }
+
+  /* A legenda do palco SOBE para o CANTO SUPERIOR ESQUERDO da caixa do globo.
+
+     Ela estava ancorada pelo pe (`bottom: 158px`) na borda esquerda, e com o
+     disco ocupando metade da tela aquela borda virou planeta: a legenda caiu
+     sobre o limbo. Mandá-la para a direita a punha em cima da fileira de
+     beneficios, que acabou de mudar para lá; tirá-la do absoluto a jogava para
+     o TOPO da pagina, porque ela mora DENTRO da camada do palco, que é
+     `absolute inset-0` — em fluxo, o alto dessa camada é o alto da seção.
+
+     O canto de cima e o unico lugar que sobra, e sobra de verdade: o disco e
+     INSCRITO na caixa quadrada, entao os quatro cantos dela sao vazios. Com a
+     legenda na borda do conteudo e no topo da caixa, ela fica fora do disco em
+     toda largura — conferido de 1400 a 2560, a distancia dela ao centro e
+     sempre maior que o raio.
+     E ganha sentido de composicao: ela e a legenda do palco, e agora rotula o
+     planeta por cima, como um titulo de cena. */
+  .hero-controle {
+    top: 100px;
+    bottom: auto;
+    left: calc((100% - min(100%, 80rem)) / 2 + 2rem);
+    width: auto;
+  }
+
   .hero-linha {
     grid-column: 1 / -1;
     display: grid;

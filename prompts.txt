@@ -1103,3 +1103,9 @@ deixe o globo pegando metade da tela do hero e jogue o titulo mais para a
 direita
 
 diminua so um pouco o tamanho do globo
+
+
+===============================================================================
+[127] 2026-10-16
+===============================================================================
+chat, de alguma forma o globo tem de estar cobrindo metade da tela

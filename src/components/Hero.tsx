@@ -341,14 +341,23 @@ export function Hero() {
           </div>
         </div>
 
-        {/* A fileira de benefícios fecha o hero, encostada na faixa (`mt-auto`),
-            na largura do container inteiro. Só a partir de `lg`: abaixo disso
-            ela é o que decide se o palco cabe na primeira tela do celular, e
-            some. O `relative z-10` a põe acima do planeta, que passa por baixo
-            dela desde que o disco cresceu. */}
+        {/* A fileira de benefícios fecha o hero, encostada na faixa (`mt-auto`).
+            Só a partir de `lg`: abaixo disso ela é o que decide se o palco cabe
+            na primeira tela do celular, e some.
+
+            A PARTIR DE 1400 ELA SAI DE CIMA DO PLANETA (`.hero-pe`, em
+            `hero.css`): vira uma pilha na metade DIREITA, alinhada ao texto.
+            Até 16/10 ela atravessava o container inteiro e o planeta passava
+            por baixo — o que funcionava enquanto o disco era pequeno, e deixou
+            de funcionar quando o dono pediu "o globo tem de estar cobrindo
+            metade da tela": a primeira coluna ("7 países / Moeda local: real,
+            pesos, dólar, euro e libra") ficava ilegível sobre o limbo.
+            Tirar a fileira de lá é o que libera a ALTURA do disco: o teto saiu
+            de `100svh - 300` para `100svh - 140`, e numa janela de 752 o
+            planeta foi de 452 para 612px. */}
         {/* Último degrau da escada: 500 + 500 = 1.000 ms, dentro do 1,2 s que o
             dono pediu de total. */}
-        <div className="ent-sobe relative z-10 mt-auto hidden grid-cols-3 gap-x-8 pt-10 pb-10 [--ent-atraso:500ms] lg:grid">
+        <div className="hero-pe ent-sobe relative z-10 mt-auto hidden grid-cols-3 gap-x-8 pt-10 pb-10 [--ent-atraso:500ms] lg:grid">
           {hero.benefits.map((benefit) => (
             <p
               key={benefit.value}
