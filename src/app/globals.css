@@ -263,7 +263,15 @@ body {
      navegação, nas dez seções. */
   display: flex;
   width: fit-content;
-  align-items: center;
+  /* `flex-start` e não `center`, com o traço reposicionado abaixo.
+
+     Com `center`, um kicker de DUAS linhas punha o traço de 24×1 no meio do
+     bloco — flutuando entre as linhas, ancorado em nada. É o caso do hero
+     ("COBRANÇA, ENTREGA E RASTREIO · BRASIL, AMÉRICA LATINA E EUROPA", que
+     quebra de 1024 para cima), e seria o caso de qualquer kicker que crescesse
+     numa tradução. O traço marca onde o texto COMEÇA, então o lugar dele é a
+     primeira linha. */
+  align-items: flex-start;
   gap: 12px;
   font-size: 0.8125rem;
   font-weight: 500;
@@ -277,6 +285,11 @@ body {
   width: 24px;
   height: 1px;
   background: var(--brand);
+  /* O centro ótico da PRIMEIRA linha. `1lh` é a altura de linha computada, então
+     a conta vale em qualquer tamanho de fonte e em qualquer tradução — e num
+     kicker de uma linha dá exatamente o mesmo pixel que `align-items: center`
+     dava, que é o que mantém as dez outras seções intactas. */
+  margin-top: calc((1lh - 1px) / 2);
 }
 
 .t-h2 {

@@ -295,28 +295,36 @@
    da entrada e deixaria o traço com 464px.
    Sem `html.wone-entrando` (JS desligado, movimento reduzido) ele nasce
    desenhado: o estado final é o padrão, e quem anima é só a classe. */
-@media (min-width: 1024px) {
-  .hero-sublinha {
-    position: relative;
-    width: fit-content;
-  }
+/* VALE EM TODA LARGURA desde 16/10. Estava inteiro dentro de um
+   `@media (min-width: 1024px)`, e por isso "automático" perdia o traço no
+   celular: a palavra que a página escolheu para carregar a promessa ficava
+   laranja e nua em 390px, e sublinhada em 1024. A marca não pode existir em
+   metade das telas.
+   A espessura fica em 2px nas duas pontas de propósito: ela é um FIO, não uma
+   proporção do tipo. Em `em` ela daria 1px no título do celular (sumiria) e
+   4px no de 80px (viraria tarja). O que escala com o tipo é o afastamento,
+   `bottom: 0.02em`, que é o que mantém o traço na mesma relação com a base da
+   letra em qualquer tamanho. */
+.hero-sublinha {
+  position: relative;
+  width: fit-content;
+}
 
-  .hero-sublinha::after {
-    content: "";
-    position: absolute;
-    inset-inline: 0;
-    bottom: 0.02em;
-    height: 2px;
-    background: var(--brand);
-    transform-origin: left center;
-  }
+.hero-sublinha::after {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  bottom: 0.02em;
+  height: 2px;
+  background: var(--brand);
+  transform-origin: left center;
+}
 
-  /* 760ms é onde a escada do título termina (160 de atraso + 600 de animação):
-     o traço entra quando a última linha acaba de assentar, e leva 900ms para
-     atravessar a palavra. Só `transform`, no compositor. */
-  html.wone-entrando .hero-sublinha::after {
-    animation: hero-sublinha 0.9s var(--ent-ease) 760ms both;
-  }
+/* 760ms é onde a escada do título termina (160 de atraso + 600 de animação):
+   o traço entra quando a última linha acaba de assentar, e leva 900ms para
+   atravessar a palavra. Só `transform`, no compositor. */
+html.wone-entrando .hero-sublinha::after {
+  animation: hero-sublinha 0.9s var(--ent-ease) 760ms both;
 }
 
 @keyframes hero-sublinha {
@@ -325,5 +333,46 @@
   }
   to {
     transform: scaleX(1);
+  }
+}
+
+/* --------------------------------------------------------------------------
+   OS RÓTULOS DO GLOBO — visíveis só quando o disco é grande o bastante para
+   que caibam.
+
+   A regra já existia, e estava meio certa: os rótulos sumiam abaixo de 1420px
+   de LARGURA, "porque o disco encolhe até os pares vizinhos se cobrirem — pior
+   que não existir". O raciocínio é o certo; a dimensão, não. Quem decide o
+   tamanho do disco é `--globo`, que é `min(536px, 100svh - 340px)` — ou seja, a
+   ALTURA da janela manda tanto quanto a largura, e numa janela larga e baixa os
+   rótulos reapareciam num disco pequeno demais.
+
+   Medido em 16/10, a 1440 de largura, variando só a altura (folga vertical
+   mínima entre dois rótulos que partilham faixa horizontal):
+
+     700px → disco 360 → México e Lisboa se cobrem por 29px
+     760px → disco 420 → México e Lisboa se cobrem por 25px
+     820px → disco 480 → pior folga +10px   ← o chão
+     900px → disco 536 → pior folga +12px
+
+   Abaixo de 820 não é questão de ajuste: duas caixas de texto de ~130px, uma de
+   cada lado de um disco de 420, na mesma latitude, não cabem — nenhum valor de
+   `nudge` resolve geometria. Então somem, como já sumiam por largura.
+   -------------------------------------------------------------------------- */
+.hero-rotulo {
+  display: none;
+}
+
+/* Lisboa e Londres abrem antes (pedido de 15/10: a Europa tem de aparecer),
+   mas obedecem ao mesmo chão de altura. */
+@media (min-width: 1024px) and (min-height: 820px) {
+  .hero-rotulo--sempre {
+    display: block;
+  }
+}
+
+@media (min-width: 1420px) and (min-height: 820px) {
+  .hero-rotulo {
+    display: block;
   }
 }

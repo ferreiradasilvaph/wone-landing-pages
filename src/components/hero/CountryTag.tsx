@@ -113,8 +113,8 @@ export function CountryTag({
           e uma janela de 1440 no Windows reporta 1430. */}
       <span
         style={{ transform: `translateY(calc(-50% + ${nudge}px))` }}
-        className={`absolute top-1/2 hidden w-max transition-opacity duration-300 ${
-          sempre ? "lg:block" : "min-[1420px]:block"
+        className={`hero-rotulo absolute top-1/2 w-max transition-opacity duration-300 ${
+          sempre ? "hero-rotulo--sempre" : ""
         } ${
           side === "right" ? "left-[14px]" : "right-[14px]"
         } ${active ? "opacity-100" : "opacity-50"}`}

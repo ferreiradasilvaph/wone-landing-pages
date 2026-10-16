@@ -185,12 +185,12 @@ export const RECUO: Record<string, { yaw: number; pitch: number }> = {};
  */
 const LADO: Record<string, { side: "left" | "right"; nudge: number }> = {
   MXN: { side: "right", nudge: 0 },
-  COP: { side: "right", nudge: -14 },
-  USD: { side: "right", nudge: 14 },
+  COP: { side: "right", nudge: -20 },
+  USD: { side: "right", nudge: 20 },
   BRL: { side: "left", nudge: -16 },
   ARS: { side: "right", nudge: 16 },
-  EUR: { side: "left", nudge: 0 },
-  GBP: { side: "left", nudge: 0 },
+  EUR: { side: "left", nudge: 10 },
+  GBP: { side: "left", nudge: -10 },
 };
 
 for (const [code, { lat, lon }] of Object.entries(CAPITAIS)) {
