@@ -436,30 +436,30 @@ export function HeroGlobe({
   }, []);
 
   /**
-   * Três modos, por largura. O balanço SÓ existe a partir de `xl`, e isso é
-   * medida, não gosto: a 1024 o corredor entre a moldura do aparelho (791) e a
-   * borda da janela (1014) tem 223px e o vão do pino do México ao de São Paulo,
-   * a R 220, mede 181px — sobram 21px de cada lado, e a excursão de ±11° do
-   * balanço mais o recuo vale ±33px. O México entraria ATRÁS do telefone e São
-   * Paulo sairia da tela em parte do ciclo (medido no navegador, não deduzido).
-   * Entre 1024 e 1279 o globo fica então PARADO na orientação de repouso — a
-   * mesma que o servidor pintou —, e o que muda com o país é o tingimento, que
-   * custa um quadro a cada 5 s. A 1280 o corredor passa de 400px e o balanço
-   * cabe com 16px de folga no pior quadro.
+   * Dois modos, por largura: o celular e o laço.
+   *
+   * Havia um terceiro — `parado`, entre 1024 e 1279 —, e ele existia por causa
+   * de um objeto que já não está no hero. O globo dividia a primeira dobra com
+   * um telefone de 300px; a 1024 o corredor entre a moldura dele e a borda da
+   * janela tinha 223px, e a excursão do balanço mais o recuo punha o pino do
+   * México ATRÁS do aparelho. O telefone saiu do hero em 15/10 (pedido da
+   * diretoria), o corredor passou a ser a tela inteira, e congelar o planeta
+   * naquela faixa virou uma regra sem motivo — justamente a faixa do tablet,
+   * onde o dono pediu que ele girasse como em todo lugar (16/10).
+   *
+   * De `lg` para cima, então, o laço roda. Abaixo disso continua o modo
+   * `celular`: lá o globo é um bloco em fluxo depois dos botões, e o que
+   * importa é não gastar bateria desenhando um planeta que já se leu.
    */
   const [modo, setModo] = useState<"celular" | "parado" | "laco">("parado");
 
   useEffect(() => {
     const lg = window.matchMedia("(min-width: 1024px)");
-    const xl = window.matchMedia("(min-width: 1280px)");
-    const sync = () =>
-      setModo(!lg.matches ? "celular" : xl.matches ? "laco" : "parado");
+    const sync = () => setModo(lg.matches ? "laco" : "celular");
     sync();
     lg.addEventListener("change", sync);
-    xl.addEventListener("change", sync);
     return () => {
       lg.removeEventListener("change", sync);
-      xl.removeEventListener("change", sync);
     };
   }, []);
 
@@ -1032,11 +1032,38 @@ export function HeroGlobe({
       if (!t0) t0 = t;
       const seg = (t - t0) / 1000;
 
-      /* Balanço: ±6° de guinada em 20 s e ±2,5° de inclinação em 33 s, os dois
-         partindo de ZERO — é por isso que o primeiro quadro do laço cai
-         exatamente sobre o que o servidor pintou. */
-      const balancoYaw = 0.02618 * Math.sin((TAU * seg) / 20);
-      const balancoPitch = 0.01309 * Math.sin(((TAU * seg) / 20) * 0.6);
+      /* O GIRO (pedido do dono, 16/10: "o globo no hero, deixe ele girando
+         levemente").
+
+         Era um balanço de 1,5° de guinada em 20 s — 0,47°/s no pico, abaixo do
+         que o olho lê como movimento: o planeta parecia parado e só os pinos
+         trocavam de cor. Agora são 6° em 28 s, o que dá 1,35°/s no pico, três
+         vezes o de antes. A 1,35°/s um ponto de terra atravessa o seu próprio
+         diâmetro em pouco mais de um segundo: é giro, e não respiração.
+
+         POR QUE NÃO UMA VOLTA INTEIRA. A primeira dobra promete "7 países,
+         moeda local" e cumpre isso mostrando OS SETE pinos com cidade e preço
+         ao mesmo tempo. Numa rotação contínua, metade deles estaria sempre do
+         outro lado da bola (`z2 <= 0`) e as etiquetas sumiriam em rodízio — a
+         imagem perderia justamente o que ela afirma. Então o giro é uma
+         oscilação lenta e larga: em qualquer janela de poucos segundos lê-se um
+         planeta girando, e nenhum pino chega a virar a esquina.
+
+         A AMPLITUDE TEM UM TETO MEDIDO — e ele é mais alto do que parecia. O
+         corredor entre a borda do disco e a coluna de texto tem 49px a 1440, mas
+         não é ele que manda: os rótulos dos pinos abrem para a ESQUERDA, então
+         o que chega mais perto do texto é o pino mais a leste, e ele para em
+         x 486 contra os 666 do h1. Amostrado a cada 800ms por 16s, o extremo
+         direito de tudo o que o globo desenha ficou em 486 e o esquerdo em 63:
+         180px de folga de um lado, 63 do outro. Nove graus cabem com sobra.
+
+         Os dois senos partem de ZERO, e isso não é detalhe: é o que faz o
+         primeiro quadro do laço cair exatamente sobre o que o servidor pintou,
+         sem um salto na entrada. A inclinação fica em 1,5° e com período primo
+         em relação ao da guinada (46 s contra 28), para os dois não voltarem
+         juntos ao mesmo ponto e o movimento nunca parecer um pêndulo. */
+      const balancoYaw = 0.1571 * Math.sin((TAU * seg) / 26);
+      const balancoPitch = 0.0349 * Math.sin((TAU * seg) / 43);
 
       /* Recuo para o país ativo, perseguido (assenta em ~1,2 s). */
       const meta = RECUO[lista[ativo.current]] ?? { yaw: 0, pitch: 0 };

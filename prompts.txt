@@ -1059,3 +1059,9 @@ o globo ta com bug no celular (mobile, estou vendo o modelo responsivo)
 [121] 2026-10-15
 ===============================================================================
 a resolucao das placasa no mobile esta horrivel. corrija (por favor)
+
+
+===============================================================================
+[122] 2026-10-16
+===============================================================================
+chat, o globo no hero, deixe ele girando levemente
