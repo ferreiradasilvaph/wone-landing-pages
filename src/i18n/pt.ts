@@ -451,15 +451,20 @@ export const pt = {
         /* O mesmo plano nas sete moedas, uma linha por `code` de
            `payments.table.countries`. Os três novos (15/10) são o mesmo plano
            de $197 em cotação ilustrativa — a nota "Valores ilustrativos, sem
-           cotação em tempo real." vale para todos e já está dita acima. */
+           cotação em tempo real." vale para todos e já está dita acima.
+           NÚMERO, e não string formatada: até 16/10 o dicionário guardava
+           "38.000" em português e "38,000" em inglês, e com isso formatava
+           dinheiro pelo IDIOMA em vez de pela MOEDA — cada idioma acertava
+           metade da tabela. A forma agora sai de `src/lib/money.ts`, que é o
+           único lugar da página que sabe como cada moeda se escreve. */
         prices: [
-          { code: "BRL", display: "197,00" },
-          { code: "MXN", display: "650" },
-          { code: "ARS", display: "38.000" },
-          { code: "COP", display: "155.000" },
-          { code: "USD", display: "197,00" },
-          { code: "EUR", display: "180,00" },
-          { code: "GBP", display: "155,00" },
+          { code: "BRL", amount: 197 },
+          { code: "MXN", amount: 650 },
+          { code: "ARS", amount: 38000 },
+          { code: "COP", amount: 155000 },
+          { code: "USD", amount: 197 },
+          { code: "EUR", amount: 180 },
+          { code: "GBP", amount: 155 },
         ],
       },
     },

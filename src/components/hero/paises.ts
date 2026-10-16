@@ -1,4 +1,5 @@
 import type { Content } from "@/i18n/pt";
+import { dinheiro, type Moeda } from "@/lib/money";
 
 /**
  * Os sete países da Wone, como o palco do hero os lê.
@@ -32,12 +33,14 @@ export function metodoDe(pais: Pais) {
   return pais.methods[0];
 }
 
-/** O valor do Plano Anual VIP na moeda do país, sem símbolo. */
+/** O Plano Anual VIP na moeda do país, símbolo colado: "R$197,00".
+ *  A forma sai de `money.ts` — o dicionário guarda o número, não a string. */
 export function precoDe(precos: Precos, code: string) {
-  return precos.find((preco) => preco.code === code)?.display ?? "";
+  const preco = precos.find((entrada) => entrada.code === code);
+  return preco ? dinheiro(preco.amount, preco.code as Moeda) : "";
 }
 
-/** "PIX · R$ 197,00" — o chip do ping e o da linha de status. */
+/** "PIX · R$197,00" — o chip do ping e o da linha de status. */
 export function chipDe(pais: Pais, precos: Precos) {
-  return `${metodoDe(pais)} · ${pais.symbol} ${precoDe(precos, pais.code)}`;
+  return `${metodoDe(pais)} · ${precoDe(precos, pais.code)}`;
 }

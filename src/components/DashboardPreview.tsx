@@ -3,15 +3,16 @@
 import { useEffect, useId, useMemo, useState } from "react";
 import { useContent } from "@/i18n";
 import { HOURLY_REVENUE, FUNNEL_STEPS } from "@/data/content";
+import { dinheiroTotal } from "@/lib/money";
 
 /* O dolar e a moeda principal do site: o produto cobra em varios paises e a
    vitrine fala para quem vende fora. O locale fica en-US para o separador de
    milhar e o decimal sairem como o mercado espera do dolar. */
-const USD = new Intl.NumberFormat("en-US", {
-  style: "currency",
-  currency: "USD",
-  maximumFractionDigits: 0,
-});
+/* O dolar sai de `money.ts`, como todo dinheiro da pagina. Aqui e sem casas
+   decimais porque e faturamento acumulado do dia, nao preco: os centavos de um
+   total de quatro digitos nao informam nada e so roubam largura do numero. */
+/* Faturamento acumulado: TOTAL, nao preco - sem centavos. Ver `money.ts`. */
+const USD = (valor: number) => dinheiroTotal(valor, "USD");
 
 /** A curva do site, escrita em CSS porque as entradas agora são `@keyframes`. */
 const EASE_CSS = "cubic-bezier(0.16, 1, 0.3, 1)";
@@ -78,7 +79,7 @@ function RevenueView({ reduced }: ViewProps) {
           {/* Figura de spec: 32px/600 tnum creme + unidade na mesma linha. É o
               degrau da escala entre o título do painel e o corpo. */}
           <span className="tnum text-[2rem] leading-none font-semibold text-cream">
-            {USD.format(total)}
+            {USD(total)}
           </span>
           <span className="text-[15px] text-muted">{analytics.panel.accumulated}</span>
         </div>
@@ -93,7 +94,7 @@ function RevenueView({ reduced }: ViewProps) {
             ) : null}
           </span>
           <span className="tnum text-[15px] font-semibold text-cream">
-            {USD.format(HOURLY_REVENUE[activeIndex])}
+            {USD(HOURLY_REVENUE[activeIndex])}
           </span>
         </div>
       </div>

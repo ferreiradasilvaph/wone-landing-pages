@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import dynamic from "next/dynamic";
 import { useContent } from "@/i18n";
+import { dinheiroTotal } from "@/lib/money";
 import { useOnScreen } from "@/lib/useOnScreen";
 import { arte } from "@/lib/arte";
 
@@ -550,7 +551,7 @@ function Simulador({
      fala de faturamento em dólar nos dois idiomas, e um "5.000" no meio de
      "$10,000 em faturamento" seriam dois milhares diferentes na mesma coluna.
      `en-US` aqui é formato de MOEDA, não de idioma. */
-  const emDolar = (valor: number) => `$${valor.toLocaleString("en-US")}`;
+  const emDolar = (valor: number) => dinheiroTotal(valor, "USD");
 
   const emMeses = (amount: number) => {
     const meses = Math.ceil(amount / mensal);

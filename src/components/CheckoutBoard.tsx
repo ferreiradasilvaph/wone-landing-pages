@@ -5,6 +5,7 @@ import { Chip } from "./Chip";
 import { CtaButton } from "./CtaButton";
 import { FlagMark } from "./FlagMark";
 import { useContent } from "@/i18n";
+import { numero, simbolo, type Moeda } from "@/lib/money";
 
 /**
  * A tabela dos sete países do checkout internacional — país, com o que o
@@ -102,7 +103,13 @@ export function CheckoutBoard() {
         <span className="t-label">{table.headers.country}</span>
         <span className="t-label">{table.headers.methods}</span>
         <span className="t-label">{table.headers.currency}</span>
-        <span className="t-label">{table.headers.plan}</span>
+        {/* A coluna de VALOR fecha a direita, e o cabecalho acompanha. E a
+            convencao de coluna de dinheiro, e aqui ela resolve um defeito
+            concreto: alinhados a esquerda, "R$197,00" comecava 10px depois de
+            "$650" (o simbolo do real tem dois caracteres) e os numeros nao
+            partilhavam eixo nenhum. Fechando a direita, os sete terminam no
+            mesmo pixel - que e a borda do conteudo. */}
+        <span className="t-label lg:text-right">{table.headers.plan}</span>
       </div>
 
       <ul className="divide-y divide-line">
@@ -173,12 +180,20 @@ export function CheckoutBoard() {
 
                 {/* Celular: rótulo e preço dividem a terceira linha. Desktop: o
                     rótulo fica acima do preço, como nas outras colunas. */}
-                <span className="mt-2.5 flex items-baseline justify-between gap-3 lg:mt-0 lg:block">
+                <span className="mt-2.5 flex items-baseline justify-between gap-3 lg:mt-0 lg:block lg:text-right">
                   <span className="text-[13px] text-muted">{table.planLabel}</span>
+                  {/* Símbolo e valor colados (gap-0.5, não 1.5): o espaço largo
+                      abria um buraco no meio de um preço. E os dois saem de
+                      `money.ts` — símbolo e forma do número na mesma mão, para
+                      nunca discordarem de moeda. */}
                   {price ? (
-                    <span className="flex items-baseline gap-1.5 lg:mt-0.5">
-                      <span className="text-[15px] font-semibold text-cream">{country.symbol}</span>
-                      <span className="tnum text-xl font-semibold text-cream">{price.display}</span>
+                    <span className="flex items-baseline gap-0.5 lg:mt-0.5 lg:justify-end">
+                      <span className="text-[15px] font-semibold text-cream">
+                        {simbolo(price.code as Moeda)}
+                      </span>
+                      <span className="tnum text-xl font-semibold text-cream">
+                        {numero(price.amount, price.code as Moeda)}
+                      </span>
                     </span>
                   ) : null}
                 </span>

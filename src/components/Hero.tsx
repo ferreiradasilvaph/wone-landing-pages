@@ -224,7 +224,7 @@ export function Hero() {
   const resumo = `${hero.stage.srIntro} ${paises
     .map(
       (item) =>
-        `${item.name}: ${metodoDe(item)}, ${item.symbol} ${precoDe(precos, item.code)}`,
+        `${item.name}: ${metodoDe(item)}, ${precoDe(precos, item.code)}`,
     )
     .join("; ")}.`;
 

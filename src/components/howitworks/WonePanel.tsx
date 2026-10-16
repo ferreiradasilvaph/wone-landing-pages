@@ -36,6 +36,7 @@ import { Chip } from "@/components/Chip";
 import { FlagMark } from "@/components/FlagMark";
 import { WoneIcon } from "@/components/WoneMark";
 import { HOURLY_REVENUE } from "@/data/content";
+import { dinheiroTotal } from "@/lib/money";
 import { FLOW_EDGES, FLOW_NODES, FlowCanvas } from "./FlowCanvas";
 import { StepLayer } from "./StepLayer";
 
@@ -49,11 +50,9 @@ const BODY = "text-[11px] xl:text-[12px]";
 const CARD = "rounded-field border border-ink-700 bg-ink-900";
 
 /** O valor do cartão de faturamento da lateral. Mesma série de Análises. */
-const USD = new Intl.NumberFormat("en-US", {
-  style: "currency",
-  currency: "USD",
-  maximumFractionDigits: 0,
-});
+/* Mesma serie de Analises, mesma regra: o dolar sai de `money.ts`. */
+/* Mesma serie de Analises, mesma regra: TOTAL, sem centavos. */
+const USD = (valor: number) => dinheiroTotal(valor, "USD");
 const REVENUE = HOURLY_REVENUE.reduce((soma, valor) => soma + valor, 0);
 
 /** Os ícones da lateral, na ordem dos dois grupos do print. */
@@ -258,7 +257,7 @@ export function WonePanel({ step, className = "" }: { step: number; className?: 
           <span className="mt-auto hidden flex-col gap-0.5 rounded-[8px] bg-ink-900 px-1.5 py-1 xl:flex">
             <span className={LABEL}>{panel.billing}</span>
             <span className="tnum text-[11px] leading-none font-semibold text-cream">
-              {USD.format(REVENUE)}
+              {USD(REVENUE)}
             </span>
             <span className="truncate text-[11px] leading-tight text-faint">
               {analytics.panel.accumulated}
