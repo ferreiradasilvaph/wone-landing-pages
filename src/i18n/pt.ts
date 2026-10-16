@@ -112,6 +112,10 @@ export const pt = {
        América Latina de propósito, porque é o país de quem lê. */
     kicker: "Cobrança, entrega e rastreio · Brasil, América Latina e Europa",
     kickerShort: "Cobrança, entrega e rastreio",
+    /* A cobertura, ao lado das sete bandeiras. Em caixa de frase e não em caixa
+       alta: as bandeiras ja carregam o peso visual da linha, e uma segunda
+       linha em versalete so competiria com o kicker logo acima. */
+    kickerReach: "Brasil, América Latina e Europa",
 
     /**
      * Título curto e em cor sólida: `titleAccent` é a única palavra em laranja,

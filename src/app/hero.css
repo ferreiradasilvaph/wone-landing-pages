@@ -343,11 +343,18 @@
   .hero-linha {
     grid-column: 1 / -1;
     display: grid;
-    /* A primeira trilha é o que sobra do disco DENTRO da coluna: ele mede
-       `--globo` e começa `--sangria` antes, então ocupa a diferença. Sem o
-       desconto, a trilha reservaria os 536 inteiros para um disco que só mostra
-       464 ali, e empurraria o texto 72px para a direita. */
-    grid-template-columns: calc(var(--globo) - var(--sangria)) minmax(0, 1fr);
+    /* QUEM TEM MEDIDA FIXA É O TEXTO, e o disco fica com o resto.
+       Ao contrário, com a trilha do globo calculada, isto estava ERRADO:
+       `--sangria` é um `calc` com `100%`, e `100%` resolve contra QUEM LÊ. Na
+       camada do palco (que é `absolute inset-0` da seção) ela dava 352px a
+       1920; aqui dentro da grade, onde `100%` é o container de 1216, dava 32.
+       A trilha do globo saía 320px larga demais e a do texto ficava com 268 —
+       para uma caixa de 464, que então transbordava a própria trilha.
+       Com `1fr` para o disco e `--texto` cravado, não há conta para divergir: o
+       texto tem sempre os seus 464 e o planeta fica com o que sobra. E ele
+       nunca alcança o texto, porque o disco para em 50vw e o texto começa em
+       `borda direita do conteúdo − 464` — conferido de 1400 a 2560. */
+    grid-template-columns: minmax(0, 1fr) var(--texto);
     column-gap: var(--respiro);
     align-items: start;
   }
@@ -355,6 +362,7 @@
   .hero-texto {
     grid-column: 2;
     max-width: var(--texto);
+    width: 100%;
     /* ENCOSTADO A DIREITA da trilha, nao centrado nela: e o "jogue o titulo
        mais para a direita" de 16/10. O efeito util alem do pedido e que a borda
        direita do bloco passa a cair na borda do CONTEUDO - a mesma linha do

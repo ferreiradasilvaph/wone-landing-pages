@@ -1109,3 +1109,11 @@ diminua so um pouco o tamanho do globo
 [127] 2026-10-16
 ===============================================================================
 chat, de alguma forma o globo tem de estar cobrindo metade da tela
+
+
+===============================================================================
+[128] 2026-10-16
+===============================================================================
+faça com que a div do texto de "cobrança, entrega e rastreio - brasil, américa
+latina e europa" seja mais preenchida, está parecendo muito expremida. preencha
+mais essa div e deixe ela mais atrativa

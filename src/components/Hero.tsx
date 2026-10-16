@@ -5,6 +5,7 @@ import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { useContent } from "@/i18n";
 import { useOnScreen } from "@/lib/useOnScreen";
 import { CtaButton } from "./CtaButton";
+import { FlagMark } from "./FlagMark";
 import { chipDe, metodoDe, precoDe } from "./hero/paises";
 import { HeroGlobe } from "./hero/HeroGlobe";
 import { StageStatus } from "./hero/StageStatus";
@@ -267,13 +268,36 @@ export function Hero() {
               com o título de 80px (444px medidos no navegador). O lead fica em
               26rem para não esticar a linha de leitura junto. */}
           <div className="hero-texto min-w-0">
-            {/* O mesmo `.t-kicker` de toda seção, com o traço de 24×1. Abaixo de
-                `sm` a cobertura dos sete países não cabe numa linha de 13px, e
-                a versão curta entra no lugar. */}
-            <p className="t-kicker">
-              <span className="hidden sm:inline-flex">{hero.kicker}</span>
-              <span className="sm:hidden">{hero.kickerShort}</span>
-            </p>
+            {/* O BLOCO DE ABERTURA: o kicker e, abaixo dele, a cobertura em
+                BANDEIRAS.
+
+                Era uma linha só — "Cobrança, entrega e rastreio · Brasil,
+                América Latina e Europa" — que precisava de 563px e tinha 464:
+                quebrava em duas sempre, com "LATINA E EUROPA" sozinha na
+                segunda. O dono viu o que isso é: "está parecendo muito
+                espremida".
+
+                A correção não foi dar mais largura (não há: a trilha do texto é
+                cravada em 29rem para o título manter três linhas), foi trocar a
+                SEGUNDA METADE por dado. A cobertura deixou de ser uma string
+                pontilhada e passou a ser as sete bandeiras — que é a mesma
+                informação, ocupa o bloco de verdade, e não repete o globo: lá os
+                países passam um por vez, aqui estão os sete ao mesmo tempo.
+                É também o que resgata a fileira de bandeiras que morreu com o
+                painel "O que vem com a Wone".
+
+                Abaixo de `sm` só o kicker curto: sete bandeiras mais a frase não
+                cabem numa linha de celular. */}
+            <p className="t-kicker">{hero.kickerShort}</p>
+
+            <div className="mt-3 hidden flex-wrap items-center gap-x-3 gap-y-2 sm:flex">
+              <span className="flex items-center gap-1.5">
+                {paises.map((pais) => (
+                  <FlagMark key={pais.code} code={pais.code} className="h-4 w-6" />
+                ))}
+              </span>
+              <span className="text-[13px] leading-5 text-muted">{hero.kickerReach}</span>
+            </div>
 
             {/* Sem `text-balance`: o balanceador igualava o comprimento das três
                 linhas e empurrava "no" para junto de "automático", quebrando o

@@ -18,6 +18,7 @@ export const en: Content = {
     /* Continente no lugar dos quatro nomes desde 15/10; veja `pt.ts`. */
     kicker: "Billing, delivery and tracking · Brazil, Latin America and Europe",
     kickerShort: "Billing, delivery and tracking",
+    kickerReach: "Brazil, Latin America and Europe",
 
     /**
      * As duas outras opções de título, equivalentes às do `pt.ts`:
