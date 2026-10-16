@@ -158,7 +158,11 @@ export function WaitlistSection() {
           </ul>
         )}
 
-        <dl className="divide-y divide-line border-t border-line">
+        {/* Fecha em baixo (`border-b`), e não só em cima. Com régua acima da
+            primeira linha, réguas entre as três e nenhuma embaixo, a lista lia
+            como um quadro a que faltou a última linha — e é a mesma convenção
+            que a grade de números da Plataforma já segue, que fecha o pé. */}
+        <dl className="divide-y divide-line border-y border-line">
           {cta.bullets.map((bullet) => (
             <div key={bullet.term} className="grid grid-cols-[7rem_1fr] py-3">
               <dt className="text-[15px] font-semibold text-cream">{bullet.term}</dt>

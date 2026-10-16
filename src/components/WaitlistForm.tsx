@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import { ChevronDown } from "lucide-react";
 import { useContent } from "@/i18n";
 import {
   EMAIL_PATTERN,
@@ -265,20 +266,43 @@ export function WaitlistForm({
         </label>
         {/* As opções vêm do dicionário porque os rótulos são traduzidos; os
             códigos que a rota aceita são os de `NATIONALITIES`
-            (`src/lib/waitlist.ts`), e `form.countries` tem de bater com eles. */}
-        <select
-          id="waitlist-nationality"
-          name="nationality"
-          defaultValue="BR"
-          disabled={isLoading}
-          className={`${FIELD_BASE} cursor-pointer border-line-strong`}
-        >
-          {form.countries.map((country) => (
-            <option key={country.code} value={country.code} className="bg-ink-900">
-              {country.label}
-            </option>
-          ))}
-        </select>
+            (`src/lib/waitlist.ts`), e `form.countries` tem de bater com eles.
+
+            CONTINUA SENDO UM `<select>` NATIVO, e isso é escolha.
+
+            O defeito que ele tinha era só de aparência: `appearance: auto`
+            trazia a seta do sistema operacional para o meio de cinco campos com
+            borda, raio e foco próprios, e a altura dava 47px contra os 48 dos
+            irmãos (a entrelinha intrínseca do controle nativo). Os dois se
+            resolvem com `appearance-none` mais uma seta desenhada aqui.
+
+            A alternativa seria uma lista própria em divs. Ela custaria teclado
+            (abrir, setas, Enter, Esc, devolver o foco), leitor de tela
+            (`role="listbox"`, `aria-activedescendant`, anúncio do valor), e o
+            seletor nativo do celular — a roda que o telefone abre no pé da
+            tela, que é melhor que qualquer lista que eu desenhasse. Trocar tudo
+            isso por uma seta é o contrário de acabamento. */}
+        <div className="relative">
+          <select
+            id="waitlist-nationality"
+            name="nationality"
+            defaultValue="BR"
+            disabled={isLoading}
+            className={`${FIELD_BASE} cursor-pointer appearance-none border-line-strong pr-11`}
+          >
+            {form.countries.map((country) => (
+              <option key={country.code} value={country.code} className="bg-ink-900">
+                {country.label}
+              </option>
+            ))}
+          </select>
+          {/* `pointer-events-none`: o clique atravessa e abre o select, como
+              atravessaria a seta nativa. */}
+          <ChevronDown
+            aria-hidden
+            className="pointer-events-none absolute top-1/2 right-4 h-4 w-4 -translate-y-1/2 text-muted"
+          />
+        </div>
       </div>
 
       {/* Os dois opcionais dividem uma linha a partir de `sm`: são o par de
