@@ -113,14 +113,34 @@ export function SiteFooter() {
             </div>
           </nav>
 
-          <div>
+          {/* A ÚLTIMA COLUNA ANCORA NA BORDA DIREITA — enquanto for mesmo a
+              última, isto é, enquanto Empresa estiver esperando os dados do
+              dono.
+
+              Sem isso o rodapé abria 257px de vão entre o fim de "Otimizey" e a
+              borda do conteúdo: a grade distribui o espaço de QUATRO colunas
+              entre três, cada faixa fica mais larga que o seu texto e o texto se
+              encosta à esquerda da sua faixa. Com a primeira coluna presa à
+              esquerda e a última à direita, a fileira volta a medir a página
+              inteira e a do meio flutua entre as duas — que é como se lê um
+              rodapé.
+
+              Quando `footer.company` for preenchido, Empresa volta a ser a
+              última e esta âncora sai sozinha. É por isso que ela é condicional
+              e não uma classe fixa: o rodapé tem de saber se recompor quando o
+              dado chegar, sem ninguém mexer no código. */}
+          <div className={empresa.length === 0 ? "md:text-right" : undefined}>
             <p className={COLUNA}>{footer.columns.integrations}</p>
             {/* Nomes, não links: o passo de 30px vale aqui também nos dois
                 tamanhos, porque não há nada para tocar. No celular as duas
                 colunas dividem a largura; no desktop elas encolhem até o nome
                 mais longo ("TikTok Ads"), senão os 454px da coluna abriam 224
                 de vão entre "PIX" e "Cartão" e a lista lia como duas. */}
-            <div className="grid grid-cols-2 gap-x-4 gap-y-2.5 md:grid-cols-[auto_auto] md:justify-start md:gap-x-10">
+            <div
+              className={`grid grid-cols-2 gap-x-4 gap-y-2.5 md:grid-cols-[auto_auto] md:gap-x-10 ${
+                empresa.length === 0 ? "md:justify-end" : "md:justify-start"
+              }`}
+            >
               {integrations.items.map((item) => (
                 <span key={item.name} className="flex items-center gap-2 text-sm text-muted">
                   {/* Ponto laranja no lugar do glifo da marca — o dono pediu em
