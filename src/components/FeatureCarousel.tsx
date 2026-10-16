@@ -240,7 +240,7 @@ function FeatureMockup({
           ].map((saida) => (
             <li key={saida.nome} className="flex items-center gap-2.5">
               <span className="t-label w-3 shrink-0">{saida.nome}</span>
-              <span aria-hidden className="h-1.5 flex-1 rounded-full bg-cream/10">
+              <span aria-hidden className="h-1.5 flex-1 rounded-full bg-line-track">
                 <span
                   className={`block h-full w-1/2 rounded-full ${
                     saida.forte ? "bg-brand" : "bg-cream/25"

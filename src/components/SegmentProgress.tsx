@@ -92,10 +92,10 @@ export function SegmentProgress({
         }`}
       >
         <span className="truncate">{tabLabels[indice]}</span>
-        <span className="block h-0.5 overflow-hidden rounded-full bg-cream/12">{preenchimento(indice)}</span>
+        <span className="block h-0.5 overflow-hidden rounded-full bg-line-track">{preenchimento(indice)}</span>
       </button>
     ) : (
-      <span key={indice} className="h-0.5 flex-1 overflow-hidden rounded-full bg-cream/12">
+      <span key={indice} className="h-0.5 flex-1 overflow-hidden rounded-full bg-line-track">
         {preenchimento(indice)}
       </span>
     ),

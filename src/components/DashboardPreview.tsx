@@ -308,7 +308,7 @@ function RatesView({ reduced }: ViewProps) {
             <span className="text-[15px] text-muted">{row.label}</span>
             <span className="tnum text-[15px] font-semibold text-cream">{row.value}%</span>
           </div>
-          <span className="block h-2 overflow-hidden rounded-full bg-cream/5">
+          <span className="block h-2 overflow-hidden rounded-full bg-line-track">
             {/* Laranja chapado: o degradê que a barra tinha é do mesmo tipo que
                 saiu dos botões e dos títulos (regra 8). */}
             <span

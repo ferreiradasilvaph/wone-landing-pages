@@ -62,6 +62,24 @@
      item selecionado se separam por tom de fundo e espaçamento. */
   --line: color-mix(in oklab, var(--cream) 6%, transparent);
   --line-strong: color-mix(in oklab, var(--cream) 10%, transparent);
+  /* O TERCEIRO NÍVEL, e o único que carrega INFORMAÇÃO: o trilho vazio da barra
+     de segmentos. Os dois de cima dão limite; este diz quantos passos existem, e
+     por isso tem de se ler, não só se insinuar.
+
+     Era um "bg-cream/12" cravado dentro do SegmentProgress, fora de qualquer
+     escala — e por estar fora, ninguém tinha medido o que ele rendia. Medido em
+     16/10: 1,29:1 sobre o ink-950 de Como funciona e 1,40:1 sobre o ink-800 de
+     Segurança. O MESMO token com contrastes diferentes conforme a seção, e o
+     pior deles abaixo do que se enxerga num fio de 2px — era isso que fazia a
+     barra parecer ter segmentos de larguras diferentes quando o ativo estava
+     pela metade: o que sumia era o trilho vazio, não o segmento.
+
+     20% é o valor que põe o fundo MAIS DIFÍCIL (ink-950) em 1,70:1, com o mais
+     fácil (ink-800) em 1,87 — os cinco fundos da página dentro de 0,17 um do
+     outro. Acima disso o trilho vira barra cinza e compete com o laranja que o
+     preenche; abaixo, volta a sumir no ink-950. O piso é 1,7, e a calibração é
+     pelo PIOR fundo e não pela média: é o pior que decide se alguém vê. */
+  --line-track: color-mix(in oklab, var(--cream) 20%, transparent);
 
   /* Os dois tons de texto secundario passam em WCAG AA sobre as superficies do
      site. O `faint` estava em 38% de creme, o que dava 2,85:1 a 3,5:1 contra o
@@ -104,6 +122,7 @@
 
   --color-line: var(--line);
   --color-line-strong: var(--line-strong);
+  --color-line-track: var(--line-track);
   --color-muted: var(--muted);
   --color-faint: var(--faint);
 

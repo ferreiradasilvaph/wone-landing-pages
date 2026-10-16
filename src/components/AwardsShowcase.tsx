@@ -431,7 +431,7 @@ export function AwardsShowcase() {
               a 4,8% do fundo do quadrado — 27px dos 560 a 1440. A fração vale em
               qualquer largura: a câmera é fixa e a caixa é quadrada, então a
               cena projeta sempre na mesma fração. */}
-          <span aria-hidden className="absolute inset-x-0 bottom-[4.8%] h-px bg-cream/12" />
+          <span aria-hidden className="absolute inset-x-0 bottom-[4.8%] h-px bg-line-strong" />
         </div>
       </div>
 
@@ -798,7 +798,7 @@ function MarcoRail({
                   automática e distância mínima não cabem na mesma propriedade); a
                   de dentro é o trilho de 2px que recorta o preenchimento. */}
               <span className="mt-auto block pt-3">
-                <span className="block h-0.5 overflow-hidden rounded-full bg-cream/12">
+                <span className="block h-0.5 overflow-hidden rounded-full bg-line-track">
                   <Preenchimento
                     key={ativo ? `${epoca}-${active}` : undefined}
                     estado={indice < active ? "cheio" : ativo ? "correndo" : "vazio"}

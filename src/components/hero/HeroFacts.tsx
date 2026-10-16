@@ -155,7 +155,7 @@ const MICRO: Record<HeroFact["kind"], (fato: HeroFact, anima: boolean) => ReactN
         </p>
         <span className="mt-2 flex items-center gap-2">
           <span className="text-[13px] leading-5 text-faint">{extra[1]}</span>
-          <span className="h-px flex-1 bg-cream/12">
+          <span className="h-px flex-1 bg-line-strong">
             <span
               className={`block h-px bg-brand ${anima ? "facts-cresce" : ""}`}
               style={atraso(120)}
