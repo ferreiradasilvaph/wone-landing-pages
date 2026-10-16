@@ -104,13 +104,20 @@ export function CountryTag({
       {/* Rótulo. O `translateY` carrega o empurrão de `nudge` junto com a
           centralização: o ponto fica onde a projeção manda, e só a caixa de
           texto se afasta do vizinho (Bogotá e Quito, a 27px um do outro).
-          Some abaixo de 1420px, e não abaixo de `xl` (1280): são SETE rótulos
-          desde 15/10, e abaixo dessa largura o disco encolhe até os pares
-          vizinhos (Bogotá/Quito, Lisboa/Londres) se cobrirem — pior que não
-          existir. Nessa faixa quem nomeia o país da vez é o `StageStatus`,
-          exatamente como já acontecia a 1024 e no celular.
-          1420 e não 1440: media query mede a viewport SEM a barra de rolagem,
-          e uma janela de 1440 no Windows reporta 1430. */}
+          Quando ele aparece é regra de `hero.css` (`.hero-rotulo`), e são DUAS
+          condições, não uma: 1420px de LARGURA e 820px de ALTURA. A de largura
+          é de 15/10 — são sete rótulos, e abaixo dela o disco encolhe até os
+          pares vizinhos (Bogotá/Quito, Lisboa/Londres) se cobrirem, pior que
+          não existir. A de altura entrou em 16/10 pelo mesmo motivo, na dimensão
+          que faltava: `--globo` é `min(536px, 100svh - 340px)`, então uma janela
+          larga e BAIXA encolhia o disco do mesmo jeito e os rótulos voltavam a
+          se cobrir (a 1440×700, México e Lisboa por 29px).
+          O preço disso fica anotado: num laptop de 1366×768 a viewport tem ~640
+          de altura e NENHUM rótulo aparece — nem Lisboa e Londres, que antes
+          apareciam em qualquer altura. Nessa faixa quem nomeia o país da vez é
+          o `StageStatus`, como já acontecia a 1024 e no celular.
+          1420 e não 1440: media query mede a viewport SEM a barra de rolagem, e
+          uma janela de 1440 no Windows reporta 1430. */}
       <span
         style={{ transform: `translateY(calc(-50% + ${nudge}px))` }}
         className={`hero-rotulo absolute top-1/2 w-max transition-opacity duration-300 ${

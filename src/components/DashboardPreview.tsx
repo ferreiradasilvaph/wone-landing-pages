@@ -5,13 +5,12 @@ import { useContent } from "@/i18n";
 import { HOURLY_REVENUE, FUNNEL_STEPS } from "@/data/content";
 import { dinheiroTotal } from "@/lib/money";
 
-/* O dolar e a moeda principal do site: o produto cobra em varios paises e a
-   vitrine fala para quem vende fora. O locale fica en-US para o separador de
-   milhar e o decimal sairem como o mercado espera do dolar. */
-/* O dolar sai de `money.ts`, como todo dinheiro da pagina. Aqui e sem casas
-   decimais porque e faturamento acumulado do dia, nao preco: os centavos de um
-   total de quatro digitos nao informam nada e so roubam largura do numero. */
-/* Faturamento acumulado: TOTAL, nao preco - sem centavos. Ver `money.ts`. */
+/* O dólar é a moeda principal do site: o produto cobra em vários países e a
+   vitrine fala para quem vende fora.
+   Faturamento acumulado do dia é TOTAL, não preço, então sai sem centavos — os
+   dois dígitos de um total de quatro não informam nada e só roubam largura do
+   número. A regra inteira (qual separador, quantas casas) mora em `money.ts`;
+   aqui só se escolhe a moeda. */
 const USD = (valor: number) => dinheiroTotal(valor, "USD");
 
 /** A curva do site, escrita em CSS porque as entradas agora são `@keyframes`. */
@@ -134,17 +133,22 @@ function RevenueView({ reduced }: ViewProps) {
             aria-hidden
           >
             <defs>
-              {/* Ancorado na CURVA (userSpaceOnUse, do topo dela ate a linha de
-                  base) e com PISO de 0,08 em vez de zero.
+              {/* O QUE CONSERTOU A ÁREA FOI O PISO DE 0,08 — não a ancoragem.
 
-                  Antes era objectBoundingBox de 0,38 a 0, sobre a caixa toda: nas
-                  horas em que a curva esta baixa, a area nasce ja na parte
-                  transparente do degrade e simplesmente nao aparece. O efeito na
-                  tela era um preenchimento que "comecava no meio do grafico",
-                  com uma aresta vertical dura por volta das 13h - e nao era o
-                  caminho cortado, era o degrade apagando a propria area.
-                  Com o piso, a lasca mais fina do dia ainda se le; com a ancora
-                  na curva, a densidade acompanha o dado em vez da moldura. */}
+                  O defeito: a área parecia começar no meio do gráfico, com uma
+                  aresta vertical dura por volta das 13h. O caminho sempre cobriu
+                  a largura toda; quem apagava era o degradê chegando a ZERO —
+                  nas horas em que a curva está baixa, a lasca de área inteira
+                  cai na parte já transparente e some.
+
+                  O `userSpaceOnUse` com `y1={chart.topo}` fica porque é
+                  EXPLÍCITO, e não porque corrigiu alguma coisa:
+                  `objectBoundingBox` é relativo à caixa do CAMINHO que
+                  referencia o degradê, e essa caixa já ia de `toY(max)` até
+                  `PLOT_H` — exatamente os mesmos 8 e 180 que estão escritos
+                  aqui. A geometria é idêntica. Escrito à mão, quem lê vê de onde
+                  vem o 180 sem ter de deduzir a bounding box de um `d` de 24
+                  pontos. */}
               <linearGradient
                 id={gradientId}
                 gradientUnits="userSpaceOnUse"
@@ -299,7 +303,7 @@ function FunnelView({ reduced }: ViewProps) {
             <span className="w-32 shrink-0 text-[13px] text-muted sm:w-40">
               {analytics.panel.funnelSteps[index]}
             </span>
-            <span className="relative h-7 flex-1 overflow-hidden rounded-field bg-cream/5">
+            <span className="relative h-7 flex-1 overflow-hidden rounded-field bg-line-track">
               {/* `segment-fill` é o keyframe que a barra de progresso do site
                   já usava: scaleX de 0 a 1, na GPU, sem relayout. */}
               <span

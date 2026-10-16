@@ -5,7 +5,7 @@ import { Chip } from "./Chip";
 import { CtaButton } from "./CtaButton";
 import { FlagMark } from "./FlagMark";
 import { useContent } from "@/i18n";
-import { numero, simbolo, type Moeda } from "@/lib/money";
+import { eMoeda, numero, simbolo } from "@/lib/money";
 
 /**
  * A tabela dos sete países do checkout internacional — país, com o que o
@@ -120,6 +120,12 @@ export function CheckoutBoard() {
              e um número errado apresentado como verdadeiro é pior que uma
              célula vazia. Nada de tipo ou de runtime acusaria a troca. */
           const price = prices.find((entry) => entry.code === country.code);
+          /* `eMoeda` alem do `find`: um codigo que nao esta nas sete de
+             money.ts e tao "sem par" quanto um que nao esta na lista de precos,
+             e a celula vazia e a mesma resposta certa para os dois. Vem em
+             variavel propria e nao dentro do `find` porque o guarda de tipo so
+             estreita quando o compilador o ve como condicao. */
+          const moeda = price && eMoeda(price.code) ? price.code : null;
           const escolhido = indice === pais;
           const metodoAtivo = country.methods[escolhido ? metodo : 0] ?? country.methods[0];
 
@@ -186,13 +192,13 @@ export function CheckoutBoard() {
                       abria um buraco no meio de um preço. E os dois saem de
                       `money.ts` — símbolo e forma do número na mesma mão, para
                       nunca discordarem de moeda. */}
-                  {price ? (
+                  {price && moeda ? (
                     <span className="flex items-baseline gap-0.5 lg:mt-0.5 lg:justify-end">
                       <span className="text-[15px] font-semibold text-cream">
-                        {simbolo(price.code as Moeda)}
+                        {simbolo(moeda)}
                       </span>
                       <span className="tnum text-xl font-semibold text-cream">
-                        {numero(price.amount, price.code as Moeda)}
+                        {numero(price.amount, moeda)}
                       </span>
                     </span>
                   ) : null}

@@ -99,8 +99,14 @@
        cumprido por sangramento em vez de por um segundo container: o disco é a
        única peça da página autorizada a começar antes da borda do conteúdo, e
        começa sempre pelo mesmo tanto.
-       Onde ele cai: a 1400 começa em x 20, a 1440 em 40, a 1920 em 280, a 2560
-       em 600 — nunca cortado, e sempre lendo como deslocamento deliberado. */
+       Onde o DISCO cai: a 1400 começa em x 20, a 1440 em 40, a 1920 em 280, a
+       2560 em 600 — nunca cortado, em nenhuma largura.
+       O HALO começa 28px antes disso (`.globe-halo` é `inset: -28px`), então a
+       1400 ele cai em −8 e o clip da cena come os 8px da ponta. Vale na faixa
+       de 1400 a 1415 e acaba sozinho a partir de 1416, onde o halo volta a
+       nascer em 0 ou mais. Fica assim: são 8px de um brilho a 12% de alfa,
+       numa faixa de 16px de largura de janela, contra o custo de encolher a
+       sangria em TODA largura para os salvar. */
     --globo: min(536px, 100svh - 340px);
     --sangria: 72px;
   }
@@ -227,16 +233,23 @@
 /* --------------------------------------------------------------------------
    A CENA DE 1400+ : TRÊS TRILHAS OCUPANDO A TELA
 
-   `var(--globo) | 1fr | var(--painel)`, com `--respiro` entre elas. A primeira
-   trilha não tem conteúdo: ela é o LUGAR do globo, que é camada de fundo e não
-   participa da grade — e é por isso que ela mede exatamente o lado dele. Como
-   a trilha começa na borda do conteúdo e o globo também, as duas bordas são a
-   mesma linha, em qualquer largura e em qualquer altura de janela.
+   `calc(--globo - --sangria) | 1fr | --painel`, com `--respiro` entre elas. A
+   primeira trilha não tem conteúdo: ela é o LUGAR do globo dentro da coluna.
+   O disco mede `--globo` e começa `--sangria` ANTES da borda do conteúdo, então
+   o que ele ocupa aqui dentro é a diferença — e é por isso que a trilha mede
+   isso e não o lado inteiro. As duas bordas direitas (a da trilha e a do disco)
+   são a mesma linha em qualquer largura e qualquer altura, porque
+   `borda + (globo − sangria)` e `(borda − sangria) + globo` são a mesma conta.
 
-   O texto fica CENTRADO na trilha do meio (`margin-inline: auto`), e não colado
-   num dos lados: a 1440 isso dá 64px de ar de cada lado — a mesma distância do
-   limbo e do painel —, e é o que faz as três peças lerem como uma cena só em
-   vez de três colunas.
+   O texto fica CENTRADO na trilha do meio (`margin-inline: auto`), mas com a
+   régua de 80rem isso deixou de render ar: medido de 1400 a 2560, as trilhas
+   dão [464, 464, 208] em QUALQUER largura — o container satura em 80rem já aos
+   1344 de janela — e os 464 do meio são exatamente os 29rem de `--texto`. O
+   bloco preenche a trilha de borda a borda, e o que separa as três peças são os
+   40px de `--respiro`. Com a régua antiga de 88rem a trilha do meio media 592
+   e sobravam 64px de cada lado; isso saiu junto com os 128px de container.
+   Se um dia o texto precisar de ar lateral de novo, o lugar de dar é
+   `--respiro`, não `--texto` — encolher o texto tira linha do título.
    -------------------------------------------------------------------------- */
 @media (min-width: 1400px) {
   .hero-linha {

@@ -259,8 +259,17 @@ export function Hero() {
               A partir de 1400 ela vira a cena inteira (`.hero-linha`, em
               `hero.css`): três trilhas — o lugar do globo, o corredor do texto
               e o painel —, da borda esquerda à borda direita do conteúdo. O
-              texto deixa de encostar no planeta e passa a ter 64px de ar de
-              cada lado; o globo deixa de sangrar para fora da coluna.
+              texto deixa de encostar no planeta. O que o separa do globo e do
+              painel são os 40px de `--respiro`, e SÓ eles: medido de 1400 a
+              2560, as três trilhas dão [464, 464, 208] em qualquer largura (o
+              container satura em 80rem já aos 1344 de janela) e o bloco de
+              texto preenche a do meio de borda a borda — zero de ar lateral
+              dentro da própria trilha. Os "64px de cada lado" que este
+              comentário prometia eram da régua de 88rem, onde a trilha do meio
+              media 592 contra os mesmos 464 de texto.
+              O GLOBO SANGRA para fora da coluna (`--sangria`, em `hero.css`) —
+              é o que concilia "globo mais à esquerda" com uma régua só para a
+              página inteira.
               `min-w-0` não é zelo: sem ele um item de grade pode ficar MAIOR que
               a trilha (a largura mínima automática de um item é o `min-content`
               dele), e num grid de uma coluna só — o celular — isso contamina a

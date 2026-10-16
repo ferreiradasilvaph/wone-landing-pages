@@ -1,5 +1,5 @@
 import type { Content } from "@/i18n/pt";
-import { dinheiro, type Moeda } from "@/lib/money";
+import { dinheiro, eMoeda } from "@/lib/money";
 
 /**
  * Os sete países da Wone, como o palco do hero os lê.
@@ -37,10 +37,13 @@ export function metodoDe(pais: Pais) {
  *  A forma sai de `money.ts` — o dicionário guarda o número, não a string. */
 export function precoDe(precos: Precos, code: string) {
   const preco = precos.find((entrada) => entrada.code === code);
-  return preco ? dinheiro(preco.amount, preco.code as Moeda) : "";
+  return preco && eMoeda(preco.code) ? dinheiro(preco.amount, preco.code) : "";
 }
 
-/** "PIX · R$197,00" — o chip do ping e o da linha de status. */
+/** "PIX · R$197,00" — o chip do ping e o da linha de status.
+ *  Sem preco (codigo sem par, ou moeda que money.ts nao conhece) o chip fica
+ *  so com o metodo: um "PIX · " com separador orfao seria pior que nada. */
 export function chipDe(pais: Pais, precos: Precos) {
-  return `${metodoDe(pais)} · ${precoDe(precos, pais.code)}`;
+  const preco = precoDe(precos, pais.code);
+  return preco ? `${metodoDe(pais)} · ${preco}` : metodoDe(pais);
 }

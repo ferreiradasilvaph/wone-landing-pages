@@ -49,9 +49,8 @@ const BODY = "text-[11px] xl:text-[12px]";
 /** A superfície de cartão do app: 12px de raio, borda de 1px, fundo um tom acima. */
 const CARD = "rounded-field border border-ink-700 bg-ink-900";
 
-/** O valor do cartão de faturamento da lateral. Mesma série de Análises. */
-/* Mesma serie de Analises, mesma regra: o dolar sai de `money.ts`. */
-/* Mesma serie de Analises, mesma regra: TOTAL, sem centavos. */
+/** O valor do cartão de faturamento da lateral: mesma série de Análises, mesma
+ *  regra. TOTAL e não preço, então sem centavos — ver `money.ts`. */
 const USD = (valor: number) => dinheiroTotal(valor, "USD");
 const REVENUE = HOURLY_REVENUE.reduce((soma, valor) => soma + valor, 0);
 

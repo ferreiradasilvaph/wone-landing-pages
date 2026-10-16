@@ -289,6 +289,12 @@ body {
      a conta vale em qualquer tamanho de fonte e em qualquer tradução — e num
      kicker de uma linha dá exatamente o mesmo pixel que `align-items: center`
      dava, que é o que mantém as dez outras seções intactas. */
+  /* Os 9px crus antes do `calc` são REDE, não redundância: numa engine sem a
+     unidade `lh` a declaração do `calc` é descartada inteira como inválida, e aí
+     `flex-start` prenderia o traço no topo da linha — nos ONZE kickers, não só
+     no do hero. 9px é o que o `calc` resolve hoje (entrelinha de 19,5px), então
+     a rede cai no mesmo pixel em vez de num palpite. */
+  margin-top: 9px;
   margin-top: calc((1lh - 1px) / 2);
 }
 

@@ -546,11 +546,12 @@ function Simulador({
      Os anteriores já caem em um mês e ficam apagados. */
   const proximo = items.findIndex((item) => item.amount > mensal);
 
-  /* Dólar escrito como o dicionário escreve nas linhas de marco — vírgula de
-     milhar, sem centavos — e não como o navegador de quem lê prefere: a vitrine
-     fala de faturamento em dólar nos dois idiomas, e um "5.000" no meio de
-     "$10,000 em faturamento" seriam dois milhares diferentes na mesma coluna.
-     `en-US` aqui é formato de MOEDA, não de idioma. */
+  /* Marco de faturamento em dólar, pelo `money.ts`: vírgula de milhar e sem
+     centavos nos dois idiomas. O raciocínio que estava escrito aqui — "en-US
+     aqui é formato de MOEDA, não de idioma" — estava certo e virou a regra da
+     página inteira em 16/10; o que mudou é que ele deixou de ser uma decisão
+     local deste arquivo. Um "5.000" no meio de "$10,000 em faturamento"
+     continuam sendo dois milhares diferentes na mesma coluna. */
   const emDolar = (valor: number) => dinheiroTotal(valor, "USD");
 
   const emMeses = (amount: number) => {

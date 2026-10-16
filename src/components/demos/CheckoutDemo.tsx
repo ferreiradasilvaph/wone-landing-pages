@@ -7,7 +7,7 @@ import { Info } from "lucide-react";
 import { FlagMark } from "../FlagMark";
 import { CtaButton } from "../CtaButton";
 import { useContent } from "@/i18n";
-import { dinheiro, numero, simbolo, type Moeda } from "@/lib/money";
+import { dinheiro, eMoeda, numero, simbolo, type Moeda } from "@/lib/money";
 
 const EASE = [0.16, 1, 0.3, 1] as const;
 
@@ -60,8 +60,21 @@ export function CheckoutDemo() {
 
   const [index, setIndex] = useState(0);
   const country = countries[index];
-  const price =
-    demo.prices.find((entry) => entry.code === country.code) ?? demo.prices[0];
+  /* SEM `?? demo.prices[0]`, e isto mudou em 16/10.
+
+     O recurso ao primeiro preco (o Brasil) existia desde que o simbolo vinha de
+     `country.symbol` - entao um codigo sem par ao menos mostrava o simbolo do
+     PAIS certo com um numero errado. Desde que simbolo e numero passaram os
+     dois a sair de `money.ts` pelo `price`, o recurso passou a produzir algo
+     pior: bandeira do Mexico, "Mexico", "SPEI" e "R$197,00" embaixo. Um preco
+     em reais apresentado como o preco mexicano.
+     `CheckoutBoard` ja tinha decidido isto para o MESMO array: "um numero
+     errado apresentado como verdadeiro e pior que uma celula vazia". Dois
+     componentes lendo uma fonte nao podem ter duas regras opostas. */
+  const price = demo.prices.find(
+    (entry) => entry.code === country.code && eMoeda(entry.code),
+  );
+  const moeda = price ? (price.code as Moeda) : null;
 
   /* Identidade estável da lista: sem isto o globo recalcularia os marcadores a
      cada renderização, e ele só precisa saber quando a lista muda de idioma. */
@@ -148,7 +161,7 @@ export function CheckoutDemo() {
           <div className="mt-4 flex items-end gap-2">
             <FlagMark code={country.code} className="mb-1 h-5 w-8" />
             <span className="pb-0.5 text-base font-semibold text-brand">
-              {simbolo(price.code as Moeda)}
+              {moeda ? simbolo(moeda) : null}
             </span>
             <AnimatePresence mode="wait">
               <motion.span
@@ -159,7 +172,7 @@ export function CheckoutDemo() {
                 transition={{ duration: reduced ? 0 : 0.35, ease: EASE }}
                 className="tnum text-[2rem] leading-none font-semibold text-cream"
               >
-                {numero(price.amount, price.code as Moeda)}
+                {price && moeda ? numero(price.amount, moeda) : null}
               </motion.span>
             </AnimatePresence>
           </div>
@@ -186,7 +199,7 @@ export function CheckoutDemo() {
               "Rodar" e "Simular de novo". Desabilitado de propósito — é o
               checkout do cliente, não uma ação desta página. */}
           <CtaButton size="object" disabled className={`mt-4 w-full ${ALVO_44}`}>
-            {dinheiro(price.amount, price.code as Moeda)}
+            {price && moeda ? dinheiro(price.amount, moeda) : demo.payWith}
           </CtaButton>
 
           <p className="mt-3 flex items-start gap-1.5 text-[13px] leading-relaxed text-faint">
