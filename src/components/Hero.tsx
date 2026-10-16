@@ -239,11 +239,17 @@ export function Hero() {
           em cada degrau de largura, lido pela caixa do planeta E pela trilha da
           grade de 1400+. Uma conta, dois leitores — e por isso eles não podem
           divergir. */}
-      {/* 88rem a partir de 1400 (eram 78): é a virada de 15/10 — o dono pediu o
-          globo mais à esquerda e o painel mais à direita, e as duas pontas só
-          cabem se o conteúdo ocupar a tela. A 1440 o conteúdo vai de x 43 a
-          1387; a 1920, de 283 a 1627. */}
-      <div className="mx-auto w-full max-w-7xl px-4 pt-24 sm:px-6 lg:flex lg:flex-1 lg:flex-col lg:px-8 lg:pt-28 min-[1400px]:max-w-[88rem]">
+      {/* 80rem, como TODA seção da página — o `min-[1400px]:max-w-[88rem]` saiu
+          em 16/10. Ele existia desde 15/10 para o globo poder ir mais à
+          esquerda, e cobrava um preço que o dono não tinha comprado: acima de
+          1400 o hero media 128px a mais que o resto, e o PÉ dele (a linha de
+          controle e a fileira de fatos) começava em x 43 enquanto o logo do
+          cabeçalho e o kicker de todas as outras seções começavam em 107. Duas
+          margens esquerdas na mesma página.
+          O pedido "globo mais à esquerda" continua atendido, e melhor: o disco
+          deixou de ser medido pelo container e passou a SANGRAR para fora dele,
+          por `--sangria` em `hero.css`. O que era desalinho virou escolha. */}
+      <div className="mx-auto w-full max-w-7xl px-4 pt-24 sm:px-6 lg:flex lg:flex-1 lg:flex-col lg:px-8 lg:pt-28">
         <div className="grid gap-x-8 gap-y-12 lg:grid-cols-12">
           {/* A LINHA DA CENA.
 

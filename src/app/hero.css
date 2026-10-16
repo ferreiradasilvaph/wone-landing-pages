@@ -20,8 +20,14 @@
    (o `@import` deste arquivo vem logo depois do dele, e nada aqui está em
    `@layer`), então ganham de qualquer utilitário sem depender de ordem.
 
-   A RÉGUA HORIZONTAL. Tudo se mede a partir da borda do CONTEÚDO do container
-   — `calc((100% - min(100%, <largura>)) / 2 + 2rem)`, onde 2rem é o `px-8`.
+   A RÉGUA HORIZONTAL. É UMA SÓ, e vale para a página inteira: 80rem. Até 16/10
+   o hero media 88rem acima de 1400, e o PÉ dele — a linha de controle e a
+   fileira de fatos — começava 64px antes do logo do cabeçalho: duas margens
+   esquerdas na mesma página, que é o tipo de coisa que o olho não sabe nomear
+   mas vê. Agora todo mundo mede do mesmo lugar, e o globo é a ÚNICA peça
+   autorizada a começar antes — ele sangra, por `--sangria`.
+   Tudo se mede a partir da borda do CONTEÚDO do container
+   — `calc((100% - min(100%, 80rem)) / 2 + 2rem)`, onde 2rem é o `px-8`.
    É `100%` e não `100vw` de propósito: a camada do palco é `absolute inset-0`
    da seção, então `100%` é a largura de LAYOUT (sem a barra de rolagem) e a
    conta cai no mesmo pixel da borda do container. Com `100vw` o globo nascia
@@ -32,14 +38,14 @@
    O LADO DO GLOBO, por degrau de largura. É a única fonte: a caixa, a trilha
    da grade e a centralização no celular leem esta variável.
 
-   O teto cresceu de novo em 15/10 ("aumente um pouco o tamanho do globo"), e o
-   número tem um limite DURO: a trilha do meio não pode ficar menor que o bloco
-   de texto, ou o título perde as três linhas. A 1440 o conteúdo tem 1.344px e
-   as outras trilhas comem 288 (respiro 40 + respiro 40 + painel 208), então
-   sobram 1.056 para globo + texto; com o texto em 29rem (464px, a medida de
-   "Telegram no" em 80px mais folga), o globo não pode passar de 592. Ficou em
-   574, que deixa 18px de margem para a fonte de reserva e ainda vale no degrau
-   apertado de 1400 a 1407px, onde o container ainda não chegou aos 88rem.
+   O teto tem um limite DURO: a trilha do meio não pode ficar menor que o bloco
+   de texto, ou o título perde as três linhas. Desde 16/10 a régua é 80rem na
+   página inteira, então acima de 1400 o conteúdo mede 1.216px e as outras
+   trilhas comem 288 (respiro 40 + respiro 40 + painel 208): sobram 928 para
+   globo + texto. O texto é intocável em 464 (29rem, a medida de "Telegram no"
+   em 80px mais folga), logo a TRILHA do globo mede 464.
+   E o DISCO mede 536, porque sangra 72px para fora da coluna. Ver `--sangria`
+   abaixo: é o que concilia "globo mais à esquerda" com uma régua só.
    O piso continua sendo a ALTURA da janela: `100svh - 340px` são o cabeçalho
    de 65px, o respiro de cima e a faixa de integrações com a fileira de
    benefícios no pé. O subtraído anda SEMPRE junto com o `top` da caixa, e na
@@ -82,7 +88,21 @@
 
 @media (min-width: 1400px) {
   .hero-cena {
-    --globo: min(574px, 100svh - 340px);
+    /* 536 e não 574: em 16/10 a régua caiu de 88rem para 80rem (uma só para a
+       página inteira) e o conteúdo perdeu 128px — de 1.344 para 1.216. Com o
+       painel em 208 e os dois respiros de 40, sobram 928 para globo + texto.
+       O TEXTO é intocável: 464 é a medida de "Telegram no" em 80px mais folga,
+       e é o que mantém o título em três linhas. Logo a trilha do globo mede
+       464 — e 464 seria um disco pequeno demais.
+       Daí a sangria. A TRILHA mede 464, o DISCO mede 536, e os 72 de diferença
+       saem para FORA da coluna, à esquerda. É o pedido "globo mais à esquerda"
+       cumprido por sangramento em vez de por um segundo container: o disco é a
+       única peça da página autorizada a começar antes da borda do conteúdo, e
+       começa sempre pelo mesmo tanto.
+       Onde ele cai: a 1400 começa em x 20, a 1440 em 40, a 1920 em 280, a 2560
+       em 600 — nunca cortado, e sempre lendo como deslocamento deliberado. */
+    --globo: min(536px, 100svh - 340px);
+    --sangria: 72px;
   }
 }
 
@@ -130,7 +150,11 @@
        72px antigos o brilho nascia em 44 e invadia o cabeçalho (pedido do dono
        em 16/10: "o globo desencosta um pouco da barra de navegação"). */
     top: 100px;
-    left: calc((100% - min(100%, 88rem)) / 2 + 2rem);
+    /* 80rem como todo mundo, MENOS a sangria: é aqui que o disco sai da coluna.
+       A conta é a mesma das outras seções até o `- var(--sangria)`, e isso é de
+       propósito — quem ler lado a lado vê que o globo não tem régua própria,
+       tem a régua de todos e um deslocamento nomeado. */
+    left: calc((100% - min(100%, 80rem)) / 2 + 2rem - var(--sangria));
   }
 }
 
@@ -200,12 +224,6 @@
   }
 }
 
-@media (min-width: 1400px) {
-  .hero-controle {
-    left: calc((100% - min(100%, 88rem)) / 2 + 2rem);
-  }
-}
-
 /* --------------------------------------------------------------------------
    A CENA DE 1400+ : TRÊS TRILHAS OCUPANDO A TELA
 
@@ -224,7 +242,11 @@
   .hero-linha {
     grid-column: 1 / -1;
     display: grid;
-    grid-template-columns: var(--globo) minmax(0, 1fr) var(--painel);
+    /* A primeira trilha é o que sobra do disco DENTRO da coluna: ele mede
+       `--globo` e começa `--sangria` antes, então ocupa a diferença. Sem o
+       desconto, a trilha reservaria os 536 inteiros para um disco que só mostra
+       464 ali, e empurraria o texto 72px para a direita. */
+    grid-template-columns: calc(var(--globo) - var(--sangria)) minmax(0, 1fr) var(--painel);
     column-gap: var(--respiro);
     align-items: start;
   }
