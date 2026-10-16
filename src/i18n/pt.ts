@@ -251,7 +251,12 @@ export const pt = {
    */
   highlights: {
     kicker: "Plataforma",
-    title: "O cliente paga. A Wone confere. O convite chega.",
+    /* TRÊS LINHAS CRAVADAS, uma frase por linha, cada uma começando no artigo
+       dela — como a tese de Como funciona. Como string única, a quebra caía
+       onde a largura mandasse ("O cliente paga. A / Wone confere. O / convite
+       chega."), com o artigo de cada frase pendurado no fim da linha anterior.
+       Sem laranja na terceira: a cor em título é da tese, e só dela. */
+    titleLines: ["O cliente paga.", "A Wone confere.", "O convite chega."],
     /* O convite de clique fecha o lead e substitui a dica solta que havia
        acima das abas (regra de copy: o lead absorve o "hint"). */
     lead: "Do pagamento ao acesso, na mesma conta: PIX ou cartão, três vias de confirmação, convite de uso único no chat. Clique num número para ver cada parte rodar.",

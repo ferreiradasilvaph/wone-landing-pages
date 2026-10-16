@@ -134,7 +134,7 @@ export const en: Content = {
 
   highlights: {
     kicker: "Platform",
-    title: "The customer pays. Wone checks. The invite lands.",
+    titleLines: ["The customer pays.", "Wone checks.", "The invite lands."],
     lead: "From payment to access, in the same account: PIX or card, three confirmation paths, a single-use invite in chat. Click a number to watch each part run.",
     simulationLabel: "Simulation",
     /* `icon` e `description` saíram dos quatro: chave morta desde que a E1

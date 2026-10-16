@@ -146,6 +146,10 @@ function useNearViewport<T extends Element>(ref: React.RefObject<T | null>) {
  */
 export function Highlights() {
   const { highlights } = useContent();
+  /* As tres frases do titulo, cada uma na sua linha. A mesma forma que a tese
+     de Como funciona usa: o dicionario guarda a lista, o componente monta a
+     tripla que o SectionHead pede. */
+  const titulo = highlights.titleLines;
   const { locale } = useLanguage();
   const items = highlights.items;
 
@@ -217,7 +221,7 @@ export function Highlights() {
   const grade = (
     <div
       role="tablist"
-      aria-label={highlights.title}
+      aria-label={titulo.join(" ")}
       className="grid max-w-[29rem] grid-cols-2 border-t border-line"
     >
       {items.map((item, index) => {
@@ -344,7 +348,7 @@ export function Highlights() {
       <SectionHead
         id="destaques"
         kicker={highlights.kicker}
-        title={highlights.title}
+        titleLines={[titulo[0], titulo[1], titulo[2]]}
         lead={highlights.lead}
         variant="B"
         aside={painel}

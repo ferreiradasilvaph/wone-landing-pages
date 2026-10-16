@@ -17,7 +17,19 @@ type SectionHeadProps = {
   id: string;
   kicker: string;
   title?: string;
-  /** Só na variante D: as três linhas da tese, a terceira em laranja. */
+  /**
+   * O título quebrado em três linhas CRAVADAS, em vez de deixar a quebra cair
+   * onde a largura mandar.
+   *
+   * Serve a qualquer variante desde 16/10. Antes era só da D, e com isso a
+   * Plataforma — cujo título também são três frases — quebrava pelo acaso da
+   * medida: "O cliente paga. A / Wone confere. O / convite chega.", com o
+   * artigo de uma frase pendurado no fim da linha da anterior. Três frases
+   * pedem três linhas, cada uma começando no artigo dela.
+   *
+   * O LARANJA da terceira linha continua exclusivo da variante D: ele é a tese
+   * da página (Como funciona), e é a única cor em título fora do h1.
+   */
   titleLines?: readonly [string, string, string];
   lead?: string;
   variant: "A" | "B" | "C" | "D";
@@ -88,14 +100,19 @@ export function SectionHead({
     variant === "D" ? "lg:col-span-6" : narrow ? "lg:col-span-4" : "lg:col-span-5";
   const lateral = (asideStart ?? (variant === "D" ? 7 : 6)) === 7 ? LATERAL_7 : LATERAL;
 
+  /* A tese (variante D) tem tipo próprio e a terceira linha laranja; as outras
+     variantes usam o mesmo `t-h2` de sempre e as três linhas saem todas em
+     creme. O que `titleLines` dá em comum às duas é só a QUEBRA cravada. */
+  const ehTese = variant === "D";
   const titulo =
-    variant === "D" && titleLines ? (
-      <h2 className={`t-h2-tese text-cream${h2Caps}`}>
+    titleLines ? (
+      <h2 className={`${ehTese ? "t-h2-tese" : "t-h2"} text-cream${h2Caps}`}>
         <span className="block">{titleLines[0]}</span>
         <span className="block">{titleLines[1]}</span>
-        {/* A terceira linha é a única cor em título fora do h1: sobre preto, um
-            cinza fraco aqui leria como texto desabilitado, não como ênfase. */}
-        <span className="block text-brand">{titleLines[2]}</span>
+        {/* Na tese, a terceira linha é a única cor em título fora do h1: sobre
+            preto, um cinza fraco aqui leria como texto desabilitado, não como
+            ênfase. Fora dela, as três linhas têm o mesmo peso. */}
+        <span className={ehTese ? "block text-brand" : "block"}>{titleLines[2]}</span>
       </h2>
     ) : (
       /* Sem `max-w` na variante A: a coluna de 7 já limita o título a 696px

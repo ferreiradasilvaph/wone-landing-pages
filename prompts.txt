@@ -1079,3 +1079,12 @@ agora preciso que o globo desencoste um pouco da barra de navegação
 agora preciso que o site todo seja melhorado, aperfeiçoando o que ja existe,
 visualmente falando. precisa ficar com aparência de um desenvolvimento de um
 dev senior. mesmo eu nao sendo, ainda
+
+
+===============================================================================
+[125] 2026-10-16
+===============================================================================
+chat, o texto em "plataforma" ("o cliente paga. a wone entrega. o convite
+chega") deve ser escrito igual o texto em "como funciona" ("voce liga tudo. o
+cliente paga. a wone entrega.") os artigos devem ser nessa sequencia, jogando o
+texto para sim a esquerda
