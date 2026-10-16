@@ -74,15 +74,25 @@
   --texto: 29rem;
 }
 
+/* De 1024 a 1399 o disco nao sangra: ele nasce na borda do conteudo e o texto
+   vem na coluna 6 da grade de 12, entrando alguns pixels POR CIMA dele — e esse
+   "alguns" e o limite da conta aqui, porque o que aperta nesta faixa e a
+   LARGURA, nao a altura.
+
+   42vw e o numero: a coluna do texto comeca por volta de 43% do conteudo, entao
+   42vw deixa o disco terminar logo antes dela com ~20 a 50px de sobreposicao,
+   que e o que o pedido de 15/10 chamou de "levemente em cima". Medido: a 1024
+   o disco vai a 430 e o titulo comeca 21px depois do limbo; a 1280, 538 e 22px;
+   a 1366, 574 e 54px.
+   Com os 540/620 fixos que estavam aqui a conta se perdia nas duas pontas —
+   numa 1366x768 o disco cobria 68px do titulo, numa 1024x768 cobria 131.
+
+   A folga de baixo continua em 324: nesta faixa o pe do hero comeca mais alto
+   (a 1366x768 ele esta em `100svh - 310`), e 324 deixa 14px de ar entre o limbo
+   e a letra. Tentei 180 e o planeta cobriu o texto do pe. */
 @media (min-width: 1024px) {
   .hero-cena {
-    --globo: min(540px, 100svh - 324px);
-  }
-}
-
-@media (min-width: 1280px) {
-  .hero-cena {
-    --globo: min(620px, 100svh - 340px);
+    --globo: min(42vw, 100svh - 324px);
   }
 }
 
@@ -107,8 +117,33 @@
        nascer em 0 ou mais. Fica assim: são 8px de um brilho a 12% de alfa,
        numa faixa de 16px de largura de janela, contra o custo de encolher a
        sangria em TODA largura para os salvar. */
-    --globo: min(536px, 100svh - 340px);
-    --sangria: 72px;
+    /* METADE DA TELA, e a sangria leva o disco ate a BORDA DA JANELA.
+       Pedido do dono em 16/10: "deixe o globo pegando metade da tela do hero e
+       jogue o titulo mais para a direita", logo depois de mandar tirar o painel
+       "O que vem com a Wone" - e foi a saida do painel que abriu o espaco.
+
+       --sangria passou a ser a propria borda do conteudo, entao
+       `left: borda - sangria` da ZERO: o disco comeca onde a janela comeca e
+       termina em 50vw. A trilha dele dentro da coluna e o que sobra,
+       `50vw - borda`.
+
+       O TETO DE ALTURA agora so respeita o CABECALHO, nao o pe. O planeta ja
+       passava por baixo da fileira de beneficios desde 15/10 (e por isso que
+       ela tem `relative z-10`), entao reservar 240px embaixo era pagar duas
+       vezes pela mesma folga - e era o que prendia o disco em 412px numa janela
+       de 752, a do dono.
+
+       Os 300 sao medidos, nao escolhidos: o PE DO HERO - a linha "CHECKOUT
+       INTERNACIONAL - SIMULACAO" e a fileira de beneficios - comeca em
+       `100svh - 286` nesta faixa, e o disco tem de parar antes dele. Tentei 180
+       primeiro e o planeta passou POR BAIXO do texto: "7 paises / Moeda local:
+       real, pesos..." ficou ilegivel sobre o limbo. O planeta passar por baixo
+       da fileira so funciona onde ela esta sobre o VAZIO; sobre o disco, nao.
+       Os 14px entre 286 e 300 sao o ar para o limbo nao encostar na letra.
+       45vw e nao 50: "diminua so um pouco o tamanho do globo", 16/10, depois de
+       ver os 50. */
+    --globo: min(45vw, 100svh - 300px);
+    --sangria: calc((100% - min(100%, 80rem)) / 2 + 2rem);
   }
 }
 
@@ -259,7 +294,7 @@
        `--globo` e começa `--sangria` antes, então ocupa a diferença. Sem o
        desconto, a trilha reservaria os 536 inteiros para um disco que só mostra
        464 ali, e empurraria o texto 72px para a direita. */
-    grid-template-columns: calc(var(--globo) - var(--sangria)) minmax(0, 1fr) var(--painel);
+    grid-template-columns: calc(var(--globo) - var(--sangria)) minmax(0, 1fr);
     column-gap: var(--respiro);
     align-items: start;
   }
@@ -267,12 +302,12 @@
   .hero-texto {
     grid-column: 2;
     max-width: var(--texto);
-    margin-inline: auto;
-  }
-
-  .hero-painel {
-    grid-column: 3;
-    width: 100%;
+    /* ENCOSTADO A DIREITA da trilha, nao centrado nela: e o "jogue o titulo
+       mais para a direita" de 16/10. O efeito util alem do pedido e que a borda
+       direita do bloco passa a cair na borda do CONTEUDO - a mesma linha do
+       botao do cabecalho e do fim de toda outra secao. Centrado, ele flutuava
+       no meio da trilha sem se alinhar a nada. */
+    margin-inline-start: auto;
   }
 }
 
@@ -363,14 +398,30 @@ html.wone-entrando .hero-sublinha::after {
    Medido em 16/10, a 1440 de largura, variando só a altura (folga vertical
    mínima entre dois rótulos que partilham faixa horizontal):
 
-     700px → disco 360 → México e Lisboa se cobrem por 29px
-     760px → disco 420 → México e Lisboa se cobrem por 25px
-     820px → disco 480 → pior folga +10px   ← o chão
-     900px → disco 536 → pior folga +12px
+   Medido a 1536 de largura, variando só a altura (folga vertical mínima entre
+   dois rótulos que partilham faixa horizontal), DEPOIS de Lisboa passar a abrir
+   para a direita:
 
-   Abaixo de 820 não é questão de ajuste: duas caixas de texto de ~130px, uma de
-   cada lado de um disco de 420, na mesma latitude, não cabem — nenhum valor de
-   `nudge` resolve geometria. Então somem, como já sumiam por largura.
+     altura 660 → disco 360 → folga 0 (São Paulo e Quito encostam)
+     altura 700 → disco 400 → folga +8   ← o chão
+     altura 752 → disco 452 → folga +10  (a janela do dono)
+     altura 900 → disco 600 → folga +14
+
+   O par que travava era sempre Cidade do México × Lisboa: os dois na mesma
+   latitude, um abrindo para a direita e o outro para a esquerda, indo um contra
+   o outro no meio de um disco pequeno. Nenhum `nudge` resolvia — é geometria
+   horizontal, e `nudge` é vertical. Virar Lisboa para a direita separou os dois
+   de vez, e com isso o chão caiu de 480px de disco para 400.
+
+   O CHÃO É O DISCO, NÃO A JANELA, e eu errei isso na primeira vez. Escrevi
+   `min-height: 820px` porque com a fórmula de então (`100svh - 340`) 820 era a
+   altura que dava o disco mínimo. O dono mudou a cena no mesmo dia, a fórmula
+   mudou junto, e o 820 ficou para trás — com ele, o dono deixou de ver os
+   rótulos na PRÓPRIA tela (Edge a 125% numa 1080p dá ~752 de viewport, e ele
+   reclamou: "o globo não aparece os nomes e as moedas com os valores").
+   A lição: este número não é independente: é a altura que resolve `--globo` no
+   disco mínimo. Mexeu na fórmula do disco, remede esta. São um fato só escrito
+   em dois lugares, e é por isso que estão anotados um ao lado do outro.
    -------------------------------------------------------------------------- */
 .hero-rotulo {
   display: none;
@@ -378,13 +429,13 @@ html.wone-entrando .hero-sublinha::after {
 
 /* Lisboa e Londres abrem antes (pedido de 15/10: a Europa tem de aparecer),
    mas obedecem ao mesmo chão de altura. */
-@media (min-width: 1024px) and (min-height: 820px) {
+@media (min-width: 1024px) and (min-height: 700px) {
   .hero-rotulo--sempre {
     display: block;
   }
 }
 
-@media (min-width: 1420px) and (min-height: 820px) {
+@media (min-width: 1420px) and (min-height: 700px) {
   .hero-rotulo {
     display: block;
   }

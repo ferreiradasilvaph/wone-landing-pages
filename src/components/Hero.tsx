@@ -6,7 +6,6 @@ import { useContent } from "@/i18n";
 import { useOnScreen } from "@/lib/useOnScreen";
 import { CtaButton } from "./CtaButton";
 import { chipDe, metodoDe, precoDe } from "./hero/paises";
-import { HeroFacts } from "./hero/HeroFacts";
 import { HeroGlobe } from "./hero/HeroGlobe";
 import { StageStatus } from "./hero/StageStatus";
 import { IntegrationBand } from "./IntegrationBand";
@@ -91,17 +90,6 @@ export function Hero() {
    */
   const [ativo, setAtivo] = useState(0);
   const ativoRef = useRef(0);
-  /**
-   * A BATIDA do mesmo relógio, para o painel de fatos.
-   *
-   * É um contador que só cresce, e não um segundo índice: o painel tem seis
-   * fileiras e o globo sete países, então um índice compartilhado prenderia um
-   * ao tamanho do outro. Com a batida, cada um faz o seu módulo e os dois
-   * continuam andando no MESMO passo de 3 s — um relógio por viewport, que é a
-   * regra. Nasce em 0 no servidor e no primeiro render do cliente: o painel sai
-   * do HTML com a primeira fileira acesa, sem esperar o React.
-   */
-  const [batida, setBatida] = useState(0);
   /** Só depois do primeiro avanço do relógio é que alguma coisa pode animar. */
   const [started, setStarted] = useState(false);
   const [reduced, setReduced] = useState(false);
@@ -165,7 +153,6 @@ export function Hero() {
         if (cancelado) return;
         ativoRef.current = (ativoRef.current + 1) % paises.length;
         setAtivo(ativoRef.current);
-        setBatida((passos) => passos + 1);
         setStarted(true);
         agenda(INTERVALO);
       }, espera);
@@ -351,41 +338,6 @@ export function Hero() {
             </div>
           </div>
 
-          {/* O PAINEL DE FATOS: a informação que o dono pediu ao lado do título.
-              Abaixo de 1400 ele desce para baixo dos botões; acima, senta na
-              TERCEIRA TRILHA da cena — encostado na borda direita do conteúdo,
-              que é o "jogue as info adicionais mais para a direita" do pedido de
-              15/10 (a 1440 ele vai de x 1179 a 1387). A largura agora é a da
-              trilha (`--painel`, 13rem, em `hero.css`), não um `w-[13rem]`
-              solto: quem mede a cena mede o painel junto.
-              O `mt-11` continua: é o degrau que alinha o topo do painel ao
-              respiro do título (kicker + mt-6).
-              Entra na coreografia da home como o último degrau antes dos
-              benefícios. Só fatos que a página já afirma.
-
-              A lista virou o `HeroFacts`, que percorre as seis fileiras no
-              passo do relógio daqui e desenha o fato ativo logo abaixo (pedido
-              do dono de 15/10: "seja mais criativo... o espaço que ficou abaixo
-              dessa div pode ser preenchido"). O `<aside>`, o rótulo e a caixa
-              continuam sendo deste arquivo — a largura de 13rem e a entrada de
-              450ms não mudaram. */}
-          <aside
-            aria-label={hero.aside.title}
-            className="hero-painel ent-sobe mt-10 rounded-card bg-ink-900 p-5 [--ent-atraso:450ms] min-[1400px]:mt-11"
-          >
-            <p className="t-label">{hero.aside.title}</p>
-            <HeroFacts
-              facts={hero.aside.items}
-              moreLabel={hero.aside.more}
-              batida={batida}
-              /* A primeira batida do hero é mais longa que as outras; o fio de
-                 progresso do painel precisa saber disso para não acabar antes
-                 do passo. */
-              duracaoMs={batida === 0 ? PRIMEIRA_ESPERA : INTERVALO}
-              running={andando}
-              reduced={reduced}
-            />
-          </aside>
           </div>
         </div>
 

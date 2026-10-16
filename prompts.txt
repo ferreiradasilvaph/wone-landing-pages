@@ -1088,3 +1088,18 @@ chat, o texto em "plataforma" ("o cliente paga. a wone entrega. o convite
 chega") deve ser escrito igual o texto em "como funciona" ("voce liga tudo. o
 cliente paga. a wone entrega.") os artigos devem ser nessa sequencia, jogando o
 texto para sim a esquerda
+
+
+===============================================================================
+[126] 2026-10-16
+===============================================================================
+mas o globo na url https://pedrinho.wone.bot nao aparece os nomes e as moedas
+com os valores...
+
+chat, remova o "o que vem com a wone" e aumente mais o tamanho do globo sem que
+ele va para tras do header
+
+deixe o globo pegando metade da tela do hero e jogue o titulo mais para a
+direita
+
+diminua so um pouco o tamanho do globo

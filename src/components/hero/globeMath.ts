@@ -189,7 +189,7 @@ const LADO: Record<string, { side: "left" | "right"; nudge: number }> = {
   USD: { side: "right", nudge: 20 },
   BRL: { side: "left", nudge: -16 },
   ARS: { side: "right", nudge: 16 },
-  EUR: { side: "left", nudge: 10 },
+  EUR: { side: "right", nudge: 10 },
   GBP: { side: "left", nudge: -10 },
 };
 
