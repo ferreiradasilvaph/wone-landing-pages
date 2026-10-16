@@ -40,6 +40,17 @@ type ViewProps = { reduced: boolean };
 const W = 640;
 const PLOT_H = 180;
 
+/* As linhas de grade, em valores REDONDOS do dado — 200 e 400 dolares — e nao
+   em fracoes da caixa.
+
+   Ate 16/10 eram tres, em 25%, 50% e 75% da ALTURA DO VIEWBOX, e sem rotulo
+   nenhum. Fracao de caixa nao e escala: com a serie indo a 455, aquelas tres
+   linhas caiam em 107, 230 e 354 dolares - numeros que ninguem escolheu e que
+   ninguem podia ler, porque nao havia rotulo. Grade sem escala e decoracao
+   fingindo ser dado, e numa secao chamada Analises isso e o pior tipo de
+   enfeite. */
+const GRADE_Y = [200, 400];
+
 function buildPath(values: number[]) {
   const max = Math.max(...values);
   const step = W / (values.length - 1);
@@ -53,6 +64,10 @@ function buildPath(values: number[]) {
     line,
     area: `${line} L ${W} ${PLOT_H} L 0 ${PLOT_H} Z`,
     pointAt: (index: number) => ({ x: index * step, y: toY(values[index]) }),
+    /* O TOPO da curva, para o degrade da area ser ancorado nela e nao na caixa
+       (ver o <linearGradient> abaixo). */
+    topo: toY(max),
+    toY,
   };
 }
 
@@ -119,19 +134,37 @@ function RevenueView({ reduced }: ViewProps) {
             aria-hidden
           >
             <defs>
-              <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#FF7700" stopOpacity="0.38" />
-                <stop offset="100%" stopColor="#FF7700" stopOpacity="0" />
+              {/* Ancorado na CURVA (userSpaceOnUse, do topo dela ate a linha de
+                  base) e com PISO de 0,08 em vez de zero.
+
+                  Antes era objectBoundingBox de 0,38 a 0, sobre a caixa toda: nas
+                  horas em que a curva esta baixa, a area nasce ja na parte
+                  transparente do degrade e simplesmente nao aparece. O efeito na
+                  tela era um preenchimento que "comecava no meio do grafico",
+                  com uma aresta vertical dura por volta das 13h - e nao era o
+                  caminho cortado, era o degrade apagando a propria area.
+                  Com o piso, a lasca mais fina do dia ainda se le; com a ancora
+                  na curva, a densidade acompanha o dado em vez da moldura. */}
+              <linearGradient
+                id={gradientId}
+                gradientUnits="userSpaceOnUse"
+                x1="0"
+                y1={chart.topo}
+                x2="0"
+                y2={PLOT_H}
+              >
+                <stop offset="0%" stopColor="#FF7700" stopOpacity="0.34" />
+                <stop offset="100%" stopColor="#FF7700" stopOpacity="0.08" />
               </linearGradient>
             </defs>
 
-            {[0.25, 0.5, 0.75].map((fraction) => (
+            {GRADE_Y.map((valor) => (
               <line
-                key={fraction}
+                key={valor}
                 x1="0"
                 x2={W}
-                y1={PLOT_H * fraction}
-                y2={PLOT_H * fraction}
+                y1={chart.toY(valor)}
+                y2={chart.toY(valor)}
                 stroke="#FFFFE3"
                 strokeOpacity="0.07"
                 strokeWidth="1"
@@ -196,6 +229,25 @@ function RevenueView({ reduced }: ViewProps) {
               />
             ))}
           </svg>
+
+          {/* OS RÓTULOS DO EIXO Y, em HTML pela mesma razão do eixo X: dentro
+              do SVG, com escala livre, a fonte esticaria com a largura.
+
+              Ficam ACIMA da linha e colados à esquerda, DENTRO da área de
+              plotagem, e não numa calha própria: a calha custaria ~44px da
+              largura do gráfico, e o canto superior esquerdo está vazio em
+              qualquer hora do dia — a curva só sobe depois das 12h, e às 00h
+              está em 45 de 455. Rótulo posto no vazio não rouba nada. */}
+          {GRADE_Y.map((valor) => (
+            <code
+              key={valor}
+              aria-hidden
+              className="pointer-events-none absolute left-0 -translate-y-full pb-1 text-faint"
+              style={{ top: `${(chart.toY(valor) / PLOT_H) * 100}%` }}
+            >
+              {USD(valor)}
+            </code>
+          ))}
 
           {/* O ponto do valor ativo, em HTML sobre o gráfico: dentro do SVG com
               escala livre ele sairia oval. Mora na caixa do gráfico, não na da
