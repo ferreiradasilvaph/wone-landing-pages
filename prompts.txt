@@ -1065,3 +1065,9 @@ a resolucao das placasa no mobile esta horrivel. corrija (por favor)
 [122] 2026-10-16
 ===============================================================================
 chat, o globo no hero, deixe ele girando levemente
+
+
+===============================================================================
+[123] 2026-10-16
+===============================================================================
+agora preciso que o globo desencoste um pouco da barra de navegação

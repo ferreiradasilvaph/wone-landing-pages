@@ -40,11 +40,14 @@
    "Telegram no" em 80px mais folga), o globo não pode passar de 592. Ficou em
    574, que deixa 18px de margem para a fonte de reserva e ainda vale no degrau
    apertado de 1400 a 1407px, onde o container ainda não chegou aos 88rem.
-   O piso continua sendo a ALTURA da janela: `100svh - 312px` são o cabeçalho
+   O piso continua sendo a ALTURA da janela: `100svh - 340px` são o cabeçalho
    de 65px, o respiro de cima e a faixa de integrações com a fileira de
-   benefícios no pé — 44px a menos que antes, medidos na folga que sobrava entre
-   o pé do disco e a fileira. Numa janela de 1440×800 o globo encolhe para 488px
-   sozinho e nada cruza a faixa.
+   benefícios no pé. O subtraído anda SEMPRE junto com o `top` da caixa, e na
+   mesma medida: o pé do disco é `top + lado`, então descer 28px o topo e tirar
+   28px do teto deixa a folga de baixo no mesmo pixel de antes. Foi o que se fez
+   em 16/10 para o halo largar a barra — as três contas (112/324, 104/340,
+   100/340) somam o mesmo pé de antes. Numa janela de 1440×800 o globo encolhe
+   para 460px sozinho e nada cruza a faixa.
    -------------------------------------------------------------------------- */
 .hero-cena {
   /* No celular o lado é o MENOR entre 440px e 90% da largura da janela — e os
@@ -67,19 +70,19 @@
 
 @media (min-width: 1024px) {
   .hero-cena {
-    --globo: min(540px, 100svh - 312px);
+    --globo: min(540px, 100svh - 324px);
   }
 }
 
 @media (min-width: 1280px) {
   .hero-cena {
-    --globo: min(620px, 100svh - 320px);
+    --globo: min(620px, 100svh - 340px);
   }
 }
 
 @media (min-width: 1400px) {
   .hero-cena {
-    --globo: min(574px, 100svh - 312px);
+    --globo: min(574px, 100svh - 340px);
   }
 }
 
@@ -108,7 +111,7 @@
 
 @media (min-width: 1024px) {
   .hero-globo {
-    top: 100px;
+    top: 112px;
     left: calc((100% - min(100%, 80rem)) / 2 + 2rem);
     margin: 0;
   }
@@ -116,14 +119,17 @@
 
 @media (min-width: 1280px) {
   .hero-globo {
-    top: 84px;
+    top: 104px;
   }
 }
 
 @media (min-width: 1400px) {
   .hero-globo {
-    /* 72px: o cabeçalho tem 65 e o disco não o encosta. */
-    top: 72px;
+    /* 100px: o cabeçalho tem 65 e o HALO começa 28px ACIMA da caixa, então
+       quem mede a distância é 100 − 28 = 72 — 7px de ar abaixo da barra. Com os
+       72px antigos o brilho nascia em 44 e invadia o cabeçalho (pedido do dono
+       em 16/10: "o globo desencosta um pouco da barra de navegação"). */
+    top: 100px;
     left: calc((100% - min(100%, 88rem)) / 2 + 2rem);
   }
 }
