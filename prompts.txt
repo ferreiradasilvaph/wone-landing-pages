@@ -1071,3 +1071,11 @@ chat, o globo no hero, deixe ele girando levemente
 [123] 2026-10-16
 ===============================================================================
 agora preciso que o globo desencoste um pouco da barra de navegação
+
+
+===============================================================================
+[124] 2026-10-16
+===============================================================================
+agora preciso que o site todo seja melhorado, aperfeiçoando o que ja existe,
+visualmente falando. precisa ficar com aparência de um desenvolvimento de um
+dev senior. mesmo eu nao sendo, ainda
