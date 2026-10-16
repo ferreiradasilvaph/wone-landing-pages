@@ -1117,3 +1117,17 @@ chat, de alguma forma o globo tem de estar cobrindo metade da tela
 faça com que a div do texto de "cobrança, entrega e rastreio - brasil, américa
 latina e europa" seja mais preenchida, está parecendo muito expremida. preencha
 mais essa div e deixe ela mais atrativa
+
+
+===============================================================================
+[129] 2026-10-16
+===============================================================================
+No hero da home, em telas largas (a partir de ~1440px), o layout está
+desequilibrado: o globo vaza para a esquerda até a borda da janela, enquanto o
+bloco de texto fica numa coluna estreita (~450px) encostada no limite direito do
+container. Sobram dois vazios grandes. Quero a composição equilibrada: coluna de
+texto mais larga (~560-640px) começando mais perto do globo; h1 pode crescer
+(clamp) sem passar de 3 linhas; o vazio à direita parecido com o respiro à
+esquerda do globo (simétrica em relação à viewport, não só ao container); a
+linha dos 3 números acompanha. Não mexer no globo em si, nem em textos/cores,
+manter o mobile, não quebrar a entrada nem o LCP.

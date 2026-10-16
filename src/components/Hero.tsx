@@ -237,7 +237,7 @@ export function Hero() {
           O pedido "globo mais à esquerda" continua atendido, e melhor: o disco
           deixou de ser medido pelo container e passou a SANGRAR para fora dele,
           por `--sangria` em `hero.css`. O que era desalinho virou escolha. */}
-      <div className="mx-auto w-full max-w-7xl px-4 pt-24 sm:px-6 lg:flex lg:flex-1 lg:flex-col lg:px-8 lg:pt-28">
+      <div className="hero-container mx-auto w-full max-w-7xl px-4 pt-24 sm:px-6 lg:flex lg:flex-1 lg:flex-col lg:px-8 lg:pt-28">
         <div className="grid gap-x-8 gap-y-12 lg:grid-cols-12">
           {/* A LINHA DA CENA.
 

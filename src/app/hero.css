@@ -149,8 +149,33 @@
        Os 14px entre 286 e 300 sao o ar para o limbo nao encostar na letra.
        45vw e nao 50: "diminua so um pouco o tamanho do globo", 16/10, depois de
        ver os 50. */
-    --globo: min(50vw, 100svh - 140px);
-    --sangria: calc((100% - min(100%, 80rem)) / 2 + 2rem);
+    /* O GRUPO: globo + respiro + texto, com largura própria, CENTRADO NA
+       JANELA. É o pedido de 16/10: "o vazio à direita do texto deve ser
+       parecido com o respiro à esquerda do globo (composição simétrica em
+       relação à viewport, não só ao container)".
+
+       Antes o grupo não era centrado em nada: o disco encostava em x=0 e o
+       texto parava na borda do container de 80rem. A 1920 isso dava 0 de
+       respiro à esquerda, 339 de vazio no meio e 357 à direita, com o texto
+       preso em 464. Agora as duas margens são "(100% − grupo) / 2" e são iguais
+       POR CONSTRUÇÃO — não há número para ajustar nem para divergir.
+
+       O RESPIRO do meio é o único vazio deliberado, e cresce com a tela.
+       O TEXTO cresce de 560 a 640 (o pedido era 560–640).
+       O GLOBO mantém o teto de altura que já tinha; quando é a altura que o
+       limita, a folga que sobra vai para as DUAS margens, nunca para o meio —
+       é isso que mantém a simetria numa janela baixa e larga.
+
+       A troca de 50vw por 44vw é o que abre espaço para o texto crescer: a
+       1440 o disco passa de 720 para 634, e os 86px vão para a coluna. */
+    --texto: clamp(35rem, 36vw, 40rem);
+    --respiro: clamp(3rem, 5vw, 6rem);
+    --globo: min(44vw, 100svh - 140px);
+    --grupo: calc(var(--globo) + var(--respiro) + var(--texto));
+    /* A margem simétrica. Só é lida na camada do palco, onde "100%" é a largura
+       da SEÇÃO — e é por isso que ela não repete o bug de "--sangria", que era
+       lida em dois contextos com "100%" valendo coisas diferentes. */
+    --margem: calc((100% - var(--grupo)) / 2);
   }
 }
 
@@ -202,7 +227,10 @@
        A conta é a mesma das outras seções até o `- var(--sangria)`, e isso é de
        propósito — quem ler lado a lado vê que o globo não tem régua própria,
        tem a régua de todos e um deslocamento nomeado. */
-    left: calc((100% - min(100%, 80rem)) / 2 + 2rem - var(--sangria));
+    /* A borda esquerda do GRUPO. O disco deixou de sangrar ate a borda da
+       janela: ele agora abre a composicao com a mesma margem que a fecha do
+       outro lado. */
+    left: var(--margem);
   }
 }
 
@@ -313,7 +341,9 @@
    -------------------------------------------------------------------------- */
 @media (min-width: 1400px) {
   .hero-pe {
-    margin-left: calc(var(--globo) - var(--sangria) + var(--respiro));
+    /* Acompanha a nova largura do texto, alinhada a ele - pedido explicito:
+       "a linha dos 3 numeros acompanha a nova largura". */
+    margin-left: calc(var(--globo) + var(--respiro));
     padding-block: 1.5rem 2rem;
   }
 
@@ -336,7 +366,7 @@
   .hero-controle {
     top: 100px;
     bottom: auto;
-    left: calc((100% - min(100%, 80rem)) / 2 + 2rem);
+    left: var(--margem);
     width: auto;
   }
 
@@ -354,15 +384,15 @@
        texto tem sempre os seus 464 e o planeta fica com o que sobra. E ele
        nunca alcança o texto, porque o disco para em 50vw e o texto começa em
        `borda direita do conteúdo − 464` — conferido de 1400 a 2560. */
-    grid-template-columns: minmax(0, 1fr) var(--texto);
+    grid-template-columns: var(--globo) var(--texto);
     column-gap: var(--respiro);
     align-items: start;
   }
 
   .hero-texto {
     grid-column: 2;
-    max-width: var(--texto);
     width: 100%;
+    max-width: none;
     /* ENCOSTADO A DIREITA da trilha, nao centrado nela: e o "jogue o titulo
        mais para a direita" de 16/10. O efeito util alem do pedido e que a borda
        direita do bloco passa a cair na borda do CONTEUDO - a mesma linha do
@@ -499,5 +529,50 @@ html.wone-entrando .hero-sublinha::after {
 @media (min-width: 1420px) and (min-height: 700px) {
   .hero-rotulo {
     display: block;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   O CONTAINER DO HERO VIRA O GRUPO, a partir de 1400.
+
+   Até 1399 ele é o `max-w-7xl` de toda seção, e nada aqui vale. A partir de
+   1400 ele passa a medir exatamente `--grupo` e a se centrar na janela — é o
+   que faz as duas margens da composição serem iguais sem nenhum número
+   cravado: elas são o que sobra, dividido por dois.
+
+   O `padding-inline: 0` é necessário: o `px-8` do container somaria 32px de
+   cada lado DENTRO do grupo, e o texto deixaria de terminar na borda dele.
+   O pé e a legenda do palco leem as mesmas variáveis, então a fileira de
+   números alinha com o texto e a legenda alinha com o disco, por construção.
+
+   O que isto custa, e fica registrado: acima de 1400 o hero deixa de dividir a
+   régua de 80rem com as outras seções. Foi uma troca pedida — "composição
+   simétrica em relação à viewport, não só ao container" —, e é diferente do
+   desalinho que saiu de manhã: lá o pé do hero começava 64px antes do logo sem
+   nenhuma razão; aqui a cena inteira é uma composição própria, centrada, e as
+   suas partes alinham entre si.
+   -------------------------------------------------------------------------- */
+@media (min-width: 1400px) {
+  .hero-container {
+    max-width: var(--grupo);
+    padding-inline: 0;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   O TÍTULO CRESCE COM A COLUNA.
+
+   Era 80px cravado, dimensionado para a coluna de 464. Com a coluna em 560–640
+   ele sobrava pequeno e deixava o bloco com ar demais à direita. O `clamp` o
+   faz acompanhar: 72px no piso, 6,2vw no meio, 96px no teto.
+
+   As TRÊS LINHAS não dependem disto: cada uma é um bloco próprio (`.ent-linha`,
+   da coreografia de entrada), então o título não reflui. O que o teto de 96px
+   protege é a linha mais longa — "Telegram no" mede 444px a 80px, logo 533 a
+   96 —, que tem de caber nos 560 da coluna mais estreita. Medido: 533 < 560.
+   -------------------------------------------------------------------------- */
+@media (min-width: 1400px) {
+  h1.hero-titulo {
+    font-size: clamp(4.5rem, 6.2vw, 6rem);
   }
 }
