@@ -150,17 +150,68 @@ export const REPOUSO: Record<
 > = {};
 
 /**
- * Recuo para o país ativo, em graus: `0,18·(λ−λ0)` limitado a ±2,5° de guinada
- * e ±1,5° de inclinação. É um gesto, não uma volta — os sete países ficam
- * sempre de frente.
+ * O GESTO para o país da vez, em radianos: 34% da centralização de `CENTRA`,
+ * limitado a −3° / +8° de guinada e ±3° de inclinação.
  *
- * Os limites caíram pela metade em 15/10, junto com o palco novo: o disco
- * passou de 600 para 760px e sangra pela esquerda da janela, então o mesmo
- * ângulo que antes deslocava 26px agora desloca 33 — e o pino da Cidade do
- * México, que é o mais a oeste, mora a ~32px da borda. Com ±2,5° o pior quadro
- * ainda o deixa dentro da tela.
+ * ELE TROCOU DE SENTIDO EM 17/10, e é correção de defeito. Até hoje isto se
+ * chamava `RECUO` e era `0,18·(λ−λ₀)` limitado a ±2,5°: um gesto que, medido,
+ * afastava o planeta do país ativo — com Buenos Aires à esquerda do centro, o
+ * ângulo negativo a levava mais para a esquerda ainda. O dono pediu o
+ * contrário, duas vezes no mesmo dia: "o giro do globo deve acompanhar a
+ * bolinha de interação dos países". Então o gesto passou a ser uma FRAÇÃO do
+ * ângulo que CENTRA o país: o planeta parte para ele em toda batida, e o
+ * mergulho só termina a viagem que o gesto começou. Uma fonte de verdade
+ * (`CENTRA`), dois tamanhos.
+ *
+ * OS LIMITES SÃO ASSIMÉTRICOS, e a assimetria é a mesma que o giro já tem: a
+ * varredura corre de 0 a +16° porque a leste há folga e a oeste não há nenhuma.
+ *  - +5° a leste, e o número é MEDIDO, não estimado. Com +8° (que era a
+ *    primeira tentativa) a pior soma — varredura no pico, +16°, com o gesto
+ *    cheio do Equador, +8° — levou a borda direita do rótulo de Lisboa a 854px
+ *    contra os 841 do `<h1>` a 1512 de janela: 13px dentro da coluna de texto.
+ *    A sensibilidade medida é de ~20,7px por grau de guinada, então 3° a menos
+ *    devolvem 62px e o pior quadro fecha em ~792 — 49px de folga;
+ *  - −3° a oeste: só a Europa pede guinada negativa, e com a varredura no piso
+ *    (0°) o total é −3° — a mesma ordem dos −2,5° que o gesto antigo já
+ *    gastava, e a Cidade do México, que desenha a 6,6% da caixa, continua na
+ *    face visível;
+ *  - ±3° de inclinação: 3° valem ~17px na vertical, e a folga medida entre o
+ *    chip de São Paulo e a linha de controle do palco é de 99px.
  */
-export const RECUO: Record<string, { yaw: number; pitch: number }> = {};
+export const GESTO: Record<string, { yaw: number; pitch: number }> = {};
+
+/** Fração da centralização que o gesto usa, e os seus limites em graus. */
+const GESTO_FRACAO = 0.34;
+const GESTO_OESTE = -3;
+const GESTO_LESTE = 5;
+const GESTO_PITCH = 3;
+
+/**
+ * CENTRALIZAÇÃO EXATA do país, em radianos: os ângulos que põem a capital no
+ * MEIO do disco (pedido do dono, 17/10 — "o giro deve acompanhar a bolinha que
+ * interage no globo (...) a cada 3 países quero que dê um efeito visual de
+ * zoom"). É o alvo do giro enquanto o mergulho está de pé; fora dele quem manda
+ * continua sendo o gesto de `GESTO`, que é uma fração destes mesmos ângulos —
+ * o globo interpola entre os dois pelo fator do enquadramento.
+ *
+ * NÃO É `λ − λ₀` / `φ − φ₀`, e a diferença é medida: a projeção já traz o ponto
+ * para a base com o centro em +Z, e o laço gira primeiro em torno de Y
+ * (guinada) e depois em torno de X (inclinação). Centrar nessa ORDEM pede os
+ * ângulos do vetor de base, não os da carta:
+ *
+ *   x₁ = cos(yaw)·x + sen(yaw)·z = 0   →   yaw   = −atan2(x, z)
+ *   y₂ = cos(p)·y − sen(p)·z₁   = 0   →   pitch = atan2(y, √(x²+z²))
+ *
+ * Londres, por exemplo, está a λ−λ₀ = +31,9° e φ−φ₀ = +29,5°, mas quem a põe
+ * no centro é yaw −22,7° / pitch +31,9°: a conta ingênua erraria o alvo por
+ * 9° de guinada, uns 40px de tela no zoom de 1,8× — e o pino escorregaria
+ * para fora do foco, que é exatamente o que um zoom ancorado não faz.
+ *
+ * O sinal da guinada é negativo porque a varredura positiva do laço empurra o
+ * centro do disco para a DIREITA (ver o comentário do giro em `HeroGlobe`):
+ * para trazer Londres, que está à direita, ao meio, gira-se para o outro lado.
+ */
+export const CENTRA: Record<string, { yaw: number; pitch: number }> = {};
 
 /**
  * Lado em que o rótulo abre, e o empurrão vertical em px.
@@ -194,7 +245,7 @@ const LADO: Record<string, { side: "left" | "right"; nudge: number }> = {
 };
 
 for (const [code, { lat, lon }] of Object.entries(CAPITAIS)) {
-  const [x, y] = baseVector(lat, lon);
+  const [x, y, z] = baseVector(lat, lon);
   const lado = LADO[code] ?? { side: "right" as const, nudge: 0 };
   REPOUSO[code] = {
     left: `${(((1 + x) / 2) * 100).toFixed(2)}%`,
@@ -202,8 +253,19 @@ for (const [code, { lat, lon }] of Object.entries(CAPITAIS)) {
     side: lado.side,
     nudge: lado.nudge,
   };
-  RECUO[code] = {
-    yaw: Math.max(-2.5, Math.min(2.5, 0.18 * (lon - LON0))) * RAD,
-    pitch: Math.max(-1.5, Math.min(1.5, 0.18 * (lat - LAT0))) * RAD,
+  const centro = {
+    yaw: -Math.atan2(x, z),
+    pitch: Math.atan2(y, Math.sqrt(x * x + z * z)),
+  };
+  CENTRA[code] = centro;
+  GESTO[code] = {
+    yaw: Math.max(
+      GESTO_OESTE * RAD,
+      Math.min(GESTO_LESTE * RAD, GESTO_FRACAO * centro.yaw),
+    ),
+    pitch: Math.max(
+      -GESTO_PITCH * RAD,
+      Math.min(GESTO_PITCH * RAD, GESTO_FRACAO * centro.pitch),
+    ),
   };
 }

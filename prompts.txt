@@ -1185,3 +1185,29 @@ zoom original do globo. faca algo visualmente espetacular...
 ===============================================================================
 lembra que falei dos artigos na sequencia em "plataforma"? em "acesso" la no
 rodape deve estar da mesma forma. o texto todo para a esquerda da tela
+
+
+===============================================================================
+[128] 2026-10-17
+===============================================================================
+melhore a qualidade desse zoom, contorne a borda do globo, seja um expert em
+edicoes , melhore isso
+
+
+===============================================================================
+[129] 2026-10-17
+===============================================================================
+a ideia esta boa, mas capriche nos detalhes
+
+
+===============================================================================
+[130] 2026-10-17
+===============================================================================
+o giro do globo deve acompanhar a bolinha de interacao dos paises, seja
+perfeccionista
+
+
+===============================================================================
+[131] 2026-10-17
+===============================================================================
+faca o zoom se aplicar dentro do globo. contorne todo o globo com o zoom

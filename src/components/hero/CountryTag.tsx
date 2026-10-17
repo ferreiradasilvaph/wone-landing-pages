@@ -1,4 +1,5 @@
 import { Chip } from "../Chip";
+import { FlagMark } from "../FlagMark";
 
 /**
  * Um país no globo do palco do hero: o ponto, o anel que acende e o rótulo
@@ -123,13 +124,36 @@ export function CountryTag({
         className={`hero-rotulo absolute top-1/2 w-max transition-opacity duration-300 ${
           sempre ? "hero-rotulo--sempre" : ""
         } ${
-          side === "right" ? "left-[14px]" : "right-[14px]"
+          /* A classe nomeada anda junto com o utilitário: quem posiciona em
+             repouso é o Tailwind, e quem a lê é `.hero-pino--foco` em
+             `hero.css`, que afasta o rótulo focado do anel de alvo. Uma classe
+             própria, e não um seletor em cima do nome do utilitário, para o
+             CSS não quebrar no dia em que os 14px mudarem. */
+          side === "right"
+            ? "hero-rotulo--dir left-[14px]"
+            : "hero-rotulo--esq right-[14px]"
         } ${active ? "opacity-100" : "opacity-50"}`}
       >
-        <span
-          className={`block text-[13px] leading-4 font-medium ${active ? "text-cream" : "text-muted"}`}
-        >
-          {city}
+        {/* A BANDEIRA só existe no rótulo FOCADO do mergulho, e por isso nasce
+            em `display: none` (a regra está em `.hero-pino--foco`, em
+            `hero.css`). Em repouso os sete rótulos ficam como estavam — sete
+            bandeiras de 18px num disco de 536 seriam ruído, e quem já mostra as
+            sete ao mesmo tempo é o bloco de abertura do texto.
+            No zoom ela ganha função: o rótulo passa a ser o ÚNICO na tela, e é
+            ele que tem de dizer de qual país é aquele enquadramento —
+            bandeira + cidade + método · preço, as identidades que a página já
+            tem. Nada inventado: o código é o da moeda, a mesma chave de
+            `payments.table.countries`. */}
+        <span className="flex items-center gap-1.5">
+          <FlagMark
+            code={code}
+            className="hero-rotulo-bandeira h-3 w-[18px]"
+          />
+          <span
+            className={`hero-rotulo-cidade text-[13px] leading-4 font-medium ${active ? "text-cream" : "text-muted"}`}
+          >
+            {city}
+          </span>
         </span>
         {/* Sempre `neutral`: o único laranja do palco é o ponto que acende (a
             regra do `Chip` reserva o `brand` ao método principal, e sete chips

@@ -272,6 +272,35 @@
     rgba(0, 0, 0, 0) 0 94%,
     rgba(0, 0, 0, 0.35) 100%
   );
+  /* O MERGULHO escala este nó (`HeroGlobe`, por quadro, só quando zoom > 0): o
+     limbo é o sombreado da esfera e tem de correr com a terra, não ficar
+     parado por cima dela.
+     `0 0` e não o `50% 50%` padrão, e isto é a conta da âncora: o laço escreve
+     `translate(anc) scale(Z)`, que é `p' = Z·p + anc` — a MESMA matriz do
+     canvas. Com a origem no centro, o `scale` teria um deslocamento implícito
+     de `(1−Z)·R` embutido e o sombreado sairia do lugar dos pontos. */
+  transform-origin: 0 0;
+  will-change: transform;
+}
+
+/* --------------------------------------------------------------------------
+   A VIGIA: o círculo fixo atrás do qual o mergulho acontece.
+
+   Pedido do dono, 17/10: "faça o zoom se aplicar dentro do globo. contorne todo
+   o globo com o zoom". O disco NÃO muda de tamanho — o que amplia é o conteúdo
+   dentro dele. No canvas isso é um `clip()` circular aplicado ANTES da matriz
+   do zoom; aqui é o mesmo círculo em CSS, para o limbo escalado não pintar o
+   seu aro escuro fora do disco (a 1,8× ele cai inteiro para fora).
+
+   `clip` e não `hidden`: os dois recortam igual, e `clip` não cria um
+   contêiner de rolagem — não há como esta caixa ganhar barra nem virar alvo de
+   `scrollIntoView`.
+   -------------------------------------------------------------------------- */
+.globe-vigia {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  overflow: clip;
 }
 
 /* --------------------------------------------------------------------------
@@ -534,6 +563,62 @@ html.wone-entrando .hero-sublinha::after {
   .hero-rotulo {
     display: block;
   }
+}
+
+/* --------------------------------------------------------------------------
+   O RÓTULO DO PAÍS FOCADO NO MERGULHO (pedido do dono, 17/10: "trabalhe com as
+   identidades reais do globo, faça algo espetacular").
+
+   Quem liga esta classe é o laço do `HeroGlobe`, no alfinete do país da vez,
+   quando o zoom passa de 0,5 — e ela é a OUTRA metade da solução de colisão: a
+   1,8× os pinos se afastam uns dos outros por 80% da distância que já tinham, e
+   os sete rótulos sairiam do disco para cima da coluna de texto. O laço apaga
+   os outros seis por opacidade; aqui o que sobra ganha presença.
+
+   DISPLAY ACIMA DAS DUAS MEDIA QUERIES, de propósito. As regras de 1420 × 700
+   existem porque SETE rótulos num disco pequeno se cobrem — o raciocínio está
+   anotado acima. No mergulho há UM, no meio do disco: a razão não se aplica, e
+   a janela de 1366×768 (a do dono) passa a ver a identidade do país em vez de
+   só o planeta aproximado. A especificidade de 0,2,0 vence as duas regras de
+   0,1,0 sem `!important` e sem depender de ordem.
+
+   O rótulo focado sobe um degrau de tamanho (15px contra 13) e passa a ter
+   bandeira. Nada de brilho, sombra ou gradiente: a página não tem nenhum dos
+   três, e o destaque aqui já é o enquadramento inteiro.
+   -------------------------------------------------------------------------- */
+.hero-pino--foco .hero-rotulo {
+  display: block;
+  /* Acima do pulso e do anel de alvo, que são canvas; e acima dos outros
+     rótulos enquanto eles desvanecem. */
+  z-index: 3;
+}
+
+/* O rótulo focado AFASTA-SE do pino: 14px é a distância de repouso, e no
+   mergulho o pino ganha um anel de alvo de 22px de raio — medido na captura do
+   pico do zoom, o chip "PIX · R$197,00" atravessava o anel e o cometa. 30px
+   livram o anel com 8px de ar, e a caixa de texto continua apontando para o
+   ponto sem ambiguidade. Quem abre para cada lado continua sendo o mesmo
+   `side` de `globeMath.LADO`: o rótulo cresce para DENTRO do disco. */
+.hero-pino--foco .hero-rotulo--dir {
+  left: 30px;
+}
+
+.hero-pino--foco .hero-rotulo--esq {
+  right: 30px;
+}
+
+.hero-pino--foco .hero-rotulo-bandeira {
+  display: inline-block;
+}
+
+.hero-pino--foco .hero-rotulo-cidade {
+  font-size: 15px;
+  line-height: 20px;
+}
+
+/* A bandeira some em repouso: ela é do mergulho. */
+.hero-rotulo-bandeira {
+  display: none;
 }
 
 /* --------------------------------------------------------------------------
