@@ -1131,3 +1131,14 @@ texto mais larga (~560-640px) começando mais perto do globo; h1 pode crescer
 esquerda do globo (simétrica em relação à viewport, não só ao container); a
 linha dos 3 números acompanha. Não mexer no globo em si, nem em textos/cores,
 manter o mobile, não quebrar a entrada nem o LCP.
+
+
+===============================================================================
+[130] 2026-10-16
+===============================================================================
+melhore a qualidade do pulso que esta com a pulseira, deixe o mais humanizado
+possível (aproveita e ja implica no dorso, essa observação)
+> diagnostico: nao e qualidade de imagem - as duas pecas sao manequins de
+> vitrine em plastico preto. Tres caminhos oferecidos (A: cortar o manequim
+> fora de quadro, B: usar so a joia solta, C: foto nova em pessoa real).
+> O dono escolheu C.
