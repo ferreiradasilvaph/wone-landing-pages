@@ -1211,3 +1211,45 @@ perfeccionista
 [131] 2026-10-17
 ===============================================================================
 faca o zoom se aplicar dentro do globo. contorne todo o globo com o zoom
+
+
+===============================================================================
+[132] 2026-10-17
+===============================================================================
+chat, eu preciso que a bolinha que liga os paises seja a referencia da rotacao,
+a rotacao do globo deve seguir a direcao que a bolinha esta correndo
+
+
+===============================================================================
+[133] 2026-10-17
+===============================================================================
+No hero, o globo tem a camera desacoplada da bolinha... Quero uma camera que
+ACOMPANHA a bolinha, tipo "voo" do Google Earth: GIRO (mesma interpolacao de
+grande circulo), ZOOM (van Wijk, abre conforme distancia, duracao
+proporcional), CHEGADA (pouso, pulso, rotulo, 1,8s), REGRAS (ordem das
+cidades, 60fps rAF, reduced-motion, pausar fora da tela). Antes de
+implementar, explique como giro e zoom estao ligados hoje. Depois, capture
+frames a cada 200ms por 15s e confira (a)(b)(c).
+
+
+===============================================================================
+[134] 2026-10-17
+===============================================================================
+Quero que o globo do hero tenha um visual IMPACTANTE, de nivel premiado
+(Awwwards / Stripe / Vercel / GitHub globe)... Globo 3D em WebGL (three.js +
+R3F + drei, ou cobe / three-globe), atmosfera fresnel, arcos 3D, bloom
+seletivo, parallax... PROCESSO: 1. apresente 2 ou 3 direcoes visuais e espere
+minha escolha. 2. etapas com um commit por etapa. 3. screenshots 1440/390 por
+etapa. 4. scripts/perf.mjs vs baseline.
+
+
+===============================================================================
+[135] 2026-10-17
+===============================================================================
+pode usar a direcao 1
+
+
+===============================================================================
+[136] 2026-10-17
+===============================================================================
+chat, diminua o zoom nas transacoes onde o ponto passa (nos paises)

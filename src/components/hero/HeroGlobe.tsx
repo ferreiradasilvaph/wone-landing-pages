@@ -15,13 +15,25 @@ import {
   amostra,
   baseVector,
   CAPITAIS,
-  CENTRA,
-  GESTO,
+  centraliza,
   naEuropa,
   GLOBE_STEP,
+  LAT0,
+  LON0,
   noise,
   REPOUSO,
 } from "./globeMath";
+import {
+  distancia,
+  duracaoDe,
+  interpola,
+  mergulho,
+  POUSO_MS,
+  voo,
+  ZOOM_DETALHE,
+  type Estado,
+  type Ponto,
+} from "./voo";
 
 /* --------------------------------------------------------------------------
    O GLOBO DO PALCO
@@ -54,7 +66,8 @@ import {
    O CUSTO
 
    Os 5.102 pontos de `globeDots.ts` são montados UMA vez em `Float32Array`
-   (~0,4 ms, dentro de efeito) e redesenhados a 30 fps. O desenho não faz 2.000
+   (~0,4 ms, dentro de efeito) e redesenhados a 60 fps desde o voo de 17/10 (o
+   acelerador de 30 saiu: ver `PASSO_MS`). O desenho não faz 2.000
    chamadas de `fill`: os pontos caem em 10 baldes (6 níveis de terra laranja +
    1 de costa + 3 dos quatro países em creme), e cada balde é um `beginPath` com
    N arcos e UM `fill`. No celular o globo fica atrás do aparelho, não tem pino nem rótulo e
@@ -100,11 +113,17 @@ const PAIS_BORDA = "#ffe2b8";
 const PAIS_NUCLEO = "#ffffe3";
 
 /**
- * A guarda do laço, em ms. 27 e não 33: num monitor de 60 Hz os quadros chegam
- * de 16,7 em 16,7 ms, então 27 deixa passar o segundo (33,3) e dá os 30 fps
- * pedidos; com 33 o segundo quadro chegaria CEDO por 0,3 ms, seria descartado,
- * e o laço cairia para 20 fps. Numa tela de 120 Hz continua dando 30; numa de
- * 30 Hz, os 30 que o aparelho tem.
+ * A guarda da ONDA DE ENTRADA fora do laço, em ms. 27 e não 33: num monitor de
+ * 60 Hz os quadros chegam de 16,7 em 16,7 ms, então 27 deixa passar o segundo
+ * (33,3) e dá 30 fps; com 33 o segundo quadro chegaria CEDO por 0,3 ms, seria
+ * descartado, e o laço cairia para 20 fps.
+ *
+ * ELA NÃO VALE MAIS PARA O LAÇO DO VOO (17/10, pedido do dono: "60fps").
+ * Acelerador num voo é jitter: a bolinha e a câmera leem um relógio contínuo, e
+ * entregar 30 amostras por segundo de um movimento de 2,6 s faz a borda dos
+ * pontos pisar em meio pixel a cada quadro. Aqui sobrou só para o caminho SEM
+ * voo (celular, movimento reduzido, freio puxado), onde o único movimento é a
+ * onda de 1,1 s e 30 fps é o que ela merece de bateria.
  */
 const PASSO_MS = 27;
 
@@ -118,56 +137,86 @@ const EUROPEUS = new Set(["EUR", "GBP"]);
 const FLASH_MS = 1000;
 
 /**
- * O COMETA e o PULSO (pedido do dono, 15/10: "quando um país acende, um cometa
- * curto percorre o arco" e "anel de pulso no pino ativo").
+ * A BOLINHA, O RASTRO E O PULSO.
  *
- * Os dois leem o MESMO carimbo de hora do flash da rede (`acendeuEm`), e por
- * isso não têm como discordar sobre quando o país acendeu. Os dois também só
- * existem com o laço de pé: fora de `xl`, ou com qualquer freio puxado
- * (pausado, movimento reduzido, aba oculta, fora da tela), o globo é
- * redesenhado UMA vez por troca e uma animação de 1,4 s num quadro só seria um
- * piscar aleatório — que é exatamente o que o portão de movimento proíbe.
+ * Os três leem o MESMO relógio do voo (`relogio.ms`, o tempo desde o pouso), e
+ * por isso não têm como discordar sobre onde a bolinha está nem sobre quando a
+ * cidade acendeu. Os três só existem com o laço de pé: fora de `lg`, ou com
+ * qualquer freio puxado (movimento reduzido, aba oculta, hero fora da tela), o
+ * globo é redesenhado UMA vez por troca, e uma animação de 2,6 s num quadro só
+ * seria um piscar aleatório — que é exatamente o que o portão de movimento
+ * proíbe.
  */
-const COMETA_MS = 1400;
 const PULSO_MS = 600;
-/** Quadros de cauda do cometa, e o quanto cada um fica para trás na perna. */
-const COMETA_CAUDA = 4;
-const COMETA_PASSO = 0.028;
+/**
+ * Quantos pontos tem a cauda da bolinha e o quanto cada um fica para trás, em
+ * fração da perna.
+ *
+ * A cauda é CURTA de propósito: quem conta a história do trajeto agora é o
+ * RASTRO (o arco desenhado atrás dela), e uma cauda longa em cima do rastro
+ * engrossaria a linha em vez de dar velocidade. 2% da perna por ponto são 1,7°
+ * de arco na perna mais longa e 0,13° na mais curta — a bolinha vira cometa só
+ * quando há viagem para isso, o que é exatamente a leitura certa.
+ */
+const BOLA_CAUDA = 4;
+const BOLA_PASSO = 0.02;
+/**
+ * O RASTRO: quantos segmentos no arco e quanto tempo ele leva para apagar
+ * depois do pouso.
+ *
+ * 24 segmentos dão a curva lisa num disco de R 317 sem virar polilinha visível
+ * (a perna mais longa tem 85°, logo 3,6° por segmento: a flecha do arco é
+ * 0,05% do raio, meio pixel). 1 s de desvanecer é o pedido — "o rastro segue
+ * atrás da bolinha e some aos poucos depois" —, e ele cabe inteiro na primeira
+ * metade do pouso de 1,8 s: quando a câmera parte para a próxima cidade, o
+ * rastro da perna anterior já saiu de cena.
+ */
+const RASTRO_PASSOS = 24;
+const RASTRO_SOME_MS = 1000;
+/** Alfa do rastro no voo. O mesmo peso das pernas acesas da rede. */
+const RASTRO_ALFA = 0.5;
 
 /** Raio angular, em radianos, do núcleo e da borda do tingimento (500/1.100 km). */
 const NUCLEO = 500 / 6371;
 const BORDA = 1100 / 6371;
 
 /* --------------------------------------------------------------------------
-   O MERGULHO — O CICLO DE CINCO BATIDAS (pedido do dono, 17/10)
+   A CÂMERA QUE ACOMPANHA A BOLINHA (pedido do dono, 17/10)
 
-   "o giro deve acompanhar a bolinha que interage no globo (...) a cada 3 países
-   quero que dê um efeito visual de zoom. um zoom que acompanha mais 2 passagens
-   da bolinha por outros países que ela vá percorrer. depois do 2 país que ela
-   passar, volte ao zoom original. (...) respeite os detalhes de um zoom real
-   que o google maps usa para os smartphones."
+   "No hero, o globo tem a câmera desacoplada da bolinha que viaja entre as
+   cidades (...) Quero uma câmera que ACOMPANHA a bolinha, tipo 'voo' do Google
+   Earth."
 
-   O relógio do hero troca de país a cada 3 s; cinco trocas são um CICLO:
+   O QUE SAIU DAQUI. Até esta manhã havia um CICLO DE CINCO BATIDAS: duas
+   batidas de enquadramento normal, uma de mergulho a 1,8× e duas de deslize,
+   com o pan de 1.300 ms começando 300 ms DEPOIS de a bolinha ter corrido o
+   arco — e a bolinha corria uma perna do anel geográfico da rede, que não é a
+   fila das cidades (elas discordavam em cinco das sete trocas, e era disso que
+   vinham os "cortes"). Três relógios, dois caminhos. O ciclo inteiro saiu; o que
+   ficou foi a INFRAESTRUTURA dele, que estava certa e continua valendo palavra
+   por palavra (a vigia circular fixa, a borda redesenhada por cima, o limbo na
+   mesma matriz, os pinos com a mesma conta, os dois corretores de espessura, o
+   dpr maior no zoom, os rótulos que apagam pela vigia).
 
-     batida 1 e 2 — enquadramento normal, a varredura de 0 a +16° de sempre;
-     batida 3     — MERGULHA: a escala sobe a 1,8× ancorada no pino do país da
-                    vez, e o giro deixa de GESTICULAR e passa a CENTRAR;
-     batida 4 e 5 — SEGUE: a escala fica, e o planeta desliza de pino em pino
-                    conforme o relógio troca de país;
-     depois da 5  — VOLTA: a escala desfaz e a varredura retoma.
+   O ZOOM DE POUSO É CALIBRÁVEL numa linha: `ZOOM_DETALHE`, em `voo.ts`. Ele
+   nasceu em 1,8× (herdado do mergulho) e caiu para 1,35× no mesmo dia, a
+   pedido do dono — "diminua o zoom nas transações onde o ponto passa". Tudo o
+   que depende de escala neste arquivo é relativo a ele.
 
-   São 15 s por ciclo e 5 batidas contra 7 países: os números são primos entre
-   si, então o mergulho cai num país DIFERENTE a cada volta — em 35 s de tela
-   ninguém vê o mesmo enquadramento duas vezes. Isso é de graça e é o que faz o
-   efeito não virar rotina.
+   O MODELO ESTÁ EM `voo.ts`, e é PURO: ele diz em que fase o voo está
+   (`pouso`/`voo`), onde a bolinha está (`bola`), o que a câmera centraliza
+   (`camera` — a mesma interpolação de grande círculo, 4% atrás dela), qual a
+   escala (`zoom`, pela curva de van Wijk) e quanto dura a perna. Este arquivo
+   só DESENHA o que aquele diz, e é por isso que giro e zoom não têm como
+   discordar: eles saem da mesma conta.
 
    O DISCO NÃO MUDA DE TAMANHO. NUNCA.
 
    É a frase que resume o desenho, e é o pedido do dono em 17/10: "faça o zoom
    se aplicar dentro do globo. contorne todo o globo com o zoom". O globo é uma
    VIGIA — um círculo de raio `g.raio` centrado em `(R, R)`, do tamanho que
-   sempre teve — e o mergulho acontece atrás do vidro. Nenhum pixel do planeta
-   aparece fora dessa circunferência em nenhum instante do ciclo.
+   sempre teve — e o voo acontece atrás do vidro. Nenhum pixel do planeta
+   aparece fora dessa circunferência em nenhum instante.
 
    Isso tem três consequências mecânicas, e as três estão no código:
     · o recorte é CIRCULAR e fica FORA da matriz do zoom (`ctx.save()`, caminho
@@ -179,122 +228,108 @@ const BORDA = 1100 / 6371;
     · os PINOS são DOM e o canvas não os corta: eles desvanecem por opacidade
       antes de cruzar a borda, pela distância ao centro contra o raio.
 
-   O QUE O GOOGLE MAPS FAZ, E QUE ESTÁ AQUI
+   A ÂNCORA DO ZOOM É O CENTRO DA CAIXA, e isto é simplificação de verdade, não
+   economia: a câmera já CENTRALIZA o ponto de interesse, então escalar em torno
+   do meio do disco deixa esse ponto matematicamente parado. O mergulho antigo
+   precisava ancorar no pino porque o giro dele chegava DEPOIS; aqui não há
+   "depois".
 
-   · PRIMEIRO O PAN, DEPOIS A ESCALA. O Maps nunca gira e amplia ao mesmo
-     tempo: ele leva a câmera até o ponto e só então desce. Aqui é igual, e por
-     uma razão medível — se o planeta ainda estiver viajando quando a escala
-     cresce, o pino ANDA sob o dedo, e a âncora deixa de valer. São 1.300 ms de
-     viagem e 900 ms de descida, 2,2 s dentro de uma batida de 3 s.
-   · ÂNCORA. A escala acontece em torno do PINO, não do centro da caixa. Escalar
-     por Z em torno de `a` é `p' = a + Z·(p − a)`, ou seja uma matriz de escala
-     Z com translação `c = a − Z·a`. Como a âncora É o pino, a conta devolve
-     `p' = p` para ele: o ponto focado fica matematicamente PARADO, não
-     aproximadamente parado. O mesmo par (escala, translação) vai para o
-     `translate3d` de cada pino — uma conta, duas camadas, e é isso que impede
-     os pinos de descolarem do planeta.
-   · ESCALA EXPONENCIAL. O zoom do Maps é potência de 2, não soma: interpola-se
-     o LOGARITMO da escala. Entre 1× e 1,8×, `2^lerp(log2 1, log2 1,8, t)` é
-     `1,8^t` — a forma fechada, uma exponenciação por quadro. É isso que faz a
-     velocidade parecer constante ao olho: cada fração de segundo multiplica a
-     escala pelo mesmo fator, em vez de somar o mesmo tanto.
-   · EASING ASSIMÉTRICO. Entrar é mais rápido que sair. 900 ms na ida com
-     `cubic-bezier(.22,.61,.36,1)` (ataque forte, chegada mansa — a curva de
-     "se aproximar de algo") e 1.200 ms na volta com `cubic-bezier(.4,0,.2,1)`,
-     que sai do lugar devagar e desacelera no fim: o Maps solta o zoom, não o
-     arranca. Na volta a ORDEM também se inverte — a escala solta primeiro e o
-     enquadramento desfaz 500 ms depois, que é como se recua de um lugar.
-     Nada de `linear` e nada de salto: toda curva parte de ONDE o valor está.
-   · APROXIMAR REVELA. Ampliar uma foto deixa tudo maior; aproximar um mapa
-     mostra mais. Daí os dois corretores de espessura (ver `fio` e `grao`, no
-     laço) e o dpr que sobe no mergulho.
-   · A DERIVA CONTINUA. No zoom o planeta não congela: a varredura segue, com
-     16% da amplitude (±1,3° em vez de ±8°). 16 e não 28 porque é medida: a
-     promessa da âncora é o pino PARADO durante a descida, e ±2,2° davam 3,4px
-     de caminhada nos 900 ms da escala — acima do teto de 2px. A ±1,3° são
-     1,9px, e ainda são 13px de excursão a 1,8×: o planeta respira.
-
-   O LIMITE DE 1,8× é a nuvem, não o gosto: os 5.102 pontos têm um passo médio
-   de ~1,4° de arco, e a partir de ~2× o olho começa a ler a espiral de
-   Fibonacci em vez da terra firme. A 1,8× o grão ainda lê como grão.
+   APROXIMAR REVELA. Ampliar uma foto deixa tudo maior; aproximar um mapa
+   mostra mais. Daí os dois corretores de espessura (ver `fio` e `grao`, no
+   laço), a malha de 15° que nasce no zoom, a segunda trama de mar e o dpr mais
+   alto. É o que separa ZOOM de AMPLIAÇÃO.
    -------------------------------------------------------------------------- */
 
-/** Batidas por ciclo: 2 normais, 1 de mergulho, 2 de deslize. */
-const CICLO = 5;
-/** Escala do mergulho. Ver o limite da nuvem, acima. */
-const ZOOM_MAX = 1.8;
 /**
- * A VIAGEM até o país da vez, em ms. Uma por batida, e ela TERMINA: é curva de
- * tempo e não perseguição exponencial, de propósito. Uma perseguição nunca
- * chega — com a constante de 0,55 s que o enquadramento pediria, ainda sobram
- * 9% do caminho quando a escala começa a crescer, e 9% de uma viagem de 300px
- * são 27px de pino andando sob o dedo. Com uma curva de 1.300 ms o giro está
- * EXATAMENTE no alvo quando a descida começa, e assentou 1,7 s antes da batida
- * seguinte.
+ * A ESPERA DA ENTRADA, em ms: o voo só começa depois dela.
+ *
+ * 2,2 s é a rampa de entrada que já existia — o tempo em que o título, o lead e
+ * os botões sobem, e em que o globo tem de ficar EXATAMENTE no enquadramento
+ * em que o servidor o pintou (o `<h1>` ao lado é o LCP da página; um salto de
+ * câmera em cima dele é o tipo de coisa que o portão do hero proíbe). Durante
+ * esses 2,2 s a câmera está no centro da projeção e a escala é 1: o primeiro
+ * quadro do laço cai sobre o quadro do servidor, pixel a pixel.
  */
-const PAN_MS = 1300;
-/** Ida e volta da escala, em ms: o Maps entra rápido e sai macio. */
-const ZOOM_ENTRA_MS = 900;
-const ZOOM_SAI_MS = 1200;
-/** Na volta, quanto o enquadramento espera antes de desfazer. */
-const ZOOM_SAI_ESPERA_MS = 500;
-/** Quanto da varredura sobrevive no mergulho: 16% de 8° = ±1,3°. */
-const ZOOM_DERIVA = 0.16;
-/** Raio assentado do anel de alvo no pino focado, em px de tela. */
+const ESPERA_MS = 2200;
+
+/**
+ * O ANEL DE ALVO no pino da cidade da vez, em px de tela. É o que o Maps põe no
+ * ponto escolhido; aqui ele marca o POUSO, e cresce com a escala.
+ */
 const ZOOM_ANEL = 22;
 
+/**
+ * O PESO DO CURSOR depois que a câmera passou a seguir a bolinha: 40% do gesto
+ * que ele tinha.
+ *
+ * O cursor move o planeta desde 16/10 ("deixe o globo interativo, ao passar o
+ * cursor por cima deve se mexer") e continua movendo — mas agora o planeta
+ * está sempre aproximado, e no zoom cada grau de guinada vale mais pixel. A
+ * 40% o empurrão máximo é 2,2° de guinada e 1,2° de inclinação, que no detalhe
+ * de 1,35× deslocam a bolinha 5% do raio do disco: o globo responde à mão sem
+ * tirar do meio o ponto que o voo está afirmando.
+ */
+const CURSOR_PESO = 0.4;
+
+/**
+ * O TETO DE dt, em ms. Um quadro que chega depois disto (uma pausa do
+ * compositor, um garbage collect, a aba voltando) não pode empurrar o voo:
+ * 100 ms é mais que o dobro de um quadro de 24 fps e menos que um décimo da
+ * perna mais curta. Sem este teto, voltar de um congelamento de 2 s avançaria o
+ * voo até a cidade seguinte num quadro — ou seja um corte, que é o defeito que
+ * este trabalho inteiro foi feito para apagar.
+ */
+const DT_TETO = 100;
+
+
 /* --------------------------------------------------------------------------
-   OS SEIS RÓTULOS QUE SAEM DE CENA — E A ORDEM DO MERGULHO
+   OS OUTROS SEIS RÓTULOS: APAGAM NO VOO, VOLTAM NO POUSO
 
-   Eles saem PRIMEIRO, antes de o planeta se mover, e voltam POR ÚLTIMO, depois
-   de ele estar de volta. A ordem não é estética, é a correção de dois defeitos
-   medidos a 1512 de janela, onde o `<h1>` começa em x 841:
+   É o pedido ao pé da letra — "os outros rótulos apagam durante o voo e
+   reaparecem só no pouso se couberem na vigia" —, e é também a correção de um
+   defeito medido: no zoom de detalhe os pinos se afastam uns dos outros por
+   35% da distância que já tinham, e seis rótulos soltos num planeta que viaja
+   atravessam o disco e vão parar em cima da coluna de texto (a 1512 de janela o
+   `<h1>` começa em x 841; com o desvanecer amarrado à escala, o rótulo mais a
+   leste chegou a x 932 — 91px dentro do texto).
 
-    · com o desvanecer amarrado à ESCALA, na volta os rótulos reacendiam com o
-      planeta ainda a 1,23× e o mais a leste chegava a x 932 — 91px dentro da
-      coluna de texto;
-    · com ele amarrado ao começo da VIAGEM mas durando 700 ms, o rótulo de
-      Lisboa chegou a x 866 com 15% de opacidade enquanto o planeta viajava
-      para centralizar a Cidade do México: a viagem é de 1.300 ms e abre 57° de
-      guinada, e 350 ms dela já deslocam o rótulo mais do que a folga.
+   A sequência: 300 ms para SAIR, no começo do voo — eles saem enquanto a
+   câmera ainda está acelerando, que é quando o deslocamento deles ainda é
+   pequeno; e, no pouso, 300 ms de espera (o pulso do pino abre primeiro,
+   sozinho) e 500 ms para VOLTAR, com a câmera já parada. Ficam cheios por ~1 s
+   antes de o voo seguinte começar.
 
-   Daí a sequência inteira do mergulho, em 2.500 ms dentro de uma batida de
-   3.000:  300 ms de rótulos saindo  →  1.300 ms de viagem  →  900 ms de
-   escala. Com o planeta PARADO nos primeiros 300 ms, o deslocamento extra dos
-   rótulos é zero por construção, e não por ajuste de número.
-   Na volta: 1.200 ms de escala soltando → o enquadramento desfaz a partir dos
-   500 ms → e os rótulos só reacendem aos 1.700 ms, quando tudo já voltou.
+   Quem decide se um rótulo CABE não é o tempo, é a geometria: a vigia
+   (`VIGIA_*`) tira quem saiu do disco e a régua da coluna de texto
+   (`CHEGOU_*`) tira quem está longe do meio. Ver os dois comentários abaixo.
    -------------------------------------------------------------------------- */
 const ROTULO_SAI_MS = 300;
-const ROTULO_VOLTA_MS = 600;
-/** Quanto a volta dos rótulos espera: aqui a escala E o enquadramento já voltaram. */
-const ROTULO_ESPERA_MS = 1700;
+const ROTULO_VOLTA_MS = 500;
+/** Quanto a volta dos rótulos espera depois do pouso: o pulso do pino vai sozinho. */
+const ROTULO_ESPERA_MS = 300;
 
 /**
  * A VIGIA, para os pinos: a faixa de raio em que o rótulo desvanece, em fração
  * de R. É a MESMA faixa do limbo que já existia — a rampa de `z2` de 0,05 a
  * 0,30 é esta mesma, escrita em cosseno em vez de raio (`rad = √(1 − z2²)`), e
  * por isso em repouso nada muda. O que ela acrescenta é valer no espaço JÁ
- * ESCALADO: no mergulho o pino fora do foco sai do disco, e um rótulo
- * pendurado no vazio ao lado do planeta é pior que nenhum.
+ * ESCALADO: com o zoom de pouso, o pino longe da cidade da vez sai do disco, e
+ * um rótulo pendurado no vazio ao lado do planeta é pior que nenhum.
  */
 const VIGIA_DENTRO = 0.954;
 const VIGIA_FORA = 0.999;
 
 /* --------------------------------------------------------------------------
-   NO MERGULHO, O RÓTULO SÓ ACENDE QUANDO O PINO CHEGA AO MEIO
+   A RÉGUA DA COLUNA DE TEXTO: UM RÓTULO SÓ EXISTE PERTO DO MEIO
 
-   É a terceira — e última — correção do mesmo defeito, e a única que é
-   GEOMÉTRICA em vez de temporal. Com o desvanecer amarrado só ao tempo, na
-   troca de país a 1,8× o rótulo do país que ENTRAVA subia de opacidade
-   enquanto o pino dele ainda estava na periferia e o planeta vinha buscá-lo:
-   medido, o rótulo de Lisboa acendeu a 13% com a borda direita em x 865, 24px
-   dentro da coluna de texto.
+   É a guarda GEOMÉTRICA — a única que não depende de tempo — e desde 17/10 ela
+   vale para TODOS os sete rótulos, não só para o da cidade focada. A razão é a
+   mesma de antes, agora permanente: a câmera está sempre aproximada, e no zoom
+   de detalhe cada 1% do raio vale mais pixel. Um rótulo a meio caminho da borda
+   abre 240px de caixa de texto e vai parar dentro da coluna do `<h1>`.
 
-   A regra que resolve é a do próprio enquadramento: no mergulho o rótulo
-   pertence ao pino que o zoom está afirmando, e esse pino está no MEIO. Então a
-   opacidade também é função do raio — cheia a até 34% de R do centro, zero a
-   partir de 52%.
+   A opacidade é função do raio: cheia até 34% de R do centro, zero a partir de
+   52%.
 
    Os dois números são medidos, e quem os fixa é o rótulo MAIS LARGO dos sete:
    "Transferência CVU / CBU · $ 38.000", 239px, abrindo para a direita. Com o
@@ -302,11 +337,17 @@ const VIGIA_FORA = 0.999;
    contra os 841 do `<h1>` — 43px de folga. A 52% ela chegaria a 858, e é por
    isso que lá a opacidade já é zero.
 
-   De graça, isto também resolve o rótulo que SAI: ele se afasta do centro, o
-   fator cai, e ele apaga por distância antes de poder viajar.
+   Três coisas vêm de graça com ela:
+    · o rótulo da cidade em que se pousou está no MEIO (rad ~0), logo sempre
+      cheio — a chegada nunca é penalizada;
+    · o rótulo da cidade de onde se partiu apaga por DISTÂNCIA assim que o voo
+      começa, antes de poder viajar para cima do texto;
+    · no pouso, "reaparecem só se couberem" deixa de ser promessa e passa a ser
+      conta: quem está longe do meio não acende.
    -------------------------------------------------------------------------- */
 const CHEGOU_DENTRO = 0.34;
 const CHEGOU_FORA = 0.52;
+
 
 /** O fio da circunferência, igual ao de `.globe-air` (globals.css). */
 const BORDA_ALFA = 0.22;
@@ -379,19 +420,6 @@ function cubica(p: number, x1: number, y1: number, x2: number, y2: number) {
   }
   const u = 1 - t;
   return 3 * u * u * t * y1 + 3 * u * t * t * y2 + t * t * t;
-}
-
-/**
- * Diferença de ângulo pelo CAMINHO CURTO, em (−π, π].
- *
- * Com os alvos de hoje — as sete capitais caem entre −22,7° e +61,9° de
- * centralização — ela nunca muda nada: nenhuma diferença chega perto de 180°.
- * Ela existe pelo dia em que um país novo entrar do outro lado do meridiano de
- * origem: sem isto, a viagem de 350° seria preferida à de 10°, e o planeta
- * daria a volta pelo lado errado na frente de quem está lendo.
- */
-function curto(d: number) {
-  return d - TAU * Math.round(d / TAU);
 }
 
 /**
@@ -577,9 +605,9 @@ type Geometria = {
   raio: number;
   /**
    * Densidade de pixels do canvas. Era local de `mede()`, e subiu para cá
-   * quando o mergulho passou a reescrever a matriz do contexto A CADA QUADRO:
-   * a escala do zoom MULTIPLICA a do dpr, e as duas têm de sair do mesmo lugar
-   * ou o planeta desenharia no dobro do tamanho num monitor retina.
+   * quando o zoom passou a reescrever a matriz do contexto A CADA QUADRO: a
+   * escala MULTIPLICA a do dpr, e as duas têm de sair do mesmo lugar ou o
+   * planeta desenharia no dobro do tamanho num monitor retina.
    */
   dpr: number;
   /** Deslocamento da caixa dentro do palco, para o arco. */
@@ -598,6 +626,7 @@ export function HeroGlobe({
   activeIndex,
   animated,
   running,
+  onCidade,
   alvoRef,
 }: {
   /** Na ordem de `payments.table.countries` — sete desde 15/10. */
@@ -605,51 +634,71 @@ export function HeroGlobe({
   activeIndex: number;
   /** `true` só depois de o relógio começar a andar e sem movimento reduzido. */
   animated: boolean;
-  /** Os quatro freios do relógio do `Hero`, já combinados. */
+  /** Os freios do relógio do `Hero`, já combinados. */
   running: boolean;
+  /**
+   * O VOO É O RELÓGIO (pedido do dono, 17/10): a perna de Londres a São Paulo
+   * leva 2,6 s e a de Bogotá a Quito 1,3 s, então quem avança a fila é o FIM DO
+   * POUSO e não um `setInterval` de 3 s. O globo avisa, o `Hero` espelha — ele
+   * continua sendo o dono de `activeIndex` para o DOM (status, chips, resumo
+   * para leitor de tela), e é por isso que nada aqui precisou mudar de lugar.
+   * Sem este aviso (celular, movimento reduzido) o relógio de 3 s do `Hero`
+   * continua mandando, como sempre.
+   */
+  onCidade?: (indice: number) => void;
   /** O nó em que o arco termina: o ticket do palco (ver `HeroTicket`). */
   alvoRef?: RefObject<HTMLElement | null>;
 }) {
   const caixa = useRef<HTMLDivElement>(null);
   const tela = useRef<HTMLCanvasElement>(null);
   /**
-   * As duas peças de CSS que o mergulho mexe: o limbo, que ESCALA com o planeta
+   * As duas peças de CSS que o zoom mexe: o limbo, que ESCALA com o planeta
    * (ele é o sombreado da esfera, e sombreado parado sobre terra que corre é o
    * defeito clássico de um zoom de imagem), e a marca da Wone, que DISSOLVE (um
    * logotipo de 83% do diâmetro cortado pela vigia seria um borrão).
    * As duas continuam pintadas pelo servidor e continuam custando zero por
-   * quadro fora do mergulho: o laço só escreve nelas quando `zoom > 0`.
+   * quadro enquanto a escala é 1 — os 2,2 s da entrada: o laço só escreve nelas
+   * depois disso.
    */
   const limbo = useRef<HTMLSpanElement>(null);
   const marca = useRef<HTMLSpanElement>(null);
   const alfinetes = useRef<(HTMLSpanElement | null)[]>([]);
   const nuvem = useRef<Nuvem | null>(null);
   const geo = useRef<Geometria | null>(null);
-  /** Ângulos do último quadro: o arco congela a posição do pino na ativação. */
-  const angulo = useRef({ yaw: 0, pitch: 0 });
+  /**
+   * O estado de câmera do último quadro — guinada, inclinação e ESCALA.
+   *
+   * A escala entrou aqui em 17/10 junto com o voo, e não é zelo: quando um
+   * freio é puxado (aba oculta, hero fora da tela) o efeito se remonta e
+   * desenha UM quadro parado. Sem a escala guardada, esse quadro sairia a 1×
+   * com a câmera apontada para uma cidade — ou seja o planeta inteiro
+   * descentralizado, que é pior que qualquer coisa que o voo possa fazer.
+   */
+  const angulo = useRef({ yaw: 0, pitch: 0, escala: 1 });
   const ativo = useRef(activeIndex);
   /**
-   * Instante em que o país da vez acendeu: é o relógio do flash da rede, do
-   * cometa e do pulso do pino.
+   * O RELÓGIO DO VOO, e ele é a única fonte de tempo do laço.
    *
-   * Nasce em −1e9, e não em 0 ou em `performance.now()`: com 0 a conta
-   * `now - acendeuEm` daria o tempo de vida da PÁGINA, que numa carga rápida
-   * cabe dentro dos 600 ms do pulso — e o pino piscaria na entrada, que é
-   * justamente o que a regra do hero proíbe. Com −1e9 nada dispara antes da
-   * primeira troca de verdade.
+   * `ms` é o tempo desde o POUSO na cidade da vez, e é um ACUMULADOR de quadros
+   * (`ms += dt`), nunca `performance.now() − carimbo`. A diferença é o pedido:
+   * "os quatro freios continuam parando tudo, e ao voltar o voo retoma de onde
+   * estava". Com relógio de parede, voltar de 30 s em outra aba cairia três
+   * cidades adiante — um corte, que é o defeito que este trabalho apaga.
+   *
+   * `entrada` é o mesmo acumulador para a ENTRADA (a espera de 2,2 s mais o
+   * mergulho até a primeira cidade), e `mergulhou` diz que ela acabou. Eles
+   * sobrevivem à remontagem do efeito: só o que o voo já andou é que conta.
    */
-  const acendeuEm = useRef(-1e9);
+  const relogio = useRef({ ms: 0, entrada: 0, mergulhou: false });
   /**
-   * Quantas vezes o relógio do hero já trocou de país. É o CONTADOR DE BATIDAS
-   * do ciclo de cinco (ver `CICLO`), e ele vive aqui e não no `Hero` de
-   * propósito: o `Hero` já expõe o país da vez (`activeIndex`), e o número de
-   * trocas é derivável dele sem uma segunda fonte de verdade — contá-lo lá
-   * significaria duas peças guardando o mesmo fato, que é como elas divergem.
-   *
-   * Nasce em 0, que vale "nenhuma troca ainda": na primeira tela o ciclo não
-   * começou, e nada pode mergulhar antes de o relógio andar.
+   * O aviso de troca de cidade para o `Hero`, num `ref`: o laço precisa dele
+   * por quadro, e uma função nova a cada render do `Hero` remontaria o efeito
+   * de desenho — ou seja, reiniciaria o voo — a cada troca de país.
    */
-  const batidas = useRef(0);
+  const avisar = useRef(onCidade);
+  useEffect(() => {
+    avisar.current = onCidade;
+  }, [onCidade]);
 
   /** O arco do pino até o aparelho. `null` até o relógio trocar de país. */
   const [arco, setArco] = useState<{ code: string; d: string } | null>(null);
@@ -708,19 +757,17 @@ export function HeroGlobe({
   }, []);
 
   /* O país da vez vai para um `ref`: o laço lê a cada quadro sem se refazer.
-     O carimbo de hora vai junto, e é o relógio do flash da rede: a perna que
-     chega a Lisboa ou a Londres acende em laranja cheio por 1 s a partir daqui. */
+     NO LAÇO quem escreve este `ref` é o próprio voo, no instante do pouso, e
+     o `activeIndex` que volta do `Hero` é o espelho — a comparação abaixo o
+     absorve sem mexer no relógio. Fora do laço (celular, movimento reduzido) é
+     o `Hero` que manda, e aqui é onde a troca dele entra. */
   useEffect(() => {
-    /* A comparação não é zelo: na montagem (e na remontagem dupla do modo
-       estrito, em desenvolvimento) o país não mudou — ele apenas começou a
-       existir. Carimbar a hora ali acenderia cometa e pulso na primeira tela. */
     if (ativo.current === activeIndex) return;
     ativo.current = activeIndex;
-    acendeuEm.current = performance.now();
-    /* A batida conta TROCAS, não renders: é o mesmo evento que acende o cometa,
-       e por isso o ciclo do mergulho nunca pode discordar de onde a bolinha
-       está. */
-    batidas.current += 1;
+    /* Uma troca vinda de fora é um recomeço de ciclo: o pouso da cidade nova
+       começa agora. No laço isto nunca roda (o voo já havia escrito o `ref`
+       antes de avisar), e fora dele o relógio do voo não é lido por ninguém. */
+    relogio.current.ms = 0;
   }, [activeIndex]);
 
   /**
@@ -757,55 +804,43 @@ export function HeroGlobe({
     const celular = modo === "celular";
     /**
      * O laço está de pé? É a condição do movimento que depende de TEMPO — o
-     * flash da rede, o cometa e o pulso do pino. Fora dela o globo é um quadro
+     * voo, o rastro, a bolinha e o pulso do pino. Fora dela o globo é um quadro
      * parado, e o que não pode animar não anima: nada de meia volta congelada
      * na tela quando o dono aperta "pausar".
      */
     const emLaco = modo === "laco" && running;
 
-    /* --------------------------------------------------------------- o zoom
-       O ESTADO DO MERGULHO, em variáveis do laço e não em `ref`: ele é
-       inteiramente um fato de ANIMAÇÃO, e o que o lê é só o desenho.
+    /* ----------------------------------------------------------------- o voo
+       O ESTADO DO QUADRO, em variáveis do laço e não em `ref`: ele é
+       inteiramente um fato de DESENHO, e o que o lê é só o desenho. O que
+       precisa sobreviver à remontagem do efeito — o tempo que o voo já andou e
+       a câmera do último quadro — mora em `relogio` e `angulo`, lá em cima.
 
-       Eles nascem em 0 a cada montagem do laço, e isso é escolha: quando um dos
-       freios do relógio é puxado no meio de um mergulho (aba oculta, hero fora
-       da tela, "pausar"), o globo volta a desenhar o quadro PARADO, que é o do
-       enquadramento normal — o mesmo em que o servidor o pintou. Ninguém vê o
-       salto, porque os três freios acontecem fora da vista; e quando o relógio
-       volta, o ciclo retoma de onde o contador de batidas está.
+       `escala` é a escala do quadro (1 = o enquadramento do servidor, 1,8 = o
+       detalhe da cidade) e `ancX/ancY` a translação que a ancora no CENTRO da
+       caixa: escalar por Z em torno de `a` é `p' = a + Z·(p − a)`, ou seja uma
+       matriz de escala Z com translação `a·(1 − Z)`. Como a câmera já
+       centraliza o ponto de interesse, `a` é o meio do disco — e o MESMO par
+       (escala, translação) vai para o `translate3d` de cada pino e do limbo.
+       Uma conta, três camadas: é isso que impede os pinos de descolarem do
+       planeta.
 
-       SÃO DOIS NÚMEROS, e separá-los é o que faz o pan vir antes da escala:
-         · `enquadra` — o ENQUADRAMENTO, 0 = gesto discreto, 1 = país centrado.
-           Manda no alvo do giro e na amplitude da varredura;
-         · `zoom` — a ESCALA, 0 = 1×, 1 = 1,8×. Manda na matriz do canvas, nos
-           corretores de espessura, no dpr e no anel de alvo.
-       Na ida o primeiro sobe e, quando termina, o segundo começa; na volta o
-       segundo desce e o primeiro o segue 500 ms depois. Nenhum `if` entre os
-       regimes em lugar nenhum: tudo o que o mergulho muda é função de um
-       destes dois fatores. */
-    let zoom = 0;
-    let enquadra = 0;
-    /** Para onde as curvas vão (0 ou 1), quando viraram e de onde partiram. */
-    let zoomQuer = 0;
-    let zoomT0 = -1e9;
-    let zoomDe = 0;
-    let enqDe = 0;
-    /** Escala do quadro e a translação que a ancora no pino (ver `desenha`). */
+       `revela` é "quanto do detalhe está aplicado", de 0 a 1: é ele que acende
+       a malha de 15°, a segunda trama de mar e o fio da borda, e que dissolve a
+       marca da Wone. Deriva da escala, não de um relógio próprio. */
     let escala = 1;
     let ancX = 0;
     let ancY = 0;
-    /**
-     * A viagem do giro: de onde ela partiu, quando, e para qual país. Uma nova
-     * começa a cada troca de país e a cada virada de regime — sempre do valor
-     * em que o giro ESTÁ, que é o que garante que nada salte.
-     */
-    let panT0 = -1e9;
-    let panDeYaw = 0;
-    let panDePitch = 0;
-    let panCode = "";
-    let panQuer = 0;
-    /** 1 = os sete rótulos; 0 = só o do país focado. Ver `ROTULO_SAI_MS`. */
+    let revela = 0;
+    /** 1 = os sete rótulos; 0 = só o da cidade da vez. Ver `ROTULO_SAI_MS`. */
     let rotulos = 1;
+    /** A fase e o relógio do voo no quadro, lidos pelo desenho. */
+    let fase: Estado["fase"] = "pouso";
+    let msFase = 0;
+    /** Onde a bolinha está, em `u` da perna — e se há rastro para desenhar. */
+    let uBola = 0;
+    let temRastro = false;
+    let bolaBase: [number, number, number] = [0, 0, 1];
     /**
      * Dois corretores de espessura, e eles são o que separa ZOOM de AMPLIAÇÃO.
      *
@@ -816,8 +851,8 @@ export function HeroGlobe({
      *   · `fio` = 1/Z devolve os fios à espessura de 1px de tela. A página tem
      *     uma escala de fios (hairlines), e ela não muda porque a câmera chegou
      *     perto;
-     *   · `grao` = Z^−0,4 engrossa o ponto por MENOS que a escala: a 1,8× o
-     *     grão cresce 1,27 enquanto o espaçamento cresce 1,8, então os vãos
+     *   · `grao` = Z^−0,4 engrossa o ponto por MENOS que a escala: a 1,35× o
+     *     grão cresce 1,13 enquanto o espaçamento cresce 1,35, então os vãos
      *     entre os pontos ABREM e a nuvem passa a ler como nuvem — a costa fica
      *     nítida e a terra ganha textura em vez de empastar.
      *     O expoente era 0,5 (a raiz) na primeira versão, e a captura do pico
@@ -828,15 +863,45 @@ export function HeroGlobe({
     let fio = 1;
     let grao = 1;
     /**
-     * Foco suavizado de cada pino: 1 no país da vez, 0 nos outros, perseguido
-     * com a mesma constante de tempo do giro. É ele que faz o DESLIZE de pino
-     * em pino das batidas 4 e 5 ser uma passagem e não um corte — o rótulo que
-     * perde o foco desvanece enquanto o novo acende, os dois no mesmo gesto.
+     * Foco suavizado de cada pino: 1 na cidade da vez, 0 nas outras. É ele que
+     * faz a chegada ser uma passagem e não um corte — o rótulo da cidade de
+     * onde se partiu desvanece enquanto o da nova acende, os dois no mesmo
+     * gesto.
      */
     const focos = new Float32Array(lista.length);
     focos[ativo.current] = 1;
     /** Último valor de destaque escrito no DOM, por pino. 2 = ainda não sei. */
     const destacado = new Uint8Array(lista.length).fill(2);
+
+    /**
+     * AS CIDADES, em lat/lon e na ORDEM DA FILA — é o que o modelo de voo pede,
+     * e é a mesma ordem de `payments.table.countries` que os pinos e os chips
+     * já usam. A ordem é intocável (pedido do dono); o anel geográfico da rede
+     * desenhada continua sendo outra coisa, decoração, e a bolinha deixou de
+     * usá-lo.
+     */
+    const cidades: Ponto[] = lista.map(
+      (code) => CAPITAIS[code] ?? { lat: 0, lon: 0 },
+    );
+    /** O centro da projeção: o enquadramento do servidor, de onde a entrada parte. */
+    const centroProj: Ponto = { lat: LAT0, lon: LON0 };
+    /** Duração do mergulho de entrada, pela MESMA régua das pernas (47,7° → 2,0 s). */
+    const mergulhoMs = duracaoDe(distancia(centroProj, cidades[0] ?? centroProj));
+
+    /**
+     * O RASTRO, montado UMA vez por perna: os 25 pontos do grande círculo já na
+     * base da projeção, prontos para girar. Não se refaz slerp por quadro — o
+     * arco é o mesmo durante os 2,6 s da perna, e o que muda é só até onde ele
+     * é traçado.
+     *
+     * `rastroDe` é a cidade de onde o arco sai, e é o que diz quando remontar.
+     * Durante o POUSO o buffer ainda guarda a perna que ACABOU de chegar — é
+     * ele que desvanece por 1 s —, e isso é de propósito: um buffer só, sem
+     * cópia, porque a perna seguinte só precisa dele quando o voo começa.
+     */
+    const rastro = new Float32Array((RASTRO_PASSOS + 1) * 3);
+    let rastroDe = -1;
+
 
     /* Arma a onda — uma vez por entrada, e só onde ela cabe.
        Quem diz se é celular aqui é o `matchMedia`, e NÃO o `modo`: `modo` nasce
@@ -861,27 +926,30 @@ export function HeroGlobe({
         : Math.min(1, (performance.now() - ondaT0.current) / ONDA_MS);
 
     /**
-     * O TETO DE DENSIDADE DE PIXELS, e ele SOBE NO MERGULHO.
+     * A DENSIDADE DE PIXELS, decidida UMA VEZ e nunca por quadro.
      *
-     * Em repouso são os 1,5 de sempre: é o ponto em que 5.102 pontos a 30 fps
-     * param de ficar mais nítidos e só ficam mais caros.
-     * No mergulho o quadro é peça de vitrine e a conta muda: os fios passam a
-     * ser desenhados com `1/Z` de espessura (ver `fio`), ou seja 0,56px de CSS
-     * a 1,8× — que a 1,5 de dpr dão 0,83px de DISPOSITIVO, abaixo de um pixel,
-     * onde a grade vira um cinza lavado em vez de um fio. 1,4× de supersampling
-     * sobre o nativo (teto 2) devolve-os a ~1,1px de dispositivo e recupera a
-     * borda dos pontos junto.
+     * 1,5 de teto: é o ponto em que 5.102 pontos param de ficar mais nítidos e
+     * só ficam mais caros.
      *
-     * O custo é real — a área rasterizada cresce 1,96× — e por isso ele é
-     * pago SÓ no mergulho, e medido: ver o `pior` do medidor.
+     * O SUPERSAMPLING DE 1,4× SAIU, e saiu MEDIDO. Ele entrou ontem para o
+     * mergulho de 1,8×, onde os fios ficavam com 0,56px de CSS (`fio` = 1/Z) e
+     * lavavam; hoje o pouso é a 1,35× e o fio tem 0,74px de CSS — 0,92px de
+     * dispositivo no monitor desta máquina. O custo dele, ao contrário, dobrou
+     * de importância: o laço passou de 30 para 60 fps, e a área rasterizada por
+     * segundo com ele era 1,96× maior. No banco de medição (1440×900, dpr 1, o
+     * mesmo servidor de desenvolvimento) o laço entrega 78 quadros por segundo
+     * sem ele e 47 com ele — ou seja, ele sozinho comia a diferença entre
+     * cumprir e não cumprir os 60 fps que o dono pediu.
+     *
+     * POR QUE NÃO ACOMPANHA O ZOOM: mexer em `canvas.width` ZERA o bitmap e
+     * realoca a textura. Com o mergulho de ontem isso acontecia duas vezes por
+     * ciclo de 15 s; com o voo, a escala muda a CADA QUADRO, e um dpr função
+     * dela seria uma realocação por quadro — o caminho mais caro que existe num
+     * canvas 2D. Então é um número por montagem do laço.
      */
-    const dprDe = (z: number) => {
-      if (celular) return 1;
-      const nativo = window.devicePixelRatio || 1;
-      return z > 0.02 ? Math.min(nativo * 1.4, 2) : Math.min(nativo, 1.5);
-    };
+    const dpr = celular ? 1 : Math.min(window.devicePixelRatio || 1, 1.5);
 
-    function mede(dpr = dprDe(zoom)) {
+    function mede() {
       const lado = box!.clientWidth;
       canvas!.width = Math.round(lado * dpr);
       canvas!.height = Math.round(lado * dpr);
@@ -941,7 +1009,7 @@ export function HeroGlobe({
         }
         ctx!.globalAlpha = (forte ? 0.09 : 0.06) * forca * g.ganho;
         ctx!.strokeStyle = LARANJA;
-        /* `fio` mantém a grade em 1px DE TELA dentro do mergulho: ver o
+        /* `fio` mantém a grade em 1px DE TELA dentro do zoom: ver o
            comentário dos dois corretores de espessura, acima. */
         ctx!.lineWidth = fio;
         ctx!.stroke();
@@ -965,33 +1033,37 @@ export function HeroGlobe({
 
       /* APROXIMAR TEM DE REVELAR, e a grade é onde isso se lê primeiro: é o
          que todo mapa faz quando se chega perto — os fios de 30° ganham
-         INTERMEDIÁRIOS de 15°, que não existiam. Eles entram pelo `zoom`, então
+         INTERMEDIÁRIOS de 15°, que não existiam. Eles entram pelo `revela`, então
          nascem invisíveis e nunca piscam; a 1,8× a malha tem o dobro da
          resolução que tinha, no mesmo laranja e na mesma espessura de tela.
-         Dez linhas a mais, e só enquanto o mergulho está de pé. */
-      if (zoom > 0.01) {
-        for (let m = -2; m <= 3; m += 1) meridiano(-72 + m * 30 + 15, zoom);
-        for (const lat of [15, -15, 45, -45]) paralelo(lat, false, zoom);
+         Dez linhas a mais, e elas acompanham a escala: cheias no pouso, quase
+         apagadas no meio de uma perna longa. */
+      if (revela > 0.01) {
+        for (let m = -2; m <= 3; m += 1) meridiano(-72 + m * 30 + 15, revela);
+        for (const lat of [15, -15, 45, -45]) paralelo(lat, false, revela);
       }
     }
 
     /**
-     * A REDE: as quatro pernas que ligam as capitais onde a Wone cobra.
+     * A REDE: as sete pernas que ligam as capitais onde a Wone cobra.
      *
-     * É ESTÁTICA — quem viaja é o arco do pino até o aparelho, e dois
-     * movimentos no mesmo gesto brigariam. Cada perna é o grande-círculo entre
-     * duas capitais, erguido 3,5% do raio no meio do caminho e nada nas pontas,
-     * o que a solta do chão sem desgrudar do pino. Os pontos já nascem na base
-     * da projeção (`rede()`, uma vez); aqui só se gira, projeta e traça — um
-     * `stroke` para as quatro.
+     * É DECORAÇÃO, e desde 17/10 é só isso. A bolinha corria uma perna dela, e
+     * era daí que vinham os cortes: o anel é GEOGRÁFICO (México → Colômbia →
+     * Equador → Brasil → Argentina → Portugal → Reino Unido → México) e não
+     * coincide com a fila das cidades em 3 das 7 trocas. Agora a bolinha segue o
+     * modelo de voo e a rede continua onde sempre esteve, fina, dizendo que os
+     * sete estão ligados.
+     *
+     * Cada perna é o grande-círculo entre duas capitais, erguido 3,5% do raio no
+     * meio do caminho e nada nas pontas, o que a solta do chão sem desgrudar do
+     * pino. Os pontos já nascem na base da projeção (`rede()`, uma vez); aqui só
+     * se gira, projeta e traça — um `stroke` para as sete.
+     *
+     * O RASTRO e a BOLINHA do voo são desenhados no fim desta função, por cima
+     * dela: é aqui que mora a conta de projetar um vetor da base, e repeti-la em
+     * outro lugar seria o segundo lugar para ela divergir.
      */
-    function malha(
-      cy: number,
-      sy: number,
-      cp: number,
-      sp: number,
-      desde: number,
-    ) {
+    function malha(cy: number, sy: number, cp: number, sp: number) {
       const g = geo.current!;
       const R = g.raio;
       const pts = rede();
@@ -1050,15 +1122,20 @@ export function HeroGlobe({
          à Europa precisa ser vista para o olho ir até lá.
            · 0,14 — as pernas das Américas, como sempre;
            · 0,30 — as que tocam Lisboa ou Londres, sempre;
-           · até 1,0 — a perna do país ATIVO, quando ele é Portugal ou Reino
-             Unido, por 1 s depois da troca, em laranja cheio e 1,5px.
-         O flash só existe no modo de laço (xl para cima): abaixo disso o globo
-         é redesenhado uma vez por troca de país, e uma animação de 1 s num
-         quadro só seria um piscar aleatório. */
+           · até 1,0 — as pernas da cidade da vez, quando ela é Lisboa ou
+             Londres, no primeiro segundo do POUSO, em laranja cheio e 1,5px.
+         O flash só existe no modo de laço: abaixo disso o globo é redesenhado
+         uma vez por troca de cidade, e uma animação de 1 s num quadro só seria
+         um piscar aleatório. */
       const ativoCode = lista[ativo.current] ?? "";
       const europeuAtivo = EUROPEUS.has(ativoCode);
       const flash =
-        europeuAtivo && emLaco && desde < FLASH_MS ? 1 - desde / FLASH_MS : 0;
+        europeuAtivo &&
+        emLaco &&
+        fase === "pouso" &&
+        msFase < FLASH_MS
+          ? 1 - msFase / FLASH_MS
+          : 0;
       const naPerna = (perna: [string, string]) =>
         perna[0] === ativoCode || perna[1] === ativoCode;
       const tocaEuropa = (perna: [string, string]) =>
@@ -1070,47 +1147,85 @@ export function HeroGlobe({
       traca((perna) => tocaEuropa(perna) && !acesa(perna), 0.3);
       if (flash > 0) traca(acesa, 0.3 + 0.7 * flash, 1.5);
 
-      /* O COMETA. A perna é a que SAI do país da vez — e cada um dos sete
-         aparece exatamente uma vez como origem no anel, então a escolha é
-         determinística: um país, um destino, sem sorteio.
-         A cabeça anda de ponta a ponta em 1,4 s, e atrás dela vêm três pontos
-         nas posições de 1, 2 e 3 quadros antes (0,028 da perna cada, que é o
-         que a cabeça anda num quadro de 30 fps). São quatro `fill` de um arco:
-         o custo é o mesmo de quatro pontos da nuvem, que tem 5.102.
-         A interpolação é LINEAR entre dois pontos vizinhos da polilinha que já
-         está montada — não se refaz grande-círculo nenhum por quadro. */
-      if (!emLaco || desde >= COMETA_MS) return;
-      const perna = REDE_PERNAS.findIndex(([de]) => de === ativoCode);
-      if (perna < 0) return;
+      if (!emLaco) return;
 
-      const avanco = desde / COMETA_MS;
-      /* Some no fim do trajeto em vez de apagar de repente. */
-      const vida = 1 - avanco * avanco;
-      for (let q = 0; q < COMETA_CAUDA; q += 1) {
-        const u = avanco - q * COMETA_PASSO;
-        if (u < 0) continue;
-        const f = u * REDE_PASSOS;
-        const s0 = Math.min(REDE_PASSOS, f | 0);
-        const s1 = Math.min(REDE_PASSOS, s0 + 1);
-        const w = f - s0;
-        const i0 = (perna * n + s0) * 3;
-        const i1 = (perna * n + s1) * 3;
-        const p = projeta(
-          pts[i0] + (pts[i1] - pts[i0]) * w,
-          pts[i0 + 1] + (pts[i1 + 1] - pts[i0 + 1]) * w,
-          pts[i0 + 2] + (pts[i1 + 2] - pts[i0 + 2]) * w,
-        );
+      /* ------------------------------------------------- o rastro e a bolinha
+
+         O RASTRO é o arco da cidade de onde se partiu até a bolinha: ele fica
+         ATRÁS dela e some em 1 s depois do pouso. Só `globalAlpha` — nenhum
+         gradiente, nenhuma segunda camada: é um `stroke` de uma polilinha que
+         já está montada em `rastro` (ver `RASTRO_PASSOS`), traçada até onde a
+         bolinha chegou.
+
+         O ÚLTIMO PONTO É A BOLINHA, e não o vértice mais próximo dela: assim a
+         ponta do rastro e a cabeça do cometa são o mesmo pixel em qualquer
+         instante, em vez de se descolarem por até 1/24 da perna. */
+      if (temRastro) {
+        const ate = fase === "voo" ? uBola : 1;
+        const vida =
+          fase === "voo"
+            ? 1
+            : Math.max(0, 1 - msFase / RASTRO_SOME_MS);
+        if (vida > 0.004) {
+          const f = ate * RASTRO_PASSOS;
+          const inteiros = Math.min(RASTRO_PASSOS, f | 0);
+          ctx!.beginPath();
+          let caneta = false;
+          for (let s = 0; s <= inteiros; s += 1) {
+            const p = projeta(rastro[s * 3], rastro[s * 3 + 1], rastro[s * 3 + 2]);
+            if (p.z2 <= 0) {
+              caneta = false;
+              continue;
+            }
+            if (caneta) ctx!.lineTo(p.sx, p.sv);
+            else ctx!.moveTo(p.sx, p.sv);
+            caneta = true;
+          }
+          const cabeca = projeta(bolaBase[0], bolaBase[1], bolaBase[2]);
+          if (caneta && cabeca.z2 > 0) ctx!.lineTo(cabeca.sx, cabeca.sv);
+          ctx!.globalAlpha = RASTRO_ALFA * vida * g.ganho;
+          ctx!.strokeStyle = COSTA;
+          /* Em px de TELA: o rastro é do gesto, não do terreno, e não engrossa
+             porque a câmera chegou perto. */
+          ctx!.lineWidth = 1.25 * fio;
+          ctx!.stroke();
+        }
+      }
+
+      /* A BOLINHA. A cabeça está na coordenada que o MODELO deu (`bola`), e
+         atrás dela vêm três pontos a 2% da perna cada, interpolados na
+         polilinha do rastro — quatro `fill` de um arco, o custo de quatro
+         pontos da nuvem que tem 5.102.
+         Os raios são em px de tela (`fio`): uma bolinha de 2,7px é uma bolinha
+         de 2,7px no detalhe de 1,35× e no mínimo de 1,11×. */
+      for (let q = 0; q < BOLA_CAUDA; q += 1) {
+        let p: { sx: number; sv: number; z2: number };
+        if (q === 0) {
+          p = projeta(bolaBase[0], bolaBase[1], bolaBase[2]);
+        } else {
+          if (!temRastro && fase === "voo") break;
+          const u = uBola - q * BOLA_PASSO;
+          if (u < 0) break;
+          const f = u * RASTRO_PASSOS;
+          const s0 = Math.min(RASTRO_PASSOS, f | 0);
+          const s1 = Math.min(RASTRO_PASSOS, s0 + 1);
+          const w = f - s0;
+          p = projeta(
+            rastro[s0 * 3] + (rastro[s1 * 3] - rastro[s0 * 3]) * w,
+            rastro[s0 * 3 + 1] + (rastro[s1 * 3 + 1] - rastro[s0 * 3 + 1]) * w,
+            rastro[s0 * 3 + 2] + (rastro[s1 * 3 + 2] - rastro[s0 * 3 + 2]) * w,
+          );
+        }
         if (p.z2 <= 0) continue;
-        const cauda = 1 - q / COMETA_CAUDA;
+        const cauda = 1 - q / BOLA_CAUDA;
         ctx!.beginPath();
-        /* A bolinha engrossa pela RAIZ da escala, como o grão da terra: no
-           mergulho ela continua sendo um cometa, e não uma bola de gude. */
-        ctx!.arc(p.sx, p.sv, (0.9 + 1.5 * cauda) * cauda * grao, 0, TAU);
-        ctx!.globalAlpha = Math.min(1, 0.95 * cauda * cauda * vida) * g.ganho;
+        ctx!.arc(p.sx, p.sv, (1.1 + 1.6 * cauda) * cauda * fio, 0, TAU);
+        ctx!.globalAlpha = Math.min(1, 0.95 * cauda * cauda) * g.ganho;
         /* Creme na cabeça, como o pino: é o mesmo gesto chegando. */
         ctx!.fillStyle = q === 0 ? PAIS_NUCLEO : COSTA;
         ctx!.fill();
       }
+      ctx!.globalAlpha = 1;
     }
 
     /**
@@ -1152,21 +1267,28 @@ export function HeroGlobe({
          quando se procura e sumir quando se lê o mapa. */
       tece(mar(), MAR_PONTOS, 0.07);
 
-      /* A SEGUNDA TRAMA, só no mergulho. A 1,8× os 900 pontos do mar se espalham
-         por 3,24 vezes a área e o oceano fica VAZIO — aproximar estava tirando
-         textura em vez de dar, que é o oposto do que um mapa faz. A espiral fina
+      /* A SEGUNDA TRAMA, que entra com o zoom. A 1,35× os 900 pontos do mar se
+         espalham por 1,82 vez a área e o oceano fica RALO — aproximar estava
+         tirando textura em vez de dar, que é o oposto do que um mapa faz. A
+         espiral fina
          tem 1.800 pontos próprios (não é um adensamento da primeira: são dois
          sorteios de Fibonacci independentes, o mesmo truque da segunda nuvem da
-         Europa) e entra pelo `zoom`, nascendo invisível. A 1,8× o mar volta a
+         Europa) e entra pelo `revela`, nascendo invisível. A 1,8× o mar volta a
          ter a densidade de tela que tem em repouso. */
-      if (zoom > 0.01) tece(marFino(), MAR_FINO_PONTOS, 0.07 * zoom);
+      if (revela > 0.01) tece(marFino(), MAR_FINO_PONTOS, 0.07 * revela);
     }
 
-    function desenha(yaw: number, pitch: number) {
-      /* `let` e não `const`: a troca de dpf do mergulho, logo abaixo, chama
-         `mede()`, que reconstrói `geo.current` — ler o objeto velho daria o dpr
-         antigo na matriz do contexto. */
-      let g = geo.current!;
+    /**
+     * UM QUADRO: a câmera (guinada, inclinação) e a ESCALA que o voo pediu.
+     *
+     * A escala entra como parâmetro e não por variável de fora porque o quadro
+     * PARADO (ResizeObserver, freio puxado) também precisa dela: ele desenha o
+     * último estado de câmera, e um quadro a 1× com a câmera apontada para uma
+     * cidade seria o planeta descentralizado — pior que qualquer coisa que o voo
+     * possa fazer.
+     */
+    function desenha(yaw: number, pitch: number, esc = 1) {
+      const g = geo.current!;
       const R = g.raio;
       const cy = Math.cos(yaw);
       const sy = Math.sin(yaw);
@@ -1174,57 +1296,39 @@ export function HeroGlobe({
       const sp = Math.sin(pitch);
       const atual = ativo.current;
 
-      /* ----------------------------------------------- a matriz do mergulho
+      /* -------------------------------------------------- a matriz do zoom
 
-         A ÂNCORA é o pino do país da vez, PROJETADO neste quadro e ANTES da
-         escala — um ponto, dez flops. Ele tem de ser recalculado a cada quadro
-         porque o planeta continua girando por baixo: ancorar numa coordenada
-         congelada faria o pino escorregar sob o dedo, que é exatamente o
-         defeito que o zoom do Maps não tem.
+         A ÂNCORA É O CENTRO DA CAIXA. A conta é a de sempre — escalar por Z em
+         torno de `a` é `p' = Z·p + (a − Z·a)`, logo a matriz do contexto é a
+         escala do dpr multiplicada por Z com a translação `a·(1 − Z)` —, e o
+         MESMO par (`escala`, `ancX/ancY`) vai para o `translate3d` dos pinos e
+         do limbo, no fim desta função. Uma conta, três camadas: é isso que
+         impede os pinos de descolarem do planeta.
 
-         A conta é a do pedido: escalar por Z em torno de `a` é
-         `p' = Z·p + (a − Z·a)`. Então a matriz do contexto é a escala do dpr
-         multiplicada por Z, com a translação `a·(1 − Z)` — e o MESMO par
-         (`escala`, `ancX/ancY`) vai para o `translate3d` dos pinos, no fim desta
-         função. Uma conta, duas camadas: é isso que impede os pinos de
-         descolarem do planeta.
-
-         A escala é `ZOOM_MAX^zoom`, que é a forma fechada de
-         `2^lerp(log2 1, log2 ZOOM_MAX, zoom)` — a interpolação do LOGARITMO
-         que o pedido pede, numa exponenciação só.
+         Até ontem `a` era o PINO da vez, porque o giro chegava depois da escala
+         e era preciso prometer que o pino ficaria parado durante a descida.
+         Agora a câmera já centraliza o ponto de interesse: o meio do disco É o
+         ponto focado, e ancorar nele é a mesma promessa escrita em duas linhas
+         em vez de dez.
 
          A translação é arredondada a 0,1px de CSS: é a mesma régua do
          `translate3d` dos pinos (e é por isso que as duas camadas não podem
          arredondar diferente), e segura o tremor de subpixel que uma matriz
-         recalculada 30 vezes por segundo produziria na borda dos pontos. */
-      if (zoom > 0.0005) {
-        const [fx, fy, fz] = alvo(lista[atual] ?? "");
-        const fx1 = cy * fx + sy * fz;
-        const fz1 = -sy * fx + cy * fz;
-        const fy2 = cp * fy - sp * fz1;
-        escala = Math.pow(ZOOM_MAX, zoom);
-        const ax = R + fx1 * R;
-        const ay = R - fy2 * R;
-        ancX = Math.round(ax * (1 - escala) * 10) / 10;
-        ancY = Math.round(ay * (1 - escala) * 10) / 10;
+         recalculada 60 vezes por segundo produziria na borda dos pontos. */
+      if (esc > 1.0005) {
+        escala = esc;
+        ancX = Math.round(R * (1 - escala) * 10) / 10;
+        ancY = ancX;
         fio = 1 / escala;
         grao = Math.pow(escala, -0.4);
+        revela = Math.min(1, (escala - 1) / (ZOOM_DETALHE - 1));
       } else {
         escala = 1;
         ancX = 0;
         ancY = 0;
         fio = 1;
         grao = 1;
-      }
-
-      /* O dpr acompanha o mergulho, e a troca acontece AQUI — antes do
-         `clearRect`, porque mexer em `canvas.width` zera o bitmap: no meio do
-         desenho isso apagaria metade do quadro. São duas trocas por ciclo de
-         15 s, nos instantes em que a escala sai de 1 e volta a 1. */
-      const querDpr = dprDe(zoom);
-      if (Math.abs(querDpr - g.dpr) > 0.01) {
-        mede(querDpr);
-        g = geo.current!;
+        revela = 0;
       }
 
       /* A ONDA: o front em px da caixa (lado = 2R), do pé ao topo. A grade e a
@@ -1250,8 +1354,6 @@ export function HeroGlobe({
         ctx!.restore();
       };
 
-      const desde = performance.now() - acendeuEm.current;
-
       /* ------------------------------------------------------------- a vigia
 
          Limpa na régua do dpr (a caixa inteira) e só DEPOIS recorta e amplia:
@@ -1266,8 +1368,9 @@ export function HeroGlobe({
 
          Antes de 17/10 o canvas era um quadrado sem recorte, e isso funcionava
          porque a queda de alfa no limbo apagava os pontos antes da borda. Com o
-         mergulho o terreno chega AMPLIADO até a aresta da caixa, e sem a vigia
-         o planeta lia como um recorte quadrado em vez de uma esfera. */
+         voo o terreno chega AMPLIADO até a aresta da caixa — e chega SEMPRE,
+         porque a câmera nunca volta a 1× depois da entrada —, e sem a vigia o
+         planeta leria como um recorte quadrado em vez de uma esfera. */
       ctx!.setTransform(g.dpr, 0, 0, g.dpr, 0, 0);
       ctx!.clearRect(0, 0, g.lado, g.lado);
       ctx!.save();
@@ -1316,7 +1419,7 @@ export function HeroGlobe({
         const vol = 0.62 + 0.38 * z2;
         /* REALCE DE ESTÚDIO: no quadrante que a luz de cima-à-esquerda pega, o
            ponto sobe um degrau de brilho e ganha raio. É um `if` por ponto, e
-           não um expoente — a 5.102 pontos a 30 fps, a diferença é medida. */
+           não um expoente — a 5.102 pontos a 60 fps, a diferença é medida. */
         const realce = lit > 0.74 ? (lit - 0.74) * 1.4 : 0;
 
         const t = dados.tingimento[i];
@@ -1362,7 +1465,7 @@ export function HeroGlobe({
           (0.72 + 0.4 * lit + 0.12 * realce) *
           vol *
           (balde % BALDES >= 7 ? 1.18 : 1) *
-          /* `grao` é 1 fora do mergulho: um multiplicador por ponto, e é o que
+          /* `grao` é 1 enquanto a escala é 1: um multiplicador por ponto, e é o que
              faz a aproximação REVELAR a nuvem em vez de só ampliá-la. */
           grao;
         trab.b[n] = balde;
@@ -1395,7 +1498,7 @@ export function HeroGlobe({
 
       /* A rede POR CIMA da terra: embaixo de 5.102 pontos de laranja ela
          desaparece, e ligar as quatro capitais é o que a imagem tem a dizer. */
-      sob(() => malha(cy, sy, cp, sp, desde));
+      sob(() => malha(cy, sy, cp, sp));
       ctx!.globalAlpha = 1;
 
       /* Os pinos: `transform` com o DESLOCAMENTO a partir da posição de
@@ -1411,7 +1514,10 @@ export function HeroGlobe({
            alfinete e por isso só pode pulsar onde o alfinete já está.
            O `hero-ping` do `CountryTag` segue existindo abaixo de 1280, onde
            não há laço para animar isto. */
-        const pulso = emLaco && desde < PULSO_MS ? desde / PULSO_MS : -1;
+        const pulso =
+          emLaco && fase === "pouso" && relogio.current.mergulhou && msFase < PULSO_MS
+            ? msFase / PULSO_MS
+            : -1;
 
         for (let j = 0; j < g.repouso.length; j += 1) {
           const el = alfinetes.current[j];
@@ -1433,19 +1539,18 @@ export function HeroGlobe({
              da bola. */
           const borda = (z2 - 0.05) / 0.25;
           const visivel = z2 <= 0 ? 0 : borda >= 1 ? 1 : borda <= 0 ? 0 : borda;
-          /* O px/py do pino no planeta, antes do mergulho — e depois dele, que
-             é a MESMA conta da matriz do canvas (`a·(1−Z) + Z·p`). Uma conta,
-             duas camadas: é só por isso que os pinos não descolam do planeta.
-             Para o pino FOCADO, `a` é ele mesmo, então a conta devolve `p` e ele
-             fica parado na tela — a promessa da âncora, exata e não aproximada. */
+          /* O px/py do pino no planeta, antes do zoom — e depois dele, que é a
+             MESMA conta da matriz do canvas (`a·(1−Z) + Z·p`, com `a` no centro
+             da caixa). Uma conta, duas camadas: é só por isso que os pinos não
+             descolam do planeta. */
           const px = R + x1 * R;
           const py2 = R - y2 * R;
           const pxz = ancX + escala * px;
           const pyz = ancY + escala * py2;
 
           /* A VIGIA VALE PARA O DOM TAMBÉM. O canvas corta o que sai do
-             círculo; o HTML não é cortado por nada, e no mergulho os pinos fora
-             do foco saem do disco — ficariam pendurados no vazio ao lado do
+             círculo; o HTML não é cortado por nada, e no zoom os pinos longe do
+             centro saem do disco — ficariam pendurados no vazio ao lado do
              planeta, ou, pior, em cima da coluna de texto. Então o rótulo
              desvanece pela distância ao centro contra o raio, na mesma faixa
              curta do limbo. Em repouso esta rampa coincide com a de `z2` (é a
@@ -1458,39 +1563,39 @@ export function HeroGlobe({
                 ? 1
                 : (VIGIA_FORA - rad) / (VIGIA_FORA - VIGIA_DENTRO);
 
-          /* OS SETE RÓTULOS NÃO CABEM NUM PLANETA APROXIMADO: a 1,8× os pinos
-             se afastam da âncora por 80% da distância que já tinham. O mergulho
-             apaga os outros seis e deixa o do país focado, que é o único que o
-             enquadramento está afirmando — e a troca acontece com o planeta
-             ainda em 1×, durante a viagem (ver `ROTULO_SAI_MS`).
-             `focos[j]` faz a travessia das batidas 4 e 5 ser um cruza-fade
-             entre o rótulo que sai e o que entra, em vez de um corte. */
-          /* O rótulo do país focado só acende quando o pino CHEGA ao meio (ver
-             `CHEGOU_DENTRO`). O fator entra misturado pelo enquadramento, para
-             em repouso valer 1 e não mexer em nada. */
+          /* OS SETE RÓTULOS NÃO CABEM NUM PLANETA APROXIMADO: no detalhe de
+             1,35× os pinos se afastam do centro por 35% da distância que já
+             tinham. No VOO fica só o da cidade de onde se partiu (`focos`), e
+             ele apaga por distância conforme se afasta do meio; no POUSO voltam
+             os que CABEM — a vigia tira quem saiu do disco e a régua da coluna
+             de texto tira quem está longe do centro.
+             `focos[j]` é o que faz a chegada ser um cruza-fade entre o rótulo
+             que sai e o que entra, em vez de um corte. */
           const chegou =
             rad <= CHEGOU_DENTRO
               ? 1
               : rad >= CHEGOU_FORA
                 ? 0
                 : (CHEGOU_FORA - rad) / (CHEGOU_FORA - CHEGOU_DENTRO);
-          const peso = focos[j] * (1 - enquadra + enquadra * chegou);
           const efetiva =
-            Math.min(visivel, naVigia) * (rotulos + (1 - rotulos) * peso);
+            Math.min(visivel, naVigia) *
+            chegou *
+            (rotulos + (1 - rotulos) * focos[j]);
           el.hidden = efetiva <= 0.004;
           el.style.opacity = efetiva >= 0.999 ? "" : efetiva.toFixed(3);
           el.style.transform = `translate3d(${(pxz - g.repouso[j].x).toFixed(1)}px, ${(pyz - g.repouso[j].y).toFixed(1)}px, 0)`;
 
-          /* O DESTAQUE do rótulo focado: bandeira + cidade + método · preço, as
-             identidades reais que a página já tem. É uma classe no alfinete e o
-             CSS cuida do resto (`.hero-pino--foco`, em `hero.css`) — assim o
-             rótulo aparece até nas janelas em que os sete não cabem, porque ali
-             ele está sozinho. Escrita só na VIRADA, nunca por quadro: tocar o
-             `classList` 30 vezes por segundo paga invalidação de estilo de
-             graça. O gatilho é `rotulos`, e não a escala: o destaque entra
-             exatamente quando os outros seis passam da metade do desvanecer,
-             que é o instante em que o rótulo focado fica sozinho na tela. */
-          const destaque = rotulos < 0.5 && j === atual ? 1 : 0;
+          /* O DESTAQUE do rótulo da cidade em que se pousou: bandeira + cidade
+             + método · preço, as identidades reais que a página já tem. É uma
+             classe no alfinete e o CSS cuida do resto (`.hero-pino--foco`, em
+             `hero.css`) — assim o rótulo aparece até nas janelas em que os sete
+             não cabem, porque ali ele está sozinho. Escrita só na VIRADA, nunca
+             por quadro: tocar o `classList` 60 vezes por segundo paga
+             invalidação de estilo de graça.
+             O gatilho é a FASE: no pouso a cidade da vez é o assunto da tela e
+             ganha o rótulo cheio; no voo ninguém é, e ele volta ao tamanho de
+             sempre antes de a câmera partir. */
+          const destaque = fase === "pouso" && j === atual ? 1 : 0;
           if (destacado[j] !== destaque) {
             destacado[j] = destaque;
             el.classList.toggle("hero-pino--foco", destaque === 1);
@@ -1498,18 +1603,17 @@ export function HeroGlobe({
 
           if (z2 <= 0) continue;
 
-          /* O ANEL DE ALVO do mergulho: nasce com 4px, CRESCE junto com a
-             escala e ASSENTA em 22px de tela — uma vez por mergulho, sem
-             piscar. É o que o Maps põe no ponto que você escolheu, e aqui ele
-             faz um segundo trabalho: nas batidas 4 e 5 ele passa de pino em
-             pino com o `focos`, e é por ele que se LÊ o deslize.
+          /* O ANEL DE ALVO: nasce com 4px, CRESCE com a escala e ASSENTA em
+             22px de tela. É o que o Maps põe no ponto que você escolheu, e aqui
+             ele marca a cidade que a câmera está afirmando — ele passa de pino
+             em pino junto com o `focos`, e é por ele que se LÊ a chegada.
              Raio e espessura em px de TELA (daí o `fio`): o alvo é da câmera,
              não do planeta, e não cresce junto com o terreno. */
-          if (zoom > 0.002 && focos[j] > 0.01) {
+          if (revela > 0.002 && focos[j] > 0.01) {
             ctx!.beginPath();
-            ctx!.arc(px, py2, (4 + (ZOOM_ANEL - 4) * zoom) * fio, 0, TAU);
+            ctx!.arc(px, py2, (4 + (ZOOM_ANEL - 4) * revela) * fio, 0, TAU);
             ctx!.globalAlpha =
-              0.3 * focos[j] * Math.min(1, zoom * 2.5) * g.ganho;
+              0.3 * focos[j] * Math.min(1, revela * 2.5) * g.ganho;
             ctx!.strokeStyle = LARANJA;
             ctx!.lineWidth = 1.25 * fio;
             ctx!.stroke();
@@ -1543,15 +1647,20 @@ export function HeroGlobe({
          `.globe-air` (globals.css), que já desenha esta circunferência no HTML
          do servidor; aqui ele é repintado POR CIMA, centrado em R − 0,75 para
          cobrir exatamente a faixa do corte.
-         O alfa sobe com o zoom em vez de ser constante, e isso é regra dura do
-         hero: em repouso o fio do CSS está sozinho — somar outro igual dobraria
-         a borda para 39% e o primeiro quadro deixaria de cair sobre o que o
-         servidor pintou. A 1/3 do mergulho ele já está cheio. */
+         O alfa sobe com a ESCALA e não é constante, e isso é regra dura do
+         hero: enquanto a escala é 1 — os 2,2 s da entrada — o fio do CSS está
+         sozinho, e somar outro igual dobraria a borda para 39% e o primeiro
+         quadro deixaria de cair sobre o que o servidor pintou. Basta a escala
+         passar de 1,08× para ele estar cheio — e ela passa ainda no mergulho de
+         entrada, e só volta para perto de 1 no meio das pernas mais longas, que
+         é quando o limbo volta a aparecer e a borda pode ceder de novo ao fio
+         do CSS. */
       ctx!.restore();
-      if (zoom > 0.0005) {
+      if (escala > 1.0005) {
         ctx!.beginPath();
         ctx!.arc(R, R, R - BORDA_FIO / 2, 0, TAU);
-        ctx!.globalAlpha = BORDA_ALFA * Math.min(1, zoom * 3) * g.ganho;
+        ctx!.globalAlpha =
+          BORDA_ALFA * Math.min(1, (escala - 1) * 12) * g.ganho;
         ctx!.strokeStyle = LARANJA;
         ctx!.lineWidth = BORDA_FIO;
         ctx!.stroke();
@@ -1560,15 +1669,16 @@ export function HeroGlobe({
 
       /* O LIMBO ACOMPANHA O PLANETA. Ele é o escurecimento dos últimos 6% do
          raio — o que faz o disco ler como bola — e vive em CSS porque não
-         girava. Agora ele ESCALA: dentro do mergulho precisa estar no mesmo
-         espaço dos pontos, ou o sombreado fica parado enquanto a terra corre
-         por baixo, que é o defeito clássico de um zoom de imagem. Recebe a
-         MESMA matriz do canvas, no compositor, de graça — e a 1,8× o seu aro
-         escuro simplesmente sai de quadro, cortado pela vigia (`.globe-vigia`,
-         em `hero.css`), que é o que acontece no Maps quando se aproxima.
-         A MARCA da Wone não escala: ela é o fundo em repouso, e a 1,8× um
-         logotipo de 83% do diâmetro cortado pela vigia seria um borrão. Em vez
-         de crescer, ela sai de cena — dissolve com o mergulho e volta com ele.
+         girava. Com o zoom ele ESCALA: precisa estar no mesmo espaço dos
+         pontos, ou o sombreado fica parado enquanto a terra corre por baixo,
+         que é o defeito clássico de um zoom de imagem. Recebe a MESMA matriz do
+         canvas, no compositor, de graça — e a partir de ~1,1× o seu aro escuro
+         sai de quadro, cortado pela vigia (`.globe-vigia`, em `hero.css`), que é
+         o que acontece no Maps quando se aproxima.
+         A MARCA da Wone não escala: ela é o fundo do planeta inteiro, e
+         aproximada seria um borrão de 83% do diâmetro cortado pela vigia. Em vez
+         de crescer, ela sai de cena com a escala — fica visível na entrada e no
+         meio das pernas longas, que é quando o planeta está inteiro na tela.
          Nos dois casos é `transform`/`opacity`: nenhum quadro passa por layout. */
       if (limbo.current) {
         limbo.current.style.transform =
@@ -1578,18 +1688,57 @@ export function HeroGlobe({
       }
       if (marca.current) {
         /* 0,06 é o alfa que o CSS dá à marca: o inline tem de MULTIPLICAR esse
-           número, não substituí-lo — escrever `1 − zoom` cru acenderia um
+           número, não substituí-lo — escrever `1 − revela` cru acenderia um
            logotipo chapado no meio do planeta. String vazia devolve o controle
            ao CSS, que é o estado de repouso. */
         marca.current.style.opacity =
-          zoom > 0.0005 ? (0.06 * (1 - zoom)).toFixed(4) : "";
+          revela > 0.0005 ? (0.06 * (1 - revela)).toFixed(4) : "";
       }
 
-      angulo.current = { yaw, pitch };
+      angulo.current = { yaw, pitch, escala };
+
+      /* O ESPIÃO: o estado do quadro em `window.__globo`, para a medição no
+         navegador poder provar as três conferências do pedido sem olhar
+         fotografia — a bolinha dentro do disco, a ausência de salto entre
+         amostras e o zoom que abre mais nas viagens longas. Duas leituras de
+         `performance.now` por quadro e nenhuma alocação: os campos são escritos
+         num objeto que já existe. */
+      const olho = medidor();
+      olho.escala = escala;
+      olho.fase = fase;
+      olho.cidade = atual;
+      olho.u = uBola;
+      olho.raio = R;
+      olho.yaw = yaw;
+      olho.pitch = pitch;
+      const vb = projetaBola(cy, sy, cp, sp, R);
+      olho.bolaX = vb.x;
+      olho.bolaY = vb.y;
+      olho.bolaVisivel = vb.z > 0;
+    }
+
+    /** A bolinha em px da CAIXA, já com a matriz do zoom: é o que a medição lê. */
+    function projetaBola(
+      cy: number,
+      sy: number,
+      cp: number,
+      sp: number,
+      R: number,
+    ) {
+      const x1 = cy * bolaBase[0] + sy * bolaBase[2];
+      const z1 = -sy * bolaBase[0] + cy * bolaBase[2];
+      const y2 = cp * bolaBase[1] - sp * z1;
+      const z2 = sp * bolaBase[1] + cp * z1;
+      return {
+        x: ancX + escala * (R + x1 * R),
+        y: ancY + escala * (R - y2 * R),
+        z: z2,
+      };
     }
 
     mede();
-    const umQuadro = () => desenha(angulo.current.yaw, angulo.current.pitch);
+    const umQuadro = () =>
+      desenha(angulo.current.yaw, angulo.current.pitch, angulo.current.escala);
 
     const observador =
       typeof ResizeObserver === "undefined"
@@ -1600,15 +1749,20 @@ export function HeroGlobe({
           });
     observador?.observe(box);
 
-    /* Fora do `xl`, ou com qualquer um dos quatro freios do relógio puxado
-       (pausado, movimento reduzido, aba oculta, fora da tela): UM quadro na
-       orientação em que o globo está, e para. Nada reagenda. */
+    /* Fora do `lg`, ou com qualquer um dos freios do relógio puxado (movimento
+       reduzido, aba oculta, hero fora da tela): UM quadro no estado em que o
+       globo está, e para. Nada reagenda.
+       É AQUI QUE MORA O "SEM VOO" do `prefers-reduced-motion`: sem laço não há
+       bolinha, não há câmera e não há zoom — o globo fica no enquadramento do
+       servidor e a troca de cidade, que continua sendo o relógio de 3 s do
+       `Hero`, é um fade de opacidade do rótulo e do pino (CSS do `CountryTag`).
+       O celular (<1024) cai no mesmo caminho, por largura. */
     if (modo !== "laco" || !running) {
       /* Sem laço, o globo fica na orientação de REPOUSO: é a que o servidor
          pintou e a que põe cada pino exatamente onde o `left/top` dele manda.
          (Com o laço de pé e um freio puxado, ao contrário, ele congela onde
          está — voltar ao repouso seria um salto.) */
-      if (modo !== "laco") angulo.current = { yaw: 0, pitch: 0 };
+      if (modo !== "laco") angulo.current = { yaw: 0, pitch: 0, escala: 1 };
       umQuadro();
       if (progresso() >= 1) return () => observador?.disconnect();
 
@@ -1635,43 +1789,20 @@ export function HeroGlobe({
     }
 
     let raf = 0;
-    let t0 = 0;
     let ultimo = -1;
-    /* O ENQUADRAMENTO acumulado: o gesto/centralização do país da vez, sem a
-       varredura e sem o cursor, que entram por fora. Nasce em ZERO e não no
-       ângulo do quadro anterior — a rampa de entrada (`entrada2`) multiplica
-       este termo junto com a varredura, e é isso que faz o primeiro quadro do
-       laço cair exatamente sobre o ângulo em que o servidor pintou o globo. */
-    let recYaw = 0;
-    let recPitch = 0;
-
-    /* Uma volta em 180 s, e um meridiano sorteado por sessão.
-       O sorteio é uma vez por montagem do laço — recarregar a página dá outro.
-       O ângulo é ACUMULADO e não "seg × velocidade": integrar a velocidade é o
-       que deixa a rampa de entrada mexer no ritmo sem criar salto no ângulo. */
-    /* A JANELA DO GIRO, em radianos (veja o comentário do laço). O giro varre
-       de 0 a +16° de guinada: é a faixa em que os SETE países marcados ficam
-       todos na face visível da bola. */
-    const GIRO_CENTRO = (8 * Math.PI) / 180;
-    const GIRO_AMPL = (8 * Math.PI) / 180;
-    const GIRO_PERIODO = 38;
-    const faseSessao = Math.random() * TAU;
 
     /* O CURSOR MOVE O PLANETA (pedido do dono, 16/10: "deixe o globo interativo,
        ao passar o cursor por cima deve se mexer").
 
-       Ele NÃO SOMA ao balanço, ele o ASSUME — e isso é medida, não gosto. A
-       folga entre o extremo direito do que o globo desenha e a coluna de texto
-       é de 42px a 1400 (44 a 1440, 68 a 1920), COM o balanço de 9° já rodando.
-       Somar mais graus comeria essa folga e os rótulos encostariam no título.
-       Então, conforme a força do cursor sobe, a amplitude do balanço cai a 40%:
-       o pior caso continua dentro do envelope já medido — 9 × 0,4 + 5,5 = 9,1°
-       contra os 9° de antes.
+       Ele SOMA à câmera do voo, com 40% do gesto que tinha (ver `CURSOR_PESO`):
+       agora o planeta está sempre aproximado, e no zoom cada grau de guinada
+       vale mais pixel. O empurrão máximo é 2,2° de guinada e 1,2° de
+       inclinação, que no detalhe de 1,8× deslocam a bolinha 7% do raio do disco
+       — o globo responde à mão sem tirar do meio o ponto que o voo está
+       afirmando, e sem comer a folga medida até a coluna de texto.
 
-       E lê melhor assim: o planeta larga a respiração própria e passa a seguir
-       a mão, que é o que "interativo" quer dizer. Ao sair, a força volta a zero
-       e o balanço retoma — nos dois sentidos com a mesma suavização exponencial
-       do recuo, então nada salta.
+       A suavização exponencial de 0,28 s continua nos dois sentidos, então nada
+       salta nem na entrada do cursor nem na saída.
 
        A escuta fica na SEÇÃO e não no globo porque a camada do palco é
        "pointer-events-none": o globo não recebe ponteiro, e nem deve — ele está
@@ -1709,283 +1840,165 @@ export function HeroGlobe({
 
     const quadro = (t: number) => {
       raf = requestAnimationFrame(quadro);
-      if (ultimo >= 0 && t - ultimo < PASSO_MS) return;
-      const dt = ultimo < 0 ? 0 : Math.min(0.1, (t - ultimo) / 1000);
+      /* SEM ACELERADOR: 60 fps, como o dono pediu. O `dt` é em ms (a unidade do
+         modelo de voo) e vem preso em `DT_TETO` — ver o comentário dele. */
+      const dt = ultimo < 0 ? 0 : Math.min(DT_TETO, t - ultimo);
       ultimo = t;
-      if (!t0) t0 = t;
-      const seg = (t - t0) / 1000;
 
-      /* O GIRO (pedido do dono, 16/10: "o globo no hero, deixe ele girando
-         levemente").
+      /* -------------------------------------------------------------- o voo
 
-         Era um balanço de 1,5° de guinada em 20 s — 0,47°/s no pico, abaixo do
-         que o olho lê como movimento: o planeta parecia parado e só os pinos
-         trocavam de cor. Agora são 6° em 28 s, o que dá 1,35°/s no pico, três
-         vezes o de antes. A 1,35°/s um ponto de terra atravessa o seu próprio
-         diâmetro em pouco mais de um segundo: é giro, e não respiração.
+         O RELÓGIO. `dt` é somado num acumulador, e é esse acumulador que o
+         modelo lê. Nada aqui consulta `performance.now()`: é o que faz os
+         freios PARAREM o voo em vez de o adiantarem, e é o que faz a retomada
+         ser de onde se estava (ver `relogio`).
 
-         POR QUE NÃO UMA VOLTA INTEIRA. A primeira dobra promete "7 países,
-         moeda local" e cumpre isso mostrando OS SETE pinos com cidade e preço
-         ao mesmo tempo. Numa rotação contínua, metade deles estaria sempre do
-         outro lado da bola (`z2 <= 0`) e as etiquetas sumiriam em rodízio — a
-         imagem perderia justamente o que ela afirma. Então o giro é uma
-         oscilação lenta e larga: em qualquer janela de poucos segundos lê-se um
-         planeta girando, e nenhum pino chega a virar a esquina.
+         A ENTRADA, em dois tempos. Primeiro a espera de 2,2 s — a rampa que já
+         existia —, em que a câmera fica no centro da projeção e a escala em 1:
+         o primeiro quadro do laço cai EXATAMENTE sobre o quadro do servidor,
+         que é regra dura do hero (o `<h1>` ao lado é o LCP da página). Depois o
+         MERGULHO até o pouso na primeira cidade, pela mesma curva de van Wijk
+         das pernas. É a única vez em que o voo começa de um estado que não é um
+         pouso, e por isso é a única que tem código próprio — 10 linhas.
 
-         A AMPLITUDE TEM UM TETO MEDIDO — e ele é mais alto do que parecia. O
-         corredor entre a borda do disco e a coluna de texto tem 49px a 1440, mas
-         não é ele que manda: os rótulos dos pinos abrem para a ESQUERDA, então
-         o que chega mais perto do texto é o pino mais a leste, e ele para em
-         x 486 contra os 666 do h1. Amostrado a cada 800ms por 16s, o extremo
-         direito de tudo o que o globo desenha ficou em 486 e o esquerdo em 63:
-         180px de folga de um lado, 63 do outro. Nove graus cabem com sobra.
+         DEPOIS DA ENTRADA é sempre o mesmo ciclo: pouso → voo → pouso. Quem
+         avança a fila é o FIM do ciclo, nunca um relógio de fora; o resto do ms
+         que sobrou do quadro é CARREGADO para o pouso seguinte (`ms -= ciclo`),
+         e é por isso que a cadência não escorrega em telas de 120 Hz. */
+      const r = relogio.current;
+      let cam: Ponto;
+      let esc: number;
 
-         Os dois senos partem de ZERO, e isso não é detalhe: é o que faz o
-         primeiro quadro do laço cair exatamente sobre o que o servidor pintou,
-         sem um salto na entrada. A inclinação fica em 1,5° e com período primo
-         em relação ao da guinada (46 s contra 28), para os dois não voltarem
-         juntos ao mesmo ponto e o movimento nunca parecer um pêndulo. */
-      /* O GIRO, PRESO À JANELA DOS PAÍSES MARCADOS (pedido do dono, 17/10:
-         "deixe o foco da rotação apenas nos países que estão destacados no
-         globo").
-
-         Até hoje de manhã o planeta dava a VOLTA INTEIRA, uma em 180 s. O
-         movimento estava certo e o enquadramento, errado: dois terços de cada
-         volta mostravam Pacífico, Ásia e África, onde a Wone não marca nada —
-         o globo passava a maior parte do tempo provando o contrário do que a
-         seção afirma.
-
-         ONDE OS SETE MORAM. Com o centro de projeção em λ₀ = −32°, as sete
-         capitais caem entre −67,1° (Cidade do México) e +31,9° (Londres) de
-         longitude RELATIVA: um arco de 99°, que é quase toda a face visível de
-         uma vez. Essa é a razão de o repouso já ser um bom enquadramento — ele
-         foi escolhido assim — e é também o que limita o giro dos dois lados:
-
-          - para OESTE (guinada negativa) não há folga nenhuma. A Cidade do
-            México já desenha a 6,6% da largura da caixa, encostada no limbo;
-            qualquer grau a menos a leva para o outro lado da bola;
-          - para LESTE há cerca de 38° antes de Londres (+31,9°) chegar aos 70°
-            em que um pino deixa de se ler. Fica-se em 16, com folga dobrada.
-
-         Daí a varredura de 0 a +16°, e não uma oscilação em torno do repouso:
-         ela corre só para o lado que tem país, e o lado que não tem fica de
-         fora. No meio do curso a Cidade do México ganha 16° de margem contra o
-         limbo — ou seja, o enquadramento MELHORA no miolo do ciclo.
-
-         A VELOCIDADE é "levemente": 16° em 38 s de ida e volta dão 1,3°/s no
-         pico, a mesma ordem da volta inteira (2°/s) e do balanço que havia
-         antes dela (1,35°/s). O que muda não é o ritmo, é para onde ele aponta.
-
-         A FASE DA SESSÃO continua, e continua fazendo o que fazia: duas pessoas
-         não veem a mesma tela. O que ela sorteia agora não é um meridiano
-         qualquer, é o PONTO DO CICLO em que a varredura começa — quem chega
-         pode pegar o planeta na ida, na volta ou numa das pontas. A amplitude é
-         a mesma para todos; só o instante muda.
-
-         Ela NÃO entra de uma vez, e isso não é enfeite: o servidor pinta o
-         globo no ângulo zero, e aplicar um ângulo sorteado no primeiro quadro
-         do cliente seria um salto visível bem em cima do elemento de LCP. A
-         rampa de 2,2 s — o tempo da entrada — multiplica a varredura inteira,
-         então o planeta parte do ângulo do servidor e abre o curso. O primeiro
-         quadro do laço cai exatamente sobre o que o servidor pintou, que é a
-         regra que já valia aqui.
-
-         A inclinação continua oscilando: o eixo de um planeta não gira, cabeceia
-         — e 2° de cabeceio em 43 s mantém o movimento de parecer um carrossel. */
-      const rampa = Math.min(1, seg / 2.2);
-      const entrada2 = rampa * rampa * (3 - 2 * rampa);
-
-      /* ------------------------------------------- o ciclo de cinco batidas
-
-         `fase` é a batida dentro do ciclo, 0 a 4 (ver `CICLO`): 0 e 1 são o
-         enquadramento normal, 2 é o mergulho, 3 e 4 são o deslize. −1 é "o
-         relógio ainda não andou", na primeira tela.
-
-         A RAMPA DE ENTRADA TEM PRIORIDADE, e isto é regra dura do hero: o
-         primeiro quadro do laço cai exatamente sobre o que o servidor pintou, e
-         nada pode disparar durante os 2,2 s em que a varredura está abrindo.
-         Na prática o primeiro mergulho só poderia acontecer na terceira troca,
-         aos 9,6 s — mas o laço se remonta quando um freio do relógio é solto
-         (voltar para a aba, rolar o hero de volta à tela), e ali `seg` recomeça
-         do zero com o contador de batidas já adiantado. Sem esta guarda o globo
-         mergulharia no mesmo instante em que a varredura está saindo do ângulo
-         do servidor, e os dois movimentos se somariam num salto. */
-      const fase = batidas.current === 0 ? -1 : (batidas.current - 1) % CICLO;
-      const quer = fase >= 2 && seg > 2.2 ? 1 : 0;
-
-      /* AS DUAS CURVAS, baseadas em TEMPO e não em perseguição exponencial: é o
-         único jeito de a ida e a volta terem FORMAS diferentes (o que o pedido
-         pede) e de a viagem TERMINAR (o que a âncora exige). Elas partem sempre
-         do valor em que as coisas estão (`zoomDe`, `enqDe`), então uma virada no
-         meio do caminho continua de onde estava — nunca de 0 nem de 1. */
-      if (quer !== zoomQuer) {
-        zoomQuer = quer;
-        zoomT0 = t;
-        zoomDe = zoom;
-        enqDe = enquadra;
-      }
-      /** Rampa 0→1 presa em [0,1], com atraso opcional. */
-      const ramp = (ms: number, dur: number) =>
-        ms <= 0 ? 0 : ms >= dur ? 1 : ms / dur;
-
-      if (zoomQuer) {
-        /* IDA, em três tempos: os rótulos saem (300 ms, planeta parado), depois
-           a viagem (1.300 ms), e só quando ela acaba a escala (900 ms). Ataque
-           forte e chegada mansa nas duas curvas, que é a curva de se aproximar
-           de algo. */
-        enquadra =
-          enqDe +
-          (1 - enqDe) *
-            cubica(ramp(t - zoomT0 - ROTULO_SAI_MS, PAN_MS), 0.22, 0.61, 0.36, 1);
-        zoom =
-          zoomDe +
-          (1 - zoomDe) *
-            cubica(
-              ramp(t - zoomT0 - ROTULO_SAI_MS - PAN_MS, ZOOM_ENTRA_MS),
-              0.22,
-              0.61,
-              0.36,
-              1,
-            );
+      if (!r.mergulhou) {
+        r.entrada += dt;
+        if (r.entrada <= ESPERA_MS) {
+          cam = centroProj;
+          esc = 1;
+          fase = "pouso";
+          /* UM POUSO ANTIGO, e o número é o que diz isso: 10 s de pouso deixam
+             os sete rótulos ACESOS (é o estado que o servidor pintou) e o pulso
+             do pino e o flash da Europa apagados, que é a regra do hero para a
+             entrada — nada pisca antes de o voo começar. */
+          msFase = 1e4;
+          uBola = 0;
+          bolaBase = alvo(lista[ativo.current] ?? "");
+        } else {
+          const m = mergulho(
+            centroProj,
+            cidades[ativo.current] ?? centroProj,
+            r.entrada - ESPERA_MS,
+            mergulhoMs,
+          );
+          cam = m.camera;
+          esc = m.zoom;
+          fase = "pouso";
+          /* O relógio do pouso só começa a contar quando o mergulho acaba: é
+             assim que o pulso do pino, o rótulo cheio e o flash da Europa
+             disparam na CHEGADA em São Paulo, e não durante a descida. Até lá
+             vale o mesmo "pouso antigo" da espera: os rótulos que ainda caibam
+             na vigia continuam acesos, e quem sai do disco apaga por GEOMETRIA
+             enquanto a câmera desce — nenhum deles pisca. */
+          msFase = 1e4;
+          uBola = 0;
+          bolaBase = alvo(lista[ativo.current] ?? "");
+          if (m.pronto) {
+            r.mergulhou = true;
+            r.ms = 0;
+          }
+        }
       } else {
-        /* VOLTA, na ordem inversa: a escala SOLTA primeiro (1.200 ms, curva que
-           sai do lugar devagar e desacelera — o Maps solta o zoom, não o
-           arranca) e o enquadramento desfaz 500 ms depois. Nos primeiros 500 ms
-           o pino continua parado enquanto o planeta encolhe: é a âncora valendo
-           também na saída. */
-        zoom =
-          zoomDe * (1 - cubica(ramp(t - zoomT0, ZOOM_SAI_MS), 0.4, 0, 0.2, 1));
-        enquadra =
-          enqDe *
-          (1 -
-            cubica(
-              ramp(t - zoomT0 - ZOOM_SAI_ESPERA_MS, ZOOM_SAI_MS),
-              0.4,
-              0,
-              0.2,
-              1,
-            ));
+        r.ms += dt;
+        let e = voo(cidades, ativo.current, r.ms);
+        if (r.ms >= e.ciclo) {
+          r.ms -= e.ciclo;
+          ativo.current = e.para;
+          /* O `Hero` é o espelho: ele guarda `activeIndex` para o DOM (status,
+             chips, resumo do leitor de tela) e o devolve no render seguinte, que
+             o efeito de cima absorve sem tocar no relógio. Escrever o `ref`
+             AQUI, e não esperar o render, é o que garante que o quadro seguinte
+             já desenhe a cidade nova — um quadro de discordância entre o
+             desenho e o rótulo seria visível a 1,8×. */
+          avisar.current?.(e.para);
+          e = voo(cidades, ativo.current, r.ms);
+        }
+        cam = e.camera;
+        esc = e.zoom;
+        fase = e.fase;
+        msFase = e.fase === "pouso" ? r.ms : r.ms - POUSO_MS;
+        uBola = e.u;
+
+        /* O RASTRO é remontado UMA vez por perna, no primeiro quadro do voo: os
+           25 pontos do grande círculo, já na base da projeção. Durante o pouso
+           o buffer guarda a perna que ACABOU de chegar — é ela que desvanece. */
+        if (e.fase === "voo" && rastroDe !== e.de) {
+          rastroDe = e.de;
+          temRastro = true;
+          for (let s = 0; s <= RASTRO_PASSOS; s += 1) {
+            const p = interpola(
+              cidades[e.de],
+              cidades[e.para],
+              s / RASTRO_PASSOS,
+            );
+            const v = baseVector(p.lat, p.lon);
+            rastro[s * 3] = v[0];
+            rastro[s * 3 + 1] = v[1];
+            rastro[s * 3 + 2] = v[2];
+          }
+        }
+        const vb = baseVector(e.bola.lat, e.bola.lon);
+        bolaBase = vb;
       }
 
-      /* Os seis rótulos saem DURANTE a viagem (escala ainda 1) e voltam DEPOIS
-         que ela assenta: ver `ROTULO_SAI_MS`. `suave` é o smoothstep de sempre,
-         para a opacidade não ter canto nas pontas. */
-      const rp = zoomQuer
-        ? 1 - ramp(t - zoomT0, ROTULO_SAI_MS)
-        : ramp(t - zoomT0 - ROTULO_ESPERA_MS, ROTULO_VOLTA_MS);
+      /* OS RÓTULOS: saem no começo do voo, voltam depois do pouso. `suave` é o
+         smoothstep de sempre, para a opacidade não ter canto nas pontas. */
+      const rp =
+        fase === "voo"
+          ? 1 - Math.min(1, msFase / ROTULO_SAI_MS)
+          : Math.min(
+              1,
+              Math.max(0, (msFase - ROTULO_ESPERA_MS) / ROTULO_VOLTA_MS),
+            );
       rotulos = rp * rp * (3 - 2 * rp);
 
-      /* A VARREDURA EM DUAS FORÇAS, misturadas pelo ENQUADRAMENTO (e não pela
-         escala — ela é framing, e precisa estar pronta antes de a escala
-         crescer):
-           · fora do mergulho, a de sempre — 0 a +16° de guinada;
-           · dentro dele, SÓ A OSCILAÇÃO, com 16% da amplitude e média ZERO.
-         A média zero não é detalhe: é ela que deixa o alvo de centralização
-         valer como está, sem compensar deslocamento nenhum. O planeta continua
-         derivando ±1,3° em torno do país focado — "o zoom real não congela o
-         mapa" — e o pino respira em volta do centro em vez de ficar cravado. */
-      const onda = (TAU * seg) / GIRO_PERIODO + faseSessao;
-      const varredura =
-        (GIRO_CENTRO + GIRO_AMPL * Math.sin(onda)) * (1 - enquadra) +
-        GIRO_AMPL * ZOOM_DERIVA * Math.sin(onda) * enquadra;
-      const balancoYaw = varredura * entrada2;
-      const balancoPitch =
-        0.0349 *
-        Math.sin((TAU * seg) / 43) *
-        (1 - (1 - ZOOM_DERIVA) * enquadra);
-
-      /* O cursor assume o balanco: mesma suavizacao do recuo (~1,2 s). */
-      const kc = 1 - Math.exp(-dt / 0.28);
+      /* O cursor, com a mesma suavização de sempre (~0,28 s). `dt` está em ms
+         aqui, daí o divisor de 280. */
+      const kc = 1 - Math.exp(-dt / 280);
       curYaw += (alvoYaw - curYaw) * kc;
       curPitch += (alvoPitch - curPitch) * kc;
       forca += (alvoForca - forca) * kc;
-      const recuaBalanco = 1 - 0.6 * forca;
 
-      /* O GIRO ACOMPANHA A BOLINHA — EM TODA BATIDA (pedido do dono, 17/10,
-         repetido duas vezes no mesmo dia).
-
-         O cometa sai do país da vez; o planeta parte para esse país junto com
-         ele. A cada batida começa uma VIAGEM: do ângulo em que o giro está até
-         o alvo do país novo, em 1.300 ms de curva. O que muda com o mergulho
-         não é SE o planeta vai, é QUANTO:
-           · GESTO (`globeMath.GESTO`) — 34% da centralização, limitado a
-             −3°/+8° de guinada: um aceno na direção certa, que é o que cabe no
-             enquadramento dos sete países;
-           · CENTRO (`globeMath.CENTRA`) — os ângulos exatos que põem a capital
-             no meio do disco.
-         O alvo é a mistura dos dois pelo `enquadra`, então não há `if` entre os
-         regimes: fora do mergulho o planeta acena, dentro dele centra, e no
-         meio está no meio.
-
-         POR QUE UMA CURVA DE TEMPO E NÃO A PERSEGUIÇÃO EXPONENCIAL DE ANTES:
-         porque uma perseguição nunca chega. Com a constante de 0,55 s que o
-         enquadramento pediria, ainda sobram 9% do caminho quando a escala
-         começa — e 9% de uma viagem de 300px são 27px de pino andando sob o
-         dedo, com a âncora prometendo o contrário. A curva chega, e chega 1,7 s
-         antes da batida seguinte: nada de arrasto permanente.
-
-         O CAMINHO CURTO: a diferença de ângulo é normalizada para (−π, π]. Com
-         os alvos de hoje (todos dentro de ±62°) ela nunca é usada de fato, mas
-         é o que impede o planeta de dar a volta pelo lado errado no dia em que
-         um país novo cruzar o meridiano de origem. */
-      const code = lista[ativo.current] ?? "";
-      const gesto = GESTO[code] ?? { yaw: 0, pitch: 0 };
-      const centro = CENTRA[code] ?? { yaw: 0, pitch: 0 };
-      const alvoY = gesto.yaw + (centro.yaw - gesto.yaw) * enquadra;
-      const alvoP = gesto.pitch + (centro.pitch - gesto.pitch) * enquadra;
-
-      if (panCode !== code || panQuer !== zoomQuer) {
-        panCode = code;
-        panQuer = zoomQuer;
-        panT0 = t;
-        panDeYaw = recYaw;
-        panDePitch = recPitch;
-      }
-      const pp = cubica(ramp(t - panT0, PAN_MS), 0.22, 0.61, 0.36, 1);
-      recYaw = panDeYaw + curto(alvoY - panDeYaw) * pp;
-      recPitch = panDePitch + (alvoP - panDePitch) * pp;
-
-      /* O foco de cada pino, perseguido: quem está no país da vez vai para 1, os
-         outros para 0. É só opacidade e alfa de anel — aqui a perseguição serve,
-         porque nada depende de ela ter CHEGADO. Sete contas por quadro.
-         SOBE MANSO E DESCE RÁPIDO (0,45 s contra 0,13 s), e a assimetria é
-         correção de defeito medida: com uma constante só, na troca de país
-         dentro do mergulho o rótulo que SAÍA continuava visível enquanto o
-         planeta viajava, e a 1,8× ele corria para a borda — a 1512 de janela a
-         borda direita dele chegou a 874px contra os 841 do `<h1>`. O que entra
-         ainda está a caminho do centro e tem tempo; o que saiu não tem mais
-         trabalho nenhum, e cada décimo em que ele fica é um rótulo atravessando
-         o disco. */
-      /* E a QUEDA encurta com o enquadramento: 0,45 s em repouso, 0,06 s no
-         mergulho. Medido: com 0,13 s fixos, a troca de país a 1,8× ainda deixava
-         o rótulo que saía chegar a x 853 com 12% de opacidade — ele percorre 26%
-         de uma viagem de 57° antes de apagar. A 0,06 s ele sai em três quadros,
-         com 9% da viagem andada, e fecha em ~824 contra os 841 do `<h1>`.
-         Três quadros de opacidade descendo não são um corte: são um rótulo que
-         deixou de ser o assunto. */
-      const quedaTau = 0.45 - 0.39 * enquadra;
+      /* O foco de cada pino, perseguido: quem está na cidade da vez vai para 1,
+         as outras para 0. É só opacidade e alfa de anel — aqui a perseguição
+         serve, porque nada depende de ela ter CHEGADO. Sete contas por quadro.
+         SOBE MANSO E DESCE RÁPIDO (0,40 s contra 0,12 s), e a assimetria é
+         correção de defeito medida: com uma constante só, o rótulo da cidade de
+         onde se PARTIU continuava visível enquanto a câmera já viajava, e a
+         1,8× ele corria para a borda — a 1512 de janela a borda direita dele
+         chegou a 874px contra os 841 do `<h1>`. O que chega está no centro e
+         tem tempo; o que saiu não tem mais trabalho nenhum. */
       for (let j = 0; j < focos.length; j += 1) {
         const alvoF = j === ativo.current ? 1 : 0;
         focos[j] +=
           (alvoF - focos[j]) *
-          (1 - Math.exp(-dt / (alvoF > focos[j] ? 0.45 : quedaTau)));
+          (1 - Math.exp(-dt / (alvoF > focos[j] ? 400 : 120)));
       }
 
-      /* O cursor também recua no mergulho (40% da força): ele continua movendo
-         o planeta — "deixe o globo interativo" segue valendo —, mas não a ponto
-         de empurrar para fora do quadro o pino que o zoom está afirmando. */
-      const amortece = 1 - 0.6 * enquadra;
-
-      /* `entrada2` multiplica o enquadramento junto com a varredura: os dois
-         são o giro, e os dois têm de abrir a partir do ângulo do servidor. */
+      /* A CÂMERA: os dois ângulos que centralizam o ponto do voo, mais o
+         empurrão do cursor. `centraliza` é a conta da projeção (ver
+         `globeMath`), e no centro dela devolve (0, 0) — o ângulo do servidor. */
+      const base = centraliza(cam.lat, cam.lon);
       const agora = performance.now();
       desenha(
-        balancoYaw * recuaBalanco + curYaw * forca * amortece + recYaw * entrada2,
-        balancoPitch * recuaBalanco +
-          curPitch * forca * amortece +
-          recPitch * entrada2,
+        base.yaw + curYaw * forca * CURSOR_PESO,
+        base.pitch + curPitch * forca * CURSOR_PESO,
+        esc,
       );
-      medidor(performance.now() - agora, zoom, escala, fase);
+      const olho = medidor();
+      const custo = performance.now() - agora;
+      olho.quadros += 1;
+      olho.soma += custo;
+      olho.media = olho.soma / olho.quadros;
+      if (custo > olho.pior) olho.pior = custo;
+      olho.dt = dt;
     };
 
     raf = requestAnimationFrame(quadro);
@@ -2210,7 +2223,7 @@ const MAR_PONTOS = 900;
  * área e o oceano fica vazio: APROXIMAR ESTAVA TIRANDO TEXTURA. Com 2.700
  * pontos no total o mar volta a ter, na tela, a densidade que tem em repouso.
  * Só é montada quando o primeiro mergulho pede (`marFino()` é preguiçoso), e só
- * é desenhada enquanto `zoom > 0`.
+ * é desenhada enquanto `revela > 0`.
  */
 const MAR_FINO_PONTOS = 1800;
 
@@ -2302,46 +2315,58 @@ function rede(): Float32Array {
 }
 
 /**
- * Média móvel do custo de desenho, exposta em `window.__globo` para a medição
- * no navegador (custo por quadro e contagem de quadros, que é como se prova que
- * os quatro freios param o laço). Duas leituras de `performance.now` por
- * quadro; nada é impresso no console.
+/**
+ * O ESPIÃO do laço, em `window.__globo`: o custo por quadro e o ESTADO do voo,
+ * para a medição no navegador poder provar o que o pedido manda conferir — a
+ * bolinha dentro do disco em todas as amostras, a ausência de salto entre duas
+ * amostras consecutivas, e o zoom abrindo mais nas viagens longas.
+ *
+ * É um objeto ÚNICO, criado na primeira chamada e mutado depois: o laço escreve
+ * nos campos dele e não aloca nada por quadro. Nada é impresso no console.
  */
-function medidor(ms: number, zoom: number, escala: number, fase: number) {
-  const w = window as typeof window & {
-    __globo?: {
-      quadros: number;
-      soma: number;
-      media: number;
-      pior: number;
-      passo: number;
-      zoom: number;
-      escala: number;
-      fase: number;
-    };
-  };
-  const m = (w.__globo ??= {
+type Espiao = {
+  /** Custo do desenho: quantos quadros, soma, média e PIOR, em ms. */
+  quadros: number;
+  soma: number;
+  media: number;
+  pior: number;
+  /** Passo médio da nuvem, em graus: é o teto do zoom (ver `ZOOM_DETALHE`). */
+  passo: number;
+  /** O último `dt` do laço, em ms: 16,7 é o quadro de 60 Hz. */
+  dt: number;
+  /** O estado do voo no último quadro. */
+  escala: number;
+  fase: string;
+  cidade: number;
+  u: number;
+  /** A bolinha em px da caixa (já com a matriz do zoom) e o raio da vigia. */
+  bolaX: number;
+  bolaY: number;
+  bolaVisivel: boolean;
+  raio: number;
+  /** A câmera, em radianos. */
+  yaw: number;
+  pitch: number;
+};
+
+function medidor(): Espiao {
+  const w = window as typeof window & { __globo?: Espiao };
+  return (w.__globo ??= {
     quadros: 0,
     soma: 0,
     media: 0,
     pior: 0,
     passo: GLOBE_STEP,
-    zoom: 0,
+    dt: 0,
     escala: 1,
-    fase: -1,
+    fase: "",
+    cidade: 0,
+    u: 0,
+    bolaX: 0,
+    bolaY: 0,
+    bolaVisivel: false,
+    raio: 0,
+    yaw: 0,
+    pitch: 0,
   });
-  m.quadros += 1;
-  m.soma += ms;
-  m.media = m.soma / m.quadros;
-  /* O PIOR QUADRO, e não só a média: o orçamento do hero é por quadro (teto de
-     ~4 ms), e uma média de 2 ms esconde um pico de 8 — que é justamente o que
-     um mergulho poderia trazer, já que a escala muda o que o canvas rasteriza.
-     Três números a mais num objeto que já existia; zero custo por quadro. */
-  if (ms > m.pior) m.pior = ms;
-  /* O estado do mergulho, para a medição no navegador poder provar a ORDEM do
-     ciclo sem olhar fotografia: `fase` é a batida (0–4), `zoom` o fator e
-     `escala` o que o contexto está aplicando. */
-  m.zoom = zoom;
-  m.escala = escala;
-  m.fase = fase;
 }

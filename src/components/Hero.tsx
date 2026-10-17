@@ -1,6 +1,13 @@
 "use client";
 
-import { Fragment, useEffect, useMemo, useRef, useState } from "react";
+import {
+  Fragment,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 
 import { useContent } from "@/i18n";
 import { useOnScreen } from "@/lib/useOnScreen";
@@ -137,6 +144,41 @@ export function Hero() {
   const naTela = useOnScreen(secao);
 
   /**
+   * O VOO DO GLOBO É O RELÓGIO, de `lg` para cima (pedido do dono, 17/10).
+   *
+   * A perna de Londres a São Paulo leva 2,6 s e a de Bogotá a Quito 1,3 s: a
+   * troca de cidade passou a ser o FIM DO POUSO do voo, e não um passo fixo de
+   * 3 s. Quem avança a fila é o `HeroGlobe`, que chama `avanca` abaixo; este
+   * componente segue sendo o dono de `ativo` para o DOM (status, chips, resumo
+   * do leitor de tela), e por isso nada mais aqui precisou mudar.
+   *
+   * Abaixo de 1024 — onde o globo é um quadro parado, sem pino e sem rótulo —
+   * quem manda continua sendo o relógio de 3 s daqui, e a troca é o fade de
+   * opacidade do `CountryTag` e da `StageStatus`: a "troca com fade simples"
+   * que o pedido pede para fora do voo.
+   * Com MOVIMENTO REDUZIDO não há relógio nenhum, e isso é anterior a este
+   * trabalho: o portão do hero congela o palco no Brasil (ver o efeito da
+   * preferência, acima). Trocar de cidade sozinho, mesmo em fade, é movimento
+   * automático — exatamente o que a preferência existe para evitar —, então
+   * ela continua valendo como está.
+   *
+   * A largura é lida em efeito, nunca no render: o HTML do servidor não sabe o
+   * tamanho da janela, e `false` nos dois lados é o que mantém o primeiro
+   * render idêntico ao do servidor.
+   */
+  const [largo, setLargo] = useState(false);
+
+  useEffect(() => {
+    const lg = window.matchMedia("(min-width: 1024px)");
+    const sync = () => setLargo(lg.matches);
+    sync();
+    lg.addEventListener("change", sync);
+    return () => lg.removeEventListener("change", sync);
+  }, []);
+
+  const voando = largo && !reduced && !tabHidden && naTela;
+
+  /**
    * O relógio: um `setTimeout` encadeado que avança o país e se reagenda.
    *
    * `setStarted(true)` acontece no MESMO avanço, e não na montagem: no instante
@@ -144,7 +186,7 @@ export function Hero() {
    * entrada é nó novo — o que já estava pintado na primeira tela nunca anima.
    */
   useEffect(() => {
-    if (reduced || tabHidden || !naTela) return;
+    if (reduced || tabHidden || !naTela || voando) return;
 
     let cancelado = false;
     let timer = 0;
@@ -168,7 +210,18 @@ export function Hero() {
     /* `started` de propósito fora das dependências: ele só decide a PRIMEIRA
        espera, e pô-lo aqui refaria o relógio no instante em que ele vira true. */
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [reduced, tabHidden, naTela, paises.length]);
+  }, [reduced, tabHidden, naTela, voando, paises.length]);
+
+  /**
+   * O avanço que o VOO pede. Ele escreve no mesmo `ref` e no mesmo estado que o
+   * relógio de 3 s escreveria — uma fonte de verdade para o país da vez, dois
+   * donos possíveis do tempo, nunca os dois ao mesmo tempo (ver `voando`).
+   */
+  const avanca = useCallback((indice: number) => {
+    ativoRef.current = indice;
+    setAtivo(indice);
+    setStarted(true);
+  }, []);
 
   /** Só anima depois do primeiro avanço, e nunca com movimento reduzido. */
   const animado = started && !reduced;
@@ -412,6 +465,7 @@ export function Hero() {
           activeIndex={ativo}
           animated={animado}
           running={andando}
+          onCidade={voando ? avanca : undefined}
         />
 
         {/* A LINHA DE CONTROLE do palco: a etiqueta de ficção, o status do país
