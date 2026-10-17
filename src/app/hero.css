@@ -893,11 +893,16 @@ html.wone-entrando .hero-sublinha::after {
 .hero-globo > .globe-mark,
 .hero-globo > .globe-vigia,
 .hero-globo > canvas {
-  /* 2,5 VEZES A RAMPA: estas camadas somem em --cine 0,4, não em 1.
+  /* 1,6 VEZES A RAMPA: estas camadas somem em --cine 0,63.
 
-     Elas não acompanham a caixa do 3D (são CSS, presas à caixa do globo), e
-     a cena 3D só começa a caminhar para o meio da janela em 0,35. Apagá-las
-     antes disso é o que garante que nunca haja o disco escuro do planeta de
-     um lado e o mapa do outro. */
-  opacity: calc(1 - var(--cine, 0) * 2.5);
+     Elas eram apagadas em 0,4, e depressa, porque a cena 3D viajava sem
+     elas e dois planetas apareciam na tela. Desde a correção do cinema a
+     caixa do globo inteira viaja (ver HeroGlobe3D), então elas vão JUNTO —
+     e podem apagar mais devagar, que é o que faz o disco ler como um objeto
+     só atravessando a tela em vez de uma camada sumindo e outra nascendo.
+
+     Elas ainda precisam sair antes do fim: a cena 3D cresce além da caixa
+     do globo, e um halo do tamanho antigo em volta de uma cidade maior é
+     justamente o aro fantasma que a primeira captura mostrou. */
+  opacity: calc(1 - var(--cine, 0) * 1.6);
 }

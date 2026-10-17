@@ -1025,15 +1025,44 @@ function Planeta({
              menos 130 px (o cabeçalho de 65 e um respiro igual embaixo). Quem
              manda quase sempre é a altura — a 1440×900 dá 770 contra os 634 de
              repouso, 21% maior. */
+          /* O TETO DO CRESCIMENTO É A BANDA ABAIXO DA BARRA, e não a
+             janela inteira menos um número redondo.
+
+             A primeira versão usava `innerHeight - 130`, e isso parecia
+             generoso até a medição numa janela de laptop: a 1528x732 o
+             globo em repouso já é `min(44vw, 100svh - 140)` = 592 px, e o
+             teto dava 602. O disco crescia DEZ PIXELS — 1,7% — e o dono
+             leu exatamente o que estava acontecendo: só o mapa dava zoom.
+             Numa janela alta o número enganava, porque lá o teto subia
+             junto e a diferença ficava grande.
+
+             Agora a conta é geométrica: a barra ocupa os primeiros 65 px,
+             sobra a banda de `innerHeight - 65`, e o disco usa essa banda
+             inteira menos 18 px de respiro em cima e embaixo. A 1528x732
+             isso dá 631 (+6,6%); a 1440x900, 799 (+26%); a 1920x1080, 979
+             (+16%). O crescimento deixa de depender de a janela ter sobra
+             vertical acidental e passa a ser o maior disco que cabe.
+
+             E o que carrega a leitura não é mais só ele: desde esta
+             correção a CAIXA INTEIRA do globo viaja (ver abaixo), então o
+             que o olho segue é o disco atravessando a tela. */
+          const BARRA = 65;
+          const RESPIRO = 18;
           const M = Math.round(
-            Math.min(window.innerWidth * 0.78, window.innerHeight - 130),
+            Math.min(
+              window.innerWidth * 0.82,
+              window.innerHeight - BARRA - RESPIRO * 2,
+            ),
           );
           cineBase.current = base;
           cineM.current = Math.max(base, M);
           const rc = caixa.getBoundingClientRect();
+          /* O destino é o meio da BANDA, não o meio da janela: com a barra
+             ocupando 65 px no topo, centrar na janela empurraria o disco
+             para debaixo dela. */
           cineAlvo.current = [
             window.innerWidth / 2 - rc.left,
-            window.innerHeight / 2 + 12 - rc.top,
+            BARRA + (window.innerHeight - BARRA) / 2 - rc.top,
           ];
           /* O CANTO SUPERIOR ESQUERDO NÃO PODE SE MEXER, e isto é CLS.
 
@@ -1067,6 +1096,9 @@ function Planeta({
         divCine.style.height = "";
         divCine.style.transform = "";
         divCine.style.inset = "0";
+        /* E a caixa do globo volta para o lugar dela. */
+        const caixaFora = divCine.parentElement as HTMLElement | null;
+        if (caixaFora) caixaFora.style.transform = "";
         q.cineLado = 0;
         q.cineX = 0;
         q.cineY = 0;
@@ -1088,26 +1120,57 @@ function Planeta({
          centro dele pelo outro: dois planetas na tela. Medido na captura de
          meia-rampa.
 
-         Com o deslocamento atrasado a ordem fica legível: primeiro o
-         planeta se dissolve onde está, depois a cidade caminha para o meio
-         da janela. 0,35 é onde o CSS já apagou (ele some em 1/2,5 = 0,4). */
-      const mv = suavinha(q.cine, 0.35, 1);
+         Era esse o remendo: adiar o deslocamento do canvas 3D para depois
+         de o CSS ter apagado. Ele resolvia os dois planetas e criava outro
+         defeito, que é o que o dono viu — durante a rampa o planeta se
+         dissolvia PARADO de um lado e a cidade aparecia do outro, de modo
+         que nada nunca VIAJAVA. Lido de fora, isso é um mapa dando zoom,
+         que foi a palavra dele.
+
+         AGORA QUEM VIAJA É A CAIXA DO GLOBO INTEIRA. O halo, o oceano, o
+         fio de atmosfera, a marca d'água, o limbo e o canvas 2D são todos
+         filhos de `.hero-globo`; uma translação nela leva os seis junto com
+         a cena 3D, e o que atravessa a tela é o DISCO, não uma camada dele.
+         Eles continuam apagando no caminho — a cena 3D cresce além deles e
+         precisa ficar sozinha no fim —, mas apagam VIAJANDO.
+
+         Nenhum texto é escalado por isto: a translação não tem escala, e a
+         rampa só começa em zoom 60, quando pinos e rótulos já se foram.
+         E translação é COMPOSIÇÃO, não layout: o CLS continua sendo zero
+         pela mesma razão de antes. */
+      const mv = suavinha(q.cine, 0.05, 0.9);
       const cx = base / 2 + (cineAlvo.current[0] - base / 2) * mv;
       const cy = base / 2 + (cineAlvo.current[1] - base / 2) * mv;
-      /* A caixa nasce no canto (0,0) com lado M, logo o centro dela está em
-         (M/2, M/2); levá-lo a (cx, cy) é a translação inteira — inclusive a
-         parte que compensa a caixa ser maior que a do globo. */
+      const caixaGlobo = divCine.parentElement as HTMLElement | null;
+      if (caixaGlobo) {
+        caixaGlobo.style.transform =
+          "translate(" +
+          (cx - base / 2).toFixed(1) +
+          "px," +
+          (cy - base / 2).toFixed(1) +
+          "px)";
+      }
+      /* A caixa do 3D nasce no canto (0,0) com lado M dentro de uma caixa
+         de lado `base`: centrar uma na outra é uma constante, e é tudo o
+         que resta para ela fazer agora que o pai viaja. */
       divCine.style.transform =
         "translate(" +
-        (cx - M / 2).toFixed(1) +
+        ((base - M) / 2).toFixed(1) +
         "px," +
-        (cy - M / 2).toFixed(1) +
+        ((base - M) / 2).toFixed(1) +
         "px)";
       kCine = aparente / M;
-      /* O disco aparente, para quem trata o ponteiro (ver `cena.cineLado`). */
+      /* O disco aparente, para quem trata o ponteiro (ver `cena.cineLado`).
+
+         O CENTRO É `base/2`, E NÃO `cx`: o ponteiro mede a posição contra o
+         retângulo da caixa do globo, e `getBoundingClientRect` já inclui a
+         translação que esta caixa acabou de receber. Publicar `cx` (que é o
+         centro em coordenadas da caixa PARADA) contaria a viagem duas
+         vezes, e o arraste no cinema erraria o disco por até 320 px. A
+         caixa do 3D está centrada na do globo, e o disco no meio do 3D. */
       q.cineLado = aparente;
-      q.cineX = cx;
-      q.cineY = cy;
+      q.cineX = base / 2;
+      q.cineY = base / 2;
     }
 
     /* O ZOOM pela `zoom` da câmera ortográfica, que é precisamente o que a
