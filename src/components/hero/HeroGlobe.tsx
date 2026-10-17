@@ -413,6 +413,32 @@ const DESVIO_ENDIREITA = 0.4;
  */
 const DESVIO_MS_POR_NAT = 300;
 
+/**
+ * O MODO CINEMA: a faixa de zoom em que o texto se apaga e o planeta cresce.
+ *
+ * 60 e 600, e não o relógio do mergulho, pela razão escrita em `cena.cine`.
+ * Os dois números saem de duas leituras:
+ *
+ *   · 60 é DEPOIS de os rótulos terem ido embora. Eles morrem com
+ *     `mapa > 0,5` (zoom ~29, veja `veuSP` em `HeroGlobe3D`), e os pontos de
+ *     terra em 14. Começar a rampa em 60 garante que nada tipográfico está na
+ *     tela quando a caixa do planeta muda de tamanho — se estivesse, o texto
+ *     do rótulo mudaria de corpo junto, que é o erro clássico de escalar uma
+ *     cena inteira por transform.
+ *   · 600 é logo acima de `ZOOM_CIDADE` (405), onde a mancha urbana já encheu
+ *     o disco. O cinema termina de entrar no mesmo instante em que a cidade
+ *     passa a ser o assunto, e não um segundo depois.
+ *
+ * A travessia 60→600 leva ~1,1 s dentro de `mergulha` (que é logarítmica no
+ * tempo), e a mesma faixa ao contrário leva ~0,8 s na `sobe`.
+ */
+const CINE_Z0 = 60;
+const CINE_Z1 = 600;
+const LN_CINE_0 = Math.log(CINE_Z0);
+const LN_CINE_1 = Math.log(CINE_Z1);
+/** Abaixo disto o cinema está desligado para valer (classe fora, estilo fora). */
+const CINE_PISO = 0.002;
+
 /* --------------------------------------------------------------------------
    O GIRO LIVRE: os quatro números do gesto
 
@@ -990,6 +1016,12 @@ export function HeroGlobe({
   }>({ cam: { lat: LAT0, lon: LON0 }, escVista: 1, incl: 0, orb: 0 });
 
   const escolher = useRef<(indice: number) => void>(() => {});
+
+  /* O MODO CINEMA: a seção (onde a variável CSS mora) e o último valor escrito,
+     para não mandar o navegador recalcular estilo num quadro em que o número
+     não mudou o bastante para virar pixel. */
+  const secaoCine = useRef<HTMLElement | null>(null);
+  const cineAnt = useRef(-1);
 
   const avisar = useRef(onCidade);
   useEffect(() => {
@@ -2424,6 +2456,7 @@ export function HeroGlobe({
       /* No celular os prédios (e, com eles, a torre e a marca) não existem. */
       sp.predios = celular ? 0 : v.predios;
       sp.logo = celular ? 0 : v.logo;
+      sp.detalhe = celular ? 0 : v.detalhe;
     }
 
     /** A bolinha em px da CAIXA, já com a matriz do zoom: é o que a medição lê. */
@@ -2778,15 +2811,26 @@ export function HeroGlobe({
     let ponteiroId = -1;
 
     /** Onde o ponteiro caiu, em px da caixa do globo, e se está no disco. */
+    /* O DISCO, COM OU SEM CINEMA.
+
+       Fora do cinema o disco É a caixa do globo, e o centro dela é (R, R)
+       — foi assim que esta função nasceu. No cinema ele cresce e anda para
+       o meio da janela, e aí a caixa deixa de ser a régua: quem manda é o
+       trio cineLado/cineX/cineY que a cena 3D publica. Sem isto, arrastar
+       na metade nova do disco não pegaria — o ponteiro estaria fora da
+       caixa pequena e o gesto simplesmente não começaria. */
     const noDisco = (ev: PointerEvent) => {
       const b = caixa.current?.getBoundingClientRect();
       if (!b) return null;
-      const R = b.width / 2;
+      const cine = palco.cineLado > 0;
+      const R = cine ? palco.cineLado / 2 : b.width / 2;
+      const cx = cine ? palco.cineX : b.width / 2;
+      const cy = cine ? palco.cineY : b.height / 2;
       const x = ev.clientX - b.left;
       const y = ev.clientY - b.top;
-      const dx = x - R;
-      const dy = y - R;
-      return dx * dx + dy * dy <= R * R ? { x, y, R } : null;
+      const dx = x - cx;
+      const dy = y - cy;
+      return dx * dx + dy * dy <= R * R ? { x, y, R, cx, cy } : null;
     };
 
     /** A escala que o espectador VÊ: no mergulho é a da caixa `sp`. */
@@ -2830,7 +2874,12 @@ export function HeroGlobe({
       if (!arrastando || ev.pointerId !== ponteiroId) return;
       const b = caixa.current?.getBoundingClientRect();
       if (!b) return;
-      const R = b.width / 2;
+      /* O RAIO APARENTE, não o da caixa: no cinema o disco cresce ~21%, e
+         com o raio antigo o mesmo gesto giraria 21% a mais de superfície
+         por pixel — o planeta ficaria mais escorregadio justamente no
+         momento em que está maior e mais perto. A conta de Δyaw = Δx/(R·Z)
+         continua idêntica; o que muda é de onde vem o R. */
+      const R = palco.cineLado > 0 ? palco.cineLado / 2 : b.width / 2;
       const Z = escalaVista();
       const dx = ev.clientX - xUlt;
       /* NO TOQUE SÓ O HORIZONTAL GIRA: o vertical é rolagem de página, e
@@ -2877,12 +2926,12 @@ export function HeroGlobe({
         const d = noDisco(ev);
         if (d) {
           const Z = escalaVista();
-          livreYaw += (-EMPURRAO * (d.x - d.R)) / (d.R * Z);
+          livreYaw += (-EMPURRAO * (d.x - d.cx)) / (d.R * Z);
           livrePitch = Math.max(
             -LIVRE_PITCH_MAX,
             Math.min(
               LIVRE_PITCH_MAX,
-              livrePitch + (EMPURRAO * (d.R - d.y)) / (d.R * Z),
+              livrePitch + (EMPURRAO * (d.cy - d.y)) / (d.R * Z),
             ),
           );
         }
@@ -2994,6 +3043,7 @@ export function HeroGlobe({
           sp.mapa = v.mapa;
           sp.predios = celular ? 0 : v.predios;
           sp.logo = celular ? 0 : v.logo;
+          sp.detalhe = celular ? 0 : v.detalhe;
         } else {
           sp.ativo = false;
         }
@@ -3140,6 +3190,47 @@ export function HeroGlobe({
       uq.escVista = palco.sp.ativo ? palco.sp.zoom : esc;
       uq.incl = palco.sp.ativo ? palco.sp.inclinacao : 0;
       uq.orb = palco.sp.ativo ? palco.sp.orbita : 0;
+
+      /* ------------------------------------------------- O MODO CINEMA
+
+         A rampa sai da ESCALA QUE O ESPECTADOR VÊ — a mesma `escVista` que o
+         desvio usa para saber de onde partir. Por isso ela é uma conta e não
+         uma máquina de estados: desce no mergulho, sobe na `sobe`, desfaz-se
+         sozinha quando um desvio leva a câmera embora, e vale zero em qualquer
+         lugar onde o zoom não esteja na faixa. Não existe estado para ficar
+         presvo fora da parada de São Paulo porque não existe estado.
+
+         No celular vale zero: lá o globo é um bloco em fluxo depois dos botões
+         e não há coluna de texto ao lado para liberar. */
+      const cine = palco.leve
+        ? 0
+        : suave((Math.log(uq.escVista) - LN_CINE_0) / (LN_CINE_1 - LN_CINE_0));
+      palco.cine = cine;
+      if (Math.abs(cine - cineAnt.current) > 0.003 || (cine === 0 && cineAnt.current !== 0)) {
+        cineAnt.current = cine;
+        if (!secaoCine.current) {
+          secaoCine.current = caixa.current?.closest("section") ?? null;
+        }
+        const sec = secaoCine.current;
+        if (sec) {
+          if (cine > CINE_PISO) {
+            sec.style.setProperty("--cine", cine.toFixed(3));
+            /* A CLASSE É UM DEGRAU, a variável é a rampa. A classe só existe
+               para tirar o ponteiro do bloco apagado: um texto em opacidade
+               0,02 ainda recebe clique, e um botão invisível que engole o
+               arrasto do planeta é pior do que nenhum botão. */
+            /* Acima de zero a camada do texto já é promovida: a opacidade
+               dele muda a cada quadro por ~1 s, e sem a promoção cada
+               quadro repintaria o <h1>, o lead e os botões. */
+            sec.classList.add("hero-cena--cine");
+            sec.classList.toggle("hero-cena--cinema", cine > 0.5);
+          } else {
+            sec.style.removeProperty("--cine");
+            sec.classList.remove("hero-cena--cine");
+            sec.classList.remove("hero-cena--cinema");
+          }
+        }
+      }
 
       /* OS RÓTULOS: saem no começo do voo, voltam depois do pouso. `suave` é o
          smoothstep de sempre, para a opacidade não ter canto nas pontas. */

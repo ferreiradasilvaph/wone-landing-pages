@@ -66,6 +66,8 @@ export type EstadoSP = {
   readonly predios: number;
   /** 0 = marca apagada na torre; 1 = acesa. */
   readonly logo: number;
+  /** 0 = só o mapa de 22 km; 1 = o recorte de 4 km do centro por cima. */
+  readonly detalhe: number;
 };
 
 /* ------------------------------------------------------- os dois patamares */
@@ -250,6 +252,22 @@ export const LIMIAR = {
    * Acesa a 87% da aproximação, ela fica inteira pelos ~2 s da demora.
    */
   logo: [5000, 9000],
+  /**
+   * A TEXTURA DE DETALHE do centro (SP_CENTRO, 4 km nos mesmos 2048 px).
+   *
+   * A grande cobre 22 km a 10,74 m/px, e no fundo do mergulho a câmera
+   * chega a 1,44 m/px: são 7,5 texels de tela por texel de textura, ou
+   * seja uma ampliação de borrão. A de detalhe tem 1,95 m/px — 1,36x de
+   * ampliação no mesmo ponto, que é nítido.
+   *
+   * 1.500 e 3.000 saem da geometria do disco, não do gosto: a 13.248/Z
+   * metros por pixel, o disco de 633 px mostra 2.795 m de raio em 1.500 e
+   * 1.398 m em 3.000. O recorte de detalhe é cheio até 1.400 m e desvanece
+   * até 2.000 — ou seja, a troca TERMINA exatamente no zoom a partir do
+   * qual a borda dele deixa de caber no quadro. Depois de 3.000 o que se
+   * vê é só a parte cheia, e a emenda não tem mais onde aparecer.
+   */
+  detalhe: [1500, 3000],
 } as const;
 
 function entre(x: number, a: number, b: number) {
@@ -267,6 +285,7 @@ export function visibilidades(zoom: number) {
     mapa: entre(zoom, LIMIAR.mapa[0], LIMIAR.mapa[1]),
     predios: entre(zoom, LIMIAR.predios[0], LIMIAR.predios[1]),
     logo: entre(zoom, LIMIAR.logo[0], LIMIAR.logo[1]),
+    detalhe: entre(zoom, LIMIAR.detalhe[0], LIMIAR.detalhe[1]),
   };
 }
 

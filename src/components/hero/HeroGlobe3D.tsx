@@ -638,12 +638,15 @@ function emSegmentos(pts: Float32Array, inicio: number, n: number) {
 function Planeta({
   aoDesenhar,
   aoBrilhar,
+  aoCidade,
   composto,
   leve,
 }: {
   aoDesenhar: () => void;
   /** Os objetos que o bloom da etapa 5 ilumina. Avisado uma vez, na montagem. */
   aoBrilhar: (objetos: Object3D[]) => void;
+  /** Avisa o compositor quando a cidade entra e sai (ver o SMAA). */
+  aoCidade: (dentro: boolean) => void;
   /** O compositor da etapa 5 está de pé? Ver `GAMA_SRGB`. */
   composto: boolean;
   leve: boolean;
@@ -663,8 +666,13 @@ function Planeta({
    * de prédio e opacidade de marca, e um degrau de 1,6% em qualquer um deles é
    * menos que o ruído do próprio mapa noturno.
    */
-  const [cidadeSP, setCidadeSP] = useState({ mapa: 0, predios: 0, logo: 0 });
-  const ultimaSP = useRef({ mapa: 0, predios: 0, logo: 0 });
+  const [cidadeSP, setCidadeSP] = useState({
+    mapa: 0,
+    predios: 0,
+    logo: 0,
+    detalhe: 0,
+  });
+  const ultimaSP = useRef({ mapa: 0, predios: 0, logo: 0, detalhe: 0 });
   const grupo = useRef<Group>(null);
   const terra = useRef<Points>(null);
   const cometaNo = useRef<Points>(null);
@@ -925,6 +933,18 @@ function Planeta({
   const quadros = useRef(0);
   const tela = useRef(0);
 
+  /* O MODO CINEMA. `cineM` é o lado do canvas enquanto ele dura (0 = fora),
+     `cineBase` o lado da caixa do globo no instante em que ele começou, e
+     `cineAlvo` o centro de destino em coordenadas dessa caixa. Os três são
+     medidos UMA vez, na entrada: medir por quadro leria o layout no meio do
+     quadro e pagaria um reflow síncrono sessenta vezes por segundo. */
+  /** O último aviso de cidade dado ao compositor, para não repetir. */
+  const naCidade = useRef(false);
+
+  const cineM = useRef(0);
+  const cineBase = useRef(0);
+  const cineAlvo = useRef<[number, number]>([0, 0]);
+
   /* A câmera e o `gl` vêm do ARGUMENTO do `useFrame`, não de `useThree`: os
      dois são objetos que este laço MUTA, e mutar o retorno de um hook é o que o
      compilador do React proíbe — com razão, porque ele guarda esse retorno
@@ -963,26 +983,158 @@ function Planeta({
       g.position.set(0, 0, 0);
     }
 
+    /* ------------------------------------------------ O MODO CINEMA
+
+       O PLANETA CRESCE SEM O BUFFER DE DESENHO SER REALOCADO POR QUADRO.
+
+       O caminho óbvio — animar a largura da caixa — é o errado: o r3f observa
+       essa caixa e chama `setSize` a cada mudança, e `setSize` realoca o
+       framebuffer E todos os alvos de render do compositor. Numa rampa de ~1 s
+       a 60 fps isso são duzentas realocações, e cada uma é uma pausa de driver.
+
+       O que se faz aqui é o contrário: no primeiro quadro de cinema a caixa
+       salta DE UMA VEZ para o tamanho final (uma única `setSize`, feita pelo
+       r3f como sempre) e o crescimento vira CÂMERA. Com a ortográfica de
+       frustum ±1, multiplicar `zoom` por `k = aparente/final` faz a borda da
+       vigia cair exatamente em `aparente/2` px do centro — ou seja, o disco
+       desenhado tem o tamanho da rampa dentro de um canvas que já é o maior.
+       Durante a rampa a cena está SUPERAMOSTRADA (desenhada em mais pixels do
+       que ocupa), que é o melhor defeito possível; no fim ela é 1:1.
+
+       O deslocamento para o meio da janela é `transform: translate`, que não
+       muda a caixa de layout e portanto não acorda o observador de tamanho.
+
+       NADA DE TEXTO MORA NESTE CANVAS, e é por isso que escalar por câmera é
+       legítimo aqui e não seria numa caixa com rótulos: a rampa só começa em
+       zoom 60, quando pinos e rótulos já foram embora há muito. */
+    /* A CAIXA DE FORA, não a de dentro. O r3f monta DOIS divs em volta do
+       canvas: o de fora leva a classe e o estilo que esta componente passa
+       (é ele o .globe-tres, e é dele o recorte circular e um overflow
+       hidden que o próprio r3f escreve inline), e o de dentro é 100%×100%
+       e é o que o observador de tamanho mede. Estilar o de dentro — que foi
+       o que a primeira versão fez — crescia o canvas por baixo de um
+       recorte que continuava do tamanho antigo: a cidade aparecia cortada
+       em dois lados retos, que foi exatamente o que a medição mostrou. */
+    const divCine = estado.gl.domElement.closest(".globe-tres") as HTMLElement | null;
+    if (divCine) {
+      if (q.cine > 0 && cineM.current === 0) {
+        const caixa = divCine.parentElement as HTMLElement | null;
+        const base = caixa?.clientWidth ?? 0;
+        if (caixa && base > 0) {
+          /* O TETO É A JANELA, não um número de arte: 78% da largura e a altura
+             menos 130 px (o cabeçalho de 65 e um respiro igual embaixo). Quem
+             manda quase sempre é a altura — a 1440×900 dá 770 contra os 634 de
+             repouso, 21% maior. */
+          const M = Math.round(
+            Math.min(window.innerWidth * 0.78, window.innerHeight - 130),
+          );
+          cineBase.current = base;
+          cineM.current = Math.max(base, M);
+          const rc = caixa.getBoundingClientRect();
+          cineAlvo.current = [
+            window.innerWidth / 2 - rc.left,
+            window.innerHeight / 2 + 12 - rc.top,
+          ];
+          /* O CANTO SUPERIOR ESQUERDO NÃO PODE SE MEXER, e isto é CLS.
+
+             A instabilidade de layout conta um elemento quando o PONTO DE
+             PARTIDA do retângulo dele muda entre dois quadros — e ignora
+             deslocamento por `transform`, que não é layout. Crescer a caixa
+             a partir do canto, portanto, não conta; recolocá-la, sim.
+
+             A primeira versão punha `left`/`top` em −68 px para manter o
+             centro no lugar, e o observador registrou 0,0149 de CLS numa
+             página que tinha zero desde o primeiro dia. Agora o canto fica
+             onde está, a caixa cresce para a direita e para baixo, e TODO o
+             recentramento — inclusive os −68 px — vive no `transform`.
+
+             O resultado na tela é o mesmo pixel; o que muda é de que lado
+             da fronteira entre layout e composição a conta acontece. */
+          divCine.style.inset = "auto";
+          divCine.style.left = "0px";
+          divCine.style.top = "0px";
+          divCine.style.width = cineM.current + "px";
+          divCine.style.height = cineM.current + "px";
+        }
+      } else if (q.cine === 0 && cineM.current !== 0) {
+        cineM.current = 0;
+        /* A ORDEM IMPORTA: inset é atalho das quatro bordas, então limpar
+           left e top DEPOIS de escrevê-lo deixa right e bottom órfãos e a
+           caixa ancorada pelo canto errado — foi o que a primeira medição
+           mostrou no estilo que sobrou. Limpa-se tudo primeiro, escreve-se o
+           atalho por último. */
+        divCine.style.width = "";
+        divCine.style.height = "";
+        divCine.style.transform = "";
+        divCine.style.inset = "0";
+        q.cineLado = 0;
+        q.cineX = 0;
+        q.cineY = 0;
+      }
+    }
+    let kCine = 1;
+    if (cineM.current > 0 && divCine) {
+      const base = cineBase.current;
+      const M = cineM.current;
+      const aparente = base + (M - base) * q.cine;
+      /* DUAS RAMPAS, E NÃO UMA: o tamanho sobe desde o começo, a POSIÇÃO só
+         depois de 35%.
+
+         O halo, o oceano e o limbo do planeta em repouso são CSS, moram na
+         caixa do globo e não acompanham esta caixa — eles apagam com a
+         mesma variável, mas no lugar onde sempre estiveram. Movendo a cena
+         3D desde o primeiro quadro, havia um trecho em que o disco escuro
+         do planeta ainda estava aceso de um lado e o mapa já tinha saído do
+         centro dele pelo outro: dois planetas na tela. Medido na captura de
+         meia-rampa.
+
+         Com o deslocamento atrasado a ordem fica legível: primeiro o
+         planeta se dissolve onde está, depois a cidade caminha para o meio
+         da janela. 0,35 é onde o CSS já apagou (ele some em 1/2,5 = 0,4). */
+      const mv = suavinha(q.cine, 0.35, 1);
+      const cx = base / 2 + (cineAlvo.current[0] - base / 2) * mv;
+      const cy = base / 2 + (cineAlvo.current[1] - base / 2) * mv;
+      /* A caixa nasce no canto (0,0) com lado M, logo o centro dela está em
+         (M/2, M/2); levá-lo a (cx, cy) é a translação inteira — inclusive a
+         parte que compensa a caixa ser maior que a do globo. */
+      divCine.style.transform =
+        "translate(" +
+        (cx - M / 2).toFixed(1) +
+        "px," +
+        (cy - M / 2).toFixed(1) +
+        "px)";
+      kCine = aparente / M;
+      /* O disco aparente, para quem trata o ponteiro (ver `cena.cineLado`). */
+      q.cineLado = aparente;
+      q.cineX = cx;
+      q.cineY = cy;
+    }
+
     /* O ZOOM pela `zoom` da câmera ortográfica, que é precisamente o que a
        matriz do canvas 2D faz: com o frustum em ±1, `zoom = Z` recorta o
        frustum para ±1/Z, e um ponto em `x₁` cai em `R + Z·R·x₁` — a conta do
        2D, sem um fator de ajuste. `updateProjectionMatrix` só quando muda:
-       durante o pouso a escala é constante por 1,8 s. */
-    if (zoom !== escala.current) {
-      escala.current = zoom;
-      camera.zoom = zoom;
+       durante o pouso a escala é constante por 1,8 s.
+
+       `kCine` é o único fator que já existiu nesta linha, e ele vale 1 fora do
+       cinema — a igualdade com o 2D que mantém os pinos colados continua exata
+       em todo quadro em que há pino para colar. */
+    const zoomCam = zoom * kCine;
+    if (zoomCam !== escala.current) {
+      escala.current = zoomCam;
+      camera.zoom = zoomCam;
       camera.updateProjectionMatrix();
       /* `grao` = Z^0,6: o ponto cresce por MENOS que a escala, então os vãos
          entre eles ABREM e aproximar REVELA a nuvem em vez de só ampliá-la. É
          a mesma curva do canvas 2D, escrita do outro lado da conta. */
-      const grao = Math.pow(zoom, 0.6);
+      const grao = Math.pow(zoomCam, 0.6);
       const mt = terra.current?.material as ShaderMaterial | undefined;
       const mc = cometa3d.material as ShaderMaterial;
       if (mt) mt.uniforms.uGrao.value = grao;
       mc.uniforms.uGrao.value = grao;
       /* A atmosfera precisa do zoom para saber ONDE fica a borda da vigia. */
       const ma = esferaNo.current?.material as ShaderMaterial | undefined;
-      if (ma) ma.uniforms.uZoom.value = zoom;
+      if (ma) ma.uniforms.uZoom.value = zoomCam;
     }
 
     /* ------------------------------------------- o planeta cede a vez
@@ -1072,17 +1224,33 @@ function Planeta({
 
     /* A cidade, em degraus de 1/64 (ver `cidadeSP`). */
     const alvoSP = mergulho
-      ? { mapa: q.sp.mapa, predios: q.sp.predios, logo: q.sp.logo }
+      ? {
+          mapa: q.sp.mapa,
+          predios: q.sp.predios,
+          logo: q.sp.logo,
+          detalhe: q.sp.detalhe,
+        }
       : ZERO_SP;
     const u = ultimaSP.current;
     if (
       Math.abs(alvoSP.mapa - u.mapa) > DEGRAU_SP ||
       Math.abs(alvoSP.predios - u.predios) > DEGRAU_SP ||
       Math.abs(alvoSP.logo - u.logo) > DEGRAU_SP ||
+      Math.abs(alvoSP.detalhe - u.detalhe) > DEGRAU_SP ||
       (alvoSP.mapa === 0) !== (u.mapa === 0)
     ) {
       ultimaSP.current = alvoSP;
       setCidadeSP(alvoSP);
+    }
+
+    /* O AVISO DO ANTISSERRILHAMENTO sobe junto, pelo mesmo degrau: o compositor
+       recompilar a cadeia de efeitos quando a lista muda, e isso é caro o
+       bastante para não poder depender de um número contínuo. Duas vezes por
+       mergulho, na entrada e na saída do mapa. */
+    const dentro = alvoSP.mapa > 0.5;
+    if (dentro !== naCidade.current) {
+      naCidade.current = dentro;
+      aoCidade(dentro);
     }
 
     /* AS MATRIZES, ATUALIZADAS À MÃO — e só então os pinos.
@@ -1215,6 +1383,11 @@ function Planeta({
         mapa={cidadeSP.mapa}
         predios={cidadeSP.predios}
         logo={cidadeSP.logo}
+        detalhe={cidadeSP.detalhe}
+        /* A textura de detalhe só é BAIXADA no desktop: são 214 kB, e no
+           celular a câmera para em 405 — bem abaixo dos 1.500 em que ela
+           começaria a aparecer. */
+        querDetalhe={!leve}
         /* A marca na fachada é o quinto objeto do bloom da etapa 5. No celular
            não há compositor nenhum, e a camada não é pedida. */
         camadaBrilho={leve ? undefined : CAMADA_BRILHO}
@@ -1666,7 +1839,7 @@ const CIDADE_MERGULHO = "BRL";
 
 /** O degrau mínimo que faz a cidade de São Paulo valer um render de React. */
 const DEGRAU_SP = 1 / 64;
-const ZERO_SP = { mapa: 0, predios: 0, logo: 0 };
+const ZERO_SP = { mapa: 0, predios: 0, logo: 0, detalhe: 0 };
 
 /** Espessura do fio dos dois anéis, em px de CSS. */
 const ANEL_FIO = 1.4;
@@ -1782,6 +1955,7 @@ export default function HeroGlobe3D({ leve = false }: { leve?: boolean }) {
   const [vivo, setVivo] = useState(false);
   /** Os objetos que o bloom da etapa 5 ilumina (ver `HeroGlobePos`). */
   const [brilho, setBrilho] = useState<Object3D[]>([]);
+  const [naCidade, setNaCidade] = useState(false);
 
   /* O 2D só larga a terra quando o 3D já está CHEIO. Durante os 600 ms os dois
      pintam — e podem, porque pintam a mesma geometria no mesmo pixel: o que se
@@ -1858,6 +2032,7 @@ export default function HeroGlobe3D({ leve = false }: { leve?: boolean }) {
       <Planeta
         aoDesenhar={() => setVivo(true)}
         aoBrilhar={setBrilho}
+        aoCidade={setNaCidade}
         composto={!leve && brilho.length > 0}
         leve={leve}
       />
@@ -1866,7 +2041,15 @@ export default function HeroGlobe3D({ leve = false }: { leve?: boolean }) {
           depois dos que escrevem a câmera e a cidade. Sem seleção ainda (os
           primeiros quadros, antes de os nós existirem) ele não é montado: um
           bloom sobre nada é uma passada de tela por quadro para somar zero. */}
-      {!leve && brilho.length > 0 ? <HeroGlobePos selecao={brilho} /> : null}
+      {!leve && brilho.length > 0 ? (
+        <HeroGlobePos
+          selecao={brilho}
+          /* A passada entra junto com o mapa e sai com ele: o mesmo degrau
+             quantizado que a cidade usa, para a cadeia de efeitos ser
+             recompilada DUAS vezes por mergulho e não a cada quadro. */
+          cidade={naCidade}
+        />
+      ) : null}
     </Canvas>
   );
 }

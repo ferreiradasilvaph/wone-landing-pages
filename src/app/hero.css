@@ -802,3 +802,102 @@ html.wone-entrando .hero-sublinha::after {
 .hero-rotulo {
   opacity: var(--rotulo-op, 1);
 }
+
+/* --------------------------------------------------------------------------
+   O MODO CINEMA (pedido do dono, 17/10)
+
+   Durante a parada em São Paulo o bloco de texto se apaga e o planeta cresce
+   para ocupar o vazio. Daqui sai só metade disso — a metade do TEXTO. O
+   crescimento do planeta é geometria de canvas e mora em `HeroGlobe3D`, porque
+   lá ele pode trocar o tamanho do buffer de desenho UMA vez em vez de uma vez
+   por quadro.
+
+   `--cine` é uma rampa de 0 a 1 escrita na SEÇÃO pelo laço do globo, derivada
+   do zoom (ver `cena.cine`). Não é uma transição de CSS, e isso é deliberado:
+   uma transição teria duração própria e brigaria com a do mergulho, que é
+   logarítmica; derivando da escala, o texto volta exatamente no mesmo zoom em
+   que foi embora, na subida e em qualquer desvio que leve a câmera dali.
+
+   SÓ NO DESKTOP. Abaixo de 1024 o globo é um bloco em fluxo depois dos botões
+   e não existe coluna ao lado para liberar — e `cena.cine` já vale zero lá, de
+   modo que esta regra nem chega a ser exercitada. A consulta de mídia está
+   aqui assim mesmo, porque uma invariante vale mais escrita duas vezes do que
+   dependendo de a outra ponta nunca mudar.
+
+   CLS ZERO POR CONSTRUÇÃO: o que muda é `opacity`, que não participa do
+   layout. Nada aqui mexe em altura, margem ou posição de nó em fluxo.
+   -------------------------------------------------------------------------- */
+@media (min-width: 1024px) {
+  .hero-texto,
+  .hero-pe {
+    opacity: calc(1 - var(--cine, 0));
+  }
+
+  /* A promoção de camada entra junto com a rampa e sai com ela: o texto tem um
+     `<h1>` de três linhas, um lead e dois botões, e repintar isso a cada quadro
+     durante um segundo é o tipo de custo que não aparece num perfil médio e
+     aparece no pior quadro. */
+  .hero-cena--cine .hero-texto,
+  .hero-cena--cine .hero-pe {
+    will-change: opacity;
+  }
+
+  /* A ANIMAÇÃO DE ENTRADA PRECISA SAIR DA FRENTE.
+
+     A fileira de benefícios carrega .ent-sobe, e a classe wone-entrando fica
+     no html para sempre — de modo que a animação, com fill both, continua
+     mandando na opacidade dela muito depois de ter terminado. E uma animação
+     vence qualquer declaração normal, por mais específica que seja. Medido: o
+     texto sumia e a fileira ficava acesa por cima da cidade.
+
+     Desligá-la AQUI é seguro porque o cinema só existe muito depois da
+     entrada: quando esta regra passa a valer, a animação já cumpriu o papel
+     dela e o valor final dela é o mesmo que a declaração devolve. Dois
+     seletores de classe mais um ganham do html.wone-entrando .ent-sobe, que
+     tem dois mais o tipo. */
+  .hero-cena--cine .hero-pe.ent-sobe,
+  .hero-cena--cine .hero-texto .ent-sobe,
+  .hero-cena--cine .hero-texto .ent-linha {
+    animation: none;
+  }
+
+  /* O PONTEIRO SAI JUNTO, mas num degrau: um bloco em opacidade 0,02 ainda
+     recebe clique, e um botão invisível que engole o arrasto do planeta é pior
+     do que nenhum botão. O foco por teclado continua existindo de propósito —
+     quem navega por Tab não vê a rampa (ela só acontece com movimento normal) e
+     não pode ficar sem o caminho para a lista de espera. */
+  .hero-cena--cinema .hero-texto,
+  .hero-cena--cinema .hero-pe {
+    pointer-events: none;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   AS CAMADAS DO DISCO DE REPOUSO SAEM JUNTO COM O TEXTO.
+
+   O halo, o oceano, o fio de atmosfera, a marca d'água, o limbo e o canvas
+   2D são todos do tamanho da caixa do globo, e a caixa não muda — quem
+   cresce no cinema é só o canvas 3D, por geometria própria (ver
+   `HeroGlobe3D`). Deixá-los acesos punha um anel laranja de 634 px em volta
+   de uma cidade de 770: um planeta fantasma atrás da maquete, que foi o que
+   a primeira captura mostrou.
+
+   Eles somem pela MESMA rampa do texto, e isso não é economia de variável —
+   é a mesma afirmação: no cinema não há mais planeta, há uma cidade. Na
+   subida voltam no mesmo zoom em que foram, porque `--cine` é derivada da
+   escala e não do relógio.
+   -------------------------------------------------------------------------- */
+.hero-globo > .globe-halo,
+.hero-globo > .globe-sea,
+.hero-globo > .globe-air,
+.hero-globo > .globe-mark,
+.hero-globo > .globe-vigia,
+.hero-globo > canvas {
+  /* 2,5 VEZES A RAMPA: estas camadas somem em --cine 0,4, não em 1.
+
+     Elas não acompanham a caixa do 3D (são CSS, presas à caixa do globo), e
+     a cena 3D só começa a caminhar para o meio da janela em 0,35. Apagá-las
+     antes disso é o que garante que nunca haja o disco escuro do planeta de
+     um lado e o mapa do outro. */
+  opacity: calc(1 - var(--cine, 0) * 2.5);
+}

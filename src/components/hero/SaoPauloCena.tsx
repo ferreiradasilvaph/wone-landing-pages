@@ -54,7 +54,7 @@ import {
 } from "three";
 
 import { baseVector } from "./globeMath";
-import { SP_MAPA } from "./spMapa";
+import { SP_CENTRO, SP_MAPA } from "./spMapa";
 import dadosPredios from "./spPredios.json";
 
 /* --------------------------------------------------------------------------
@@ -78,6 +78,20 @@ const ALTURA_CHAO = 30;
 
 /** O lado do chão, em metros: os 2048 px da textura a 10,742 m/px. */
 const LADO_CHAO = SP_MAPA.lado * SP_MAPA.metrosPorPixel;
+
+/**
+ * O RECORTE DE DETALHE: 4 km nos mesmos 2048 px, centrado na torre.
+ *
+ * O disco dele tem 2.000 m de raio (a maior circunferência que cabe no
+ * quadrado da textura) e é CHEIO até 1.400, desvanecendo até a borda. Os
+ * 1.400 não são estética: a 13.248/Z metros por pixel, o disco de 633 px
+ * mostra 1.398 m de raio em Z = 3.000, que é onde a troca termina. Ou seja,
+ * a partir do instante em que o recorte está inteiro no ar, a faixa que
+ * desvanece já não cabe no quadro — e a emenda não tem onde aparecer.
+ */
+const LADO_CENTRO = SP_CENTRO.larguraKm * 1000;
+const RAIO_CENTRO = LADO_CENTRO / 2;
+const CHEIO_CENTRO = 0.7;
 
 /**
  * O AFUNILAMENTO DA BORDA DOS PRÉDIOS.
@@ -679,11 +693,18 @@ function constroiPredios(aneis: AnelPronto[]) {
  * multiplicaria a cor, e a borda continuaria lá. Custa 640 triângulos e nenhum
  * draw call a mais: continua sendo UMA malha com UM material.
  */
-function constroiChao() {
-  const R = LADO_CHAO / 2;
+/**
+ * Um disco de chão com alfa por vértice na borda — serve aos DOIS mapas, o
+ * de 22 km e o recorte de 4 km, porque a única coisa que muda entre eles é
+ * o raio e o lado do quadrado da textura.
+ */
+function constroiChao(
+  R = LADO_CHAO / 2,
+  lado = LADO_CHAO,
+  ANEIS = [0, 0.7, 0.88, 1],
+  ALFAS = [1, 1, 0.6, 0],
+) {
   const SETORES = 128;
-  const ANEIS = [0, 0.7, 0.88, 1];
-  const ALFAS = [1, 1, 0.6, 0];
 
   const pos: number[] = [];
   const uv: number[] = [];
@@ -692,7 +713,7 @@ function constroiChao() {
     const x = Math.cos(ang) * r * R;
     const y = Math.sin(ang) * r * R;
     pos.push(x, y, 0);
-    uv.push(0.5 + x / LADO_CHAO, 0.5 + y / LADO_CHAO);
+    uv.push(0.5 + x / lado, 0.5 + y / lado);
     cor.push(1, 1, 1, alfa);
   };
 
@@ -1155,6 +1176,18 @@ export type SaoPauloCenaProps = {
   /** A marca na torre: 0 = apagada, 1 = acesa. */
   logo: number;
   /**
+   * O RECORTE DE DETALHE do centro: 0 = só o mapa de 22 km, 1 = o de 4 km
+   * por cima dele. A travessia acontece entre Z = 1.500 e Z = 3.000 (ver
+   * LIMIAR.detalhe, em mergulhoSP), e como ela sai da ESCALA e não do
+   * relógio, ela se desfaz sozinha na subida e em qualquer desvio.
+   */
+  detalhe: number;
+  /**
+   * Baixar ou não a textura de detalhe. Falso no celular: são 214 kB, e a
+   * câmera de lá para em Z = 405, onde o recorte nem começaria a aparecer.
+   */
+  querDetalhe?: boolean;
+  /**
    * A CAMADA DO BRILHO da etapa 5, ou `undefined` para não participar dele.
    *
    * A marca na fachada é um dos cinco objetos que o pós-processamento acende —
@@ -1183,6 +1216,8 @@ export default function SaoPauloCena({
   mapa,
   predios,
   logo,
+  detalhe,
+  querDetalhe = false,
   camadaBrilho,
 }: SaoPauloCenaProps) {
   const gl = useThree((s) => s.gl);
@@ -1223,6 +1258,12 @@ export default function SaoPauloCena({
       torreGeo: constroiTorre(),
       logoGeo: constroiLogo(),
       chaoGeo: constroiChao(),
+      centroGeo: constroiChao(
+        RAIO_CENTRO,
+        LADO_CENTRO,
+        [0, CHEIO_CENTRO, 0.9, 1],
+        [1, 1, 0.45, 0],
+      ),
       triangulos,
       aneis: aneis.length,
     };
@@ -1234,8 +1275,16 @@ export default function SaoPauloCena({
     return {
       chao: carrega(SP_MAPA.textura, aniso, invalidate, aquece),
       logo: carrega("/images/logo-icon.png", aniso, invalidate, aquece),
+      /* O recorte entra no MESMO memo, e não num carregamento tardio com
+         estado: pedi-lo só quando o zoom passa de 1.500 pouparia 214 kB de
+         quem nunca chega lá, mas TODO MUNDO chega lá — São Paulo é a
+         primeira cidade do voo. O que sobraria seria a chance de a textura
+         ainda estar decodificando no quadro em que ela precisa aparecer. */
+      centro: querDetalhe
+        ? carrega(SP_CENTRO.arquivo, aniso, invalidate, aquece)
+        : null,
     };
-  }, [gl, invalidate]);
+  }, [gl, invalidate, querDetalhe]);
 
   const materiais = useMemo(() => {
     const chao = new MeshBasicMaterial({
@@ -1249,6 +1298,19 @@ export default function SaoPauloCena({
       depthWrite: false,
       toneMapped: false,
     });
+    /* O RECORTE usa o mesmo material do chão, com a mesma receita: alfa por
+       vértice na borda, sem escrever profundidade (ele é camada de baixo e
+       não pode recortar prédio) e com o teste ligado (é ele que faz o prédio
+       tapar o mapa). O que o separa do chão grande é só a ORDEM de desenho. */
+    const chaoCentro = texturas.centro
+      ? new MeshBasicMaterial({
+          map: texturas.centro,
+          transparent: true,
+          vertexColors: true,
+          depthWrite: false,
+          toneMapped: false,
+        })
+      : null;
     const predio = new MeshBasicMaterial({ vertexColors: true, toneMapped: false });
     const torre = new MeshBasicMaterial({ vertexColors: true, toneMapped: false });
     const marca = new MeshBasicMaterial({
@@ -1272,7 +1334,7 @@ export default function SaoPauloCena({
       side: DoubleSide,
       forceSinglePass: true,
     });
-    return { chao, predio, torre, marca };
+    return { chao, chaoCentro, predio, torre, marca };
   }, [texturas]);
 
   /* Devolver tudo ao driver no desmonte: o canvas do hero morre quando o
@@ -1284,11 +1346,14 @@ export default function SaoPauloCena({
       pecas.torreGeo.dispose();
       pecas.logoGeo.dispose();
       pecas.chaoGeo.dispose();
+      pecas.centroGeo.dispose();
       materiais.chao.dispose();
+      materiais.chaoCentro?.dispose();
       materiais.predio.dispose();
       materiais.torre.dispose();
       materiais.marca.dispose();
       texturas.chao.dispose();
+      texturas.centro?.dispose();
       texturas.logo.dispose();
     },
     [pecas, materiais, texturas],
@@ -1333,6 +1398,36 @@ export default function SaoPauloCena({
           if (no && camadaBrilho !== undefined) no.layers.enable(camadaBrilho);
         }}
       />
+
+      {/* O RECORTE DE DETALHE, por cima do mapa de 22 km.
+
+          CENTRADO NA TORRE, não no meio da caixa da textura grande: é por
+          isso que ele recebe o mesmo `deslocamento` dos prédios. Os dois
+          mapas têm a mesma projeção e a mesma paleta por classe de via; o
+          que muda é a escala, de 10,74 m/px para 1,95.
+
+          ORDEM, E NÃO PROFUNDIDADE: os dois chãos têm `depthWrite` falso, de
+          modo que nenhum dos dois escreve no buffer e não há disputa de
+          profundidade entre eles — quem decide quem fica por cima é
+          `renderOrder`. Os prédios continuam opacos e escrevendo, e por isso
+          continuam tapando os dois.
+
+          UM DRAW CALL A MAIS, e só enquanto ele existe: fora da faixa de
+          troca o nó nem é criado. */}
+      {materiais.chaoCentro && detalhe > 0.004 ? (
+        <mesh
+          geometry={pecas.centroGeo}
+          material={materiais.chaoCentro}
+          position={deslocamento}
+          material-opacity={mapa * detalhe * (1 - CHAO_NO_FUNDO * logo)}
+          renderOrder={2.2}
+          ref={(no) => {
+            /* Entra no bloom pela mesma razão do chão grande: as vias dele
+               são a FONTE DE LUZ do quadro no fundo do mergulho. */
+            if (no && camadaBrilho !== undefined) no.layers.enable(camadaBrilho);
+          }}
+        />
+      ) : null}
 
       {mostraPredios ? (
         <group position={deslocamento}>

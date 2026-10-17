@@ -256,6 +256,38 @@ export type Cena = {
   livreYaw: number;
   livrePitch: number;
   /**
+   * O MODO CINEMA, de 0 a 1 — o pedido do dono de 17/10: durante a parada em
+   * São Paulo o bloco de texto se apaga e o planeta cresce para ocupar o vazio.
+   *
+   * ELE SAI DO ZOOM, E NÃO DO RELÓGIO DO MERGULHO. É a mesma decisão que faz as
+   * visibilidades de `mergulhoSP` saírem da escala: um sinal derivado da escala
+   * se desfaz sozinho em TODO caminho de volta, sem um segundo roteiro.
+   *
+   *   · a fase `sobe` o desfaz porque o zoom cai;
+   *   · um DESVIO disparado de dentro da torre o desfaz pela mesma rampa,
+   *     enquanto a câmera parte — sem uma linha a mais no desvio;
+   *   · fora da parada de São Paulo o zoom nunca chega perto da faixa, então
+   *     não existe estado de cinema para ficar preso.
+   *
+   * Zero no celular (o 3D leve não recebe o modo) e zero com movimento
+   * reduzido, onde não há mergulho nenhum.
+   */
+  cine: number;
+  /**
+   * O DISCO APARENTE DURANTE O CINEMA, escrito pela cena 3D: o diâmetro em
+   * px de CSS e o centro em coordenadas de .hero-globo.
+   *
+   * Existe porque no cinema o disco deixa de coincidir com a caixa do globo
+   * — ele cresce e anda para o meio da janela — e quem trata o PONTEIRO
+   * precisa da régua certa: onde o disco está (para saber se o clique é
+   * nele) e qual é o raio aparente (para o arrasto girar o mesmo tanto de
+   * superfície por pixel que girava antes). Zero significa sem cinema: a
+   * conta volta a ser a de sempre, contra a caixa.
+   */
+  cineLado: number;
+  cineX: number;
+  cineY: number;
+  /**
    * A VERSÃO LEVE, abaixo de 1024 (etapa 6): metade dos pontos, `dpr` 1,
    * fresnel sem `pow`, arcos sem o fio creme por dentro e metade das faíscas.
    * Mora no contrato porque quem decide é a largura (o `HeroGlobe`) e quem
@@ -345,6 +377,8 @@ export type Cena = {
     mapa: number;
     predios: number;
     logo: number;
+    /** O recorte de 4 km do centro, por cima do mapa de 22 km. */
+    detalhe: number;
   };
 
   /* ------------------------------------------------------------- a ponte */
@@ -429,6 +463,10 @@ const ESTADO: Cena = {
   escolher: null,
   livreYaw: 0,
   livrePitch: 0,
+  cine: 0,
+  cineLado: 0,
+  cineX: 0,
+  cineY: 0,
   leve: false,
   pinos: [],
   focos: new Float32Array(0),
@@ -454,6 +492,7 @@ const ESTADO: Cena = {
     mapa: 0,
     predios: 0,
     logo: 0,
+    detalhe: 0,
   },
   nuvem: null,
   avanca: null,

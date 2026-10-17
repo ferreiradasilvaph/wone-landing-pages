@@ -1,6 +1,12 @@
 "use client";
 
-import { EffectComposer, Noise, SelectiveBloom, Vignette } from "@react-three/postprocessing";
+import {
+  EffectComposer,
+  Noise,
+  SelectiveBloom,
+  FXAA,
+  Vignette,
+} from "@react-three/postprocessing";
 import { BlendFunction } from "postprocessing";
 import { UnsignedByteType, type Object3D } from "three";
 
@@ -121,7 +127,17 @@ const VINHETA_FORCA = 0.42;
  * que o laço do `HeroGlobe` chama, como todos os outros. Não há laço novo, não
  * há `invalidate`, e a pausa com a aba oculta continua sendo zero quadro.
  */
-export default function HeroGlobePos({ selecao }: { selecao: Object3D[] }) {
+export default function HeroGlobePos({
+  selecao,
+  cidade,
+}: {
+  selecao: Object3D[];
+  /**
+   * Estamos na parada de São Paulo? É o único momento em que a cena tem
+   * ARESTAS DE POLÍGONO para serrilhar.
+   */
+  cidade: boolean;
+}) {
   return (
     <EffectComposer
       multisampling={0}
@@ -152,6 +168,40 @@ export default function HeroGlobePos({ selecao }: { selecao: Object3D[] }) {
       ) : (
         <></>
       )}
+      {/* O ANTISSERRILHAMENTO, E SÓ NA CIDADE.
+
+          O contexto nasce com antialias: false desde a etapa 2, e a razão
+          continua boa: fora do mergulho a única aresta da cena é a borda de
+          cada ponto, resolvida por um smoothstep no fragment, e as linhas da
+          rede são LineSegments2, que já se suavizam sozinhas. MSAA ali não
+          comprava nada.
+
+          Dentro da cidade a conta vira do avesso: são 76 mil triângulos de
+          paredes e telhados, com arestas quase horizontais, no único momento
+          da página em que a câmera fica parada por dois segundos — o lugar
+          clássico de serrilha, e o único em que alguém tem tempo de olhar
+          para ela.
+
+          FXAA E NÃO SMAA, E ISSO FOI MEDIDO, NÃO ESCOLHIDO POR GOSTO.
+
+          O pedido era SMAA. O build diz o preço dele: o chunk do compositor
+          vai de 28,2 kB para 83,5 kB gzip — 55,3 kB, que não são shader e sim
+          as duas tabelas de busca (área e busca) que o pacote embute como
+          data URI. E elas não dá para separar num chunk tardio: vivem dentro
+          do mesmo módulo postprocessing de que o EffectComposer já depende,
+          então assim que qualquer linha do projeto cita SMAAEffect elas caem
+          no chunk que o PRIMEIRO quadro 3D espera. Tentei o import dinâmico
+          num arquivo só para elas e o bundler as juntou de volta, como tinha
+          de juntar.
+
+          FXAA faz o mesmo serviço por 1,4 kB gzip (29,6 contra 28,2), lendo a
+          imagem que já existe, sem tabela nenhuma. Ele é um pouco mais mole
+          que o SMAA em aresta quase horizontal — e o que esta cena tem é
+          silhueta escura de prédio sobre mapa escuro, onde essa diferença não
+          é o que separa o quadro bom do ruim. Quarenta vezes o peso pela
+          fração de nitidez que sobra é um negócio ruim; se o dono quiser a
+          nitidez extra, a troca é uma palavra nesta linha. */}
+      {cidade ? <FXAA /> : <></>}
     </EffectComposer>
   );
 }
