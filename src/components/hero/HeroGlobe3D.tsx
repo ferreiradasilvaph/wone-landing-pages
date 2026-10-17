@@ -1085,7 +1085,7 @@ function Planeta({
           divCine.style.width = cineM.current + "px";
           divCine.style.height = cineM.current + "px";
         }
-      } else if (q.cine === 0 && cineM.current !== 0) {
+      } else if (q.cine === 0 && q.mergulho === 0 && cineM.current !== 0) {
         cineM.current = 0;
         /* A ORDEM IMPORTA: inset é atalho das quatro bordas, então limpar
            left e top DEPOIS de escrevê-lo deixa right e bottom órfãos e a
@@ -1108,7 +1108,14 @@ function Planeta({
     if (cineM.current > 0 && divCine) {
       const base = cineBase.current;
       const M = cineM.current;
-      const aparente = base + (M - base) * q.cine;
+      /* O CRESCIMENTO É DO MERGULHO, A VIAGEM É DO CINE.
+
+         Na fase `chegada` o zoom está parado, logo `mergulho` vale zero e
+         `aparente` vale `base`: o disco atravessa a tela do tamanho que
+         sempre teve, inteiro. Só quando a descida começa é que ele cresce
+         — e aí o texto já saiu e as camadas CSS do planeta já estão
+         apagando pela mesma variável. */
+      const aparente = base + (M - base) * q.mergulho;
       /* DUAS RAMPAS, E NÃO UMA: o tamanho sobe desde o começo, a POSIÇÃO só
          depois de 35%.
 
@@ -1138,7 +1145,10 @@ function Planeta({
          rampa só começa em zoom 60, quando pinos e rótulos já se foram.
          E translação é COMPOSIÇÃO, não layout: o CLS continua sendo zero
          pela mesma razão de antes. */
-      const mv = suavinha(q.cine, 0.05, 0.9);
+      /* A viagem é `cine` DIRETO, sem janela: a fase inteira da chegada é
+         a viagem, e a curva dela já é um smoothstep em `linhaSP`. Pôr uma
+         segunda janela aqui seria amassar a curva duas vezes. */
+      const mv = q.cine;
       const cx = base / 2 + (cineAlvo.current[0] - base / 2) * mv;
       const cy = base / 2 + (cineAlvo.current[1] - base / 2) * mv;
       const caixaGlobo = divCine.parentElement as HTMLElement | null;

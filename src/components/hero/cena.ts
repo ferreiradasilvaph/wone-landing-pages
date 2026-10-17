@@ -256,23 +256,47 @@ export type Cena = {
   livreYaw: number;
   livrePitch: number;
   /**
-   * O MODO CINEMA, de 0 a 1 — o pedido do dono de 17/10: durante a parada em
-   * São Paulo o bloco de texto se apaga e o planeta cresce para ocupar o vazio.
+   * O MODO CINEMA, de 0 a 1 — O SINAL DE TEMPO.
    *
-   * ELE SAI DO ZOOM, E NÃO DO RELÓGIO DO MERGULHO. É a mesma decisão que faz as
-   * visibilidades de `mergulhoSP` saírem da escala: um sinal derivado da escala
-   * se desfaz sozinho em TODO caminho de volta, sem um segundo roteiro.
+   * Ele manda em duas coisas: o bloco de texto do hero (que apaga) e a
+   * VIAGEM da caixa do globo (que atravessa a tela). As duas acontecem
+   * juntas, na fase `chegada` da linha do tempo de São Paulo, com o zoom
+   * ainda parado — e desfazem-se juntas na `despedida`, com o zoom já de
+   * volta.
    *
-   *   · a fase `sobe` o desfaz porque o zoom cai;
-   *   · um DESVIO disparado de dentro da torre o desfaz pela mesma rampa,
-   *     enquanto a câmera parte — sem uma linha a mais no desvio;
-   *   · fora da parada de São Paulo o zoom nunca chega perto da faixa, então
-   *     não existe estado de cinema para ficar preso.
+   * ELE ERA DERIVADO DO ZOOM ATÉ 17/10, e isso era o defeito. Com a rampa
+   * presa à escala, a viagem do disco acontecia no MEIO do mergulho,
+   * misturada com a descida, e o que se lia era "só o mapa deu zoom" — a
+   * frase do dono. O pedido dele é ORDEM: "quando o pontinho parar em São
+   * Paulo, esse efeito do globo ir para o centro e consequentemente a div
+   * sumir deve acontecer quando o pontinho chega; aí na sequência os
+   * zooms". Ordem é tempo, então o sinal virou tempo.
+   *
+   * Ele PERSEGUE `sp.palco` com taxa limitada (ver CINE_TAXA no
+   * `HeroGlobe`) em vez de copiá-lo: na subida a rampa do palco já é mais
+   * lenta que o limite e nada muda, mas num DESVIO por clique o alvo vai a
+   * zero num quadro, e sem o limite o planeta saltaria de volta para a
+   * esquerda enquanto a câmera parte.
    *
    * Zero no celular (o 3D leve não recebe o modo) e zero com movimento
    * reduzido, onde não há mergulho nenhum.
    */
   cine: number;
+  /**
+   * O MERGULHO, de 0 a 1 — O SINAL DE ESCALA.
+   *
+   * O par de `cine`, e a razão de os dois existirem separados: ele manda no
+   * CRESCIMENTO do disco e no apagamento das camadas CSS do planeta (halo,
+   * oceano, atmosfera, marca d'água, limbo e o canvas 2D), que são as duas
+   * coisas que só fazem sentido quando a câmera está descendo de verdade.
+   *
+   * Sai do zoom visto, entre 60 e 600, como `cine` saía antes — o que mudou
+   * é que agora ele manda só nisto. Separados, o planeta viaja INTEIRO na
+   * chegada (nada cresce, nada apaga) e só começa a se desfazer quando a
+   * descida começa: sem o aro fantasma de um halo do tamanho antigo em volta
+   * de uma cidade maior.
+   */
+  mergulho: number;
   /**
    * O DISCO APARENTE DURANTE O CINEMA, escrito pela cena 3D: o diâmetro em
    * px de CSS e o centro em coordenadas de .hero-globo.
@@ -379,6 +403,13 @@ export type Cena = {
     logo: number;
     /** O recorte de 4 km do centro, por cima do mapa de 22 km. */
     detalhe: number;
+    /**
+     * O PALCO da linha do tempo (ver `linhaSP`): 0 no pouso, 1 nas quatro
+     * fases de zoom, subindo na `chegada` e descendo na `despedida`.
+     * É o ALVO de `cine`, não o valor que a página usa — quem a página lê
+     * é `cine`, que persegue este com taxa limitada.
+     */
+    palco: number;
   };
 
   /* ------------------------------------------------------------- a ponte */
@@ -464,6 +495,7 @@ const ESTADO: Cena = {
   livreYaw: 0,
   livrePitch: 0,
   cine: 0,
+  mergulho: 0,
   cineLado: 0,
   cineX: 0,
   cineY: 0,
@@ -493,6 +525,7 @@ const ESTADO: Cena = {
     predios: 0,
     logo: 0,
     detalhe: 0,
+    palco: 0,
   },
   nuvem: null,
   avanca: null,

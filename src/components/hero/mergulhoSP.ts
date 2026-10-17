@@ -35,7 +35,14 @@ import { POUSO_MS, suave, ZOOM_DETALHE } from "./voo";
 
 /* ------------------------------------------------------------------ fases */
 
-export type FaseSP = "pouso" | "mergulha" | "contempla" | "sobe" | "fim";
+export type FaseSP =
+  | "pouso"
+  | "chegada"
+  | "mergulha"
+  | "contempla"
+  | "sobe"
+  | "despedida"
+  | "fim";
 
 export type EstadoSP = {
   /** Em que trecho da parada estamos. */
@@ -68,6 +75,22 @@ export type EstadoSP = {
   readonly logo: number;
   /** 0 = só o mapa de 22 km; 1 = o recorte de 4 km do centro por cima. */
   readonly detalhe: number;
+  /**
+   * O PALCO: 0 = o hero como sempre, 1 = o hero entregue ao planeta.
+   *
+   * É o sinal do MODO CINEMA, e ele é de TEMPO, não de escala — ao contrário
+   * de todas as outras visibilidades deste arquivo. A diferença é deliberada
+   * e foi pedida pelo dono em 17/10: "quando o pontinho parar em São Paulo,
+   * esse efeito do globo ir para o centro e consequentemente a div sumir
+   * deve acontecer quando o pontinho chega; aí na sequência os zooms".
+   *
+   * Ou seja: o palco é ORDEM, e ordem é tempo. Ele sobe inteiro na fase
+   * `chegada`, com o zoom ainda parado no do pouso, e só depois o mergulho
+   * começa. Derivá-lo da escala — que foi a primeira versão — punha a
+   * viagem do disco no MEIO da descida, misturada com ela, e era isso que
+   * se lia como "só o mapa deu zoom".
+   */
+  readonly palco: number;
 };
 
 /* ------------------------------------------------------- os dois patamares */
@@ -147,6 +170,24 @@ export const ZOOM_TORRE = 9200;
 export const POUSO_SP_MS = POUSO_MS;
 
 /**
+ * A CHEGADA: o hero se abre para o planeta, com o zoom PARADO.
+ *
+ * 1,1 s em que nada de escala acontece e tudo de palco acontece: o disco
+ * inteiro — halo, oceano, atmosfera, marca d'água, limbo, pontos, pino e
+ * rótulo de São Paulo — viaja da coluna da esquerda para o meio da tela,
+ * no tamanho de repouso, enquanto o bloco de texto se apaga.
+ *
+ * É a fase que organiza a leitura: primeiro a página CEDE o espaço, depois
+ * a câmera desce. Sem ela as duas coisas aconteciam juntas no meio do
+ * mergulho e nenhuma das duas se lia.
+ *
+ * 1,1 s e não 0,6: a viagem é de ~320 px num disco de ~600, e abaixo de
+ * ~0,9 s ela vira um salto lateral. Nem 1,8: acima disso o espectador já
+ * entendeu que vai descer e a espera passa a ser espera.
+ */
+export const CHEGADA_MS = 1100;
+
+/**
  * O MERGULHO: de `ZOOM_DETALHE` (1,35) até `ZOOM_CIDADE` (405).
  *
  * São ln(405 / 1,35) = 5,70 nats de escala em 3,4 s — 1,68 nat/s, dentro da
@@ -181,12 +222,34 @@ export const CONTEMPLA_APROXIMA = 0.58;
  */
 export const SOBE_MS = 2400;
 
-/** A parada inteira: 11,2 s. A segunda mais longa do tour tem 1,8 s. */
-export const DURACAO_SP_MS = POUSO_SP_MS + MERGULHA_MS + CONTEMPLA_MS + SOBE_MS;
+/**
+ * A DESPEDIDA: o inverso da chegada, e também com o zoom parado.
+ *
+ * 900 ms — mais curta que a chegada pela mesma razão que a subida é mais
+ * curta que a descida: a ida é promessa, a volta é conta já paga. O voo só
+ * parte para a cidade seguinte depois dela, de modo que o disco nunca
+ * levanta voo de um lugar que não é o lugar dele.
+ */
+export const DESPEDIDA_MS = 900;
+
+/**
+ * A parada inteira: 13,2 s (eram 11,2 antes da chegada e da despedida). É
+ * esta a constante que o `voo.ts` recebe como duração do pouso em São Paulo
+ * — o voo não sabe o que acontece aqui dentro, só quanto tempo esperar.
+ */
+export const DURACAO_SP_MS =
+  POUSO_SP_MS +
+  CHEGADA_MS +
+  MERGULHA_MS +
+  CONTEMPLA_MS +
+  SOBE_MS +
+  DESPEDIDA_MS;
 
 const FIM_POUSO = POUSO_SP_MS;
-const FIM_MERGULHA = FIM_POUSO + MERGULHA_MS;
+const FIM_CHEGADA = FIM_POUSO + CHEGADA_MS;
+const FIM_MERGULHA = FIM_CHEGADA + MERGULHA_MS;
 const FIM_CONTEMPLA = FIM_MERGULHA + CONTEMPLA_MS;
+const FIM_SOBE = FIM_CONTEMPLA + SOBE_MS;
 
 /* ------------------------------------------------- obliquidade e órbita */
 
@@ -313,37 +376,72 @@ export const FRACAO_CIDADE = (LN_CIDADE - LN_DETALHE) / (LN_TORRE - LN_DETALHE);
 /* ------------------------------------------------------------- o estado */
 
 /** `ms` desde o instante em que a bolinha pousou em São Paulo. */
-export function mergulhoSP(ms: number): EstadoSP {
+/**
+ * A LINHA DO TEMPO DA PARADA EM SÃO PAULO, inteira, numa função pura.
+ *
+ * Seis fases em ordem, e a ordem É o conteúdo (pedido do dono, 17/10):
+ *
+ *   pouso      1,8 s   o pino pulsa e o rótulo abre, como nas outras seis
+ *   chegada    1,1 s   o PALCO sobe: o disco viaja, o texto apaga — zoom parado
+ *   mergulha   3,4 s   1,35 → 405
+ *   contempla  3,6 s   405 → 9.200 e a demora em cima da torre
+ *   sobe       2,4 s   9.200 → 1,35
+ *   despedida  0,9 s   o PALCO desce: o disco volta, o texto volta — zoom parado
+ *
+ * O QUE A SEPARA EM DUAS GRANDEZAS: `zoom` (e tudo o que sai dele pelas
+ * `visibilidades`) é a escala; `palco` é o tempo. A chegada e a despedida
+ * mexem SÓ no palco, com o zoom cravado no do pouso; as quatro do meio mexem
+ * só no zoom, com o palco cravado em 1. Nenhum quadro faz as duas coisas, e é
+ * isso que dá a sequência que o dono pediu em vez da mistura que havia.
+ */
+export function linhaSP(ms: number): EstadoSP {
   // POUSO — a cidade ainda é um pino no globo, como nas outras seis.
   if (ms < FIM_POUSO) {
-    return monta("pouso", ms / POUSO_SP_MS, ZOOM_DETALHE, 0, 0);
+    return monta("pouso", ms / POUSO_SP_MS, ZOOM_DETALHE, 0, 0, 0);
+  }
+
+  /* CHEGADA — o hero cede o espaço. Zoom PARADO no do pouso: o disco atravessa
+     a tela inteiro e do tamanho que sempre teve, com o pino e o rótulo de São
+     Paulo ainda em cima dele. Só quando ele chega é que a câmera desce. */
+  if (ms < FIM_CHEGADA) {
+    const t = (ms - FIM_POUSO) / CHEGADA_MS;
+    return monta("chegada", t, ZOOM_DETALHE, 0, 0, suave(t));
   }
 
   // MERGULHA — 1,35 → 405. Os pontos apagam e o chão entra no caminho.
   if (ms < FIM_MERGULHA) {
-    const t = (ms - FIM_POUSO) / MERGULHA_MS;
-    return monta("mergulha", t, escalaLog(LN_DETALHE, LN_CIDADE, suave(t)), 0, 0);
+    const t = (ms - FIM_CHEGADA) / MERGULHA_MS;
+    return monta(
+      "mergulha",
+      t,
+      escalaLog(LN_DETALHE, LN_CIDADE, suave(t)),
+      0,
+      0,
+      1,
+    );
   }
 
-  // CONTEMPLA — 405 → 14.000 na primeira parte, firme na segunda.
+  // CONTEMPLA — 405 → 9.200 na primeira parte, firme na segunda.
   if (ms < FIM_CONTEMPLA) {
     const t = (ms - FIM_MERGULHA) / CONTEMPLA_MS;
     const desce = suave(Math.min(1, t / CONTEMPLA_APROXIMA));
     /* A órbita é UM ciclo de seno ao longo da fase inteira (começa e acaba em
        zero, sem degrau de guinada na emenda com a subida), com um envelope que
        tira a ponta de velocidade dos 15% iniciais e finais. */
-    const envelope = suave(Math.min(1, t / 0.15)) * suave(Math.min(1, (1 - t) / 0.15));
+    const envelope =
+      suave(Math.min(1, t / 0.15)) * suave(Math.min(1, (1 - t) / 0.15));
     return monta(
       "contempla",
       t,
       escalaLog(LN_CIDADE, LN_TORRE, desce),
       INCLINACAO_MAX * desce,
       ORBITA_MAX * Math.sin(2 * Math.PI * t) * envelope,
+      1,
     );
   }
 
   // SOBE — a mesma curva ao contrário, do fundo até 1,35.
-  if (ms < DURACAO_SP_MS) {
+  if (ms < FIM_SOBE) {
     const t = (ms - FIM_CONTEMPLA) / SOBE_MS;
     const volta = suave(t);
     /* A obliquidade some ANTES da escala (em 70% da fase): endireitar primeiro
@@ -356,13 +454,30 @@ export function mergulhoSP(ms: number): EstadoSP {
       escalaLog(LN_TORRE, LN_DETALHE, volta),
       INCLINACAO_MAX * (1 - endireita),
       0,
+      1,
     );
+  }
+
+  /* DESPEDIDA — o palco desce com o zoom JÁ de volta ao do pouso. O disco
+     volta para a coluna da esquerda e o texto reacende; só depois disto o voo
+     parte, de modo que a próxima perna sempre começa do lugar de repouso. */
+  if (ms < DURACAO_SP_MS) {
+    const t = (ms - FIM_SOBE) / DESPEDIDA_MS;
+    return monta("despedida", t, ZOOM_DETALHE, 0, 0, 1 - suave(t));
   }
 
   // FIM — devolve exatamente o estado de pouso das outras cidades, para o laço
   // do voo poder seguir daqui sem um quadro de diferença.
-  return monta("fim", 1, ZOOM_DETALHE, 0, 0);
+  return monta("fim", 1, ZOOM_DETALHE, 0, 0, 0);
 }
+
+/**
+ * O nome antigo, mantido porque é o que o `HeroGlobe` chama. A conta mora em
+ * `linhaSP` e só lá: um segundo caminho para o mesmo instante é a forma mais
+ * fácil de as duas metades da parada divergirem meio quadro.
+ */
+export const mergulhoSP = linhaSP;
+
 
 function monta(
   fase: FaseSP,
@@ -370,8 +485,9 @@ function monta(
   zoom: number,
   inclinacao: number,
   orbita: number,
+  palco: number,
 ): EstadoSP {
-  return { fase, t, zoom, inclinacao, orbita, ...visibilidades(zoom) };
+  return { fase, t, zoom, inclinacao, orbita, palco, ...visibilidades(zoom) };
 }
 
 /* --------------------------------------------------------------------------

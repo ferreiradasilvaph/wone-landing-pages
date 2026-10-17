@@ -1371,3 +1371,14 @@ por que o efeito em sao paulo parou? conserte
 ===============================================================================
 chat, no efeito do zoom na cidade de sao paulo, o globo todo deve ir para o
 centro da tela, nao so o zoom do mapa
+
+
+===============================================================================
+[154] 2026-10-17
+===============================================================================
+chat, a div "venda pelo telegram no automatico" deve sair de cena na mesma hora
+q o globo vai para o centro da tela. quando o pontinho parar no brasil, em sao
+paulo, esse feito do globo ir para o centro e consequentemente a div sumir deve
+acontecer qnd o pontinho chega no brasil, em sao paulo, ai na sequencia os zooms
+
+organize essa logica

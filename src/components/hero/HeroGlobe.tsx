@@ -414,9 +414,15 @@ const DESVIO_ENDIREITA = 0.4;
 const DESVIO_MS_POR_NAT = 300;
 
 /**
- * O MODO CINEMA: a faixa de zoom em que o texto se apaga e o planeta cresce.
+ * O MERGULHO (ver `cena.mergulho`): a faixa de zoom em que o PLANETA CRESCE
+ * e as camadas CSS dele se apagam.
  *
- * 60 e 600, e não o relógio do mergulho, pela razão escrita em `cena.cine`.
+ * Esta rampa já mandou também no texto e na viagem do disco, e era esse o
+ * defeito que o dono apontou em 17/10: presos à escala, os três aconteciam no
+ * meio da descida, misturados com ela. Agora o texto e a viagem são de TEMPO
+ * (a fase `chegada` de `linhaSP`) e esta rampa ficou só com o que de fato
+ * depende da escala.
+ *
  * Os dois números saem de duas leituras:
  *
  *   · 60 é DEPOIS de os rótulos terem ido embora. Eles morrem com
@@ -426,8 +432,8 @@ const DESVIO_MS_POR_NAT = 300;
  *     do rótulo mudaria de corpo junto, que é o erro clássico de escalar uma
  *     cena inteira por transform.
  *   · 600 é logo acima de `ZOOM_CIDADE` (405), onde a mancha urbana já encheu
- *     o disco. O cinema termina de entrar no mesmo instante em que a cidade
- *     passa a ser o assunto, e não um segundo depois.
+ *     o disco. O crescimento termina no mesmo instante em que a cidade passa
+ *     a ser o assunto, e não um segundo depois.
  *
  * A travessia 60→600 leva ~1,1 s dentro de `mergulha` (que é logarítmica no
  * tempo), e a mesma faixa ao contrário leva ~0,8 s na `sobe`.
@@ -436,8 +442,20 @@ const CINE_Z0 = 60;
 const CINE_Z1 = 600;
 const LN_CINE_0 = Math.log(CINE_Z0);
 const LN_CINE_1 = Math.log(CINE_Z1);
-/** Abaixo disto o cinema está desligado para valer (classe fora, estilo fora). */
+/** Abaixo disto o sinal está desligado para valer (classe fora, estilo fora). */
 const CINE_PISO = 0.002;
+
+/**
+ * A TAXA MÁXIMA de `cena.cine`, em unidades por ms: 1 em 600 ms.
+ *
+ * Subindo ela nunca morde — a rampa da fase `chegada` leva 1,1 s e o pico
+ * da `suave` dá 1 em 733 ms. Ela existe para o DESVIO: um clique no meio da
+ * torre põe o alvo em zero no mesmo quadro, e sem limite o planeta saltaria
+ * de volta para a coluna da esquerda enquanto a câmera parte. Com ela, a
+ * volta leva no máximo 0,6 s e o passo a 60 fps fica em 0,028 — bem abaixo
+ * do degrau de 0,1 que o olho pega.
+ */
+const CINE_TAXA = 1 / 600;
 
 /* --------------------------------------------------------------------------
    O GIRO LIVRE: os quatro números do gesto
@@ -1022,6 +1040,9 @@ export function HeroGlobe({
      não mudou o bastante para virar pixel. */
   const secaoCine = useRef<HTMLElement | null>(null);
   const cineAnt = useRef(-1);
+  const mergAnt = useRef(-1);
+  /** O valor corrente de `cena.cine`, que persegue o palco com taxa limitada. */
+  const cineAtual = useRef(0);
 
   const avisar = useRef(onCidade);
   useEffect(() => {
@@ -2457,6 +2478,10 @@ export function HeroGlobe({
       sp.predios = celular ? 0 : v.predios;
       sp.logo = celular ? 0 : v.logo;
       sp.detalhe = celular ? 0 : v.detalhe;
+      /* O PALCO da linha do tempo, que é o alvo do modo cinema. No celular
+         não há cinema: lá o globo é um bloco em fluxo depois dos botões e
+         não existe coluna ao lado para liberar. */
+      sp.palco = celular ? 0 : e.palco;
     }
 
     /** A bolinha em px da CAIXA, já com a matriz do zoom: é o que a medição lê. */
@@ -3191,23 +3216,47 @@ export function HeroGlobe({
       uq.incl = palco.sp.ativo ? palco.sp.inclinacao : 0;
       uq.orb = palco.sp.ativo ? palco.sp.orbita : 0;
 
-      /* ------------------------------------------------- O MODO CINEMA
+      /* ----------------------------------------- O CINEMA E O MERGULHO
 
-         A rampa sai da ESCALA QUE O ESPECTADOR VÊ — a mesma `escVista` que o
-         desvio usa para saber de onde partir. Por isso ela é uma conta e não
-         uma máquina de estados: desce no mergulho, sobe na `sobe`, desfaz-se
-         sozinha quando um desvio leva a câmera embora, e vale zero em qualquer
-         lugar onde o zoom não esteja na faixa. Não existe estado para ficar
-         presvo fora da parada de São Paulo porque não existe estado.
+         DOIS SINAIS, DOIS DONOS (ver `cena.cine` e `cena.mergulho`).
 
-         No celular vale zero: lá o globo é um bloco em fluxo depois dos botões
-         e não há coluna de texto ao lado para liberar. */
-      const cine = palco.leve
+         `cine` é TEMPO: ele persegue o palco da linha do tempo de São Paulo,
+         que sobe na fase `chegada` com o zoom parado e desce na `despedida`
+         com o zoom já de volta. Ele manda no texto e na viagem do disco.
+
+         `mergulho` é ESCALA: a mesma rampa de zoom de antes, entre 60 e 600.
+         Ele manda no crescimento do disco e no apagamento das camadas CSS do
+         planeta.
+
+         Separá-los é o pedido do dono de 17/10 traduzido em código: primeiro
+         a página cede o espaço (cine), depois a câmera desce (mergulho). Com
+         um sinal só, as duas coisas aconteciam no mesmo intervalo e nenhuma
+         se lia. */
+      const alvoCine = palco.leve ? 0 : palco.sp.ativo ? palco.sp.palco : 0;
+      const passo = CINE_TAXA * dt;
+      const cine =
+        alvoCine > cineAtual.current
+          ? Math.min(alvoCine, cineAtual.current + passo)
+          : Math.max(alvoCine, cineAtual.current - passo);
+      cineAtual.current = cine;
+      palco.cine = cine;
+
+      /* 'merg' e nao 'mergulho': ja existe uma funcao com esse nome neste
+         escopo (a que escreve a caixa sp por quadro), e sombrea-la deixaria o
+         laco chamando um numero. */
+      const merg = palco.leve
         ? 0
         : suave((Math.log(uq.escVista) - LN_CINE_0) / (LN_CINE_1 - LN_CINE_0));
-      palco.cine = cine;
-      if (Math.abs(cine - cineAnt.current) > 0.003 || (cine === 0 && cineAnt.current !== 0)) {
+      palco.mergulho = merg;
+
+      if (
+        Math.abs(cine - cineAnt.current) > 0.003 ||
+        Math.abs(merg - mergAnt.current) > 0.003 ||
+        (cine === 0 && cineAnt.current !== 0) ||
+        (merg === 0 && mergAnt.current !== 0)
+      ) {
         cineAnt.current = cine;
+        mergAnt.current = merg;
         if (!secaoCine.current) {
           secaoCine.current = caixa.current?.closest("section") ?? null;
         }
@@ -3215,23 +3264,27 @@ export function HeroGlobe({
         if (sec) {
           if (cine > CINE_PISO) {
             sec.style.setProperty("--cine", cine.toFixed(3));
-            /* A CLASSE É UM DEGRAU, a variável é a rampa. A classe só existe
-               para tirar o ponteiro do bloco apagado: um texto em opacidade
-               0,02 ainda recebe clique, e um botão invisível que engole o
-               arrasto do planeta é pior do que nenhum botão. */
             /* Acima de zero a camada do texto já é promovida: a opacidade
                dele muda a cada quadro por ~1 s, e sem a promoção cada
                quadro repintaria o <h1>, o lead e os botões. */
             sec.classList.add("hero-cena--cine");
+            /* A CLASSE É UM DEGRAU, a variável é a rampa. A classe só existe
+               para tirar o ponteiro do bloco apagado: um texto em opacidade
+               0,02 ainda recebe clique, e um botão invisível que engole o
+               arrasto do planeta é pior do que nenhum botão. */
             sec.classList.toggle("hero-cena--cinema", cine > 0.5);
           } else {
             sec.style.removeProperty("--cine");
             sec.classList.remove("hero-cena--cine");
             sec.classList.remove("hero-cena--cinema");
           }
+          if (merg > CINE_PISO) {
+            sec.style.setProperty("--mergulho", merg.toFixed(3));
+          } else {
+            sec.style.removeProperty("--mergulho");
+          }
         }
       }
-
       /* OS RÓTULOS: saem no começo do voo, voltam depois do pouso. `suave` é o
          smoothstep de sempre, para a opacidade não ter canto nas pontas. */
       const rp =

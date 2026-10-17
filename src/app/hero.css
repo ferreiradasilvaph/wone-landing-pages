@@ -873,19 +873,23 @@ html.wone-entrando .hero-sublinha::after {
 }
 
 /* --------------------------------------------------------------------------
-   AS CAMADAS DO DISCO DE REPOUSO SAEM JUNTO COM O TEXTO.
+   AS CAMADAS DO DISCO DE REPOUSO SAEM COM O MERGULHO, NÃO COM O CINEMA.
 
    O halo, o oceano, o fio de atmosfera, a marca d'água, o limbo e o canvas
-   2D são todos do tamanho da caixa do globo, e a caixa não muda — quem
-   cresce no cinema é só o canvas 3D, por geometria própria (ver
-   `HeroGlobe3D`). Deixá-los acesos punha um anel laranja de 634 px em volta
-   de uma cidade de 770: um planeta fantasma atrás da maquete, que foi o que
-   a primeira captura mostrou.
+   2D são todos do tamanho da caixa do globo. Eles VIAJAM com ela (a caixa
+   inteira recebe um transform, ver `HeroGlobe3D`), e é por isso que o
+   planeta atravessa a tela inteiro na fase `chegada` em vez de se dissolver
+   num lugar e renascer noutro.
 
-   Eles somem pela MESMA rampa do texto, e isso não é economia de variável —
-   é a mesma afirmação: no cinema não há mais planeta, há uma cidade. Na
-   subida voltam no mesmo zoom em que foram, porque `--cine` é derivada da
-   escala e não do relógio.
+   O que os apaga é `--mergulho`, o sinal de ESCALA, e não `--cine`, o de
+   tempo: eles só precisam sair quando a cena 3D começa a CRESCER além
+   deles. Com a variável antiga eles apagavam já na chegada, e o disco
+   atravessava a tela desbotando — o oposto do que o dono pediu, que é o
+   planeta indo ao centro inteiro e só depois virando cidade.
+
+   1,6 vezes a rampa: somem em `--mergulho` 0,63, bem antes de o disco ter
+   crescido o bastante para um halo do tamanho antigo virar um aro fantasma
+   em volta de uma cidade maior.
    -------------------------------------------------------------------------- */
 .hero-globo > .globe-halo,
 .hero-globo > .globe-sea,
@@ -893,16 +897,5 @@ html.wone-entrando .hero-sublinha::after {
 .hero-globo > .globe-mark,
 .hero-globo > .globe-vigia,
 .hero-globo > canvas {
-  /* 1,6 VEZES A RAMPA: estas camadas somem em --cine 0,63.
-
-     Elas eram apagadas em 0,4, e depressa, porque a cena 3D viajava sem
-     elas e dois planetas apareciam na tela. Desde a correção do cinema a
-     caixa do globo inteira viaja (ver HeroGlobe3D), então elas vão JUNTO —
-     e podem apagar mais devagar, que é o que faz o disco ler como um objeto
-     só atravessando a tela em vez de uma camada sumindo e outra nascendo.
-
-     Elas ainda precisam sair antes do fim: a cena 3D cresce além da caixa
-     do globo, e um halo do tamanho antigo em volta de uma cidade maior é
-     justamente o aro fantasma que a primeira captura mostrou. */
-  opacity: calc(1 - var(--cine, 0) * 1.6);
+  opacity: calc(1 - var(--mergulho, 0) * 1.6);
 }
