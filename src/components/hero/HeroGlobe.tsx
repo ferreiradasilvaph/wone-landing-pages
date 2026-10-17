@@ -1,7 +1,18 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useEffect, useRef, useState, type RefObject } from "react";
 
+import {
+  cena,
+  COSTA,
+  entrega,
+  PAIS_BORDA,
+  PAIS_NUCLEO,
+  TERRA,
+  temWebGL,
+  type Nuvem,
+} from "./cena";
 import { CountryTag } from "./CountryTag";
 import {
   GLOBE_COAST,
@@ -12,15 +23,21 @@ import {
   GLOBE_EU_SAMPLES,
 } from "./globeDots";
 import {
+  alvo,
   amostra,
   baseVector,
   CAPITAIS,
   centraliza,
+  EUROPEUS,
   naEuropa,
   GLOBE_STEP,
   LAT0,
   LON0,
   noise,
+  rede,
+  REDE_PASSOS,
+  REDE_PERNAS,
+  REDE_SOBE,
   REPOUSO,
 } from "./globeMath";
 import {
@@ -95,22 +112,13 @@ const LARANJA = "#ff7700";
    mesmo alfa de antes — e isso não é economia de código, é o efeito: o alfa já
    é `0,06 + 0,28·luz` caindo até o limbo, então o ponto escuro é escuro E
    braseiro, o ponto aceso é opaco E laranja, e os dois somem juntos na borda.
-   -------------------------------------------------------------------------- */
 
-/** Braseiro → laranja da marca, em seis passos de luz. */
-const TERRA = [
-  "#8a3f0a",
-  "#a14a08",
-  "#b95506",
-  "#d06104",
-  "#e86c02",
-  "#ff7700",
-];
-/** A costa, só no lado iluminado: laranja claro. */
-const COSTA = "#ffb070";
-/** Os quatro países: creme quente na borda, creme puro no núcleo. */
-const PAIS_BORDA = "#ffe2b8";
-const PAIS_NUCLEO = "#ffffe3";
+   OS CINCO NÚMEROS DA PALETA MUDARAM DE ARQUIVO em 17/10, com a etapa 1 do
+   globo 3D: eles moram em `cena.ts`, que é o contrato entre os dois pintores do
+   planeta. Não é zelo — é que uma divergência de cor entre os dois canvas
+   apareceria como um SALTO no instante do crossfade, e dois arquivos escrevendo
+   `#ff7700` de cabeça são dois lugares para o próximo ajuste esquecer um.
+   -------------------------------------------------------------------------- */
 
 /**
  * A guarda da ONDA DE ENTRADA fora do laço, em ms. 27 e não 33: num monitor de
@@ -127,12 +135,6 @@ const PAIS_NUCLEO = "#ffffe3";
  */
 const PASSO_MS = 27;
 
-/**
- * Os dois países do outro lado do Atlântico, por código de moeda. A rede e o
- * anel do pino os tratam diferente desde 15/10: o dono pediu para a Europa
- * aparecer quando "um ponto liga no outro".
- */
-const EUROPEUS = new Set(["EUR", "GBP"]);
 /** Quanto dura o laranja cheio na perna que chega à Europa, em ms. */
 const FLASH_MS = 1000;
 
@@ -446,21 +448,6 @@ const COR = [...TERRA, COSTA, PAIS_BORDA, PAIS_BORDA, PAIS_NUCLEO];
 /** Quantos baldes o laço percorre. */
 const BALDES = ALFA.length;
 
-type Nuvem = {
-  /** Vetores na base da projeção, prontos para girar. */
-  bx: Float32Array;
-  by: Float32Array;
-  bz: Float32Array;
-  /** Raio base do ponto (fleck + costa), antes do fator de luz. */
-  rb: Float32Array;
-  /** Parcela de alfa que a costa acrescenta. */
-  ac: Float32Array;
-  /** Força do tingimento, 0 fora dos quatro países. */
-  tingimento: Float32Array;
-  /** Índice do país tingido, ou 255 (nenhum). Só vale com `tingimento > 0`. */
-  pais: Uint8Array;
-};
-
 /**
  * Monta a nuvem a partir dos deltas de `globeDots.ts`.
  *
@@ -481,6 +468,12 @@ function monta(codes: string[]): Nuvem {
     ac: new Float32Array(n),
     tingimento: new Float32Array(n),
     pais: new Uint8Array(n),
+    /* O `fleck` é guardado desde 17/10 porque a cena 3D o lê para a COR e para
+       o ALFA de cada ponto (ver `HeroGlobe3D`). Aqui ele continua entrando
+       dissolvido em `rb`; recuperá-lo de lá seria desfazer uma conta de três
+       termos, e a semente dele — o índice da espiral — não sobrevive à
+       montagem. 20 kB numa nuvem de 180. */
+    fleck: new Float32Array(n),
   };
   /* 255 e "nenhum pais", e nao 0: desde que a Europa inteira ganhou tingimento
      permanente, um ponto tingido PODE nao pertencer a capital nenhuma — e com
@@ -520,6 +513,7 @@ function monta(codes: string[]): Nuvem {
     const fleck = noise(indice + 0.25);
     nuvem.rb[k] = 1.15 * (0.86 + 0.3 * fleck + 0.18 * costa);
     nuvem.ac[k] = 0.12 * costa;
+    nuvem.fleck[k] = fleck;
 
     tinge(nuvem, k, x, y, z, alvos, naEuropa(lat, lon));
     k += 1;
@@ -549,7 +543,8 @@ function monta(codes: string[]): Nuvem {
     nuvem.bx[k] = x;
     nuvem.by[k] = y;
     nuvem.bz[k] = z;
-    nuvem.rb[k] = 1.15 * (0.86 + 0.3 * noise(indiceEu + 0.25));
+    nuvem.fleck[k] = noise(indiceEu + 0.25);
+    nuvem.rb[k] = 1.15 * (0.86 + 0.3 * nuvem.fleck[k]);
     nuvem.ac[k] = 0;
     tinge(nuvem, k, x, y, z, alvos, true);
     k += 1;
@@ -598,6 +593,43 @@ function tinge(
     }
   }
 }
+
+/* --------------------------------------------------------------------------
+   O PLANETA 3D, E O PORTÃO QUE O DEIXA ENTRAR (etapa 1, pedido do dono 17/10)
+
+   `next/dynamic` com `ssr: false` — e isso é só metade do trabalho. O que
+   `dynamic` garante é que o código não entra no HTML do servidor nem no bundle
+   da primeira dobra; o que ele NÃO garante é QUANDO baixar, porque ele só adia
+   o download até o componente RENDERIZAR. Então o portão é o render, e ele tem
+   quatro trancas, todas medidas na entrega:
+
+    1. `lg` para cima. Abaixo de 1024 o globo é um quadro parado atrás do texto,
+       sem pino e sem rótulo, e um contexto WebGL ali seria bateria gasta num
+       planeta que já se leu. O celular é a etapa 6.
+    2. WebGL de pé (`temWebGL`, uma vez). Sem ele o portão nunca abre e o 2D
+       fica — o fallback do pedido, sem uma linha de código própria.
+    3. O laço rodando (`running`): hero na tela, aba visível e SEM movimento
+       reduzido. Com a preferência ligada não há voo, logo não há quem chame
+       `entrega()`, logo o canvas 3D nasceria preto e ficaria — então ele
+       simplesmente não nasce. "Globo parado, sem voo" continua sendo o canvas
+       2D de hoje.
+    4. DEPOIS DO LCP. O elemento de LCP desta página é o `span.globe-mark` — a
+       marca d'água dentro do globo, medida hoje em 0,92 s no desktop —, e nada
+       aqui pode atrasá-la nem movê-la. São três esperas em série: o evento
+       `load` da janela, um `requestIdleCallback` (com teto de 1,5 s, que é
+       também o fallback para quem não o tem) e o fim da ENTRADA do hero (os
+       2,2 s de `ESPERA_MS`).
+
+   A entrada é medida no relógio do PRÓPRIO globo (`relogio.entrada`), não em
+   `performance.now()`: ele é um acumulador que para com os freios, então uma
+   aba em segundo plano não "gasta" a entrada sem ninguém ver — exatamente como
+   o voo. Daí a espera ser um `setTimeout` curto repetido em vez de um prazo
+   calculado: o fim da entrada não é um instante do relógio de parede.
+   -------------------------------------------------------------------------- */
+const HeroGlobe3D = dynamic(() => import("./HeroGlobe3D"), { ssr: false });
+
+/** De quanto em quanto se olha o relógio da entrada, em ms. */
+const PORTAO_PASSO = 100;
 
 type Geometria = {
   /** Lado da caixa, em px de CSS (o globo é quadrado: lado = 2R). */
@@ -756,6 +788,84 @@ export function HeroGlobe({
     };
   }, []);
 
+  /**
+   * O PORTÃO DO PLANETA 3D (ver o comentário de `HeroGlobe3D`, acima).
+   *
+   * Uma vez aberto, fica aberto: um `running` que oscila (a aba indo e
+   * voltando) não pode destruir e recriar o contexto WebGL — perder o contexto
+   * é perder os buffers, e recriá-los a cada troca de aba é o gasto que todo
+   * este arquivo foi escrito para não ter. Quem para o 3D numa aba oculta é o
+   * laço, que simplesmente deixa de entregar quadros.
+   */
+  const [tres, setTres] = useState(false);
+
+  useEffect(() => {
+    if (tres || modo !== "laco" || !running) return;
+    if (!temWebGL()) return;
+
+    const marcos = cena().marcos;
+    let vivo = true;
+    let idle = 0;
+    let timer = 0;
+
+    /* A terceira espera: o fim da ENTRADA do hero, no relógio do próprio
+       globo. Enquanto ela não acabou, nada é baixado. */
+    const esperaEntrada = () => {
+      if (!vivo) return;
+      if (relogio.current.entrada >= ESPERA_MS) {
+        marcos.entrada = performance.now();
+        setTres(true);
+        return;
+      }
+      timer = window.setTimeout(esperaEntrada, PORTAO_PASSO);
+    };
+
+    const noOcioso = () => {
+      marcos.idle = performance.now();
+      esperaEntrada();
+    };
+
+    /* A segunda: um instante de ócio depois do `load`. O teto de 1,5 s existe
+       porque `requestIdleCallback` sem prazo pode nunca chegar numa aba
+       ocupada — e é o mesmo 1,5 s que serve de fallback onde a API não existe
+       (Safari até a 17). */
+    const noLoad = () => {
+      if (!vivo) return;
+      marcos.load = performance.now();
+      if (typeof window.requestIdleCallback === "function") {
+        idle = window.requestIdleCallback(noOcioso, { timeout: 1500 });
+      } else {
+        timer = window.setTimeout(noOcioso, 1500);
+      }
+    };
+
+    /* A primeira: o `load` da janela. Se a página já carregou (uma navegação
+       de cliente, ou um portão que reabriu), ele não vai disparar de novo. */
+    if (document.readyState === "complete") noLoad();
+    else window.addEventListener("load", noLoad, { once: true });
+
+    return () => {
+      vivo = false;
+      window.removeEventListener("load", noLoad);
+      if (idle && typeof window.cancelIdleCallback === "function") {
+        window.cancelIdleCallback(idle);
+      }
+      window.clearTimeout(timer);
+    };
+  }, [tres, modo, running]);
+
+  /**
+   * A VOLTA PARA O 2D, por largura: abaixo de `lg` o 3D sai de cena (ele é a
+   * etapa 6) e o canvas 2D reassume o planeta no mesmo quadro — `pronto` é
+   * zerado pelo desmonte do `HeroGlobe3D`.
+   *
+   * DERIVADO, e não um segundo estado: o portão (`tres`) é uma coisa que
+   * aconteceu uma vez e não se desfaz; a largura é outra, e muda com o arrastar
+   * do canto da janela. Guardar o produto das duas num `useState` seria um
+   * terceiro número para discordar dos outros dois.
+   */
+  const mostra3d = tres && modo === "laco";
+
   /* O país da vez vai para um `ref`: o laço lê a cada quadro sem se refazer.
      NO LAÇO quem escreve este `ref` é o próprio voo, no instante do pouso, e
      o `activeIndex` que volta do `Hero` é o espelho — a comparação abaixo o
@@ -800,6 +910,14 @@ export function HeroGlobe({
     const dados = nuvem.current;
     const trab = buffers.current;
 
+    /* O ESTADO COMPARTILHADO com a cena 3D (ver `cena.ts`). A nuvem é publicada
+       aqui, no único lugar que a monta: o 3D a LÊ, nunca a refaz — quem decide
+       se um ponto é terra, costa ou país é o gerador, e uma segunda peneira
+       seria uma segunda geografia. */
+    const palco = cena();
+    palco.nuvem = dados;
+    palco.codigos = lista;
+
     /** Celular: nuvem pela metade, dpr 1, sem pino e sem laço. */
     const celular = modo === "celular";
     /**
@@ -832,6 +950,12 @@ export function HeroGlobe({
     let ancX = 0;
     let ancY = 0;
     let revela = 0;
+    /**
+     * O 2D ainda pinta o planeta? `false` depois do crossfade do globo 3D (ver
+     * `cena.ts`). Mora aqui, no escopo do efeito, e não dentro de `desenha`,
+     * porque `malha()` também o lê — e nenhum dos dois pode decidir isso por si.
+     */
+    let planeta2d = true;
     /** 1 = os sete rótulos; 0 = só o da cidade da vez. Ver `ROTULO_SAI_MS`. */
     let rotulos = 1;
     /** A fase e o relógio do voo no quadro, lidos pelo desenho. */
@@ -1143,6 +1267,13 @@ export function HeroGlobe({
       const acesa = (perna: [string, string]) =>
         flash > 0 && europeuAtivo && naPerna(perna);
 
+      /* A REDE E O COMETA SUBIRAM PARA O 3D na etapa 3: lá as sete pernas são
+         linhas de verdade, erguidas da superfície, e a bolinha tem rastro
+         luminoso e faíscas. Quando a cena 3D está no comando, tudo daqui para
+         baixo nesta função é trabalho repetido — e repetido RENTE AO CHÃO, que
+         é justamente o que a etapa 3 saiu do chão para corrigir. */
+      if (!planeta2d) return;
+
       traca((perna) => !tocaEuropa(perna) && !acesa(perna), 0.14);
       traca((perna) => tocaEuropa(perna) && !acesa(perna), 0.3);
       if (flash > 0) traca(acesa, 0.3 + 0.7 * flash, 1.5);
@@ -1296,6 +1427,20 @@ export function HeroGlobe({
       const sp = Math.sin(pitch);
       const atual = ativo.current;
 
+      /* O 3D ASSUMIU O PLANETA? Então o 2D para de pintar OS 5.458 PONTOS DE
+         TERRA (etapa 1) e, desde a etapa 3, também A REDE, O RASTRO e A
+         BOLINHA. A mesma imagem desenhada duas vezes é o dobro do custo e, nos
+         600 ms do crossfade, um engrossamento de cada traço.
+
+         O QUE FICA, e fica de propósito: a GRADE e a TRAMA DO MAR — elas não
+         estão em etapa nenhuma do plano, custam 16 `stroke` e um `fill`, e
+         compõem por baixo dos pontos 3D exatamente como sempre fizeram (o
+         canvas 2D está debaixo do 3D, e lá a esfera só escreve cor onde a
+         atmosfera acende). E o ANEL DE ALVO e o PULSO do pino, que são da
+         câmera e não do terreno, junto com os PINOS e os RÓTULOS, que são DOM
+         (etapa 4 só muda quem os posiciona). */
+      planeta2d = !palco.pronto;
+
       /* -------------------------------------------------- a matriz do zoom
 
          A ÂNCORA É O CENTRO DA CAIXA. A conta é a de sempre — escalar por Z em
@@ -1394,7 +1539,14 @@ export function HeroGlobe({
       let n = 0;
       let usados = 0;
 
-      for (let i = 0; i < GLOBE_COUNT + GLOBE_EU_COUNT; i += g.salto) {
+      /* Com o 3D no comando a varredura não acontece: `total` é zero, `n` fica
+         zero e o laço dos baldes, logo abaixo, roda as suas dez voltas vazias
+         sem um `beginPath`. É um `if` escrito como limite em vez de como
+         desvio — o corpo do laço continua sendo o único lugar que sabe projetar
+         um ponto da nuvem, e não há caminho alternativo para ele divergir. */
+      const total = planeta2d ? GLOBE_COUNT + GLOBE_EU_COUNT : 0;
+
+      for (let i = 0; i < total; i += g.salto) {
         const x = dados.bx[i];
         const y = dados.by[i];
         const z = dados.bz[i];
@@ -1697,6 +1849,31 @@ export function HeroGlobe({
 
       angulo.current = { yaw, pitch, escala };
 
+      /* ----------------------------------------- o quadro para a cena 3D
+
+         PUBLICAR É A ÚLTIMA COISA que o desenho do 2D faz, e é de propósito:
+         neste ponto `yaw`, `pitch` e `escala` são os números que acabaram de
+         pintar a terra, posicionar os pinos e escalar o limbo. O 3D lê ESTES —
+         não um estado paralelo, não um estado derivado. É o que faz a câmera
+         ortográfica de lá cair no mesmo pixel da projeção de cá, e é por isso
+         que os pinos DOM continuam colados na esfera sem uma linha de
+         recálculo (ver a derivação em `cena.ts`).
+
+         Escrita de campo em objeto que já existe: zero alocação por quadro.
+         Quem MANDA DESENHAR é o laço, não esta função — `umQuadro()` também
+         passa por aqui, e um quadro parado não pode gastar um render do 3D. */
+      palco.yaw = yaw;
+      palco.pitch = pitch;
+      palco.escala = escala;
+      palco.lado = g.lado;
+      palco.raio = R;
+      palco.fase = fase;
+      palco.cidade = atual;
+      palco.u = uBola;
+      palco.entrada = relogio.current.entrada;
+      palco.msFase = msFase;
+      palco.temRastro = temRastro;
+
       /* O ESPIÃO: o estado do quadro em `window.__globo`, para a medição no
          navegador poder provar as três conferências do pedido sem olhar
          fotografia — a bolinha dentro do disco, a ausência de salto entre
@@ -1745,7 +1922,17 @@ export function HeroGlobe({
         ? null
         : new ResizeObserver(() => {
             mede();
-            if (modo !== "laco" || !running) umQuadro();
+            if (modo !== "laco" || !running) {
+              umQuadro();
+              /* COM O FREIO PUXADO o 3D está congelado no último quadro que
+                 desenhou — e um `resize` apaga o buffer dele (o r3f redimensiona
+                 o canvas, e redimensionar um canvas o zera). Só aqui, então, um
+                 quadro 3D é entregue fora do laço: é o quadro que redesenha o
+                 planeta no tamanho novo. A regra "zero quadros com a aba oculta"
+                 continua inteira — ninguém redimensiona uma janela que não está
+                 vendo. */
+              if (palco.pronto) entrega(performance.now());
+            }
           });
     observador?.observe(box);
 
@@ -1933,19 +2120,34 @@ export function HeroGlobe({
           rastroDe = e.de;
           temRastro = true;
           for (let s = 0; s <= RASTRO_PASSOS; s += 1) {
-            const p = interpola(
-              cidades[e.de],
-              cidades[e.para],
-              s / RASTRO_PASSOS,
-            );
+            const t = s / RASTRO_PASSOS;
+            const p = interpola(cidades[e.de], cidades[e.para], t);
             const v = baseVector(p.lat, p.lon);
             rastro[s * 3] = v[0];
             rastro[s * 3 + 1] = v[1];
             rastro[s * 3 + 2] = v[2];
+            /* A MESMA perna, ERGUIDA, para a cena 3D (etapa 3): `REDE_SOBE` no
+               meio do caminho e zero nas pontas, que é a elevação das pernas da
+               rede. O cometa viaja POR CIMA do planeta, dentro do próprio arco,
+               em vez de raspar o chão como fazia no 2D — é o "com volume" do
+               pedido, e é a única coisa que muda de LUGAR na migração.
+               Escrito no mesmo laço porque é a mesma interpolação: um `slerp`,
+               dois buffers. */
+            const sobe = 1 + REDE_SOBE * Math.sin(Math.PI * t);
+            palco.arco[s * 3] = v[0] * sobe;
+            palco.arco[s * 3 + 1] = v[1] * sobe;
+            palco.arco[s * 3 + 2] = v[2] * sobe;
           }
         }
         const vb = baseVector(e.bola.lat, e.bola.lon);
         bolaBase = vb;
+        /* A bolinha, erguida como o arco em que ela viaja. */
+        const sobeBola = 1 + REDE_SOBE * Math.sin(Math.PI * e.u);
+        palco.bola[0] = vb[0] * sobeBola;
+        palco.bola[1] = vb[1] * sobeBola;
+        palco.bola[2] = vb[2] * sobeBola;
+        palco.de = e.de;
+        palco.para = e.para;
       }
 
       /* OS RÓTULOS: saem no começo do voo, voltam depois do pouso. `suave` é o
@@ -1999,6 +2201,13 @@ export function HeroGlobe({
       olho.media = olho.soma / olho.quadros;
       if (custo > olho.pior) olho.pior = custo;
       olho.dt = dt;
+
+      /* O QUADRO ENTREGUE À CENA 3D, no MESMO `requestAnimationFrame`. Não é
+         `invalidate()`: aquele agenda um quadro próprio e o 3D sairia 16,7 ms
+         atrasado, o que no pico de velocidade são 5,4 px de descolamento entre
+         o pino DOM e a esfera — ver `entrega()` em `cena.ts`. Sem cena montada
+         é uma comparação com `null` e nada mais. */
+      entrega(t);
     };
 
     raf = requestAnimationFrame(quadro);
@@ -2115,6 +2324,20 @@ export function HeroGlobe({
         {/* A terra firme. Vazio e transparente até o primeiro quadro. */}
         <canvas ref={tela} className="absolute inset-0 h-full w-full" />
 
+        {/* O PLANETA EM 3D, etapa 1 (pedido do dono, 17/10).
+
+            LOGO DEPOIS do canvas 2D, e isto é a pilha de camadas do globo lida
+            de baixo para cima: halo, oceano, atmosfera, MARCA D'ÁGUA, pontos.
+            O 3D entra no mesmo degrau dos pontos — em cima da marca, debaixo do
+            limbo —, porque é a terra firme que ele substitui, e nada mais.
+            Para isso a esfera-base dele escreve só PROFUNDIDADE e nenhuma cor:
+            uma esfera opaca aqui apagaria a marca d'água, que é o elemento de
+            LCP da página (ver `HeroGlobe3D`).
+
+            Antes do portão abrir este nó não existe e o chunk não é baixado —
+            `next/dynamic` adia o download até o componente RENDERIZAR. */}
+        {mostra3d ? <HeroGlobe3D /> : null}
+
         {/* O LIMBO POR DENTRO: os últimos 6% do raio escurecem até 35% de
             preto. Vem DEPOIS do canvas de propósito — é dos pontos que ele
             precisa tirar peso, e é isso que faz o disco virar bola. Continua
@@ -2182,18 +2405,6 @@ export function HeroGlobe({
   );
 }
 
-/** Vetor de base da capital, memorizado por código (quatro entradas). */
-const ALVOS = new Map<string, [number, number, number]>();
-function alvo(code: string): [number, number, number] {
-  let v = ALVOS.get(code);
-  if (!v) {
-    const lugar = CAPITAIS[code] ?? { lat: 0, lon: 0 };
-    v = baseVector(lugar.lat, lugar.lon);
-    ALVOS.set(code, v);
-  }
-  return v;
-}
-
 /* ----------------------------------------------------------- a trama do mar */
 
 /**
@@ -2251,68 +2462,6 @@ function marFino(): Float32Array {
   return (MAR_FINO ??= tecelagem(MAR_FINO_PONTOS));
 }
 
-/* ------------------------------------------------------------------ a rede */
-
-/**
- * As sete pernas da rede, em anel: México → Colômbia → Equador → Brasil →
- * Argentina → Portugal → Reino Unido → México. São os MESMOS sete países dos
- * pinos — a rede não acrescenta mercado nenhum, ela mostra que os sete estão
- * ligados.
- *
- * A ordem do anel é geográfica, não a da tabela: assim nenhuma perna cruza o
- * disco de lado a lado, e a volta se lê como um circuito. A perna que fecha o
- * anel (Londres → Cidade do México) é a única que atravessa o Atlântico por
- * cima, e é ela que diz, sem palavra, que a Europa entrou.
- */
-const REDE_PERNAS: [string, string][] = [
-  ["MXN", "COP"],
-  ["COP", "USD"],
-  ["USD", "BRL"],
-  ["BRL", "ARS"],
-  ["ARS", "EUR"],
-  ["EUR", "GBP"],
-  ["GBP", "MXN"],
-];
-
-/** Pontos por perna. 22 dá a curva lisa a R 300 sem virar polilinha visível. */
-const REDE_PASSOS = 22;
-
-let REDE: Float32Array | null = null;
-
-/**
- * Os pontos das quatro pernas na base da projeção, montados UMA vez (4×23
- * vetores): interpolação esférica entre as duas capitais — o grande-círculo,
- * não a reta da tela — com uma elevação de 3,5% do raio no meio do caminho e
- * zero nas pontas, que é o que ergue a perna do chão sem desgrudá-la do pino.
- */
-function rede(): Float32Array {
-  if (REDE) return REDE;
-  const n = REDE_PASSOS + 1;
-  const out = new Float32Array(REDE_PERNAS.length * n * 3);
-  let k = 0;
-  for (const [de, para] of REDE_PERNAS) {
-    const a = alvo(de);
-    const b = alvo(para);
-    const d = Math.min(
-      1,
-      Math.max(-1, a[0] * b[0] + a[1] * b[1] + a[2] * b[2]),
-    );
-    const omega = Math.acos(d);
-    const so = Math.sin(omega);
-    for (let s = 0; s < n; s += 1) {
-      const t = s / REDE_PASSOS;
-      const wa = so < 1e-6 ? 1 - t : Math.sin((1 - t) * omega) / so;
-      const wb = so < 1e-6 ? t : Math.sin(t * omega) / so;
-      const sobe = 1 + 0.035 * Math.sin(Math.PI * t);
-      out[k] = (a[0] * wa + b[0] * wb) * sobe;
-      out[k + 1] = (a[1] * wa + b[1] * wb) * sobe;
-      out[k + 2] = (a[2] * wa + b[2] * wb) * sobe;
-      k += 3;
-    }
-  }
-  REDE = out;
-  return out;
-}
 
 /**
 /**

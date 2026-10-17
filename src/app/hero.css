@@ -304,6 +304,56 @@
 }
 
 /* --------------------------------------------------------------------------
+   O CANVAS 3D: A MESMA VIGIA, E UM CROSSFADE DE 600 ms
+
+   Etapa 1 do globo 3D (pedido do dono, 17/10). O canvas da cena 3D tem o
+   tamanho exato da caixa do globo e nasce EM CIMA do canvas 2D, no mesmo
+   enquadramento — os dois desenham a mesma projeção ortográfica, pixel a pixel
+   (ver `cena.ts`).
+
+   A VIGIA é `clip-path: circle(50%)` e não `border-radius`: o nó recortado é o
+   div que o react-three-fiber monta em volta do canvas, e ele já traz
+   `overflow: hidden` no estilo inline — um `border-radius` na borda externa
+   dele não cortaria o canvas filho, que é o que precisa de corte. O círculo faz
+   aqui o que o `clip()` circular faz no canvas 2D e o que o `.globe-vigia` faz
+   no limbo: o disco NÃO muda de tamanho, o que amplia é o conteúdo dentro dele.
+   `circle(50%)` numa caixa quadrada é exatamente o círculo de raio R centrado —
+   a mesma vigia, agora em três materiais.
+
+   O CROSSFADE é a única animação de entrada que o hero admite neste canvas, e
+   ela é o oposto de uma aparição: durante os 600 ms os DOIS pintam o planeta,
+   na mesma câmera, e o que se vê é um ponto ficando mais nítido. Só quando a
+   opacidade chega a 1 é que o 2D larga a terra (ver `cena.pronto`). `linear` e
+   não `ease`: um crossfade entre duas imagens coincidentes só é invisível se a
+   soma das duas opacidades for constante, e qualquer curva com aceleração faz a
+   soma passar por um vale — o planeta "respiraria" no meio da transição.
+
+   `will-change: opacity` para o compositor promover a camada antes do primeiro
+   quadro da transição: sem ele o primeiro quadro paga a promoção, e é o único
+   quadro em que o 3D precisa estar perfeitamente alinhado com o 2D.
+   -------------------------------------------------------------------------- */
+.globe-tres {
+  clip-path: circle(50%);
+  opacity: 0;
+  transition: opacity 600ms linear;
+  will-change: opacity;
+}
+
+.globe-tres--vivo {
+  opacity: 1;
+}
+
+/* Movimento reduzido não chega aqui — o portão de montagem do `HeroGlobe` nem
+   monta a cena 3D nesse caso, e o globo continua sendo o canvas 2D parado. A
+   regra existe para o caso em que a preferência é LIGADA depois da montagem:
+   aí o canvas aparece de uma vez, sem fade, no quadro em que já estava. */
+@media (prefers-reduced-motion: reduce) {
+  .globe-tres {
+    transition: none;
+  }
+}
+
+/* --------------------------------------------------------------------------
    A LINHA DE CONTROLE do palco (rótulo + status + pausar).
 
    Ancorada pelo PÉ, nunca pelo topo: a altura do hero é a da janela, e com

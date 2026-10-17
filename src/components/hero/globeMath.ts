@@ -225,3 +225,99 @@ for (const [code, { lat, lon }] of Object.entries(CAPITAIS)) {
     nudge: lado.nudge,
   };
 }
+
+/* ------------------------------------------------------------------ a rede */
+
+/**
+ * As sete pernas da rede, em anel: México → Colômbia → Equador → Brasil →
+ * Argentina → Portugal → Reino Unido → México. São os MESMOS sete países dos
+ * pinos — a rede não acrescenta mercado nenhum, ela mostra que os sete estão
+ * ligados.
+ *
+ * A ordem do anel é geográfica, não a da tabela: assim nenhuma perna cruza o
+ * disco de lado a lado, e a volta se lê como um circuito. A perna que fecha o
+ * anel (Londres → Cidade do México) é a única que atravessa o Atlântico por
+ * cima, e é ela que diz, sem palavra, que a Europa entrou.
+ *
+ * ELA MUDOU DE ARQUIVO em 17/10, com a etapa 3 do globo 3D: os arcos deixaram
+ * o canvas 2D e viraram linhas de verdade na cena, e a geometria passou a ter
+ * dois leitores. Este arquivo já era a casa da geometria compartilhada do
+ * globo (a projeção, a espiral, as capitais); a rede é geometria.
+ */
+export const REDE_PERNAS: [string, string][] = [
+  ["MXN", "COP"],
+  ["COP", "USD"],
+  ["USD", "BRL"],
+  ["BRL", "ARS"],
+  ["ARS", "EUR"],
+  ["EUR", "GBP"],
+  ["GBP", "MXN"],
+];
+
+/**
+ * Os dois países do outro lado do Atlântico, por código de moeda. A rede e o
+ * anel do pino os tratam diferente desde 15/10: o dono pediu para a Europa
+ * aparecer quando "um ponto liga no outro".
+ */
+export const EUROPEUS = new Set(["EUR", "GBP"]);
+
+/** Pontos por perna. 22 dá a curva lisa a R 300 sem virar polilinha visível. */
+export const REDE_PASSOS = 22;
+
+/**
+ * A ELEVAÇÃO da perna no meio do caminho, em fração do raio. É o que ergue o
+ * arco do chão sem desgrudá-lo do pino (zero nas duas pontas), e desde a etapa
+ * 3 é também a altura em que a BOLINHA e o RASTRO viajam — uma constante, dois
+ * leitores, nenhuma chance de a bolinha correr por dentro do próprio arco.
+ */
+export const REDE_SOBE = 0.035;
+
+/** Vetor de base da capital, memorizado por código (sete entradas). */
+const ALVOS = new Map<string, [number, number, number]>();
+
+export function alvo(code: string): [number, number, number] {
+  let v = ALVOS.get(code);
+  if (!v) {
+    const lugar = CAPITAIS[code] ?? { lat: 0, lon: 0 };
+    v = baseVector(lugar.lat, lugar.lon);
+    ALVOS.set(code, v);
+  }
+  return v;
+}
+
+let REDE: Float32Array | null = null;
+
+/**
+ * Os pontos das sete pernas na base da projeção, montados UMA vez (7×23
+ * vetores): interpolação esférica entre as duas capitais — o grande-círculo,
+ * não a reta da tela — com `REDE_SOBE` de elevação no meio do caminho e zero
+ * nas pontas.
+ */
+export function rede(): Float32Array {
+  if (REDE) return REDE;
+  const n = REDE_PASSOS + 1;
+  const out = new Float32Array(REDE_PERNAS.length * n * 3);
+  let k = 0;
+  for (const [de, para] of REDE_PERNAS) {
+    const a = alvo(de);
+    const b = alvo(para);
+    const d = Math.min(
+      1,
+      Math.max(-1, a[0] * b[0] + a[1] * b[1] + a[2] * b[2]),
+    );
+    const omega = Math.acos(d);
+    const so = Math.sin(omega);
+    for (let s = 0; s < n; s += 1) {
+      const t = s / REDE_PASSOS;
+      const wa = so < 1e-6 ? 1 - t : Math.sin((1 - t) * omega) / so;
+      const wb = so < 1e-6 ? t : Math.sin(t * omega) / so;
+      const sobe = 1 + REDE_SOBE * Math.sin(Math.PI * t);
+      out[k] = (a[0] * wa + b[0] * wb) * sobe;
+      out[k + 1] = (a[1] * wa + b[1] * wb) * sobe;
+      out[k + 2] = (a[2] * wa + b[2] * wb) * sobe;
+      k += 3;
+    }
+  }
+  REDE = out;
+  return out;
+}
