@@ -1162,3 +1162,9 @@ melhor que isso, deixe o globo girando livre levemente, para cada sessão
 (usuário que aderir à url "https://pedrinho.wone.bot") de usuário.
 
 clarear mais o globo / em específico, os continentes
+
+
+===============================================================================
+[133] 2026-10-17
+===============================================================================
+deixe o foco da rotação apenas nos países que estão destacados no globo

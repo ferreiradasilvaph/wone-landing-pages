@@ -1051,9 +1051,13 @@ export function HeroGlobe({
        O sorteio é uma vez por montagem do laço — recarregar a página dá outro.
        O ângulo é ACUMULADO e não "seg × velocidade": integrar a velocidade é o
        que deixa a rampa de entrada mexer no ritmo sem criar salto no ângulo. */
-    const GIRO_VEL = TAU / 180;
+    /* A JANELA DO GIRO, em radianos (veja o comentário do laço). O giro varre
+       de 0 a +16° de guinada: é a faixa em que os SETE países marcados ficam
+       todos na face visível da bola. */
+    const GIRO_CENTRO = (8 * Math.PI) / 180;
+    const GIRO_AMPL = (8 * Math.PI) / 180;
+    const GIRO_PERIODO = 38;
     const faseSessao = Math.random() * TAU;
-    let giroAcumulado = 0;
 
     /* O CURSOR MOVE O PLANETA (pedido do dono, 16/10: "deixe o globo interativo,
        ao passar o cursor por cima deve se mexer").
@@ -1143,37 +1147,58 @@ export function HeroGlobe({
          sem um salto na entrada. A inclinação fica em 1,5° e com período primo
          em relação ao da guinada (46 s contra 28), para os dois não voltarem
          juntos ao mesmo ponto e o movimento nunca parecer um pêndulo. */
-      /* O GIRO LIVRE, E UMA FASE POR SESSÃO (pedido do dono, 17/10: "deixe o
-         globo girando livre levemente, para cada sessão de usuário").
+      /* O GIRO, PRESO À JANELA DOS PAÍSES MARCADOS (pedido do dono, 17/10:
+         "deixe o foco da rotação apenas nos países que estão destacados no
+         globo").
 
-         Isto SUBSTITUI a oscilação de ±9° que vivia aqui, e substitui também a
-         razão dela. O comentário antigo defendia a oscilação assim: numa
-         rotação contínua metade dos pinos estaria sempre do outro lado da bola
-         e as etiquetas sumiriam em rodízio, e a primeira dobra perderia a prova
-         dos "7 países". Esse argumento caiu hoje por conta própria — a prova
-         dos sete passou a ser a FILEIRA DE BANDEIRAS ao lado do título, que
-         mostra os sete ao mesmo tempo e não gira. Liberado disso, o planeta
-         pode fazer o que um planeta faz.
+         Até hoje de manhã o planeta dava a VOLTA INTEIRA, uma em 180 s. O
+         movimento estava certo e o enquadramento, errado: dois terços de cada
+         volta mostravam Pacífico, Ásia e África, onde a Wone não marca nada —
+         o globo passava a maior parte do tempo provando o contrário do que a
+         seção afirma.
 
-         A VELOCIDADE é "levemente": uma volta em 180 s, 2°/s. O pico da
-         oscilação antiga era 1,35°/s, então é a mesma ordem de leitura — só que
-         sem voltar atrás.
+         ONDE OS SETE MORAM. Com o centro de projeção em λ₀ = −32°, as sete
+         capitais caem entre −67,1° (Cidade do México) e +31,9° (Londres) de
+         longitude RELATIVA: um arco de 99°, que é quase toda a face visível de
+         uma vez. Essa é a razão de o repouso já ser um bom enquadramento — ele
+         foi escolhido assim — e é também o que limita o giro dos dois lados:
 
-         A FASE DA SESSÃO é o que faz duas pessoas não verem a mesma tela: cada
-         carregamento sorteia um meridiano. Ela NÃO entra de uma vez, e isso não
-         é enfeite: o servidor pinta o globo no ângulo zero, e aplicar um ângulo
-         sorteado no primeiro quadro do cliente seria um salto visível bem em
-         cima do elemento de LCP. A rampa leva 2,2 s — o tempo da entrada —, e
-         como ela multiplica também a VELOCIDADE, o planeta parte parado e
-         ganha curso. O primeiro quadro do laço cai exatamente sobre o que o
-         servidor pintou, que é a regra que já valia aqui.
+          - para OESTE (guinada negativa) não há folga nenhuma. A Cidade do
+            México já desenha a 6,6% da largura da caixa, encostada no limbo;
+            qualquer grau a menos a leva para o outro lado da bola;
+          - para LESTE há cerca de 38° antes de Londres (+31,9°) chegar aos 70°
+            em que um pino deixa de se ler. Fica-se em 16, com folga dobrada.
+
+         Daí a varredura de 0 a +16°, e não uma oscilação em torno do repouso:
+         ela corre só para o lado que tem país, e o lado que não tem fica de
+         fora. No meio do curso a Cidade do México ganha 16° de margem contra o
+         limbo — ou seja, o enquadramento MELHORA no miolo do ciclo.
+
+         A VELOCIDADE é "levemente": 16° em 38 s de ida e volta dão 1,3°/s no
+         pico, a mesma ordem da volta inteira (2°/s) e do balanço que havia
+         antes dela (1,35°/s). O que muda não é o ritmo, é para onde ele aponta.
+
+         A FASE DA SESSÃO continua, e continua fazendo o que fazia: duas pessoas
+         não veem a mesma tela. O que ela sorteia agora não é um meridiano
+         qualquer, é o PONTO DO CICLO em que a varredura começa — quem chega
+         pode pegar o planeta na ida, na volta ou numa das pontas. A amplitude é
+         a mesma para todos; só o instante muda.
+
+         Ela NÃO entra de uma vez, e isso não é enfeite: o servidor pinta o
+         globo no ângulo zero, e aplicar um ângulo sorteado no primeiro quadro
+         do cliente seria um salto visível bem em cima do elemento de LCP. A
+         rampa de 2,2 s — o tempo da entrada — multiplica a varredura inteira,
+         então o planeta parte do ângulo do servidor e abre o curso. O primeiro
+         quadro do laço cai exatamente sobre o que o servidor pintou, que é a
+         regra que já valia aqui.
 
          A inclinação continua oscilando: o eixo de um planeta não gira, cabeceia
          — e 2° de cabeceio em 43 s mantém o movimento de parecer um carrossel. */
       const rampa = Math.min(1, seg / 2.2);
       const entrada2 = rampa * rampa * (3 - 2 * rampa);
-      giroAcumulado += dt * GIRO_VEL * entrada2;
-      const balancoYaw = faseSessao * entrada2 + giroAcumulado;
+      const varredura =
+        GIRO_CENTRO + GIRO_AMPL * Math.sin((TAU * seg) / GIRO_PERIODO + faseSessao);
+      const balancoYaw = varredura * entrada2;
       const balancoPitch = 0.0349 * Math.sin((TAU * seg) / 43);
 
       /* O cursor assume o balanco: mesma suavizacao do recuo (~1,2 s). */
