@@ -343,6 +343,32 @@
   opacity: 1;
 }
 
+/* --------------------------------------------------------------------------
+   A PROFUNDIDADE DO PINO (etapa 4)
+
+   Pedido do dono, 17/10: "o pino do hemisfério de trás some (já some), e os
+   que se aproximam do limbo encolhem e apagam pela mesma queda 0,62 + 0,38·z₂
+   dos pontos — hoje o pino é chapado e não participa do volume".
+
+   `--pino-vol` é esse fator, escrito no ALFINETE pela cena 3D a cada quadro
+   (ver `HeroGlobe3D`), e lido aqui por UM nó só: o ponto. O rótulo não escala,
+   e isso não é esquecimento — um texto que encolhe perto do limbo é um texto
+   que se lê pior, e a legibilidade é a razão inteira de os rótulos serem DOM
+   em vez de textura. O que dá volume é o PONTO; o que dá informação é o texto,
+   e ele tem tamanho fixo.
+
+   `transform-origin` no meio porque o ponto já está centrado no alfinete pelos
+   `-mt/-ml` do Tailwind: escalar em torno do próprio centro mantém o pixel do
+   lugar exatamente onde a projeção o pôs.
+
+   O valor-padrão 1 é o que faz esta regra custar ZERO enquanto não há cena 3D:
+   sem a variável escrita, `scale(1)` é identidade, e o pino é o de sempre.
+   -------------------------------------------------------------------------- */
+.hero-ponto {
+  transform: scale(var(--pino-vol, 1));
+  transform-origin: 50% 50%;
+}
+
 /* Movimento reduzido não chega aqui — o portão de montagem do `HeroGlobe` nem
    monta a cena 3D nesse caso, e o globo continua sendo o canvas 2D parado. A
    regra existe para o caso em que a preferência é LIGADA depois da montagem:

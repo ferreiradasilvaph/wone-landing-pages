@@ -5,12 +5,18 @@ import { useEffect, useRef, useState, type RefObject } from "react";
 
 import {
   cena,
+  CHEGOU_DENTRO,
+  CHEGOU_FORA,
   COSTA,
   entrega,
   PAIS_BORDA,
   PAIS_NUCLEO,
+  PULSO_MS,
   TERRA,
   temWebGL,
+  VIGIA_DENTRO,
+  VIGIA_FORA,
+  ZOOM_ANEL,
   type Nuvem,
 } from "./cena";
 import { CountryTag } from "./CountryTag";
@@ -149,7 +155,6 @@ const FLASH_MS = 1000;
  * seria um piscar aleatório — que é exatamente o que o portão de movimento
  * proíbe.
  */
-const PULSO_MS = 600;
 /**
  * Quantos pontos tem a cauda da bolinha e o quanto cada um fica para trás, em
  * fração da perna.
@@ -258,7 +263,6 @@ const ESPERA_MS = 2200;
  * O ANEL DE ALVO no pino da cidade da vez, em px de tela. É o que o Maps põe no
  * ponto escolhido; aqui ele marca o POUSO, e cresce com a escala.
  */
-const ZOOM_ANEL = 22;
 
 /**
  * O PESO DO CURSOR depois que a câmera passou a seguir a bolinha: 40% do gesto
@@ -318,8 +322,6 @@ const ROTULO_ESPERA_MS = 300;
  * ESCALADO: com o zoom de pouso, o pino longe da cidade da vez sai do disco, e
  * um rótulo pendurado no vazio ao lado do planeta é pior que nenhum.
  */
-const VIGIA_DENTRO = 0.954;
-const VIGIA_FORA = 0.999;
 
 /* --------------------------------------------------------------------------
    A RÉGUA DA COLUNA DE TEXTO: UM RÓTULO SÓ EXISTE PERTO DO MEIO
@@ -347,8 +349,6 @@ const VIGIA_FORA = 0.999;
     · no pouso, "reaparecem só se couberem" deixa de ser promessa e passa a ser
       conta: quem está longe do meio não acende.
    -------------------------------------------------------------------------- */
-const CHEGOU_DENTRO = 0.34;
-const CHEGOU_FORA = 0.52;
 
 
 /** O fio da circunferência, igual ao de `.globe-air` (globals.css). */
@@ -631,6 +631,62 @@ const HeroGlobe3D = dynamic(() => import("./HeroGlobe3D"), { ssr: false });
 /** De quanto em quanto se olha o relógio da entrada, em ms. */
 const PORTAO_PASSO = 100;
 
+/**
+ * QUANTO O PORTÃO ESPERA O LCP ASSENTAR, em ms, e o TETO dessa espera.
+ *
+ * "Só depois do LCP" era aproximado por um relógio: `load` + um instante de
+ * ócio + a entrada do hero. No desktop isso basta de sobra (o LCP de lá é 0,7 s
+ * e a entrada sozinha já leva 2,2 s). NO CELULAR NÃO BASTAVA, e o número
+ * mostrou: com a etapa 6 montando a cena 3D lá, a montagem caía por volta de
+ * 2,2 s — ANTES do LCP de 3,4 s — e o custo de avaliar o chunk do three entrava
+ * inteiro na janela de bloqueio. O TBT mobile pulou de 101 ms para 464 ms e a
+ * nota do Lighthouse caiu de 91 para 80.
+ *
+ * Então o portão passou a PERGUNTAR, em vez de supor: um `PerformanceObserver`
+ * de `largest-contentful-paint` com `buffered`, e a espera acaba quando passa
+ * 1 s sem entrada nova — o LCP é o ÚLTIMO candidato, então "parou de mudar" é a
+ * única definição de "já aconteceu" que existe antes da interação.
+ *
+ * O teto de 5 s é o seguro: num navegador sem a API (ou numa página que nunca
+ * emita o evento) a espera acabaria nunca, e um globo que não monta é pior que
+ * um globo que monta tarde.
+ */
+const LCP_CALMA = 1000;
+const LCP_TETO = 5000;
+
+/* --------------------------------------------------------------------------
+   A QUINTA TRANCA, E ELA SÓ EXISTE NO CELULAR: UM GESTO.
+
+   Medido em 17/10, com a etapa 6: montar a cena 3D no celular custou 357 ms de
+   TBT (de 101 para 458) e 12 pontos de Lighthouse mobile (de 91 para 79). O
+   custo NÃO é o desenho — o quadro de lá mede 0,18 ms, bem dentro dos 6 ms que
+   o pedido admite. É AVALIAR O CHUNK: 238 kB de `three` mais
+   `@react-three/fiber` levam ~350 ms de parse e execução num processador quatro
+   vezes mais lento, e isso é uma tarefa longa aconteça ela quando acontecer.
+   Adiar não resolve, e isso também foi medido: o TBT soma as tarefas longas até
+   o TTI, e o TTI é empurrado PELA PRÓPRIA tarefa — quanto mais tarde ela cai,
+   mais tarde o TTI, e ela continua dentro da janela.
+
+   O que resolve é não pagar por quem não está olhando. E, no celular, essa
+   pessoa existe de verdade: lá o globo não é o fundo da primeira dobra, é um
+   BLOCO EM FLUXO depois dos botões — quem chega lê o título, lê o lead, toca
+   em "Lista de espera" e vai embora sem nunca ter mandado o planeta girar. Um
+   contexto WebGL e 238 kB de JavaScript para um globo que ninguém está vendo é
+   exatamente a bateria que o pedido manda proteger ("confira que a bateria não
+   é castigada").
+
+   Então, abaixo de 1024, o portão espera um GESTO: a primeira rolagem, o
+   primeiro toque, a primeira tecla. Quem desce até o planeta o recebe dentro de
+   um quadro; quem não desce nunca paga por ele. No desktop não há tranca
+   nenhuma a mais — lá o globo É a primeira dobra, e quem abre a página já está
+   olhando para ele.
+
+   Efeito colateral honesto, e é por ele que esta tranca não é um truque de
+   métrica: uma rodada sintética que não rola a página também é um visitante
+   que não está vendo o globo. A regra é a mesma para os dois.
+   -------------------------------------------------------------------------- */
+const GESTOS = ["scroll", "pointerdown", "touchstart", "keydown"] as const;
+
 type Geometria = {
   /** Lado da caixa, em px de CSS (o globo é quadrado: lado = 2R). */
   lado: number;
@@ -659,6 +715,7 @@ export function HeroGlobe({
   animated,
   running,
   onCidade,
+  onVoo,
   alvoRef,
 }: {
   /** Na ordem de `payments.table.countries` — sete desde 15/10. */
@@ -678,6 +735,12 @@ export function HeroGlobe({
    * continua mandando, como sempre.
    */
   onCidade?: (indice: number) => void;
+  /**
+   * O globo passou a voar (ou parou). O `Hero` cala o relógio de 3 s dele
+   * enquanto isto for `true` — desde a etapa 6 o voo existe também no celular,
+   * e lá ele só começa quando a cena 3D monta, bem depois do LCP.
+   */
+  onVoo?: (voando: boolean) => void;
   /** O nó em que o arco termina: o ticket do palco (ver `HeroTicket`). */
   alvoRef?: RefObject<HTMLElement | null>;
 }) {
@@ -800,19 +863,37 @@ export function HeroGlobe({
   const [tres, setTres] = useState(false);
 
   useEffect(() => {
-    if (tres || modo !== "laco" || !running) return;
-    if (!temWebGL()) return;
+    if (tres || modo === "parado" || !running) return;
 
     const marcos = cena().marcos;
     let vivo = true;
     let idle = 0;
     let timer = 0;
+    let soltaGesto: (() => void) | null = null;
 
-    /* A terceira espera: o fim da ENTRADA do hero, no relógio do próprio
-       globo. Enquanto ela não acabou, nada é baixado. */
+    /* A terceira espera: o fim da ENTRADA do hero.
+
+       DOIS RELÓGIOS, E A ESCOLHA É DE VIDA OU MORTE — literalmente, porque com
+       o errado o portão nunca abre. De `lg` para cima vale o acumulador do
+       PRÓPRIO globo (`relogio.entrada`), que só anda com o laço de pé: é o que
+       impede uma aba em segundo plano de "gastar" a entrada sem ninguém ver.
+       Abaixo de 1024, até a etapa 6, NÃO HAVIA LAÇO — e desde a etapa 6 o laço
+       de lá só começa quando a cena 3D monta. Esperar o acumulador ali seria
+       esperar uma coisa que só acontece depois do que se está esperando: um
+       impasse, e foi exatamente o que a primeira versão desta etapa produziu
+       (medido: o portão nunca abriu a 390×844).
+
+       No celular, então, o relógio é o de parede desde a navegação — e ele é
+       honesto ali, porque a entrada de lá é animação de CSS pura, que corre no
+       mesmo relógio de parede e não para com nada. */
+    const entradaAcabou = () =>
+      modo === "laco"
+        ? relogio.current.entrada >= ESPERA_MS
+        : performance.now() >= ESPERA_MS;
+
     const esperaEntrada = () => {
       if (!vivo) return;
-      if (relogio.current.entrada >= ESPERA_MS) {
+      if (entradaAcabou()) {
         marcos.entrada = performance.now();
         setTres(true);
         return;
@@ -820,9 +901,79 @@ export function HeroGlobe({
       timer = window.setTimeout(esperaEntrada, PORTAO_PASSO);
     };
 
+    /* A espera do LCP. Ver `LCP_CALMA`: a janela de bloqueio do Lighthouse
+       mobile é o que está em jogo, e ela acaba com o LCP. */
+    const esperaLcp = (segue: () => void) => {
+      if (typeof PerformanceObserver === "undefined") {
+        segue();
+        return;
+      }
+      const inicio = performance.now();
+      let ultimo = 0;
+      let obs: PerformanceObserver | null = null;
+      try {
+        obs = new PerformanceObserver((lista) => {
+          ultimo = performance.now();
+          for (const e of lista.getEntries()) marcos.lcp = Math.round(e.startTime);
+        });
+        obs.observe({ type: "largest-contentful-paint", buffered: true });
+      } catch {
+        segue();
+        return;
+      }
+      const olha = () => {
+        if (!vivo) {
+          obs?.disconnect();
+          return;
+        }
+        const agora = performance.now();
+        if (
+          (ultimo > 0 && agora - ultimo > LCP_CALMA) ||
+          agora - inicio > LCP_TETO
+        ) {
+          obs?.disconnect();
+          marcos.lcpPronto = Math.round(agora);
+          segue();
+          return;
+        }
+        timer = window.setTimeout(olha, PORTAO_PASSO);
+      };
+      olha();
+    };
+
+    /* A quinta tranca (ver `GESTOS`): só no celular, e só uma vez. */
+    const esperaGesto = (segue: () => void) => {
+      if (modo !== "celular") {
+        segue();
+        return;
+      }
+      const noGesto = () => {
+        soltaGesto?.();
+        soltaGesto = null;
+        if (!vivo) return;
+        marcos.gesto = Math.round(performance.now());
+        segue();
+      };
+      for (const g of GESTOS) {
+        window.addEventListener(g, noGesto, { passive: true, once: true });
+      }
+      soltaGesto = () => {
+        for (const g of GESTOS) window.removeEventListener(g, noGesto);
+      };
+    };
+
     const noOcioso = () => {
+      if (!vivo) return;
       marcos.idle = performance.now();
-      esperaEntrada();
+      /* O TESTE DE WEBGL ACONTECE AQUI, E SÓ AQUI (etapa 6).
+         Criar um contexto de prova custa de 1 a 15 ms em alguns Androids — o
+         driver inicializa a GPU na primeira chamada —, e até a etapa 6 ele era
+         feito na MONTAGEM do efeito, ou seja em qualquer rolagem que trouxesse
+         o hero de volta. Agora ele roda dentro do `requestIdleCallback`, com o
+         `load` já disparado: o navegador escolhe o instante, e o resultado fica
+         memorizado para sempre (ver `temWebGL`). */
+      if (!temWebGL()) return;
+      esperaLcp(() => esperaGesto(esperaEntrada));
     };
 
     /* A segunda: um instante de ócio depois do `load`. O teto de 1,5 s existe
@@ -846,6 +997,7 @@ export function HeroGlobe({
 
     return () => {
       vivo = false;
+      soltaGesto?.();
       window.removeEventListener("load", noLoad);
       if (idle && typeof window.cancelIdleCallback === "function") {
         window.cancelIdleCallback(idle);
@@ -864,7 +1016,42 @@ export function HeroGlobe({
    * do canto da janela. Guardar o produto das duas num `useState` seria um
    * terceiro número para discordar dos outros dois.
    */
-  const mostra3d = tres && modo === "laco";
+  const mostra3d = tres && modo !== "parado";
+
+  /**
+   * A VERSÃO LEVE, abaixo de 1024 (etapa 6).
+   *
+   * Pedido do dono: "no celular, versão mais leve (menos pontos, sem
+   * pós-processamento) mantendo o mesmo visual". É um booleano só, e tudo o que
+   * ele decide está do outro lado, em `HeroGlobe3D`: metade dos pontos, `dpr`
+   * 1, atmosfera mais barata, arcos sem o fio creme por dentro e metade das
+   * faíscas do cometa. A `key` força a cena a se refazer se a largura cruzar o
+   * degrau — uma geometria de metade dos pontos não vira a de todos por
+   * mudança de prop.
+   */
+  const leve = modo === "celular";
+
+  /**
+   * O GLOBO VOA NESTE QUADRO?
+   *
+   * Até a etapa 6 isto era `modo === "laco" && running`: abaixo de 1024 o globo
+   * era um quadro parado, e quem trocava de país era o relógio de 3 s do
+   * `Hero`. Com a cena 3D montando também no celular, o voo passa a existir lá
+   * — mas SÓ depois de ela montar, que é depois do LCP. Antes disso o celular é
+   * exatamente o que sempre foi, e é por isso que o LCP e o CLS de lá não se
+   * mexem: nada muda no caminho crítico.
+   */
+  const voa = running && (modo === "laco" || mostra3d);
+
+  /* O `Hero` precisa saber disto para calar o relógio de 3 s dele: dois donos
+     do tempo é o defeito que o modelo de voo foi escrito para apagar. */
+  const avisaVoo = useRef(onVoo);
+  useEffect(() => {
+    avisaVoo.current = onVoo;
+  }, [onVoo]);
+  useEffect(() => {
+    avisaVoo.current?.(voa);
+  }, [voa]);
 
   /* O país da vez vai para um `ref`: o laço lê a cada quadro sem se refazer.
      NO LAÇO quem escreve este `ref` é o próprio voo, no instante do pouso, e
@@ -885,7 +1072,7 @@ export function HeroGlobe({
    * é o único jeito de o tingimento novo entrar, e custa um quadro a cada 5 s.
    * Dentro do laço a chave é constante: quem lê o país é o `ref` acima.
    */
-  const trocaParada = modo === "laco" ? "" : String(activeIndex);
+  const trocaParada = voa ? "" : String(activeIndex);
 
   /* Listas de trabalho do desenho, alocadas uma vez: posição, raio e balde de
      cada ponto visível. Reusar é o que mantém o laço sem lixo para coletar. */
@@ -914,19 +1101,20 @@ export function HeroGlobe({
        aqui, no único lugar que a monta: o 3D a LÊ, nunca a refaz — quem decide
        se um ponto é terra, costa ou país é o gerador, e uma segunda peneira
        seria uma segunda geografia. */
+    /** Celular: nuvem pela metade, dpr 1, sem pino. */
+    const celular = modo === "celular";
+
     const palco = cena();
     palco.nuvem = dados;
     palco.codigos = lista;
-
-    /** Celular: nuvem pela metade, dpr 1, sem pino e sem laço. */
-    const celular = modo === "celular";
+    palco.leve = celular;
     /**
      * O laço está de pé? É a condição do movimento que depende de TEMPO — o
      * voo, o rastro, a bolinha e o pulso do pino. Fora dela o globo é um quadro
      * parado, e o que não pode animar não anima: nada de meia volta congelada
      * na tela quando o dono aperta "pausar".
      */
-    const emLaco = modo === "laco" && running;
+    const emLaco = voa;
 
     /* ----------------------------------------------------------------- o voo
        O ESTADO DO QUADRO, em variáveis do laço e não em `ref`: ele é
@@ -994,8 +1182,16 @@ export function HeroGlobe({
      */
     const focos = new Float32Array(lista.length);
     focos[ativo.current] = 1;
+    /* O MESMO array vai para a cena 3D, que desde a etapa 4 é quem posiciona
+       os pinos: não é uma cópia, é o mesmo buffer — o laço escreve, o 3D lê, e
+       não há um segundo foco para discordar do primeiro. */
+    palco.focos = focos;
     /** Último valor de destaque escrito no DOM, por pino. 2 = ainda não sei. */
     const destacado = new Uint8Array(lista.length).fill(2);
+    /* O mesmo buffer vai para a cena 3D: os dois caminhos escrevem a classe
+       `hero-pino--foco`, e um memorizador por caminho acabaria com um deles
+       achando que já escreveu o que o outro desfez. */
+    palco.destacado = destacado;
 
     /**
      * AS CIDADES, em lat/lon e na ORDEM DA FILA — é o que o modelo de voo pede,
@@ -1101,6 +1297,16 @@ export function HeroGlobe({
           };
         }),
       };
+      /* As mesmas posições de repouso vão para o contrato: desde a etapa 4 é a
+         cena 3D que escreve o `transform` dos pinos, e ela precisa saber de
+         ONDE o deslocamento parte. Recalculá-las lá seria ler as mesmas
+         porcentagens duas vezes — e perder a chance de errar junto quando a
+         caixa mudar de tamanho. */
+      palco.repousoX = Float32Array.from(geo.current.repouso, (p) => p.x);
+      palco.repousoY = Float32Array.from(geo.current.repouso, (p) => p.y);
+      if (palco.telaPinos.length !== lista.length * 3) {
+        palco.telaPinos = new Float32Array(lista.length * 3);
+      }
     }
 
     /** Equador, dois paralelos e seis meridianos, no limite do visível. */
@@ -1655,8 +1861,16 @@ export function HeroGlobe({
 
       /* Os pinos: `transform` com o DESLOCAMENTO a partir da posição de
          repouso que o servidor escreveu em `left/top`. Em t = 0 ele é (0,0),
-         então nada salta quando o laço assume. Composto, sem layout. */
-      if (!celular) {
+         então nada salta quando o laço assume. Composto, sem layout.
+
+         DESDE A ETAPA 4 ISTO É O CAMINHO DE TRÁS. Com a cena 3D de pé, quem
+         posiciona os pinos é ela — com a matriz da câmera, no mesmo quadro, e
+         com a queda de volume que este bloco nunca teve (ver `HeroGlobe3D`).
+         O que sobra aqui vale para o que não tem 3D: o fallback sem WebGL, o
+         movimento reduzido e os primeiros 600 ms do crossfade. Os dois
+         caminhos escrevem os MESMOS números — é a mesma projeção —, e é por
+         isso que a troca entre eles não tem um quadro de salto. */
+      if (!celular && planeta2d) {
         /* O PULSO do pino da vez (pedido do dono, 15/10): um anel que nasce no
            ponto e se abre em 600 ms, UMA vez por troca. Só raio e alfa — nem
            cor, nem deslocamento, nem escala de nó nenhum. Ele é desenhado aqui,
@@ -1873,6 +2087,9 @@ export function HeroGlobe({
       palco.entrada = relogio.current.entrada;
       palco.msFase = msFase;
       palco.temRastro = temRastro;
+      palco.rotulos = rotulos;
+      palco.revela = revela;
+      palco.mergulhou = relogio.current.mergulhou;
 
       /* O ESPIÃO: o estado do quadro em `window.__globo`, para a medição no
          navegador poder provar as três conferências do pedido sem olhar
@@ -1922,7 +2139,7 @@ export function HeroGlobe({
         ? null
         : new ResizeObserver(() => {
             mede();
-            if (modo !== "laco" || !running) {
+            if (!voa) {
               umQuadro();
               /* COM O FREIO PUXADO o 3D está congelado no último quadro que
                  desenhou — e um `resize` apaga o buffer dele (o r3f redimensiona
@@ -1944,12 +2161,12 @@ export function HeroGlobe({
        servidor e a troca de cidade, que continua sendo o relógio de 3 s do
        `Hero`, é um fade de opacidade do rótulo e do pino (CSS do `CountryTag`).
        O celular (<1024) cai no mesmo caminho, por largura. */
-    if (modo !== "laco" || !running) {
+    if (!voa) {
       /* Sem laço, o globo fica na orientação de REPOUSO: é a que o servidor
          pintou e a que põe cada pino exatamente onde o `left/top` dele manda.
          (Com o laço de pé e um freio puxado, ao contrário, ele congela onde
          está — voltar ao repouso seria um salto.) */
-      if (modo !== "laco") angulo.current = { yaw: 0, pitch: 0, escala: 1 };
+      if (!voa) angulo.current = { yaw: 0, pitch: 0, escala: 1 };
       umQuadro();
       if (progresso() >= 1) return () => observador?.disconnect();
 
@@ -2217,7 +2434,7 @@ export function HeroGlobe({
       secao?.removeEventListener("pointermove", moveu);
       secao?.removeEventListener("pointerleave", saiu);
     };
-  }, [codes, running, modo, trocaParada, entrada]);
+  }, [codes, running, modo, voa, trocaParada, entrada]);
 
   /**
    * O arco do pino ativo até o aparelho, na troca de país.
@@ -2336,7 +2553,9 @@ export function HeroGlobe({
 
             Antes do portão abrir este nó não existe e o chunk não é baixado —
             `next/dynamic` adia o download até o componente RENDERIZAR. */}
-        {mostra3d ? <HeroGlobe3D /> : null}
+        {mostra3d ? (
+          <HeroGlobe3D key={leve ? "leve" : "cheio"} leve={leve} />
+        ) : null}
 
         {/* O LIMBO POR DENTRO: os últimos 6% do raio escurecem até 35% de
             preto. Vem DEPOIS do canvas de propósito — é dos pontos que ele
@@ -2376,6 +2595,10 @@ export function HeroGlobe({
                 animated={animated}
                 pinRef={(el) => {
                   alfinetes.current[index] = el;
+                  /* A MESMA lista vai para a cena 3D: desde a etapa 4 é ela
+                     quem escreve o `transform` destes nós, com a matriz da
+                     câmera e no mesmo quadro. */
+                  cena().pinos = alfinetes.current;
                 }}
               />
             );

@@ -88,6 +88,53 @@ export const PAIS_NUCLEO = "#ffffe3";
  */
 export const ARCO_PASSOS = 25;
 
+/* --------------------------------------------------------------------------
+   AS RÉGUAS DO PINO — e por que elas moram no contrato
+
+   Elas vinham do `HeroGlobe`, e subiram para cá na etapa 4, quando os pinos
+   passaram a ser posicionados pela cena 3D. Agora há DOIS caminhos que os
+   escrevem — o 3D, quando a cena está de pé; o canvas 2D, no fallback sem
+   WebGL, no movimento reduzido e nos 600 ms do crossfade — e os dois têm de
+   dar o MESMO número, ou a troca entre eles seria um quadro de salto.
+   -------------------------------------------------------------------------- */
+
+/**
+ * A VIGIA, para os pinos: a faixa de raio em que o rótulo desvanece, em fração
+ * de R. É a MESMA faixa do limbo que o canvas já tinha — a rampa de `z₂` de
+ * 0,05 a 0,30, escrita em raio em vez de cosseno (`rad = √(1 − z₂²)`) —, e por
+ * isso em repouso nada muda. O que ela acrescenta é valer no espaço JÁ
+ * ESCALADO: com o zoom de pouso, o pino longe da cidade da vez sai do disco, e
+ * um rótulo pendurado no vazio ao lado do planeta é pior que nenhum.
+ */
+export const VIGIA_DENTRO = 0.954;
+export const VIGIA_FORA = 0.999;
+
+/**
+ * A RÉGUA DA COLUNA DE TEXTO: um rótulo só existe perto do meio.
+ *
+ * É a guarda GEOMÉTRICA — a única que não depende de tempo — e vale para os
+ * SETE rótulos. A razão é permanente: a câmera está sempre aproximada, e no
+ * zoom de detalhe cada 1% do raio vale mais pixel. Um rótulo a meio caminho da
+ * borda abre 240px de caixa de texto e vai parar dentro da coluna do `<h1>`.
+ *
+ * Os dois números são medidos, e quem os fixa é o rótulo MAIS LARGO dos sete:
+ * "Transferência CVU / CBU · $ 38.000", 239px, abrindo para a direita. Com o
+ * pino a 34% de R (caixa de 665, R 332), a borda direita dele cai em x 798
+ * contra os 841 do `<h1>` — 43px de folga. A 52% ela chegaria a 858, e é por
+ * isso que lá a opacidade já é zero.
+ */
+export const CHEGOU_DENTRO = 0.34;
+export const CHEGOU_FORA = 0.52;
+
+/** Quanto dura o pulso do pino no pouso, em ms. */
+export const PULSO_MS = 600;
+
+/**
+ * O ANEL DE ALVO no pino da cidade da vez, em px de tela. É o que o Maps põe no
+ * ponto escolhido; aqui ele marca o POUSO, e cresce com a escala.
+ */
+export const ZOOM_ANEL = 22;
+
 /**
  * A NUVEM DE TERRA FIRME, montada UMA vez pelo `HeroGlobe` a partir dos deltas
  * de `globeDots.ts` e lida pelos dois pintores.
@@ -175,6 +222,50 @@ export type Cena = {
   arco: Float32Array;
   /** Os sete códigos de moeda, na ordem da fila. */
   codigos: string[];
+  /**
+   * A VERSÃO LEVE, abaixo de 1024 (etapa 6): metade dos pontos, `dpr` 1,
+   * fresnel sem `pow`, arcos sem o fio creme por dentro e metade das faíscas.
+   * Mora no contrato porque quem decide é a largura (o `HeroGlobe`) e quem
+   * obedece é a cena — e porque o desenho do cometa, que é função livre, também
+   * precisa saber.
+   */
+  leve: boolean;
+
+  /* ------------------------------------------- os pinos (etapa 4)
+
+     Os PINOS e os RÓTULOS continuam sendo DOM — é o que mantém o texto
+     legível, selecionável, traduzível (PT/EN) e fora de uma textura. O que
+     mudou na etapa 4 é QUEM os posiciona: era o laço do 2D, com a sua própria
+     projeção; passou a ser a cena 3D, com a MATRIZ DA CÂMERA — a mesma que
+     desenha a esfera, no mesmo `requestAnimationFrame`. Deixou de haver duas
+     contas para o mesmo pixel, e com isso deixou de haver como elas
+     divergirem. */
+
+  /** Os nós dos alfinetes, na ordem de `codigos`. Publicados pelo `HeroGlobe`. */
+  pinos: (HTMLSpanElement | null)[];
+  /**
+   * Foco perseguido de cada pino: 1 na cidade da vez, 0 nas outras. Sobe manso
+   * (0,40 s) e desce rápido (0,12 s) — é o que faz a chegada ser um cruza-fade
+   * entre o rótulo que sai e o que entra, em vez de um corte.
+   */
+  focos: Float32Array;
+  /** 1 = os sete rótulos; 0 = só o da cidade da vez. */
+  rotulos: number;
+  /** "Quanto do detalhe está aplicado", de 0 a 1. Deriva da escala. */
+  revela: number;
+  /** O mergulho de entrada acabou? Antes disso nada pulsa. */
+  mergulhou: boolean;
+  /**
+   * A posição de REPOUSO de cada pino, em px da caixa — a que o servidor
+   * escreveu em `left`/`top`. O que se escreve no nó é o DESLOCAMENTO a partir
+   * dela, e em repouso ele é (0,0): nada salta quando a cena assume.
+   */
+  repousoX: Float32Array;
+  repousoY: Float32Array;
+  /** Saída: x, y (px da caixa) e z₂ de cada pino, como a cena 3D os projetou. */
+  telaPinos: Float32Array;
+  /** Último valor de destaque escrito no DOM, por pino. 2 = ainda não sei. */
+  destacado: Uint8Array;
 
   /* ------------------------------------------------------------- a ponte */
   nuvem: Nuvem | null;
@@ -199,6 +290,14 @@ export type Cena = {
   /** `gl.info.render` do último quadro: a prova do "UM draw call". */
   chamadas: number;
   pontos: number;
+  /**
+   * `gl.info.memory`: quantas geometrias e texturas a GPU está segurando.
+   * É a conta que o pedido da etapa 6 manda conferir no celular ("memória GPU
+   * modesta") — e a que denuncia um vazamento, porque geometria que o desmonte
+   * esquece de liberar aparece aqui como um número que só sobe.
+   */
+  geometrias: number;
+  texturas: number;
   /** `performance.now()` do primeiro quadro 3D desenhado. 0 = nenhum ainda. */
   nasceu: number;
   /**
@@ -217,7 +316,17 @@ export type Cena = {
    */
   espia3d: { camera: Camera; grupo: Object3D } | null;
   /** Os marcos do portão de montagem (item 3), em `performance.now()`. */
-  marcos: { load: number; idle: number; entrada: number; montou: number };
+  marcos: {
+    load: number;
+    idle: number;
+    /** O último `startTime` de LCP visto, e quando ele parou de mudar. */
+    lcp: number;
+    lcpPronto: number;
+    /** O primeiro gesto do visitante, no celular. 0 = não houve. */
+    gesto: number;
+    entrada: number;
+    montou: number;
+  };
 };
 
 const ESTADO: Cena = {
@@ -237,6 +346,16 @@ const ESTADO: Cena = {
   bola: new Float32Array([0, 0, 1]),
   arco: new Float32Array(ARCO_PASSOS * 3),
   codigos: [],
+  leve: false,
+  pinos: [],
+  focos: new Float32Array(0),
+  rotulos: 1,
+  revela: 0,
+  mergulhou: false,
+  repousoX: new Float32Array(0),
+  repousoY: new Float32Array(0),
+  telaPinos: new Float32Array(0),
+  destacado: new Uint8Array(0),
   nuvem: null,
   avanca: null,
   pronto: false,
@@ -246,9 +365,19 @@ const ESTADO: Cena = {
   pior: 0,
   chamadas: 0,
   pontos: 0,
+  geometrias: 0,
+  texturas: 0,
   nasceu: 0,
   espia3d: null,
-  marcos: { load: 0, idle: 0, entrada: 0, montou: 0 },
+  marcos: {
+    load: 0,
+    idle: 0,
+    lcp: 0,
+    lcpPronto: 0,
+    gesto: 0,
+    entrada: 0,
+    montou: 0,
+  },
 };
 
 if (typeof window !== "undefined") {

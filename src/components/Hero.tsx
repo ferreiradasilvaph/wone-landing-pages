@@ -144,7 +144,7 @@ export function Hero() {
   const naTela = useOnScreen(secao);
 
   /**
-   * O VOO DO GLOBO É O RELÓGIO, de `lg` para cima (pedido do dono, 17/10).
+   * O VOO DO GLOBO É O RELÓGIO (pedido do dono, 17/10).
    *
    * A perna de Londres a São Paulo leva 2,6 s e a de Bogotá a Quito 1,3 s: a
    * troca de cidade passou a ser o FIM DO POUSO do voo, e não um passo fixo de
@@ -152,31 +152,41 @@ export function Hero() {
    * componente segue sendo o dono de `ativo` para o DOM (status, chips, resumo
    * do leitor de tela), e por isso nada mais aqui precisou mudar.
    *
-   * Abaixo de 1024 — onde o globo é um quadro parado, sem pino e sem rótulo —
-   * quem manda continua sendo o relógio de 3 s daqui, e a troca é o fade de
-   * opacidade do `CountryTag` e da `StageStatus`: a "troca com fade simples"
-   * que o pedido pede para fora do voo.
-   * Com MOVIMENTO REDUZIDO não há relógio nenhum, e isso é anterior a este
-   * trabalho: o portão do hero congela o palco no Brasil (ver o efeito da
-   * preferência, acima). Trocar de cidade sozinho, mesmo em fade, é movimento
-   * automático — exatamente o que a preferência existe para evitar —, então
-   * ela continua valendo como está.
+   * O RELÓGIO DE 3 s DAQUI NÃO MORREU: ele é quem manda sempre que o voo não
+   * está de pé — sem WebGL, com movimento reduzido, e nos segundos antes de o
+   * portão da cena 3D abrir. Nesse caminho a troca é o fade de opacidade do
+   * `CountryTag` e da `StageStatus`, a "troca com fade simples" que o pedido
+   * pede para fora do voo.
    *
-   * A largura é lida em efeito, nunca no render: o HTML do servidor não sabe o
-   * tamanho da janela, e `false` nos dois lados é o que mantém o primeiro
-   * render idêntico ao do servidor.
+   * A LEITURA DE LARGURA SAIU DAQUI na etapa 6 do globo 3D. Ela existia para
+   * dizer "de 1024 para cima há voo", e deixou de ser verdade: o voo passou a
+   * existir no celular também, e passou a depender de coisas que só o globo
+   * sabe (WebGL, LCP, portão). Quem responde agora é ele, por `onVoo` — e uma
+   * largura lida em dois lugares para decidir a mesma coisa seria o começo de
+   * uma divergência.
    */
-  const [largo, setLargo] = useState(false);
 
-  useEffect(() => {
-    const lg = window.matchMedia("(min-width: 1024px)");
-    const sync = () => setLargo(lg.matches);
-    sync();
-    lg.addEventListener("change", sync);
-    return () => lg.removeEventListener("change", sync);
-  }, []);
-
-  const voando = largo && !reduced && !tabHidden && naTela;
+  /**
+   * QUEM É O DONO DO TEMPO, e desde a etapa 6 do globo 3D quem responde é o
+   * PRÓPRIO GLOBO.
+   *
+   * Era uma conta daqui — `largo && !reduced && !tabHidden && naTela` —, e ela
+   * dizia a verdade enquanto o voo só existia de 1024 para cima. Com a cena 3D
+   * montando também no celular, o voo passou a depender de coisas que só o
+   * globo sabe: se há WebGL, se o LCP já passou, se o portão abriu. Então ele
+   * avisa (`onVoo`), e este componente apenas obedece — o relógio de 3 s daqui
+   * cala enquanto o voo está de pé, e volta a mandar quando ele cai (sem
+   * WebGL, com movimento reduzido, ou antes de o portão abrir).
+   *
+   * UM DONO DE CADA VEZ. É a mesma regra de 17/10 que fez a bolinha e a câmera
+   * saírem do mesmo modelo: dois relógios sobre a mesma fila foi o defeito que
+   * produziu os "cortes" que o dono viu.
+   *
+   * Nasce `false` — e tem de nascer: o servidor não sabe a largura nem se há
+   * WebGL, e o primeiro render tem de ser igual nos dois lados. Até o globo
+   * avisar, o relógio de 3 s manda, exatamente como sempre mandou.
+   */
+  const [voando, setVoando] = useState(false);
 
   /**
    * O relógio: um `setTimeout` encadeado que avança o país e se reagenda.
@@ -466,6 +476,7 @@ export function Hero() {
           animated={animado}
           running={andando}
           onCidade={voando ? avanca : undefined}
+          onVoo={setVoando}
         />
 
         {/* A LINHA DE CONTROLE do palco: a etiqueta de ficção, o status do país

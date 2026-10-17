@@ -12,6 +12,7 @@ import {
   type OrthographicCamera,
   type Points,
   type ShaderMaterial,
+  Vector3,
 } from "three";
 /* As linhas de espessura em PIXEL vêm dos exemplos do próprio three — nada
    novo no `package.json`, e exatamente os mesmos três módulos que as placas de
@@ -29,13 +30,19 @@ import {
   ARCO_PASSOS,
   cena,
   type Cena,
+  CHEGOU_DENTRO,
+  CHEGOU_FORA,
   COSTA,
   PAIS_BORDA,
   PAIS_NUCLEO,
+  PULSO_MS,
   TERRA,
+  VIGIA_DENTRO,
+  VIGIA_FORA,
+  ZOOM_ANEL,
   type Nuvem,
 } from "./cena";
-import { EUROPEUS, rede, REDE_PASSOS, REDE_PERNAS } from "./globeMath";
+import { alvo, EUROPEUS, rede, REDE_PASSOS, REDE_PERNAS } from "./globeMath";
 
 /* --------------------------------------------------------------------------
    O PLANETA EM 3D — ETAPAS 1, 2 E 3
@@ -96,8 +103,14 @@ const RAIO_ESFERA = 0.9985;
 /** A duração do crossfade, igual à do `.globe-tres` em `hero.css`. */
 const FADE_MS = 600;
 
-/** Segmentos da esfera. 64×48 para o fresnel não facetar perto da borda. */
+/**
+ * Segmentos da esfera: 64×48 no desktop, para o fresnel não facetar perto da
+ * borda; 32×24 no celular (etapa 6), onde a borda tem metade dos pixels e a
+ * faceta de 11° some na própria suavização do fresnel. 3.072 triângulos contra
+ * 768.
+ */
 const ESFERA_SEG = [64, 48] as const;
+const ESFERA_SEG_LEVE = [32, 24] as const;
 
 /* --------------------------------------------------------------------------
    ETAPA 2 — A ATMOSFERA
@@ -179,7 +192,16 @@ const atmosferaFrag = /* glsl */ `
        mantém idêntica no pouso e no meio da perna mais longa, que foi o defeito
        da primeira versão (ela abria com o zoom e lavava o planeta). */
     float rs = length(vP.xy) * uZoom;
-    float f = pow(smoothstep(0.76, 1.0, rs), uExp) * uForca;
+    float b = smoothstep(0.76, 1.0, rs);
+    #ifdef LEVE
+      /* No celular o expoente é 2, que é uma multiplicação — pow é a única
+         função cara deste shader, e ele roda em cada fragmento do disco. A
+         curva muda de 1,6 para 2,0: a atmosfera fica um fio mais contida, o
+         que num disco de 340 px é exatamente o que se quer. */
+      float f = b * b * uForca;
+    #else
+      float f = pow(b, uExp) * uForca;
+    #endif
     /* SEM discard: o fragmento descartado não escreve PROFUNDIDADE, e é a
        profundidade desta esfera que esconde o hemisfério de trás. No corpo do
        disco ele escreve (0,0,0,0) — zero tinta, zero alfa — e a página
@@ -391,10 +413,31 @@ const pontosFrag = /* glsl */ `
    -------------------------------------------------------------------------- */
 
 /** Vértices do cometa: 1 cabeça + 63 de rastro + 32 partículas. */
+/**
+ * A LUZ NO CHÃO (etapa 4): um disco emissivo discreto na superfície, sob o
+ * pino que pousou.
+ *
+ * Ela é o VÉRTICE 0 deste mesmo `Points`, e não um objeto novo — o fragmento
+ * de disco macio e a mistura aditiva que o rastro já usa são exatamente o que
+ * um "disco emissivo" quer dizer. Zero `drawcall` a mais.
+ *
+ * 26 px de raio e 0,42 de alfa: o bastante para o olho entender que a cidade
+ * ACENDEU quando a bolinha para nela, e pouco o bastante para não virar um
+ * holofote — a 1,35× de escala isso é um halo de 52 px num disco de 634, uns
+ * 8% do diâmetro. Sobe em 450 ms com o pouso (mais lento que o pulso, que é o
+ * gesto rápido da chegada) e cai em 300 ms quando a câmera parte.
+ */
+const LUZ_RAIO = 26;
+const LUZ_ALFA = 0.42;
+const LUZ_SOBE_MS = 450;
+const LUZ_CAI_MS = 300;
+
+const COMETA_LUZ = 1;
 const COMETA_CABECA = 2;
 const COMETA_RASTRO = 63;
 const COMETA_PARTICULAS = 32;
-const COMETA_N = COMETA_CABECA + COMETA_RASTRO + COMETA_PARTICULAS;
+const COMETA_N =
+  COMETA_LUZ + COMETA_CABECA + COMETA_RASTRO + COMETA_PARTICULAS;
 
 /**
  * O comprimento do rastro, em fração da perna.
@@ -483,18 +526,24 @@ const FLASH_MS = 1000;
  * quadro: o raio base do ponto, o acréscimo de costa, a força do tingimento e
  * de qual dos sete países ele é.
  */
-function geometriaDaTerra(nuvem: Nuvem) {
-  const n = nuvem.bx.length;
+function geometriaDaTerra(nuvem: Nuvem, salto: number) {
+  /* O SALTO é a versão leve do celular (etapa 6): 2 toma um ponto sim, um
+     não, e a nuvem cai de 5.458 para 2.729. É o MESMO `salto` que o canvas 2D
+     já usava lá desde sempre, e é o jeito certo de ralear uma espiral de
+     Fibonacci — ela é uniforme por construção, então metade dela continua
+     uniforme. Peneirar por região deixaria buracos; sortear deixaria grumos. */
+  const n = Math.ceil(nuvem.bx.length / salto);
   const pos = new Float32Array(n * 3);
   const dado = new Float32Array(n * 4);
-  for (let i = 0; i < n; i += 1) {
-    pos[i * 3] = nuvem.bx[i];
-    pos[i * 3 + 1] = nuvem.by[i];
-    pos[i * 3 + 2] = nuvem.bz[i];
-    dado[i * 4] = nuvem.rb[i];
-    dado[i * 4 + 1] = nuvem.ac[i];
-    dado[i * 4 + 2] = nuvem.tingimento[i];
-    dado[i * 4 + 3] = nuvem.pais[i];
+  for (let k = 0; k < n; k += 1) {
+    const i = k * salto;
+    pos[k * 3] = nuvem.bx[i];
+    pos[k * 3 + 1] = nuvem.by[i];
+    pos[k * 3 + 2] = nuvem.bz[i];
+    dado[k * 4] = nuvem.rb[i];
+    dado[k * 4 + 1] = nuvem.ac[i];
+    dado[k * 4 + 2] = nuvem.tingimento[i];
+    dado[k * 4 + 3] = nuvem.pais[i];
   }
   const g = new BufferGeometry();
   g.setAttribute("position", new BufferAttribute(pos, 3));
@@ -532,10 +581,17 @@ function emSegmentos(pts: Float32Array, inicio: number, n: number) {
  * aqui desencaixaria os pinos do planeta em pleno voo, e seria invisível em
  * repouso — o tipo de defeito que só aparece na captura.
  */
-function Planeta({ aoDesenhar }: { aoDesenhar: () => void }) {
+function Planeta({
+  aoDesenhar,
+  leve,
+}: {
+  aoDesenhar: () => void;
+  leve: boolean;
+}) {
   const grupo = useRef<Group>(null);
   const terra = useRef<Points>(null);
   const cometaNo = useRef<Points>(null);
+  const marcasNo = useRef<Points>(null);
   const esferaNo = useRef<Mesh>(null);
   const redeNo = useRef<LineSegments2>(null);
   const nucleoNo = useRef<LineSegments2>(null);
@@ -563,7 +619,7 @@ function Planeta({ aoDesenhar }: { aoDesenhar: () => void }) {
     };
 
     /* ------------------------------------------------------- a terra firme */
-    const geoTerra = q.nuvem ? geometriaDaTerra(q.nuvem) : null;
+    const geoTerra = q.nuvem ? geometriaDaTerra(q.nuvem, leve ? 2 : 1) : null;
     const uTerra = {
       uDpr: { value: 1 },
       uGrao: { value: 1 },
@@ -579,6 +635,9 @@ function Planeta({ aoDesenhar }: { aoDesenhar: () => void }) {
     };
 
     /* ----------------------------------------------------------- a esfera */
+    /* `defines` é um objeto memorizado como os uniformes: trocá-lo por um
+       literal a cada render faria o three recompilar o shader por quadro. */
+    const defines = leve ? { LEVE: "" } : {};
     const uAtm = {
       uCor: { value: cores.atm },
       uForca: { value: ATM_FORCA },
@@ -653,6 +712,11 @@ function Planeta({ aoDesenhar }: { aoDesenhar: () => void }) {
     });
     const linhaNucleo = new LineSegments2(gNucleo, mNucleo);
     linhaNucleo.frustumCulled = false;
+    /* NO CELULAR O NÚCLEO NÃO EXISTE (etapa 6): são sete linhas de 22 segmentos
+       cada desenhadas uma segunda vez, e num disco de 340 px o fio creme de
+       0,85 px já não se separa do corpo laranja. Paga-se um `drawcall` e uma
+       passada de fragmentos por uma diferença que a tela não mostra. */
+    linhaNucleo.visible = !leve;
 
     const gFlash = new LineSegmentsGeometry();
     gFlash.setPositions(new Float32Array((n - 1) * 2 * 6));
@@ -694,11 +758,35 @@ function Planeta({ aoDesenhar }: { aoDesenhar: () => void }) {
       semente[i * 3 + 2] = ruido(i + 0.73) - 0.5;
     }
 
+    /* ------------------------------------------- os aneis (etapa 4) */
+    const posMarcas = new Float32Array(2 * 3);
+    const marcas = new Float32Array(2 * 3);
+    const gMarcas = new BufferGeometry();
+    gMarcas.setAttribute("position", new BufferAttribute(posMarcas, 3));
+    gMarcas.setAttribute("aMarca", new BufferAttribute(marcas, 3));
+    const uMarcas = {
+      uDpr: { value: 1 },
+      uFio: { value: ANEL_FIO },
+      uFolga: { value: ANEL_FOLGA },
+      /* O TETO do `gl_PointSize` desta GPU, perguntado ao driver no
+         `onCreated` do `Canvas`. O padrão só garante 1 px; na prática um
+         desktop dá 255 ou mais e um celular costuma dar 63 a 1024. O pulso
+         chega a 30 px de raio, ou seja 66 px de sprite a dpr 1 — colado no
+         piso de um Android antigo, e por isso o número é perguntado em vez de
+         suposto. */
+      uTeto: { value: 64 },
+      uCor: { value: cores.laranja },
+    };
+
     return {
       geoTerra,
       uTerra,
       uAtm,
+      defines,
       uCometa,
+      uMarcas,
+      gMarcas,
+      marcas,
       linhaRede,
       linhaNucleo,
       linhaFlash,
@@ -710,7 +798,7 @@ function Planeta({ aoDesenhar }: { aoDesenhar: () => void }) {
       pesoCometa,
       semente,
     };
-  }, []);
+  }, [leve]);
 
   /* A PONTE: o laço do 2D passa a ter como desenhar esta cena. Registrada em
      efeito porque é um fato de ciclo de vida — ao desmontar, o 2D volta a
@@ -738,6 +826,7 @@ function Planeta({ aoDesenhar }: { aoDesenhar: () => void }) {
       cena3d.linhaFlash.geometry.dispose();
       cena3d.linhaFlash.material.dispose();
       cena3d.gCometa.dispose();
+      cena3d.gMarcas.dispose();
     },
     [cena3d],
   );
@@ -758,7 +847,8 @@ function Planeta({ aoDesenhar }: { aoDesenhar: () => void }) {
     const rede3d = redeNo.current;
     const flash3d = flashNo.current;
     const cometa3d = cometaNo.current;
-    if (!g || !rede3d || !flash3d || !cometa3d) return;
+    const marcas3d = marcasNo.current;
+    if (!g || !rede3d || !flash3d || !cometa3d || !marcas3d) return;
 
     /* A CÂMERA DO QUADRO, lida e não calculada: os três números são os mesmos
        que o `desenha()` do 2D acabou de usar. */
@@ -808,6 +898,9 @@ function Planeta({ aoDesenhar }: { aoDesenhar: () => void }) {
       const mc = cometa3d.material as ShaderMaterial;
       if (mt) mt.uniforms.uDpr.value = estado.viewport.dpr;
       mc.uniforms.uDpr.value = estado.viewport.dpr;
+      const mm = marcas3d.material as ShaderMaterial;
+      mm.uniforms.uDpr.value = estado.viewport.dpr;
+      mm.uniforms.uTeto.value = TETO_SPRITE.valor;
     }
 
     /* O FLASH da chegada à Europa: 1 s de laranja cheio nas duas pernas da
@@ -821,9 +914,24 @@ function Planeta({ aoDesenhar }: { aoDesenhar: () => void }) {
     flash3d.visible = aceso > 0.004;
 
     desenhaCometa(q, cena3d, cometa3d);
+    desenhaMarcas(q, marcas3d, cena3d.marcas);
+
+    /* AS MATRIZES, ATUALIZADAS À MÃO — e só então os pinos.
+
+       O `useFrame` roda ANTES do `gl.render`, e é o `render` que normalmente
+       recompõe `matrixWorld` e `matrixWorldInverse`. Posicionar os pinos sem
+       isto seria usar a matriz do quadro ANTERIOR: o atraso de 16,7 ms que a
+       etapa 1 evitou ao trocar `invalidate()` por `advance()`, reintroduzido
+       pela porta dos fundos. Duas composições de 4×4 por quadro. */
+    g.updateMatrixWorld(true);
+    camera.updateMatrixWorld();
+    camera.matrixWorldInverse.copy(camera.matrixWorld).invert();
+    posicionaPinos(q, camera, g);
 
     q.chamadas = estado.gl.info.render.calls;
     q.pontos = estado.gl.info.render.points;
+    q.geometrias = estado.gl.info.memory.geometries;
+    q.texturas = estado.gl.info.memory.textures;
     /* As matrizes DE VERDADE, para a conferência pino×esfera (ver `cena.ts`). */
     if (!q.espia3d) q.espia3d = { camera, grupo: g };
 
@@ -853,11 +961,18 @@ function Planeta({ aoDesenhar }: { aoDesenhar: () => void }) {
           está no buffer. É exatamente o que esta esfera quer — ela é a primeira
           coisa do quadro, e o alfa que ela escreve é o da atmosfera. */}
       <mesh ref={esferaNo}>
-        <sphereGeometry args={[RAIO_ESFERA, ESFERA_SEG[0], ESFERA_SEG[1]]} />
+        <sphereGeometry
+          args={
+            leve
+              ? [RAIO_ESFERA, ESFERA_SEG_LEVE[0], ESFERA_SEG_LEVE[1]]
+              : [RAIO_ESFERA, ESFERA_SEG[0], ESFERA_SEG[1]]
+          }
+        />
         <shaderMaterial
           vertexShader={atmosferaVert}
           fragmentShader={atmosferaFrag}
           uniforms={cena3d.uAtm}
+          defines={cena3d.defines}
         />
       </mesh>
 
@@ -881,6 +996,21 @@ function Planeta({ aoDesenhar }: { aoDesenhar: () => void }) {
       <primitive ref={redeNo} object={cena3d.linhaRede} />
       <primitive ref={nucleoNo} object={cena3d.linhaNucleo} />
       <primitive ref={flashNo} object={cena3d.linhaFlash} />
+
+      {/* O ANEL DE ALVO E O PULSO (etapa 4): dois sprites, um `drawcall`.
+
+          Depois dos pontos e dos arcos, antes do cometa: eles são do CHÃO, e o
+          cometa passa por cima deles. `depthTest` ligado, como todo o resto —
+          um anel na cidade que está do outro lado da bola não aparece. */}
+      <points ref={marcasNo} geometry={cena3d.gMarcas} frustumCulled={false}>
+        <shaderMaterial
+          vertexShader={marcasVert}
+          fragmentShader={marcasFrag}
+          transparent
+          depthWrite={false}
+          uniforms={cena3d.uMarcas}
+        />
+      </points>
 
       {/* O COMETA (etapa 3): cabeça, rastro e partículas num `Points` só.
 
@@ -943,16 +1073,36 @@ function desenhaCometa(
   const peso = cena3d.pesoCometa;
   const geo = no.geometry;
 
-  /* Sem perna montada (antes do primeiro voo), ou com o rastro já apagado:
-     zero vértices desenhados, e o `drawRange` tira o objeto do quadro sem
-     tirá-lo da cena. */
-  const vivo = q.temRastro && (q.fase === "voo" || q.msFase < RASTRO_SOME_MS);
+  const noVoo = q.fase === "voo";
+
+  /* A LUZ NO CHÃO (etapa 4), no vértice 0, e ela é desenhada SEMPRE — o que
+     muda é o alfa. Ela não segue o cometa: fica na cidade em que se pousou,
+     acende enquanto a câmera está parada ali e apaga quando ela parte. */
+  const cidade = alvo(q.codigos[q.cidade] ?? "");
+  pos[0] = cidade[0];
+  pos[1] = cidade[1];
+  pos[2] = cidade[2];
+  peso[0] = LUZ_RAIO;
+  peso[1] =
+    LUZ_ALFA *
+    (noVoo
+      ? Math.max(0, 1 - q.msFase / LUZ_CAI_MS)
+      : Math.min(1, q.msFase / LUZ_SOBE_MS)) *
+    (q.mergulhou ? 1 : 0);
+  peso[2] = 0;
+
+  /* Sem perna montada (antes do primeiro voo), ou com o rastro já apagado: o
+     cometa inteiro sai com alfa zero e o fragmento o descarta. A luz no chão
+     continua, e é por isso que isto deixou de ser um `drawRange` curto. */
+  const vivo = q.temRastro && (noVoo || q.msFase < RASTRO_SOME_MS);
   if (!vivo) {
-    geo.setDrawRange(0, 0);
+    for (let i = COMETA_LUZ; i < COMETA_N; i += 1) peso[i * 3 + 1] = 0;
+    geo.setDrawRange(0, COMETA_N);
+    (geo.getAttribute("position") as BufferAttribute).needsUpdate = true;
+    (geo.getAttribute("aPeso") as BufferAttribute).needsUpdate = true;
     return;
   }
 
-  const noVoo = q.fase === "voo";
   const cabeca = noVoo ? q.u : 1;
   const vida = noVoo ? 1 : Math.max(0, 1 - q.msFase / RASTRO_SOME_MS);
 
@@ -979,16 +1129,18 @@ function desenhaCometa(
      sprite pequeno no creme da marca a alfa cheio. O resultado satura no meio
      e esfria para a borda, que é como uma luz de verdade se comporta — e é o
      que a ÚNICA bolinha chapada do 2D não tinha jeito de fazer. */
-  emU(cabeca, pos, 0);
-  peso[0] = COMETA_RAIO;
-  peso[1] = 0.5 * vida;
-  peso[2] = 0.15;
-  pos[3] = pos[0];
-  pos[4] = pos[1];
-  pos[5] = pos[2];
-  peso[3] = COMETA_RAIO * 0.42;
-  peso[4] = vida;
-  peso[5] = 1;
+  const halo = COMETA_LUZ * 3;
+  const nucleo = (COMETA_LUZ + 1) * 3;
+  emU(cabeca, pos, halo);
+  peso[halo] = COMETA_RAIO;
+  peso[halo + 1] = 0.5 * vida;
+  peso[halo + 2] = 0.15;
+  pos[nucleo] = pos[halo];
+  pos[nucleo + 1] = pos[halo + 1];
+  pos[nucleo + 2] = pos[halo + 2];
+  peso[nucleo] = COMETA_RAIO * 0.42;
+  peso[nucleo + 1] = vida;
+  peso[nucleo + 2] = 1;
 
   /* O RASTRO: 63 pontos sobre o terço de perna atrás da cabeça, com raio e
      alfa caindo até zero. A curva do alfa é quadrática porque a soma dos
@@ -996,7 +1148,7 @@ function desenhaCometa(
   for (let s = 0; s < COMETA_RASTRO; s += 1) {
     const k = (s + 1) / COMETA_RASTRO;
     const u = cabeca - k * COMETA_COMPRIMENTO;
-    const i = (COMETA_CABECA + s) * 3;
+    const i = (COMETA_LUZ + COMETA_CABECA + s) * 3;
     if (u < 0) {
       peso[i + 1] = 0;
       continue;
@@ -1012,8 +1164,17 @@ function desenhaCometa(
      arco por uma fase própria. Elas nascem perto da cabeça, caem para trás e
      somem — e o deslocamento é um empurrão em três eixos, o bastante para não
      virarem uma segunda linha em cima da primeira. */
+  /* METADE DAS FAÍSCAS NO CELULAR (etapa 6). As que sobram não somem de vez:
+     elas saem com alfa zero e o fragmento as descarta, o que custa um vértice
+     e nenhum fragmento — mais barato que mexer no `drawRange` e perder os
+     vértices do rastro, que vêm depois delas na ordem. */
+  const faiscas = q.leve ? COMETA_PARTICULAS >> 1 : COMETA_PARTICULAS;
   for (let s = 0; s < COMETA_PARTICULAS; s += 1) {
-    const i = (COMETA_CABECA + COMETA_RASTRO + s) * 3;
+    const i = (COMETA_LUZ + COMETA_CABECA + COMETA_RASTRO + s) * 3;
+    if (s >= faiscas) {
+      peso[i + 1] = 0;
+      continue;
+    }
     /* `fase` percorre 0→1 várias vezes ao longo da perna: cada faísca tem o
        seu próprio relógio, deslocado pela semente. */
     const fase = (cabeca * 6 + cena3d.semente[s * 3]) % 1;
@@ -1038,6 +1199,263 @@ function desenhaCometa(
   (geo.getAttribute("aPeso") as BufferAttribute).needsUpdate = true;
 }
 
+/* --------------------------------------------------------------------------
+   ETAPA 4 — OS PINOS E OS RÓTULOS, POSICIONADOS PELA CENA
+
+   Pedido do dono, 17/10: "os pinos e rótulos continuam DOM (legibilidade e
+   PT/EN exigem isso), mas passam a ser posicionados PELA CENA 3D: projete o
+   ponto da superfície pela câmera 3D e escreva o `transform` no mesmo
+   `requestAnimationFrame` em que entrega o quadro — um relógio, zero
+   descolamento."
+
+   É o que esta função faz, e a diferença com o que havia antes é sutil e
+   importante. O canvas 2D projetava os pinos com a SUA conta (as quatro linhas
+   de seno e cosseno do laço) e a esfera 3D era desenhada com a matriz da
+   câmera. As duas concordavam — medimos 0,13 px de desvio máximo em 1.400
+   amostras —, mas eram DUAS CONTAS. Agora é uma: o mesmo `matrixWorld` do grupo
+   e a mesma `projectionMatrix` que acabaram de desenhar os 5.458 pontos põem o
+   alfinete no lugar. Não há mais como divergirem, porque não há mais duas.
+
+   AS MATRIZES SÃO ATUALIZADAS À MÃO AQUI, e é por isso que o desvio é zero e
+   não "um quadro": o `useFrame` roda ANTES do `gl.render`, e é o `render` que
+   normalmente atualiza `matrixWorld` e `matrixWorldInverse`. Sem o
+   `updateMatrixWorld` abaixo, os pinos seriam posicionados pela matriz do
+   quadro ANTERIOR — exatamente o atraso de 16,7 ms que a etapa 1 evitou ao
+   trocar `invalidate()` por `advance()`. Duas composições de 4×4 por quadro é o
+   preço, e ele é ridículo perto do que compra.
+   -------------------------------------------------------------------------- */
+
+/** Vetor de trabalho da projeção: um só, reusado — zero alocação por quadro. */
+const PROJ = new Vector3();
+
+/**
+ * A PROFUNDIDADE DO PINO (etapa 4): o mesmo fator de volume dos pontos de
+ * terra, `0,62 + 0,38·z₂`.
+ *
+ * Vale 1 no meio da bola e 0,62 no limbo, e multiplica o TAMANHO do ponto (por
+ * `--pino-vol`, em CSS) e a OPACIDADE do alfinete. Antes da etapa 4 o pino era
+ * chapado: do mesmo tamanho no centro e na beira, num planeta cujos pontos já
+ * encolhiam. Era o único objeto da cena que não participava do volume.
+ */
+function volume(z2: number) {
+  return 0.62 + 0.38 * z2;
+}
+
+function posicionaPinos(q: Cena, camera: OrthographicCamera, grupo: Group) {
+  const pinos = q.pinos;
+  /* ABAIXO DE 1024 NÃO HÁ PINO: os `CountryTag` existem no DOM mas o nó que os
+     embrulha é `hidden lg:block`, e sete caixas de texto não cabem em 370 px
+     (quem nomeia o país da vez lá é a `StageStatus`). Escrever `transform` em
+     nós dentro de um `display: none` é trabalho que nunca vira pixel. */
+  if (q.leve || !pinos.length || !q.lado) return;
+  const lado = q.lado;
+  const R = lado / 2;
+  const MG = grupo.matrixWorld;
+  const atual = q.cidade;
+  const noPouso = q.fase === "pouso";
+
+  for (let j = 0; j < pinos.length; j += 1) {
+    const el = pinos[j];
+    if (!el) continue;
+    const base = alvo(q.codigos[j] ?? "");
+    PROJ.set(base[0], base[1], base[2]).applyMatrix4(MG);
+    /* `z₂` é a componente z em espaço de MUNDO, e numa cena em que a câmera
+       está em +Z sem rotação isso é exatamente o cosseno do ângulo ao centro
+       do disco — o mesmo `z₂` do canvas 2D. Lido ANTES de projetar, porque a
+       projeção o troca pela profundidade normalizada. */
+    const z2 = PROJ.z;
+    PROJ.project(camera);
+    const px = ((PROJ.x + 1) / 2) * lado;
+    const py = ((1 - PROJ.y) / 2) * lado;
+
+    /* O PINO SOME NO LIMBO, e some por opacidade, nunca por `hidden` binário:
+       com o giro livre todos cruzam o limbo o tempo todo, e cortar o nó de uma
+       vez faria o rótulo PISCAR na borda do disco, sete vezes por volta. */
+    const borda = (z2 - 0.05) / 0.25;
+    const visivel = z2 <= 0 ? 0 : borda >= 1 ? 1 : borda <= 0 ? 0 : borda;
+
+    /* A VIGIA VALE PARA O DOM TAMBÉM: o canvas corta o que sai do círculo, o
+       HTML não é cortado por nada, e no zoom os pinos longe do centro saem do
+       disco. E a régua da coluna de texto tira quem está longe do meio — é ela
+       que impede um rótulo de 240px de cruzar a borda esquerda do `<h1>`. */
+    const rad = Math.hypot(px - R, py - R) / R;
+    const naVigia =
+      rad >= VIGIA_FORA
+        ? 0
+        : rad <= VIGIA_DENTRO
+          ? 1
+          : (VIGIA_FORA - rad) / (VIGIA_FORA - VIGIA_DENTRO);
+    const chegou =
+      rad <= CHEGOU_DENTRO
+        ? 1
+        : rad >= CHEGOU_FORA
+          ? 0
+          : (CHEGOU_FORA - rad) / (CHEGOU_FORA - CHEGOU_DENTRO);
+
+    const foco = q.focos[j] ?? 0;
+    const vol = volume(z2);
+    const efetiva =
+      Math.min(visivel, naVigia) *
+      chegou *
+      (q.rotulos + (1 - q.rotulos) * foco) *
+      /* A queda de volume entra NA OPACIDADE junto com o tamanho: no limbo o
+         pino não é só menor, é mais fraco — é esse par que o olho lê como
+         curvatura, e é o mesmo par que os 5.458 pontos de terra usam. */
+      vol;
+
+    el.hidden = efetiva <= 0.004;
+    el.style.opacity = efetiva >= 0.999 ? "" : efetiva.toFixed(3);
+    el.style.transform = `translate3d(${(px - q.repousoX[j]).toFixed(1)}px, ${(py - q.repousoY[j]).toFixed(1)}px, 0)`;
+    /* `--pino-vol` é lido só pelo PONTO (ver `.hero-ponto`, em `hero.css`): o
+       rótulo não escala, porque um texto que encolhe perto do limbo é um texto
+       que se lê pior. Arredondado a três casas para não invalidar estilo por
+       um milésimo que ninguém vê. */
+    el.style.setProperty("--pino-vol", vol.toFixed(3));
+
+    /* O DESTAQUE do rótulo da cidade em que se pousou, escrito só na VIRADA:
+       tocar o `classList` 60 vezes por segundo paga invalidação de estilo de
+       graça. */
+    const destaque = noPouso && j === atual;
+    if (q.destacado[j] !== (destaque ? 1 : 0)) {
+      q.destacado[j] = destaque ? 1 : 0;
+      el.classList.toggle("hero-pino--foco", destaque);
+    }
+
+    /* A posição projetada volta para o estado compartilhado: é dela que saem o
+       anel de alvo e o pulso, logo abaixo, e é ela que a medição no navegador
+       compara com a esfera. */
+    q.telaPinos[j * 3] = px;
+    q.telaPinos[j * 3 + 1] = py;
+    q.telaPinos[j * 3 + 2] = z2;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   ETAPA 4 — O ANEL DE ALVO E O PULSO, E A LUZ NO CHÃO
+
+   O anel de alvo é o que o Maps põe no ponto que você escolheu: aqui ele marca
+   a cidade que a câmera está afirmando, e passa de pino em pino junto com o
+   foco. O pulso é o anel que nasce no ponto e se abre uma vez, em 600 ms, na
+   chegada. Os dois eram traçados no canvas 2D; com os pinos posicionados pela
+   cena, eles vieram junto — ficar para trás significaria o anel desenhado pela
+   projeção antiga em volta de um pino posto pela nova.
+
+   DOIS SPRITES, UM `drawcall`. Um anel não cabe no shader de disco do cometa
+   (ele é oco), então este `Points` tem fragmento próprio: a distância ao centro
+   do sprite contra um raio, com a espessura em px de TELA — um fio de 1,5 px é
+   um fio de 1,5 px perto ou longe, que é a escala de fios da página inteira.
+
+   POR QUE NÃO DOM: um anel em CSS cresce por `transform: scale`, e escalar um
+   nó com borda engrossa a BORDA junto — um fio de 2 px vira 12 px no fim do
+   pulso. Fazer a borda ficar fina pediria animar `width`/`height`, ou seja
+   layout 60 vezes por segundo. No sprite a espessura é uma conta no fragmento,
+   independente do raio.
+
+   A LUZ NO CHÃO ("um disco emissivo discreto na superfície sob o pino que
+   pousou") não precisou de objeto novo: ela é mais UM vértice do `Points` do
+   cometa, que já tem o fragmento de disco macio e a mistura aditiva. Emissiva
+   de verdade, portanto — soma luz ao que está atrás, como o rastro.
+   -------------------------------------------------------------------------- */
+
+/** Espessura do fio dos dois anéis, em px de CSS. */
+const ANEL_FIO = 1.4;
+/**
+ * O teto de `gl_PointSize` do driver, lido uma vez no `onCreated` do canvas.
+ * Num objeto porque ele é descoberto DEPOIS de os uniformes serem criados — e
+ * o `useFrame` o copia para o uniforme no primeiro quadro.
+ */
+const TETO_SPRITE = { valor: 64 };
+/** Folga entre o raio do anel e a aresta do sprite, em px de CSS. */
+const ANEL_FOLGA = 3;
+/** Raio e alfa máximos do pulso. */
+const PULSO_RAIO = 26;
+const PULSO_ALFA = 0.5;
+
+const marcasVert = /* glsl */ `
+  attribute vec3 aMarca;    /* raio em px de CSS, alfa, (reservado) */
+  uniform float uDpr;
+  uniform float uFio;
+  uniform float uFolga;
+  uniform float uTeto;      /* o maior gl_PointSize que esta GPU aceita */
+  varying float vAnel;
+  varying float vMeia;
+  varying float vAA;
+  varying float vAlfa;
+  void main() {
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    float sprite = min((aMarca.x + uFolga) * 2.0 * uDpr, uTeto);
+    gl_PointSize = sprite;
+    /* O raio do anel em unidades do sprite. Se a GPU tiver cortado o tamanho
+       (uTeto), isto passa de 0,5 e o anel cai FORA do sprite: ele some, em vez
+       de aparecer no raio errado. Some é o defeito honesto. */
+    vAnel = (aMarca.x * uDpr) / max(sprite, 1.0);
+    vMeia = (uFio * 0.5 * uDpr) / max(sprite, 1.0);
+    vAA = 1.0 / max(sprite, 1.0);
+    vAlfa = aMarca.y;
+  }
+`;
+
+const marcasFrag = /* glsl */ `
+  uniform vec3 uCor;
+  varying float vAnel;
+  varying float vMeia;
+  varying float vAA;
+  varying float vAlfa;
+  void main() {
+    float d = abs(length(gl_PointCoord - 0.5) - vAnel);
+    float m = 1.0 - smoothstep(vMeia - vAA, vMeia + vAA, d);
+    float a = vAlfa * m;
+    if (a <= 0.003) discard;
+    vec3 c = linearToOutputTexel(vec4(uCor, 1.0)).rgb;
+    gl_FragColor = vec4(c, a);
+  }
+`;
+
+/**
+ * Os dois anéis do quadro: o alvo e o pulso, na cidade da vez.
+ *
+ * Posição: o vetor de base da capital, na SUPERFÍCIE (raio 1) — os anéis são
+ * do chão, não do ar; quem voa é o cometa. Fora do pouso eles têm alfa zero e
+ * o fragmento os descarta.
+ */
+function desenhaMarcas(q: Cena, no: Points, marcas: Float32Array) {
+  const geo = no.geometry;
+  const base = alvo(q.codigos[q.cidade] ?? "");
+  const pos = geo.getAttribute("position") as BufferAttribute;
+  for (let v = 0; v < 2; v += 1) {
+    pos.array[v * 3] = base[0];
+    pos.array[v * 3 + 1] = base[1];
+    pos.array[v * 3 + 2] = base[2];
+  }
+
+  /* O ANEL DE ALVO: nasce com 4 px, CRESCE com a escala e assenta em 22 px de
+     tela. É por ele que se LÊ a chegada, e ele acompanha o foco — passa de
+     pino em pino num cruza-fade, sem corte. */
+  const foco = q.focos[q.cidade] ?? 0;
+  marcas[0] = 4 + (ZOOM_ANEL - 4) * q.revela;
+  marcas[1] =
+    0.3 * foco * Math.min(1, q.revela * 2.5) * (q.revela > 0.002 ? 1 : 0);
+
+  /* O PULSO: uma volta por chegada, com saída rápida e chegada mansa — a mesma
+     leitura do resto do palco. `mergulhou` é o que impede o pulso de disparar
+     durante o mergulho de entrada: ali a câmera está descendo, não chegando. */
+  const pulso =
+    q.mergulhou && q.fase === "pouso" && q.msFase < PULSO_MS
+      ? q.msFase / PULSO_MS
+      : -1;
+  if (pulso < 0) {
+    marcas[3] = 4;
+    marcas[4] = 0;
+  } else {
+    const e = 1 - (1 - pulso) * (1 - pulso) * (1 - pulso);
+    marcas[3] = 4 + PULSO_RAIO * e;
+    marcas[4] = PULSO_ALFA * (1 - pulso);
+  }
+
+  pos.needsUpdate = true;
+  (geo.getAttribute("aMarca") as BufferAttribute).needsUpdate = true;
+}
+
 /**
  * O CANVAS do planeta 3D.
  *
@@ -1047,7 +1465,7 @@ function desenhaCometa(
  * nenhuma, os dois desenham o mesmo quadro, e no fim o 2D para de pintar o que
  * o 3D passou a desenhar.
  */
-export default function HeroGlobe3D() {
+export default function HeroGlobe3D({ leve = false }: { leve?: boolean }) {
   const [vivo, setVivo] = useState(false);
 
   /* O 2D só larga a terra quando o 3D já está CHEIO. Durante os 600 ms os dois
@@ -1091,7 +1509,7 @@ export default function HeroGlobe3D() {
       frameloop="demand"
       /* O teto de 1,5 é o mesmo do canvas 2D: é onde 5.458 pontos param de
          ficar mais nítidos e só ficam mais caros. */
-      dpr={[1, 1.5]}
+      dpr={leve ? 1 : [1, 1.5]}
       /* `flat` = `NoToneMapping`. O padrão do r3f é ACES filmic, uma curva de
          cinema que lavaria o `#ff7700` da marca para um laranja pastel. A
          paleta desta página é escolhida em sRGB e tem de sair em sRGB. */
@@ -1109,8 +1527,20 @@ export default function HeroGlobe3D() {
         powerPreference: "high-performance",
         preserveDrawingBuffer: false,
       }}
+      onCreated={({ gl }) => {
+        /* O TETO DO SPRITE desta GPU, perguntado ao driver uma vez.
+           `ALIASED_POINT_SIZE_RANGE` devolve [mínimo, máximo] em px de
+           DISPOSITIVO: o padrão WebGL só garante 1, e um `gl_PointSize` acima
+           do teto é CORTADO sem aviso — o anel do pulso apareceria no raio
+           errado em vez de crescer. Com o número na mão, o shader prefere
+           sumir a mentir (ver `marcasVert`). */
+        const faixa = gl.getContext().getParameter(
+          WebGLRenderingContext.ALIASED_POINT_SIZE_RANGE,
+        ) as Float32Array | null;
+        if (faixa && faixa.length > 1) TETO_SPRITE.valor = faixa[1];
+      }}
     >
-      <Planeta aoDesenhar={() => setVivo(true)} />
+      <Planeta aoDesenhar={() => setVivo(true)} leve={leve} />
     </Canvas>
   );
 }

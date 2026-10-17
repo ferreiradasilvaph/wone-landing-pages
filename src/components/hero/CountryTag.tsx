@@ -73,7 +73,11 @@ export function CountryTag({
           1px. A transição é de cor, tamanho e anel — nada de escala, que
           brigaria com o `hero-ping`. */}
       <span
-        className={`absolute top-1/2 left-1/2 rounded-full bg-cream transition-[background-color,width,height,box-shadow] duration-300 ${
+        /* `hero-ponto` é o gancho da PROFUNDIDADE (etapa 4 do globo 3D): a
+           cena escreve `--pino-vol` no alfinete e o CSS encolhe SÓ este ponto,
+           nunca o rótulo — um texto que encolhe perto do limbo seria um texto
+           ilegível, e a legibilidade é a razão de os rótulos serem DOM. */
+        className={`hero-ponto absolute top-1/2 left-1/2 rounded-full bg-cream transition-[background-color,width,height,box-shadow] duration-300 ${
           active
             ? "-mt-1 -ml-1 h-2 w-2 ring-2 ring-brand"
             : "-mt-[3px] -ml-[3px] h-1.5 w-1.5 bg-cream/60 ring-1 ring-brand/60"
