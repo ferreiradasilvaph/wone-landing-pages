@@ -1142,3 +1142,14 @@ possível (aproveita e ja implica no dorso, essa observação)
 > vitrine em plastico preto. Tres caminhos oferecidos (A: cortar o manequim
 > fora de quadro, B: usar so a joia solta, C: foto nova em pessoa real).
 > O dono escolheu C.
+
+
+===============================================================================
+[131] 2026-10-17
+===============================================================================
+deixe a barra de integrações, a baixo do hero, mais consistente, sem bugs e sem
+quebrar. ao clicar na logo e dar um refrash na pagina, preciso que o efeito
+visual que está aplicado seja mais rapido e sutil ao mesmo tempo (me refiro aos
+efeitos visuais que pedi pra voce se referencias no site da dotfy.com.br)
+
+deixe o globo interativo ao passar o cursor por cima deve se mexer

@@ -926,16 +926,20 @@ code {
 }
 
 html.wone-entrando .ent-linha > span {
-  animation: ent-linha 0.6s var(--ent-ease) var(--ent-atraso, 0ms) both;
+  animation: ent-linha 0.38s var(--ent-ease) var(--ent-atraso, 0ms) both;
 }
 
-/* O resto da escada: sobe e aparece. A distância vem por `--ent-sobe` (12px no
-   texto, 16px no aparelho, que é maior e precisa de mais curso para a subida
-   se ler). */
+/* O resto da escada: sobe e aparece. A distância vem por `--ent-sobe` — 8px no
+   texto desde 16/10 (eram 12).
+
+   O pedido foi "mais rápido e sutil ao mesmo tempo", e os dois não brigam: o
+   que pesa na percepção de drama é o CURSO, não só a duração. A mesma entrada
+   com menos caminho lê como assentar em vez de entrar. Quem tem caixa maior
+   (o aparelho) continua pedindo mais curso pela própria variável. */
 @keyframes ent-sobe {
   from {
     opacity: 0;
-    transform: translateY(var(--ent-sobe, 12px));
+    transform: translateY(var(--ent-sobe, 8px));
   }
   to {
     opacity: 1;
@@ -944,7 +948,7 @@ html.wone-entrando .ent-linha > span {
 }
 
 html.wone-entrando .ent-sobe {
-  animation: ent-sobe 0.5s var(--ent-ease) var(--ent-atraso, 0ms) both;
+  animation: ent-sobe 0.34s var(--ent-ease) var(--ent-atraso, 0ms) both;
 }
 
 /* Só opacidade, para o que não deve se mover: os quatro pinos do globo entram
@@ -960,7 +964,7 @@ html.wone-entrando .ent-sobe {
 }
 
 html.wone-entrando .ent-surge {
-  animation: ent-surge 0.45s var(--ent-ease) var(--ent-atraso, 0ms) both;
+  animation: ent-surge 0.3s var(--ent-ease) var(--ent-atraso, 0ms) both;
 }
 
 /* --------------------------------------------------------------------------
@@ -984,15 +988,24 @@ html.wone-entrando .ent-surge {
    `transform`, numa camada própria: a lista é dupla e o deslocamento de -50%
    faz a emenda cair sempre no mesmo lugar. 36 s por volta: lento o bastante
    para ler cada nome, rápido o bastante para se perceber que anda. */
+/* O trilho anda UMA CÓPIA por volta, seja qual for o número de cópias: com N
+   delas, uma cópia é 100%/N do trilho.
+
+   Era "−50%" com duas cópias cravadas, e aí mudar o número de cópias mudaria a
+   VELOCIDADE junto — a 36s, quatro cópias a −50% andariam o dobro. Com a conta
+   amarrada a "--copias", o número de cópias resolve só o buraco do laço (a
+   razão está em `IntegrationBand.tsx`) e a velocidade fica onde estava:
+   1.627px em 36s, 45px por segundo. */
 @keyframes band-marquee {
   from {
     transform: translateX(0);
   }
   to {
-    transform: translateX(-50%);
+    transform: translateX(calc(-100% / var(--copias)));
   }
 }
 .band-marquee {
+  --copias: 4;
   animation: band-marquee 36s linear infinite;
   will-change: transform;
 }

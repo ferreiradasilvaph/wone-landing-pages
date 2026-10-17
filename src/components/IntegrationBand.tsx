@@ -6,6 +6,24 @@
    continuam no rodapé, onde cada integração tem a própria linha. */
 const PONTO = "h-1.5 w-1.5 shrink-0 rounded-full bg-brand";
 
+/**
+ * QUANTAS CÓPIAS DA LISTA O TRILHO CARREGA — e por que não são duas.
+ *
+ * Eram duas, com o keyframe deslocando −50% (uma cópia). Isso só fecha o laço
+ * enquanto UMA cópia cobrir a tela, e a lista mede 1.627px: a partir daí, no
+ * instante em que o laço reinicia, o fim do conteúdo já passou da borda e sobra
+ * faixa vazia. Medido em 16/10, com o trilho congelado no fim da volta: a 1920
+ * o conteúdo acabava em 1.627 e a tela ia até 1.910 — 282px de buraco; a 2560,
+ * 933px. Abaixo de 1.627 nunca aparecia, e é por isso que passou despercebido.
+ *
+ * Com N cópias e um deslocamento de −100%/N, o trilho anda exatamente UMA
+ * cópia por volta — então a velocidade não depende de N, e o que N compra é
+ * quanto de tela as cópias restantes cobrem: (N−1) × 1.627. Com quatro, 4.881px,
+ * que cobre qualquer monitor que exista hoje, incluindo os ultrawide de 3440 e
+ * 4096. Se a lista encolher um dia, a conta é essa — não um palpite novo.
+ */
+const COPIAS = [0, 1, 2, 3];
+
 const CELULA =
   "flex h-full shrink-0 items-center gap-2.5 border-r border-line px-6 whitespace-nowrap";
 
@@ -49,8 +67,8 @@ export function IntegrationBand({
     >
       <div className="relative flex h-full overflow-hidden">
         <div className="band-marquee flex h-full w-max hover:[animation-play-state:paused]">
-          {[0, 1].map((copia) => (
-            <div key={copia} aria-hidden={copia === 1} className="flex h-full shrink-0">
+          {COPIAS.map((copia) => (
+            <div key={copia} aria-hidden={copia > 0} className="flex h-full shrink-0">
               {items.map((item) => (
                 <span key={`${copia}-${item.name}`} className={CELULA}>
                   <span aria-hidden className={PONTO} />

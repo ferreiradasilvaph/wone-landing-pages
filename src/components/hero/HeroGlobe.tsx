@@ -1024,6 +1024,56 @@ export function HeroGlobe({
     let recYaw = angulo.current.yaw;
     let recPitch = angulo.current.pitch;
 
+    /* O CURSOR MOVE O PLANETA (pedido do dono, 16/10: "deixe o globo interativo,
+       ao passar o cursor por cima deve se mexer").
+
+       Ele NÃO SOMA ao balanço, ele o ASSUME — e isso é medida, não gosto. A
+       folga entre o extremo direito do que o globo desenha e a coluna de texto
+       é de 42px a 1400 (44 a 1440, 68 a 1920), COM o balanço de 9° já rodando.
+       Somar mais graus comeria essa folga e os rótulos encostariam no título.
+       Então, conforme a força do cursor sobe, a amplitude do balanço cai a 40%:
+       o pior caso continua dentro do envelope já medido — 9 × 0,4 + 5,5 = 9,1°
+       contra os 9° de antes.
+
+       E lê melhor assim: o planeta larga a respiração própria e passa a seguir
+       a mão, que é o que "interativo" quer dizer. Ao sair, a força volta a zero
+       e o balanço retoma — nos dois sentidos com a mesma suavização exponencial
+       do recuo, então nada salta.
+
+       A escuta fica na SEÇÃO e não no globo porque a camada do palco é
+       "pointer-events-none": o globo não recebe ponteiro, e nem deve — ele está
+       por baixo do texto e dos botões, e capturá-lo roubaria o clique deles.
+
+       Só `mouse`: em toque, um `pointermove` é um arrasto de rolagem, e girar o
+       planeta a cada deslize seria movimento que ninguém pediu. */
+    const CURSOR_YAW = 0.096;
+    const CURSOR_PITCH = 0.052;
+    let alvoYaw = 0;
+    let alvoPitch = 0;
+    let alvoForca = 0;
+    let curYaw = 0;
+    let curPitch = 0;
+    let forca = 0;
+
+    const secao = caixa.current?.closest("section") ?? null;
+    const moveu = (ev: PointerEvent) => {
+      if (ev.pointerType !== "mouse") return;
+      const box = caixa.current?.getBoundingClientRect();
+      if (!box) return;
+      /* Posição do cursor em relação ao CENTRO do disco, normalizada pelo raio
+         e presa em −1..1: fora do disco o efeito satura em vez de crescer. */
+      const nx = (ev.clientX - (box.left + box.width / 2)) / (box.width / 2);
+      const ny = (ev.clientY - (box.top + box.height / 2)) / (box.height / 2);
+      alvoYaw = Math.max(-1, Math.min(1, nx)) * CURSOR_YAW;
+      alvoPitch = Math.max(-1, Math.min(1, ny)) * CURSOR_PITCH;
+      alvoForca = 1;
+    };
+    const saiu = () => {
+      alvoForca = 0;
+    };
+    secao?.addEventListener("pointermove", moveu, { passive: true });
+    secao?.addEventListener("pointerleave", saiu);
+
     const quadro = (t: number) => {
       raf = requestAnimationFrame(quadro);
       if (ultimo >= 0 && t - ultimo < PASSO_MS) return;
@@ -1065,6 +1115,13 @@ export function HeroGlobe({
       const balancoYaw = 0.1571 * Math.sin((TAU * seg) / 26);
       const balancoPitch = 0.0349 * Math.sin((TAU * seg) / 43);
 
+      /* O cursor assume o balanco: mesma suavizacao do recuo (~1,2 s). */
+      const kc = 1 - Math.exp(-dt / 0.28);
+      curYaw += (alvoYaw - curYaw) * kc;
+      curPitch += (alvoPitch - curPitch) * kc;
+      forca += (alvoForca - forca) * kc;
+      const recuaBalanco = 1 - 0.6 * forca;
+
       /* Recuo para o país ativo, perseguido (assenta em ~1,2 s). */
       const meta = RECUO[lista[ativo.current]] ?? { yaw: 0, pitch: 0 };
       const k = 1 - Math.exp(-dt / 0.28);
@@ -1072,7 +1129,10 @@ export function HeroGlobe({
       recPitch += (meta.pitch - recPitch) * k;
 
       const marca = performance.now();
-      desenha(balancoYaw + recYaw, balancoPitch + recPitch);
+      desenha(
+        balancoYaw * recuaBalanco + curYaw * forca + recYaw,
+        balancoPitch * recuaBalanco + curPitch * forca + recPitch,
+      );
       medidor(performance.now() - marca);
     };
 
@@ -1080,6 +1140,8 @@ export function HeroGlobe({
     return () => {
       cancelAnimationFrame(raf);
       observador?.disconnect();
+      secao?.removeEventListener("pointermove", moveu);
+      secao?.removeEventListener("pointerleave", saiu);
     };
   }, [codes, running, modo, trocaParada, entrada]);
 
@@ -1195,7 +1257,7 @@ export function HeroGlobe({
             Na entrada eles aparecem DEPOIS da onda (700 ms), e só em
             opacidade: mover um pino seria mentir sobre o lugar dele no planeta,
             e mostrá-lo antes da onda seria pendurá-lo no vazio. */}
-        <div className="ent-surge absolute inset-0 hidden [--ent-atraso:700ms] lg:block">
+        <div className="ent-surge absolute inset-0 hidden [--ent-atraso:380ms] lg:block">
           {pins.map((pin, index) => {
             const p = REPOUSO[pin.code];
             if (!p) return null;

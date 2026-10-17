@@ -459,11 +459,15 @@
   transform-origin: left center;
 }
 
-/* 760ms é onde a escada do título termina (160 de atraso + 600 de animação):
-   o traço entra quando a última linha acaba de assentar, e leva 900ms para
-   atravessar a palavra. Só `transform`, no compositor. */
+/* 490ms é onde a escada do título termina (110 de atraso + 380 de animação): o
+   traço entra quando a última linha acaba de assentar. Em 16/10 os dois números
+   caíram — eram 760ms de espera e 900ms de travessia, e esse par sozinho fazia
+   a entrada durar 1,66s: o resto da página já estava parado havia meio segundo
+   enquanto um risco de 2px ainda atravessava a palavra.
+   Em 440ms a travessia continua legível e some como gesto, que é o que o dono
+   pediu ("mais rápido e sutil ao mesmo tempo"). Só `transform`, no compositor. */
 html.wone-entrando .hero-sublinha::after {
-  animation: hero-sublinha 0.9s var(--ent-ease) 760ms both;
+  animation: hero-sublinha 0.44s var(--ent-ease) 490ms both;
 }
 
 @keyframes hero-sublinha {

@@ -40,7 +40,7 @@ const PRIMEIRA_ESPERA = 3600;
  * sendo o único dono da coreografia. A terceira linha — a palavra laranja — tem
  * o atraso escrito no próprio nó, logo abaixo.
  */
-const ATRASO_LINHA = ["[--ent-atraso:0ms]", "[--ent-atraso:80ms]"];
+const ATRASO_LINHA = ["[--ent-atraso:0ms]", "[--ent-atraso:55ms]"];
 
 /**
  * Abertura da página: O PLANETA OCUPANDO A METADE ESQUERDA DA JANELA, e o texto
@@ -322,7 +322,7 @@ export function Hero() {
                   desenhado, da esquerda para a direita, em 900ms. O traço é
                   pseudo-elemento: não entra na caixa do texto e não toca no
                   `<h1>`, que é o LCP do celular. */}
-              <span className="ent-linha [--ent-atraso:160ms]">
+              <span className="ent-linha [--ent-atraso:110ms]">
                 <span className="hero-sublinha text-brand">
                   {hero.titleAccent}
                 </span>
@@ -332,7 +332,7 @@ export function Hero() {
             {/* O lead vem fatiado do dicionário: os trechos em objeto são os dois
                 momentos que ganham peso (o método de pagamento e a entrada no
                 canal). Nada mais muda de peso na primeira dobra. */}
-            <p className="t-lead ent-sobe mt-6 max-w-[31rem] text-pretty [--ent-atraso:300ms] min-[1400px]:max-w-[26rem]">
+            <p className="t-lead ent-sobe mt-6 max-w-[31rem] text-pretty [--ent-atraso:190ms] min-[1400px]:max-w-[26rem]">
               {hero.lead.map((trecho, index) =>
                 typeof trecho === "string" ? (
                   <Fragment key={index}>{trecho}</Fragment>
@@ -347,7 +347,7 @@ export function Hero() {
             {/* Botão + link na MESMA linha nos dois tamanhos de tela: dois botões
                 lado a lado não diriam qual é a ação principal, e o link empilhado
                 no celular empurrava o palco para fora da primeira tela. */}
-            <div className="ent-sobe mt-8 flex flex-wrap items-center gap-6 [--ent-atraso:400ms]">
+            <div className="ent-sobe mt-8 flex flex-wrap items-center gap-6 [--ent-atraso:260ms]">
               <CtaButton href="#fila-de-espera">{hero.ctaPrimary}</CtaButton>
               {/* O link tem 23px de altura de texto, e o portão pede alvo de
                   44: o pseudo-elemento de 11px em cima e embaixo leva o alvo a
@@ -381,7 +381,7 @@ export function Hero() {
             planeta foi de 452 para 612px. */}
         {/* Último degrau da escada: 500 + 500 = 1.000 ms, dentro do 1,2 s que o
             dono pediu de total. */}
-        <div className="hero-pe ent-sobe relative z-10 mt-auto hidden grid-cols-3 gap-x-8 pt-10 pb-10 [--ent-atraso:500ms] lg:grid">
+        <div className="hero-pe ent-sobe relative z-10 mt-auto hidden grid-cols-3 gap-x-8 pt-10 pb-10 [--ent-atraso:320ms] lg:grid">
           {hero.benefits.map((benefit) => (
             <p
               key={benefit.value}
@@ -433,7 +433,7 @@ export function Hero() {
                 dado fictício está — em cima do ticket, que é quem mostra valor.
                 Abaixo de 1420 quem ocupa esta linha é a `StageStatus`, que
                 nomeia o país da vez (lá os rótulos dos pinos não existem). */}
-            <p className="t-label ent-sobe [--ent-atraso:500ms] max-[1419px]:hidden">
+            <p className="t-label ent-sobe [--ent-atraso:320ms] max-[1419px]:hidden">
               {hero.stage.label} · {ui.simulation}
             </p>
             <StageStatus
