@@ -1305,3 +1305,56 @@ de destaque com a logo do wone
 vou precisar sair, continue trabalhando e em caso de duvidas, prossiga com
 suas melhores sugestoes. quaisquer observacoes mexemos mais pra frente. me
 entregue com louvor o que lhe fora pedido. bom trabalho. inte.
+
+
+===============================================================================
+[144] 2026-10-17
+===============================================================================
+a transicao no click deve ser suave
+
+
+===============================================================================
+[145] 2026-10-17
+===============================================================================
+no click dos paises
+
+
+===============================================================================
+[146] 2026-10-17
+===============================================================================
+tire o tracejado laranja no ULTIMO zoom, o que aparece a maquete da cidade,
+faca um predio mais bonito e uma cidade mais bonita
+
+
+===============================================================================
+[147] 2026-10-17
+===============================================================================
+o globo como um todo deve ser clickavel e ao clickar em quaisuqer lugar do
+globo, gira-lo conformo o sentido do click, fira-lo levemente, mas livre
+
+
+===============================================================================
+[148] 2026-10-17
+===============================================================================
+quando o pontinho estiver na cidade de sao paulo, faca a div "Venda pelo
+Telegram no automatico" inteira deve sumir bem devagar, aumentando o tamanho do
+globo para que a imagem da cidade, no ULTIMO zoom fique mais detalhada e rica
+em refinamento grafico. utilize as melhores bibliotecas possiveis
+
+
+===============================================================================
+[149] 2026-10-17
+===============================================================================
+quando a animacao na cidade de sao paulo acabar, volte para o hero normal
+
+
+===============================================================================
+[150] 2026-10-17
+===============================================================================
+com a div de volta
+
+
+===============================================================================
+[151] 2026-10-17
+===============================================================================
+preciso de mais criatividade no globo como um todo

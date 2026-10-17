@@ -1,17 +1,23 @@
 /**
- * Metadados da textura `public/images/sp-noite.webp` — o mapa noturno de São
- * Paulo do hero.
+ * Metadados das texturas de São Paulo à noite do hero.
  *
  * GERADO POR `scripts/gera-sp.mjs`. Não edite à mão: rode o script.
  *
+ * SÃO DUAS, e a segunda existe por causa do fim do voo. `SP_MAPA` cobre 22 km
+ * em 2048 px (10,74 m/px) e serve do globo até a aproximação da cidade;
+ * `SP_CENTRO` cobre 4 km nos mesmos 2048 px (1,95 m/px) e entra por crossfade
+ * no último trecho, onde a câmera chega a ~1,4 m/px e a textura grande já estaria
+ * ampliada cinco vezes. As duas compartilham projeção, paleta e cor por classe
+ * de via — uma avenida é a mesma avenida nas duas.
+ *
  * A geometria é REAL, do OpenStreetMap. Os dados são ODbL, e a licença exige que
- * a atribuição de `ATRIBUICAO` apareça em texto visível na página que mostra a
- * imagem — é por isso que ela é um campo exportado e não um comentário.
+ * a atribuição de `ATRIBUICAO` apareça em texto visível na página que mostra as
+ * imagens — é por isso que ela é um campo exportado e não um comentário.
  *
  * A TORRE É FICÇÃO. A Wone não tem torre na Avenida Paulista: `torre` é o ponto
- * escolhido para a ilustração 3D da próxima etapa, ao lado do MASP — a
- * 38 m do eixo da avenida nos dados do OSM. Tudo que nascer desse ponto tem
- * de aparecer na interface rotulado como SIMULAÇÃO.
+ * escolhido para a ilustração 3D — ao lado do MASP, a 38 m do eixo da
+ * avenida nos dados do OSM, e é também o centro de `SP_CENTRO`. Tudo que nascer
+ * desse ponto tem de aparecer na interface rotulado como SIMULAÇÃO.
  *
  * A projeção é equiretangular local — a mesma do script, repetida aqui em
  * `projetaSP` para a câmera não refazer a conta de cabeça.
@@ -29,18 +35,20 @@ export type PontoSP = {
   readonly py: number;
 };
 
+export type CaixaSP = {
+  readonly norte: number;
+  readonly sul: number;
+  readonly oeste: number;
+  readonly leste: number;
+};
+
 export type MapaSP = {
   readonly textura: string;
   readonly lado: number;
   readonly larguraKm: number;
   readonly metrosPorPixel: number;
   readonly centro: { readonly lat: number; readonly lon: number };
-  readonly bbox: {
-    readonly norte: number;
-    readonly sul: number;
-    readonly oeste: number;
-    readonly leste: number;
-  };
+  readonly bbox: CaixaSP;
   readonly atribuicao: string;
   readonly torre: {
     readonly nome: string;
@@ -144,9 +152,52 @@ export const SP_MAPA: MapaSP = {
   ],
 };
 
+/**
+ * A textura de DETALHE, centrada na torre. Mesma projeção, mesma paleta, mesma
+ * atribuição; muda só a escala. Entra por crossfade por cima de `SP_MAPA` no
+ * fim do voo — e é por isso que as bordas dela desvanecem até o ink-950: é a
+ * vinheta que faz a emenda sumir.
+ */
+export type CentroSP = {
+  readonly arquivo: string;
+  readonly lado: number;
+  readonly larguraKm: number;
+  readonly metrosPorPixel: number;
+  readonly centro: { readonly lat: number; readonly lon: number };
+  readonly bbox: CaixaSP;
+  readonly atribuicao: string;
+};
+
+export const SP_CENTRO: CentroSP = {
+  arquivo: "/images/sp-noite-centro.webp",
+  lado: 2048,
+  larguraKm: 4,
+  metrosPorPixel: 1.953125,
+  centro: { lat: -23.5614, lon: -46.6559 },
+  bbox: {
+    norte: -23.543313,
+    sul: -23.579487,
+    oeste: -46.6755,
+    leste: -46.6363,
+  },
+  atribuicao: ATRIBUICAO,
+};
+
 /** lat/lon → pixel da textura. Fora da caixa o resultado sai fora de [0, lado]. */
 export function projetaSP(lat: number, lon: number): { x: number; y: number } {
   const { bbox, lado } = SP_MAPA;
+  return {
+    x: ((lon - bbox.oeste) / (bbox.leste - bbox.oeste)) * lado,
+    y: ((bbox.norte - lat) / (bbox.norte - bbox.sul)) * lado,
+  };
+}
+
+/** O mesmo, na textura de detalhe. */
+export function projetaSPCentro(
+  lat: number,
+  lon: number,
+): { x: number; y: number } {
+  const { bbox, lado } = SP_CENTRO;
   return {
     x: ((lon - bbox.oeste) / (bbox.leste - bbox.oeste)) * lado,
     y: ((bbox.norte - lat) / (bbox.norte - bbox.sul)) * lado,
