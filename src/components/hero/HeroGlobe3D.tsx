@@ -31,6 +31,7 @@ import { LineSegmentsGeometry } from "three/examples/jsm/lines/LineSegmentsGeome
 import {
   ARCO_PASSOS,
   CAMADA_BRILHO,
+  GAMA_SRGB,
   cena,
   type Cena,
   CHEGOU_DENTRO,
@@ -45,7 +46,15 @@ import {
   ZOOM_ANEL,
   type Nuvem,
 } from "./cena";
-import { alvo, EUROPEUS, rede, REDE_PASSOS, REDE_PERNAS } from "./globeMath";
+import {
+  alvo,
+  EUROPEUS,
+  naPerna,
+  rede,
+  REDE_PASSOS,
+  REDE_PERNAS,
+  solXYZ,
+} from "./globeMath";
 import SaoPauloCena from "./SaoPauloCena";
 
 /* --------------------------------------------------------------------------
@@ -61,6 +70,14 @@ import SaoPauloCena from "./SaoPauloCena";
    cena que já está desenhada. Enquanto o chunk não chega, o planeta aparece sem
    brilho — que é exatamente o fallback certo.
    -------------------------------------------------------------------------- */
+/**
+ * As nuvens, adiadas: elas só existem no desktop, e no celular nem o módulo
+ * é pedido.
+ */
+const HeroGlobeNuvens = dynamic(() => import("./HeroGlobeNuvens"), {
+  ssr: false,
+});
+
 const HeroGlobePos = dynamic(() => import("./HeroGlobePos"), {
   ssr: false,
   loading: () => null,
@@ -123,6 +140,27 @@ const HeroGlobePos = dynamic(() => import("./HeroGlobePos"), {
 const RAIO_ESFERA = 0.9985;
 
 /* --------------------------------------------------------------------------
+   A POEIRA DE FUNDO FOI CORTADA, E ESTE É O LUGAR ONDE ELA ENTRARIA.
+
+   O pedido era um campo de 300 a 400 pontos minúsculos ATRÁS do planeta,
+   "concentrados na coroa entre o limbo e a borda do disco, nunca sobre a
+   terra". Essa coroa não existe, e a conta é de uma linha: a vigia tem 317 px
+   de raio e a esfera tem raio 1 em espaço de mundo, de modo que a silhueta
+   dela na tela mede raio × escala. Na escala do voo (1,35) isso dá 428 px —
+   a esfera TRANSBORDA a vigia em 111 px, e o limbo nem chega a entrar no
+   quadro. Mesmo na escala 1 do servidor a silhueta coincide exatamente com a
+   borda do disco: a coroa tem largura zero.
+
+   O anel escuro que se vê na borda não é coroa vazia, é a queda de `limbo`
+   dos próprios pontos de terra (smoothstep até z₂ = 0,18), e ela só começa em
+   r = 0,984 do raio — 5 px. Pôr estrelas ali seria pô-las sobre a terra, que
+   é justamente o que o pedido proibia.
+
+   Então não há poeira. O planeta já tem um céu: é o preto da página.
+   -------------------------------------------------------------------------- */
+
+
+/* --------------------------------------------------------------------------
    A GAMA DO ALFA — o preço do compositor, pago em um número
 
    Dentro do `EffectComposer` (etapa 5) a cena é desenhada num RENDER TARGET, e
@@ -145,7 +183,7 @@ const RAIO_ESFERA = 0.9985;
    da mistura; sem ele vale 1 e nada muda. Os dois caminhos passam a mostrar o
    MESMO planeta — o que importa porque o celular não tem compositor nenhum.
    -------------------------------------------------------------------------- */
-const GAMA_SRGB = 2.4;
+/* GAMA_SRGB mora em cena.ts: as nuvens, num chunk tardio, precisam do mesmo. */
 
 /** A duração do crossfade, igual à do `.globe-tres` em `hero.css`. */
 const FADE_MS = 600;
@@ -339,6 +377,14 @@ const pontosVert = /* glsl */ `
   uniform float uFriaForca;
   uniform float uVela;
   uniform float uGamaAlfa;
+  /* O SOL, em espaço LOCAL da esfera: ele gira em volta da geografia, não
+     da tela, e por isso o terminador atravessa os continentes em vez de
+     ficar parado num canto do disco. Uma volta em 150 s. */
+  uniform vec3 uSol;
+  uniform float uTempo;     /* segundos, independente do voo */
+  uniform float uNoite;     /* 0 desliga o terminador e as luzes */
+  uniform float uHover;     /* índice do país sob o ponteiro, ou -1 */
+  uniform float uHoverK;    /* a subida do realce, 0 a 1 em ~200 ms */
   varying vec4 vCor;
 
   void main() {
@@ -365,6 +411,18 @@ const pontosVert = /* glsl */ `
        "nenhum país", e 255 nunca empata com um índice de 0 a 6. */
     float aceso = 1.0 - step(0.5, abs(aPonto.w - uAtivo));
 
+    /* O TERMINADOR. A variável position é o ponto na esfera NÃO girada, e este
+       produto escalar é a latitude solar dele: 1 ao meio-dia, -1 à
+       meia-noite. A faixa de ±0,22 é um arco de ±12,7°, ou seja os ~25° de
+       transição pedidos — larga o bastante para a passagem do dia para a
+       noite ser um gradiente e não uma linha desenhada. */
+    float dia = dot(normalize(position), uSol);
+    float sol = mix(1.0, smoothstep(-0.22, 0.22, dia), uNoite);
+
+    /* 1 quando este ponto é o país sob o ponteiro. Mesmo truque do aceso:
+       os pontos de terra têm w = 255 e nunca empatam com -1..6. */
+    float sobHover = (1.0 - step(0.5, abs(aPonto.w - uHover))) * uHoverK;
+
     vec3 cor;
     float alfa;
     float extra = 1.0;
@@ -375,10 +433,16 @@ const pontosVert = /* glsl */ `
          informação da tela. Os três degraus subiram com o pedido de 17/10
          ("países marcados em creme mais luminoso"): 0,26/0,50/0,86 viraram
          0,32/0,64/0,98. */
-      float s = t * mix(1.0, 1.6, aceso) * (0.75 + 0.25 * z2);
+      /* O HOVER SOBE O PAÍS INTEIRO UM DEGRAU, e é o convite para clicar
+         (pedido do dono, 17/10). Ele multiplica o MESMO s que já separa
+         borda de núcleo, então o país não ganha cor nova: ele sobe na
+         própria escada — a borda vira núcleo, o núcleo satura. 1,75 é o que
+         leva o balde de baixo (0,30) acima do limiar do de cima (1,2) nos
+         pontos de tingimento alto, sem acender a franja do vizinho. */
+      float s = t * mix(1.0, 1.6, aceso) * mix(1.0, 1.75, sobHover) * (0.75 + 0.25 * z2);
       alfa = s >= 1.2 ? 0.90 : (s >= 0.6 ? 0.60 : 0.30);
       cor = s >= 1.2 ? uPaisNucleo : uPaisBorda;
-      extra = 1.18;
+      extra = 1.18 + 0.16 * sobHover;
     } else {
       float bruto = (0.06 + 0.32 * lit + 0.1 * realce + ac) * limbo * vol;
       /* A RAMPA, mais vívida (pedido do dono, 17/10). Era a tabela de baldes
@@ -412,6 +476,46 @@ const pontosVert = /* glsl */ `
       if (ac > 0.0 && bruto >= 0.3067) {
         cor = uCosta;
         alfa = 0.68;
+      }
+
+      /* O DIA UM DEGRAU MAIS QUENTE, A NOITE UM DEGRAU MAIS APAGADA.
+
+         Só no ramo da TERRA: os sete países são informação, e um país que
+         some porque o sol passou seria o planeta escondendo o que a página
+         está afirmando. O alfa é quem carrega quase tudo (0,58 contra
+         1,06), porque é ele que o olho lê como presença; a cor anda pouco,
+         12% na direção do laranja cheio, para o lado do sol não ficar só
+         mais forte e sim mais QUENTE. */
+      alfa *= mix(0.58, 1.06, sol);
+      cor = mix(cor, uLaranja, sol * 0.12);
+
+      /* AS LUZES DE CIDADE, no lado da noite.
+
+         7% dos pontos de terra, sorteados por um hash da própria posição
+         — ou seja determinístico e sem um atributo a mais no buffer: o
+         mesmo ponto é luz em toda aba e em todo deploy. Elas são creme (a
+         cor da página), um pouco maiores, e cintilam com um seno de
+         período 3 a 6 s e fase própria, o que é o bastante para o olho ler
+         VIDA sem ler pisca-pisca.
+
+         É ILUMINAÇÃO, NÃO DADO: nenhuma cidade nova é afirmada aqui. As
+         sete que a página afirma são os pinos, e continuam sendo os únicos
+         com nome.
+
+         O piso de 0,40 é multiplicado por limbo e por vol de propósito: sem
+         isso uma luz no limbo ressuscitaria um ponto que a curvatura já
+         tinha apagado, e o planeta ganharia uma borda granulada. */
+      float dado = fract(
+        sin(dot(position.xy, vec2(12.9898, 78.233)) + position.z * 41.137) *
+          43758.5453
+      );
+      float ehLuz = step(dado, 0.07) * (1.0 - sol) * uNoite;
+      if (ehLuz > 0.001) {
+        float per = 3.0 + 3.0 * fract(dado * 17.0);
+        float cintila = 0.86 + 0.14 * sin(uTempo * 6.2831853 / per + dado * 6.2831853);
+        cor = mix(cor, uPaisNucleo, 0.8 * ehLuz);
+        alfa = mix(alfa, max(alfa, 0.40 * limbo * vol) * cintila, ehLuz);
+        extra *= 1.0 + 0.3 * ehLuz;
       }
     }
 
@@ -488,8 +592,33 @@ const COMETA_LUZ = 1;
 const COMETA_CABECA = 2;
 const COMETA_RASTRO = 63;
 const COMETA_PARTICULAS = 32;
+/**
+ * AS MICROFAÍSCAS DA REDE (pedido do dono, 17/10: mais criatividade).
+ *
+ * Uma ou duas por vez percorrendo as pernas DECORATIVAS do anel, a 30% do
+ * brilho do cometa, sem cauda. A história é a da própria página: a rede não
+ * para quando a bolinha para — ela está transacionando o tempo todo, e entre
+ * dois pousos continua havendo dinheiro andando nela.
+ *
+ * São os dois ÚLTIMOS vértices deste mesmo Points, e não um objeto novo:
+ * mistura aditiva, sprite macio e cor da cabeça são exatamente o que uma
+ * faísca quer dizer. Zero draw call a mais.
+ */
+const COMETA_FAISCAS = 2;
 const COMETA_N =
+  COMETA_LUZ +
+  COMETA_CABECA +
+  COMETA_RASTRO +
+  COMETA_PARTICULAS +
+  COMETA_FAISCAS;
+/** Onde as faíscas começam dentro do buffer. */
+const FAISCA_BASE =
   COMETA_LUZ + COMETA_CABECA + COMETA_RASTRO + COMETA_PARTICULAS;
+/** Fração da perna por segundo: a perna inteira em ~2,4 s. */
+const FAISCA_VEL = 0.42;
+/** Raio em px de CSS e alfa de pico — 30% do da cabeça do cometa. */
+const FAISCA_RAIO = 3.4;
+const FAISCA_ALFA = 0.3;
 
 /**
  * O comprimento do rastro, em fração da perna.
@@ -719,6 +848,11 @@ function Planeta({
       uFriaForca: { value: FRIA_FORCA },
       uVela: { value: 1 },
       uGamaAlfa: { value: 1 },
+      uSol: { value: new Vector3(1, 0.31, 0).normalize() },
+      uTempo: { value: 0 },
+      uNoite: { value: 1 },
+      uHover: { value: -1 },
+      uHoverK: { value: 0 },
     };
 
     /* ----------------------------------------------------------- a esfera */
@@ -745,7 +879,7 @@ function Planeta({
       const forca = REDE_PERNAS[p].some((c) => EUROPEUS.has(c)) ? 1 : REDE_FRACA;
       posRede.set(emSegmentos(pts, p * n, n), k * 6);
       for (let s = 0; s < n - 1; s += 1) {
-        for (let v = 0; v < 2; v += 1) {
+        for (let v = 0; v < 3; v += 1) {
           const i = (k + s) * 6 + v * 3;
           corRede[i] = cores.laranja.r * forca;
           corRede[i + 1] = cores.laranja.g * forca;
@@ -850,8 +984,8 @@ function Planeta({
     }
 
     /* ------------------------------------------- os aneis (etapa 4) */
-    const posMarcas = new Float32Array(2 * 3);
-    const marcas = new Float32Array(2 * 3);
+    const posMarcas = new Float32Array(3 * 3);
+    const marcas = new Float32Array(3 * 3);
     const gMarcas = new BufferGeometry();
     gMarcas.setAttribute("position", new BufferAttribute(posMarcas, 3));
     gMarcas.setAttribute("aMarca", new BufferAttribute(marcas, 3));
@@ -938,6 +1072,12 @@ function Planeta({
      `cineAlvo` o centro de destino em coordenadas dessa caixa. Os três são
      medidos UMA vez, na entrada: medir por quadro leria o layout no meio do
      quadro e pagaria um reflow síncrono sessenta vezes por segundo. */
+  /** O realce do país sob o ponteiro, perseguido em ~200 ms. */
+  const hoverK = useRef(0);
+  /** O sol, reusado: um `Vector3` novo por quadro é lixo por quadro. */
+  const solDir = useRef(new Vector3(1, 0.31, 0).normalize());
+  const solCru = useRef<[number, number, number]>([1, 0, 0]);
+
   /** O último aviso de cidade dado ao compositor, para não repetir. */
   const naCidade = useRef(false);
 
@@ -949,7 +1089,7 @@ function Planeta({
      dois são objetos que este laço MUTA, e mutar o retorno de um hook é o que o
      compilador do React proíbe — com razão, porque ele guarda esse retorno
      entre renders. Pelo argumento, o objeto é o do quadro. */
-  useFrame((estado) => {
+  useFrame((estado, dtQuadro) => {
     const camera = estado.camera as OrthographicCamera;
     const q = cena();
     const g = grupo.current;
@@ -1292,6 +1432,44 @@ function Planeta({
     (flash3d.material as LineMaterial).opacity = 0.7 * aceso;
     flash3d.visible = aceso > 0.004;
 
+    /* ------------------------------------------ O PLANETA ESTÁ VIVO
+
+       O SOL, O RELÓGIO E O REALCE DO PAÍS. Três uniformes escritos por
+       quadro no material da terra, e nenhum objeto novo: o terminador, as
+       luzes de cidade e o hover moram todos no shader que já desenha os
+       5.458 pontos.
+
+       O sol dá UMA VOLTA EM 150 s, e a volta é em volta do eixo Y da
+       esfera NÃO girada — ou seja da geografia, não da tela. É por isso
+       que o terminador atravessa os continentes mesmo com o voo parado num
+       pouso, e é por isso que ele não depende do voo para existir. A
+       inclinação fixa de 0,31 em Y tira o terminador de cima dos polos: um
+       terminador exatamente meridiano lê como uma fatia cortada, não como
+       um planeta. */
+    const mTerra = terra.current?.material as ShaderMaterial | undefined;
+    if (mTerra) {
+      solXYZ(q.tempo, solCru.current);
+      const d = solDir.current;
+      d.set(solCru.current[0], solCru.current[1], solCru.current[2]);
+      mTerra.uniforms.uSol.value = d;
+      mTerra.uniforms.uTempo.value = q.tempo;
+
+      /* As nuvens leem O MESMO sol — e tinham de ler: duas direções de luz
+         num planeta só é a definição de um quadro que não fecha. A deriva
+         delas é em UV, no sentido contrário, e a 0,2°/s contra os 2,4°/s do
+         sol: elas andam, mas o terminador passa por cima delas. */
+
+      /* O HOVER SOBE E DESCE EM ~200 ms. Perseguição exponencial, a mesma
+         do cursor: o índice muda num quadro, o realce leva um quinto de
+         segundo — e é essa diferença que faz o país parecer responder em
+         vez de piscar. */
+      const alvoHover = q.hover >= 0 ? 1 : 0;
+      const kh = 1 - Math.exp(-Math.min(0.1, dtQuadro) / 0.2);
+      hoverK.current += (alvoHover - hoverK.current) * kh;
+      if (q.hover >= 0) mTerra.uniforms.uHover.value = q.hover;
+      mTerra.uniforms.uHoverK.value = hoverK.current;
+    }
+
     desenhaCometa(q, cena3d, cometa3d);
     desenhaMarcas(q, marcas3d, cena3d.marcas);
 
@@ -1404,6 +1582,17 @@ function Planeta({
         />
       </mesh>
 
+      {/* AS NUVENS, num chunk SÓ DELAS (ver `HeroGlobeNuvens`).
+
+          Elas são desktop puro: o gerador de ruído, os dois shaders e a
+          esfera somam ~1,6 kB gzip que o celular baixaria para nunca montar.
+          Num import tardio, o celular não os pede — e o que sobra no chunk
+          compartilhado é só o que ele de fato usa, que é o terminador dentro
+          do shader dos pontos de terra.
+
+          `composto` entra como prop porque a gama do alfa muda quando o
+          compositor está de pé (ver GAMA_SRGB), e quem sabe disso é o pai. */}
+      {!leve ? <HeroGlobeNuvens composto={composto} /> : null}
       {/* A TERRA FIRME: 5.458 vértices, um `drawcall`.
 
           `depthWrite: false` e `depthTest: true`: os pontos são TESTADOS contra
@@ -1513,6 +1702,87 @@ function montaFlash(
  * remontados pelo 2D uma vez por perna): aqui só se interpola entre dois
  * vértices dele. Nenhum `slerp` por quadro, nenhuma alocação.
  */
+/**
+ * O ESTADO DAS DUAS FAÍSCAS.
+ *
+ * No módulo, como o SOBRE dos pinos: é estado de DESENHO, não de cena. E usa
+ * Math.random, ao contrário da cidade de São Paulo, de propósito — lá a
+ * reprodutibilidade era o requisito (as janelas não podem piscar a cada
+ * remontagem), aqui o requisito é o oposto: dois visitantes não precisam ver
+ * a mesma faísca, e PRECISAM não ver um padrão.
+ */
+const FAISCAS = [
+  { perna: -1, ultima: -1, t: 0, espera: 1.4 },
+  { perna: -1, ultima: -1, t: 0, espera: 4.2 },
+];
+const FAISCA_RELOGIO = { ultimo: -1 };
+const FAISCA_PT: [number, number, number] = [0, 0, 0];
+
+/**
+ * As faíscas correm pelo relógio da CENA, não pelo do voo: elas existem
+ * durante o pouso, durante o voo e durante a espera, que é a coisa toda. O
+ * dt sai da diferença de cena.tempo e tem o mesmo teto de 100 ms do laço —
+ * voltar de uma aba oculta não pode teletransportar a faísca.
+ */
+function desenhaFaiscas(q: Cena, pos: Float32Array, peso: Float32Array) {
+  /* NÃO NO CELULAR. Elas não custam draw call (são dois vértices de um Points
+     que já é desenhado), mas o pedido do dono é explícito: abaixo de 1024 o
+     planeta recebe só o terminador e as luzes de cidade, que moram dentro do
+     shader que ele já roda. Dois pontos a mais num quadro de 390 px de largura
+     seriam decoração sem lugar para ser vista. */
+  if (q.leve) {
+    peso[FAISCA_BASE * 3 + 1] = 0;
+    peso[(FAISCA_BASE + 1) * 3 + 1] = 0;
+    return;
+  }
+  const dt =
+    FAISCA_RELOGIO.ultimo < 0
+      ? 0
+      : Math.max(0, Math.min(0.1, q.tempo - FAISCA_RELOGIO.ultimo));
+  FAISCA_RELOGIO.ultimo = q.tempo;
+
+  for (let i = 0; i < COMETA_FAISCAS; i += 1) {
+    const f = FAISCAS[i];
+    const o = (FAISCA_BASE + i) * 3;
+
+    if (f.perna < 0) {
+      f.espera -= dt;
+      if (f.espera > 0) {
+        peso[o + 1] = 0;
+        continue;
+      }
+      /* NUNCA A MESMA PERNA DUAS VEZES SEGUIDAS: com sete pernas e sorteio
+         livre, uma repetição em cada sete lê como a faísca ter ficado presa
+         — e o que se quer afirmar é o contrário, que a rede inteira está
+         viva. O desvio para a seguinte custa uma soma. */
+      let nova = Math.floor(Math.random() * REDE_PERNAS.length);
+      if (nova === f.ultima) nova = (nova + 1) % REDE_PERNAS.length;
+      f.perna = nova;
+      f.ultima = nova;
+      f.t = 0;
+    }
+
+    f.t += dt * FAISCA_VEL;
+    if (f.t >= 1) {
+      f.perna = -1;
+      f.espera = 2 + Math.random() * 4;
+      peso[o + 1] = 0;
+      continue;
+    }
+
+    naPerna(f.perna, f.t, FAISCA_PT);
+    pos[o] = FAISCA_PT[0];
+    pos[o + 1] = FAISCA_PT[1];
+    pos[o + 2] = FAISCA_PT[2];
+    peso[o] = FAISCA_RAIO;
+    /* O seno apaga a faísca nas duas pontas: ela nasce num pino e morre no
+       outro sem aparecer nem sumir de uma vez, que é o que a faria ler como
+       um defeito de desenho em vez de uma passagem. */
+    peso[o + 1] = FAISCA_ALFA * Math.sin(Math.PI * f.t);
+    peso[o + 2] = 1;
+  }
+}
+
 function desenhaCometa(
   q: Cena,
   cena3d: {
@@ -1528,6 +1798,10 @@ function desenhaCometa(
   const geo = no.geometry;
 
   const noVoo = q.fase === "voo";
+
+  /* AS FAÍSCAS PRIMEIRO, e fora de qualquer condição do cometa: elas não
+     dependem de haver perna montada nem de o rastro estar vivo. */
+  desenhaFaiscas(q, pos, peso);
 
   /* A LUZ NO CHÃO (etapa 4), no vértice 0, e ela é desenhada SEMPRE — o que
      muda é o alfa. Ela não segue o cometa: fica na cidade em que se pousou,
@@ -1550,7 +1824,7 @@ function desenhaCometa(
      continua, e é por isso que isto deixou de ser um `drawRange` curto. */
   const vivo = q.temRastro && (noVoo || q.msFase < RASTRO_SOME_MS);
   if (!vivo) {
-    for (let i = COMETA_LUZ; i < COMETA_N; i += 1) peso[i * 3 + 1] = 0;
+    for (let i = COMETA_LUZ; i < FAISCA_BASE; i += 1) peso[i * 3 + 1] = 0;
     geo.setDrawRange(0, COMETA_N);
     (geo.getAttribute("position") as BufferAttribute).needsUpdate = true;
     (geo.getAttribute("aPeso") as BufferAttribute).needsUpdate = true;
@@ -1797,12 +2071,20 @@ function posicionaPinos(q: Cena, camera: OrthographicCamera, grupo: Group) {
       continue;
     }
     el.hidden = false;
-    el.style.opacity = efetiva >= 0.999 ? "" : efetiva.toFixed(3);
+    /* O PAÍS SOB O PONTEIRO VAI A PLENO (pedido do dono, 17/10). O
+       alfinete sobe na hora — um alvo de 30 px que responde devagar lê
+       como atraso, não como suavidade —, e quem suaviza é o RÓTULO, pela
+       transição de 300 ms que ele já tem. */
+    const sobre = j === q.hover;
+    const op = sobre ? 1 : efetiva;
+    el.style.opacity = op >= 0.999 ? "" : op.toFixed(3);
     /* A opacidade do rótulo é RELATIVA à do alfinete (o CSS a multiplica pela
        herdada), então o que se escreve aqui é só o que FALTA. */
     el.style.setProperty(
       "--rotulo-op",
-      (efetiva > 0.001 ? Math.min(1, texto / efetiva) : 0).toFixed(3),
+      sobre
+        ? "1"
+        : (efetiva > 0.001 ? Math.min(1, texto / efetiva) : 0).toFixed(3),
     );
     el.style.transform = `translate3d(${(px - q.repousoX[j]).toFixed(1)}px, ${(py - q.repousoY[j]).toFixed(1)}px, 0)`;
     /* `--pino-vol` é lido só pelo PONTO (ver `.hero-ponto`, em `hero.css`): o
@@ -1827,6 +2109,18 @@ function posicionaPinos(q: Cena, camera: OrthographicCamera, grupo: Group) {
     q.telaPinos[j * 3 + 1] = py;
     q.telaPinos[j * 3 + 2] = z2;
   }
+
+  /* A CLASSE DO HOVER, só na virada (ver `SOBRE`). Ela é quem levanta o
+     rótulo 2 px — e o levantamento é CSS, com transição própria, porque
+     dois pixels escritos por quadro seriam dois pixels de invalidação de
+     estilo por quadro para não se mexer. */
+  if (SOBRE.indice !== q.hover) {
+    const antes = pinos[SOBRE.indice];
+    if (antes) antes.classList.remove("hero-pino--sobre");
+    const agora = pinos[q.hover];
+    if (agora) agora.classList.add("hero-pino--sobre");
+    SOBRE.indice = q.hover;
+  }
 }
 
 /** Smoothstep entre dois limites — a mesma curva da casa. */
@@ -1846,6 +2140,15 @@ function suavinha(x: number, a: number, b: number) {
  * aparecem com o mesmo peso e o planeta perde o foco que o voo está afirmando.
  */
 const PISO_PONTO = 0.38;
+
+/**
+ * O ÚLTIMO pino que estava sob o ponteiro.
+ *
+ * Mora no módulo, e não no contrato, porque é estado de DESENHO e não de
+ * cena: serve só para tocar o `classList` na virada em vez de sessenta
+ * vezes por segundo. `cena.hover` continua sendo a verdade.
+ */
+const SOBRE = { indice: -1 };
 
 /** Onde o rótulo da torre fica, em px de tela a partir do centro do disco. */
 const ROTULO_TORRE_X = 76;
@@ -1928,6 +2231,21 @@ const ANEL_FOLGA = 3;
 const PULSO_RAIO = 26;
 const PULSO_ALFA = 0.5;
 
+/**
+ * A ONDA DA CHEGADA (pedido do dono, 17/10): um segundo anel, largo e muito
+ * fraco, que se abre até o DOBRO do raio do pulso em 900 ms.
+ *
+ * É o terceiro vértice do mesmo Points dos anéis — zero draw call —, e o que
+ * o separa dos outros dois é a LARGURA: aMarca.z multiplica o fio, e só ele
+ * o usa. A leitura é a de um pouso: o pulso é o impacto, a onda é o que o
+ * chão faz depois.
+ *
+ * 0,12 de alfa e 900 ms: mais forte que isso e ela compete com o pulso, que
+ * é quem anuncia a chegada; mais rápida e ela vira um segundo pulso.
+ */
+const ONDA_MS = 900;
+const ONDA_ALFA = 0.12;
+
 const marcasVert = /* glsl */ `
   attribute vec3 aMarca;    /* raio em px de CSS, alfa, (reservado) */
   uniform float uDpr;
@@ -1948,7 +2266,9 @@ const marcasVert = /* glsl */ `
        (uTeto), isto passa de 0,5 e o anel cai FORA do sprite: ele some, em vez
        de aparecer no raio errado. Some é o defeito honesto. */
     vAnel = (aMarca.x * uDpr) / max(sprite, 1.0);
-    vMeia = (uFio * 0.5 * uDpr) / max(sprite, 1.0);
+    /* aMarca.z multiplica a LARGURA do fio, e só a onda o usa (os outros
+       dois vértices deixam o campo em zero, que é o buffer recém-nascido). */
+    vMeia = (uFio * (1.0 + 2.5 * aMarca.z) * 0.5 * uDpr) / max(sprite, 1.0);
     vAA = 1.0 / max(sprite, 1.0);
     vAlfa = pow(aMarca.y * uVela, uGamaAlfa);
   }
@@ -2010,6 +2330,26 @@ function desenhaMarcas(q: Cena, no: Points, marcas: Float32Array) {
     marcas[3] = 4 + PULSO_RAIO * e;
     marcas[4] = PULSO_ALFA * (1 - pulso);
   }
+
+  /* A ONDA. Só no desktop: o sprite dela chega a 118 px a dpr 1, e o teto de
+     gl_PointSize de um Android antigo pode ser 64 — lá ela sairia cortada ou
+     não sairia, e um anel que às vezes aparece é pior que nenhum. */
+  const onda =
+    !q.leve && q.mergulhou && q.fase === "pouso" && q.msFase < ONDA_MS
+      ? q.msFase / ONDA_MS
+      : -1;
+  if (onda < 0) {
+    marcas[6] = 4;
+    marcas[7] = 0;
+  } else {
+    const e = 1 - (1 - onda) * (1 - onda);
+    marcas[6] = 4 + PULSO_RAIO * 2 * e;
+    /* O alfa cai ao QUADRADO: um anel que se abre com alfa linear parece
+       engrossar no fim, porque a circunferência cresce junto e o olho soma a
+       tinta. Ao quadrado ele some enquanto abre, que é o que uma onda faz. */
+    marcas[7] = ONDA_ALFA * (1 - onda) * (1 - onda);
+  }
+  marcas[8] = 1;
 
   pos.needsUpdate = true;
   (geo.getAttribute("aMarca") as BufferAttribute).needsUpdate = true;

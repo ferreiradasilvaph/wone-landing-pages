@@ -293,6 +293,64 @@ let REDE: Float32Array | null = null;
  * não a reta da tela — com `REDE_SOBE` de elevação no meio do caminho e zero
  * nas pontas.
  */
+/**
+ * UM PONTO QUALQUER DE UMA PERNA DA REDE, sem passar pelo buffer.
+ *
+ * `rede()` devolve as sete pernas já amostradas em 23 passos, que é o que
+ * a LINHA precisa. A faísca precisa de outra coisa: a posição num `t`
+ * CONTÍNUO, porque ela percorre a perna e um salto de 1/22 por quadro
+ * seria um tracejado, não uma faísca. Mesma interpolação de grande
+ * círculo e mesma elevação — é a mesma curva, lida em outro lugar.
+ */
+/**
+ * A DIREÇÃO DO SOL no espaço LOCAL da esfera, para um instante do relógio
+ * da cena (ver `cena.tempo`).
+ *
+ * Mora aqui, e não nos dois lugares que a usam, porque é exatamente o tipo
+ * de constante que diverge sem ninguém ver: os pontos de terra desenham o
+ * terminador com ela e as nuvens decidem com ela qual hemisfério está
+ * iluminado. Meio grau de diferença entre as duas põe nuvem no lado da
+ * noite, e ninguém vai procurar o defeito numa fórmula copiada.
+ *
+ * Uma volta em 150 s. O 0,31 em Y é uma inclinação fixa que tira o
+ * terminador de cima dos polos: um terminador exatamente meridiano lê como
+ * uma fatia cortada, não como um planeta.
+ */
+export function solXYZ(
+  tempo: number,
+  fora: [number, number, number],
+): [number, number, number] {
+  const ang = (tempo / 150) * Math.PI * 2;
+  const x = Math.cos(ang) * 0.95;
+  const z = Math.sin(ang) * 0.95;
+  const y = 0.31;
+  const n = Math.hypot(x, y, z);
+  fora[0] = x / n;
+  fora[1] = y / n;
+  fora[2] = z / n;
+  return fora;
+}
+
+export function naPerna(
+  perna: number,
+  t: number,
+  fora: [number, number, number],
+): [number, number, number] {
+  const par = REDE_PERNAS[perna % REDE_PERNAS.length];
+  const a = alvo(par[0]);
+  const b = alvo(par[1]);
+  const d = Math.min(1, Math.max(-1, a[0] * b[0] + a[1] * b[1] + a[2] * b[2]));
+  const omega = Math.acos(d);
+  const so = Math.sin(omega);
+  const wa = so < 1e-6 ? 1 - t : Math.sin((1 - t) * omega) / so;
+  const wb = so < 1e-6 ? t : Math.sin(t * omega) / so;
+  const sobe = 1 + REDE_SOBE * Math.sin(Math.PI * t);
+  fora[0] = (a[0] * wa + b[0] * wb) * sobe;
+  fora[1] = (a[1] * wa + b[1] * wb) * sobe;
+  fora[2] = (a[2] * wa + b[2] * wb) * sobe;
+  return fora;
+}
+
 export function rede(): Float32Array {
   if (REDE) return REDE;
   const n = REDE_PASSOS + 1;

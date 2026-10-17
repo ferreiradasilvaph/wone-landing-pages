@@ -899,3 +899,36 @@ html.wone-entrando .hero-sublinha::after {
 .hero-globo > canvas {
   opacity: calc(1 - var(--mergulho, 0) * 1.6);
 }
+
+/* --------------------------------------------------------------------------
+   O PAÍS SOB O PONTEIRO (pedido do dono, 17/10)
+
+   A mesma régua de 30 px do clique: quem decide é o `perto()` do
+   `HeroGlobe`, que já desenhava o cursor, e a cena 3D acende os pontos do
+   país enquanto esta classe levanta o rótulo. Uma régua, três respostas —
+   cursor, pontos e texto —, e nenhuma delas pode discordar das outras
+   porque todas saem do mesmo número.
+
+   DOIS PIXELS, e não mais: o rótulo tem 13px de corpo e vive colado num
+   alfinete de 6px. Três já o desprendem do ponto a que ele pertence.
+   -------------------------------------------------------------------------- */
+.hero-rotulo {
+  transition:
+    opacity 300ms,
+    translate 180ms var(--ent-ease, ease);
+}
+
+.hero-pino--sobre .hero-rotulo {
+  --rotulo-op: 1;
+  translate: 0 -2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-rotulo {
+    transition: none;
+  }
+
+  .hero-pino--sobre .hero-rotulo {
+    translate: none;
+  }
+}

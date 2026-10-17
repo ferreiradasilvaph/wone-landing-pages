@@ -2719,9 +2719,21 @@ export function HeroGlobe({
       if (ev.pointerType !== "mouse") return;
       /* O cursor avisa o que o clique vai fazer ali. Barato: sete distâncias e
          uma comparação de raio. */
+      const emCima = arrastando ? -1 : perto(ev);
       if (arrastando) marcaCursor(0);
-      else if (perto(ev) >= 0) marcaCursor(2);
+      else if (emCima >= 0) marcaCursor(2);
       else marcaCursor(noDisco(ev) ? 1 : -1);
+
+      /* O PAÍS SOB O PONTEIRO vai para o contrato, e a cena 3D acende os
+         pontos dele (ver `uHover`). Mesma régua, mesma função: o convite
+         para clicar é desenhado exatamente onde o clique funciona. */
+      palco.hover = emCima;
+
+      /* O PARALLAX CONGELA ENQUANTO SE ARRASTA. Dois gestos disputando a
+         mesma câmera dão um planeta que escorrega da mão: o arrasto diz
+         para onde girar e o parallax, lendo o mesmo ponteiro, puxa junto.
+         Quem está segurando manda sozinho. */
+      if (arrastando) return;
       const box = caixa.current?.getBoundingClientRect();
       if (!box) return;
       /* Posição do cursor em relação ao CENTRO do disco, normalizada pelo raio
@@ -2734,6 +2746,9 @@ export function HeroGlobe({
     };
     const saiu = () => {
       alvoForca = 0;
+      /* O realce do país sai junto com o ponteiro: um país aceso sem ninguém
+         em cima dele é uma promessa de clique que não existe mais. */
+      palco.hover = -1;
     };
     /* ----------------------------------------------- O PAÍS CLICÁVEL
 
@@ -3315,6 +3330,10 @@ export function HeroGlobe({
         if (Math.abs(livreYaw) < 1e-6) livreYaw = 0;
         if (Math.abs(livrePitch) < 1e-6) livrePitch = 0;
       }
+
+      /* O RELÓGIO DA CENA (ver `cena.tempo`): o sol, o cintilar das luzes e
+         a deriva das nuvens correm por ele, e não pelo voo. */
+      palco.tempo += dt / 1000;
 
       /* O cursor, com a mesma suavização de sempre (~0,28 s). `dt` está em ms
          aqui, daí o divisor de 280. */

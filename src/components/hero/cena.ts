@@ -139,6 +139,17 @@ export const CHEGOU_FORA = 0.52;
  * quando ninguém diz nada, e um dia alguém acrescenta um segundo efeito seletivo
  * nesta cena sem saber que a 10 já estava tomada.
  */
+/**
+ * A GAMA DO ALFA quando o compositor de pos-processamento esta de pe.
+ *
+ * Mora no contrato pela mesma razao de CAMADA_BRILHO: e um numero que DOIS
+ * modulos precisam combinar — o shader dos pontos de terra e o das nuvens —,
+ * e um deles vive num chunk tardio. Com o compositor, o three renderiza para
+ * um alvo LINEAR, a mistura de alfa muda de espaco, e elevar o alfa a 2,4
+ * antes de misturar devolve o mesmo planeta que o caminho sem compositor.
+ */
+export const GAMA_SRGB = 2.4;
+
 export const CAMADA_BRILHO = 11;
 
 /** Quanto dura o pulso do pino no pouso, em ms. */
@@ -297,6 +308,25 @@ export type Cena = {
    * de uma cidade maior.
    */
   mergulho: number;
+  /**
+   * O RELÓGIO DA CENA, em segundos, independente do voo.
+   *
+   * Ele existe porque três coisas do planeta não têm nada a ver com a
+   * viagem: o sol que gira (uma volta em 150 s), o cintilar das luzes de
+   * cidade e a deriva das nuvens. Nenhuma delas pode parar quando o voo
+   * está num pouso, e nenhuma delas pode saltar quando ele recomeça.
+   *
+   * Avança com o MESMO dt do laço, teto incluído — ou seja: para quando a
+   * aba some ou o hero sai da tela, porque aí não há quadro nenhum, e não
+   * engole dez segundos de uma vez quando a aba volta.
+   */
+  tempo: number;
+  /**
+   * O PAÍS SOB O PONTEIRO, ou −1. Mesma régua de 30 px do clique, escrita
+   * pelo mesmo `perto()` que decide o cursor — um só lugar define o que
+   * "estar em cima de um país" quer dizer.
+   */
+  hover: number;
   /**
    * O DISCO APARENTE DURANTE O CINEMA, escrito pela cena 3D: o diâmetro em
    * px de CSS e o centro em coordenadas de .hero-globo.
@@ -496,6 +526,8 @@ const ESTADO: Cena = {
   livrePitch: 0,
   cine: 0,
   mergulho: 0,
+  tempo: 0,
+  hover: -1,
   cineLado: 0,
   cineX: 0,
   cineY: 0,
