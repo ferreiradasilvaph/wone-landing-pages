@@ -1019,6 +1019,7 @@ export const en: Content = {
     },
     legalEntity: "",
     copyright: "© 2026 Wone Bot.",
+    mapAttribution: "Map © OpenStreetMap contributors",
     disclaimer:
       "Wone is an independent SaaS platform with no corporate affiliation with, or endorsement from, Telegram.",
     languageLabel: "Language",

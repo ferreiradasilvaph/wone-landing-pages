@@ -180,6 +180,19 @@ export function SiteFooter() {
                 </>
               )}
               {footer.copyright}
+              {/* A atribuição do mapa de São Paulo, na mesma linha do
+                  copyright: é exigência da licença dos dados (ODbL), e fica
+                  ao lado da outra linha de autoria porque é disso que se
+                  trata — quem fez o quê. */}
+              <span aria-hidden> · </span>
+              <a
+                href="https://www.openstreetmap.org/copyright"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline decoration-line underline-offset-4 hover:text-cream"
+              >
+                {footer.mapAttribution}
+              </a>
             </p>
             <p className="sm:text-right">{footer.disclaimer}</p>
           </div>

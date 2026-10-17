@@ -1490,6 +1490,14 @@ export const pt = {
     /** Razão social e CNPJ, quando houver; vazio não renderiza. */
     legalEntity: "",
     copyright: "© 2026 Wone Bot.",
+    /**
+     * Atribuição do mapa de São Paulo do globo (`public/images/sp-noite.webp`,
+     * gerado de dados do OpenStreetMap por `scripts/gera-sp.mjs`). Não é
+     * cortesia: a licença ODbL EXIGE esta frase, com este texto, visível na
+     * página que mostra o mapa. Igual nos dois idiomas, porque é o nome do
+     * projeto e dos autores, não uma frase a traduzir.
+     */
+    mapAttribution: "Mapa © OpenStreetMap contributors",
     /** Aviso de não vínculo com o Telegram: texto obrigatório, não reescrever. */
     disclaimer:
       "A Wone é uma plataforma SaaS independente e não possui vínculo corporativo ou endosso do Telegram.",
