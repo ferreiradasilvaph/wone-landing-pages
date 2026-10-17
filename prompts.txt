@@ -1382,3 +1382,9 @@ paulo, esse feito do globo ir para o centro e consequentemente a div sumir deve
 acontecer qnd o pontinho chega no brasil, em sao paulo, ai na sequencia os zooms
 
 organize essa logica
+
+
+===============================================================================
+[155] 2026-10-17
+===============================================================================
+vamos chat... o que e esse Issues? parece um erro, corrija-o
