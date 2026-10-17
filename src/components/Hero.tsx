@@ -477,6 +477,10 @@ export function Hero() {
           running={andando}
           onCidade={voando ? avanca : undefined}
           onVoo={setVoando}
+          /* A palavra que rotula a torre da Wone no fundo do mergulho em São
+             Paulo. Nenhum texto novo no dicionário: é a MESMA que já marca a
+             ficção em cima do ticket, três linhas abaixo. */
+          simulacao={ui.simulation}
         />
 
         {/* A LINHA DE CONTROLE do palco: a etiqueta de ficção, o status do país

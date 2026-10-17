@@ -741,3 +741,64 @@ html.wone-entrando .hero-sublinha::after {
     font-size: clamp(4.5rem, 6.2vw, 6rem);
   }
 }
+
+/* --------------------------------------------------------------------------
+   O RÓTULO DE FICÇÃO DA TORRE (integração do mergulho em São Paulo)
+
+   A cidade do fundo do mergulho é geometria real — contornos do OpenStreetMap,
+   mapa noturno de verdade. A torre com a marca da Wone na fachada é ilustração,
+   e esta página rotula toda ficção onde ela acontece: o ticket do palco já diz
+   "SIMULAÇÃO" em cima dos valores, e a torre recebe a mesma palavra no instante
+   em que a marca acende.
+
+   Ele nasce `hidden` e com opacidade zero, e quem o acende é a cena 3D, por
+   `opacity` — nunca por layout. A posição é escrita em `transform` a partir do
+   CENTRO da caixa: o enquadre do mergulho mantém a base da torre exatamente ali
+   (ver `enquadraSP`), então o centro é o ponto de referência mais estável que
+   existe neste quadro.
+
+   As medidas são as dos rótulos de país (`.hero-rotulo`), de propósito: é o
+   mesmo tipo de legenda sobre o mesmo planeta, e inventar um segundo estilo
+   para dizer a mesma coisa seria dois lugares para o próximo ajuste esquecer
+   um. A diferença é a cor — creme a 72% em vez do cinza do rótulo inativo —,
+   porque este aparece sozinho sobre uma cidade iluminada.
+   -------------------------------------------------------------------------- */
+.hero-rotulo-sp {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: max-content;
+  opacity: 0;
+  pointer-events: none;
+  font-size: 11px;
+  line-height: 1;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: color-mix(in oklab, var(--cream) 72%, transparent);
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.85);
+  will-change: transform, opacity;
+}
+
+
+/* --------------------------------------------------------------------------
+   O PONTO FICA, O RÓTULO É QUE SE RETIRA (pedido do dono, 17/10)
+
+   "Quero agora que cada país seja clicável, no globo."
+
+   Até aqui a régua da coluna de texto (`CHEGOU_*`) apagava o ALFINETE INTEIRO de
+   quem estivesse longe do meio do disco — e com isso, medido, só um ou dois dos
+   sete pinos existiam na tela a cada instante. Um país que não aparece não é um
+   país clicável, e a regra precisou ser separada em duas:
+
+     · o PONTO obedece só à geometria (hemisfério, vigia, volume) e a um PISO —
+       ele some de vez no limbo e nunca antes;
+     · o RÓTULO, que é a caixa de texto de 240 px capaz de invadir a coluna do
+       `<h1>`, continua obedecendo à régua inteira.
+
+   É a separação que o problema sempre pediu: quem brigava com o título era o
+   TEXTO, nunca o ponto de 6 px. `--rotulo-op` é escrito pela cena a cada quadro,
+   e o valor-padrão 1 mantém esta regra sem efeito onde não há cena 3D.
+   -------------------------------------------------------------------------- */
+.hero-rotulo {
+  opacity: var(--rotulo-op, 1);
+}

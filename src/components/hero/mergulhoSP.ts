@@ -107,7 +107,33 @@ export const ZOOM_CIDADE = 405;
  * largura, dois terços do quadro são telhado e parede, não chão. Mesmo assim o
  * `SaoPauloCena` escurece o chão no fundo do mergulho (veja `CHAO_NO_FUNDO`).
  */
-export const ZOOM_TORRE = 14000;
+export const ZOOM_TORRE = 9200;
+
+/* --------------------------------------------------------------------------
+   POR QUE 9.200 E NÃO 14.000 (pedido do dono, 17/10)
+
+   "Melhore a aparência da cidade (...) melhore a qualidade em pixels, faça um
+   belo trabalho cinematográfico."
+
+   O que limita a nitidez do fundo do mergulho não é o canvas: é a TEXTURA do
+   chão, que tem 10,74 m por texel e é fixa. Em 14.000 o disco mostrava 0,91 km
+   em 1,44 m/px, ou seja o mapa aparecia ampliado 7,5× — cada texel virava um
+   quadrado de 7,5 px, e nenhum ajuste de filtro conserta isso. Em 9.200 o disco
+   mostra 1,385 km a 2,19 m/px e a ampliação cai para 4,9×: um terço a menos de
+   borrão, no mesmo lugar da cena.
+
+   O QUE SE PERDE, declarado: a torre passa de 88 para 58 px de altura e a marca
+   na fachada de 32 para 21 px — e 21 px é exatamente o número que a nota do
+   `LIMIAR.logo` já apontava como o ponto em que "os dois anéis do símbolo se
+   separam". O prédio continua sendo o prédio, e o que estava borrado embaixo
+   dele melhora em um terço.
+
+   O que compensa a perda de tamanho é o BLOOM da etapa 5, que passou a pegar a
+   cidade: as vias e as janelas acesas sangram luz, e um quadro noturno com
+   brilho se lê como "mais resolvido" mesmo com o mesmo número de pixels. É o
+   truque de todo mapa noturno bonito, e é o que a referência que o dono
+   aprovou (`sp-noite.webp`) faz com as Marginais.
+   -------------------------------------------------------------------------- */
 
 /* ------------------------------------------------------------ as durações */
 

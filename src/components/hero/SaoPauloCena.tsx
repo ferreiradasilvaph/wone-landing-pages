@@ -47,6 +47,7 @@ import {
   Quaternion,
   ShapeUtils,
   SRGBColorSpace,
+  type Texture,
   TextureLoader,
   Vector2,
   Vector3,
@@ -116,16 +117,21 @@ const LOGO_ALTURA = (LOGO_LARGURA * 400) / 642;
 const LOGO_FACHADA_Z = 172;
 
 /**
- * O CHÃO ESCURECE NO FUNDO DO MERGULHO.
+ * O CHÃO ESCURECE NO FUNDO DO MERGULHO — agora muito menos.
  *
- * A textura tem 10,74 m por texel e o fim do mergulho mostra 1,44 m/px: uma
- * ampliação de 7,5×. Num mapa noturno isso lê como luz espalhada, não como
- * foto borrada, mas lê melhor ainda com 30% a menos de brilho — aí quem
- * carrega o detalhe é a geometria dos prédios, que naquele zoom tem detalhe de
- * sobra. A conta usa `logo`, que é exatamente o sinal de "estamos no fundo"
- * (ela só sai de zero acima de Z = 5.000).
+ * Eram 30%, e o motivo era bom: com o mergulho terminando em Z = 14.000 a
+ * textura aparecia ampliada 7,5×, e apagar o chão escondia o borrão. Com o fim
+ * do mergulho recuado para 9.200 (ver `ZOOM_TORRE`) a ampliação caiu para 4,9×,
+ * e com o bloom da etapa 5 pegando as vias o chão virou a FONTE DE LUZ do
+ * quadro — apagá-lo em 30% agora é apagar justamente o que faz a cena parecer
+ * uma cidade à noite.
+ *
+ * 12% é o que restou: o bastante para a geometria dos prédios continuar sendo
+ * quem carrega o detalhe no fundo, e pouco o bastante para as Marginais
+ * continuarem acesas. A conta usa `logo`, que é exatamente o sinal de "estamos
+ * no fundo" (ela só sai de zero acima de Z = 5.000).
  */
-const CHAO_NO_FUNDO = 0.3;
+const CHAO_NO_FUNDO = 0.12;
 
 /* ------------------------------------------------------------------ cores
 
@@ -167,13 +173,30 @@ function paraLinear(saida: Tom, a: Tom) {
 
 /* Tudo dentro da paleta da página (`globals.css`): os pretos `ink-*`, o laranja
    da marca e o âmbar das vias da textura. */
-const PAREDE_LUZ = tom("#22222e"); // a face voltada para a luz
-const PAREDE_SOMBRA = tom("#0b0b10"); // a face de costas
-const PAREDE_TOPO = tom("#35354a"); // o fio da aresta de cima
-const TELHADO = tom("#1e1e2a");
+/* A PALETA DA CIDADE SUBIU DE CONTRASTE em 17/10, com o pedido de "um belo
+   trabalho cinematográfico".
+
+   O que havia era um azul-chumbo quase plano: a face iluminada a #22222E e a de
+   costas a #0B0B10 — 14 pontos de luminância entre a frente e o fundo de um
+   prédio. Num quadro noturno isso lê como maquete de papelão, porque é
+   justamente a RAZÃO entre as faces que o olho usa para separar volumes.
+
+   Agora a face da luz vai a #3A3A52 e a de sombra DESCE a #07070B: o contraste
+   entre elas quase triplica, e a cidade ganha relevo sem ganhar brilho médio —
+   o quadro continua escuro, que é o que um mapa noturno tem de ser. A aresta
+   de cima, que é o fio que desenha a silhueta de cada prédio contra o céu,
+   sobe junto para #51516E.
+
+   A JANELA fica no mesmo âmbar das vias (#FFB070): é a cor da luz desta cidade,
+   e inventar uma segunda seria dizer que as ruas e as salas acesas são feitas
+   de lâmpadas diferentes. */
+const PAREDE_LUZ = tom("#3a3a52"); // a face voltada para a luz
+const PAREDE_SOMBRA = tom("#07070b"); // a face de costas
+const PAREDE_TOPO = tom("#51516e"); // o fio da aresta de cima
+const TELHADO = tom("#15151e");
 const JANELA = tom("#ffb070"); // o mesmo âmbar das vias da textura
-const TORRE_CORPO = tom("#15151f");
-const TORRE_LUZ = tom("#2e2e3e");
+const TORRE_CORPO = tom("#101018");
+const TORRE_LUZ = tom("#45455f");
 const LARANJA = tom("#ff7700");
 
 /**
@@ -776,9 +799,29 @@ function constroiLogo() {
    AS TEXTURAS
    -------------------------------------------------------------------------- */
 
-function carrega(url: string, aniso: number, pronto: () => void) {
+function carrega(
+  url: string,
+  aniso: number,
+  pronto: () => void,
+  aquece?: (t: Texture) => void,
+) {
   const textura = new TextureLoader().load(url, (t) => {
     t.needsUpdate = true;
+    /* O ENVIO PARA A GPU, FORA DO MERGULHO.
+
+       Medido em 17/10, na integração: o primeiro quadro em que o chão aparece
+       custava 73 ms — um engasgo de quatro quadros bem no começo da descida. O
+       culpado não é o desenho (o segundo mergulho da mesma sessão tem pico de
+       0,8 ms): é a SUBIDA DA TEXTURA. São 2048×2048 em RGBA, 16,7 MB, mais a
+       cadeia de mipmaps, e o three só faz isso no primeiro quadro em que o
+       material é desenhado — que aqui é o quadro em que o mapa ainda está a 3%
+       de opacidade e ninguém o vê.
+
+       `initTexture` faz esse envio AGORA, no instante em que o arquivo acaba de
+       decodificar — ou seja nos primeiros segundos da página, atrás do
+       crossfade do globo, onde há folga de sobra. O mergulho chega com a
+       textura já na GPU. */
+    aquece?.(t);
     pronto();
   });
   textura.colorSpace = SRGBColorSpace;
@@ -801,6 +844,19 @@ export type SaoPauloCenaProps = {
   predios: number;
   /** A marca na torre: 0 = apagada, 1 = acesa. */
   logo: number;
+  /**
+   * A CAMADA DO BRILHO da etapa 5, ou `undefined` para não participar dele.
+   *
+   * A marca na fachada é um dos cinco objetos que o pós-processamento acende —
+   * e é o único que mora aqui dentro. Em vez de o compositor sair procurando a
+   * malha pela cena (frágil: ela nasce e morre com `logo`), a placa entra na
+   * camada por conta própria, e o `SelectiveBloom` a encontra pelo teste de
+   * camada como encontra os outros quatro.
+   *
+   * No celular não há compositor nenhum: a prop chega `undefined` e nada é
+   * tocado.
+   */
+  camadaBrilho?: number;
 };
 
 /**
@@ -813,7 +869,12 @@ export type SaoPauloCenaProps = {
  *
  * com `e = mergulhoSP(ms)`. O componente não lê relógio nenhum.
  */
-export default function SaoPauloCena({ mapa, predios, logo }: SaoPauloCenaProps) {
+export default function SaoPauloCena({
+  mapa,
+  predios,
+  logo,
+  camadaBrilho,
+}: SaoPauloCenaProps) {
   const gl = useThree((s) => s.gl);
   const invalidate = useThree((s) => s.invalidate);
 
@@ -859,9 +920,10 @@ export default function SaoPauloCena({ mapa, predios, logo }: SaoPauloCenaProps)
 
   const texturas = useMemo(() => {
     const aniso = gl.capabilities.getMaxAnisotropy();
+    const aquece = (t: Texture) => gl.initTexture(t);
     return {
-      chao: carrega(SP_MAPA.textura, aniso, invalidate),
-      logo: carrega("/images/logo-icon.png", aniso, invalidate),
+      chao: carrega(SP_MAPA.textura, aniso, invalidate, aquece),
+      logo: carrega("/images/logo-icon.png", aniso, invalidate, aquece),
     };
   }, [gl, invalidate]);
 
@@ -952,6 +1014,14 @@ export default function SaoPauloCena({ mapa, predios, logo }: SaoPauloCenaProps)
         material={materiais.chao}
         material-opacity={mapa * (1 - CHAO_NO_FUNDO * logo)}
         renderOrder={2}
+        ref={(no) => {
+          /* O CHÃO ENTRA NO BLOOM (etapa 5, pedido de 17/10 por "um belo
+             trabalho cinematográfico"). É o mapa noturno: as vias são
+             filamentos de luz âmbar sobre preto, e é exatamente o tipo de coisa
+             que um bloom existe para tratar. O limiar de luminância do efeito
+             (0,12) deixa o preto do mapa de fora sozinho — só as vias passam. */
+          if (no && camadaBrilho !== undefined) no.layers.enable(camadaBrilho);
+        }}
       />
 
       {mostraPredios ? (
@@ -962,6 +1032,12 @@ export default function SaoPauloCena({ mapa, predios, logo }: SaoPauloCenaProps)
             <mesh
               geometry={pecas.predioGeo}
               material={materiais.predio}
+              ref={(no) => {
+                /* Os prédios também: o que brilha neles são as JANELAS, que
+                   são do mesmo âmbar das vias. As paredes, bem abaixo do
+                   limiar, não sangram nada. */
+                if (no && camadaBrilho !== undefined) no.layers.enable(camadaBrilho);
+              }}
               material-color-r={brilho}
               material-color-g={brilho}
               material-color-b={brilho}
@@ -985,6 +1061,14 @@ export default function SaoPauloCena({ mapa, predios, logo }: SaoPauloCenaProps)
               material={materiais.marca}
               material-opacity={logo}
               renderOrder={3}
+              ref={(no) => {
+                /* A placa entra na camada do brilho assim que existe. `enable`
+                   e não `set`: a camada 0 tem de continuar ligada, ou a marca
+                   sumiria da passada normal e só apareceria no bloom. */
+                if (no && camadaBrilho !== undefined) {
+                  no.layers.enable(camadaBrilho);
+                }
+              }}
             />
           ) : null}
         </group>

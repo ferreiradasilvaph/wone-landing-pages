@@ -21,6 +21,13 @@ import {
 } from "./cena";
 import { CountryTag } from "./CountryTag";
 import {
+  DURACAO_SP_MS,
+  enquadraSP,
+  mergulhoSP,
+  visibilidades,
+  ZOOM_CIDADE,
+} from "./mergulhoSP";
+import {
   GLOBE_COAST,
   GLOBE_COUNT,
   GLOBE_DELTAS,
@@ -351,6 +358,22 @@ const ROTULO_ESPERA_MS = 300;
    -------------------------------------------------------------------------- */
 
 
+/** O piso do alfinete quando o rótulo se retira. Ver `PISO_PONTO` no 3D. */
+const PISO_PONTO_2D = 0.38;
+
+/**
+ * O RAIO DE CLIQUE de um país, em px da caixa do globo.
+ *
+ * 30 e não os 6 px do desenho do ponto: o planeta está sempre em movimento, e
+ * perseguir um alvo de 6 px que anda é o tipo de interação que ninguém tenta
+ * duas vezes. 30 px é o dobro do mínimo que as diretrizes de toque pedem para o
+ * RAIO, e ainda assim menor que a metade da distância entre os dois pinos mais
+ * próximos da tela (Bogotá e Quito ficam a 27 px um do outro em repouso, mas no
+ * zoom de pouso de 1,35× isso vira 37) — então nunca há dúvida sobre qual país
+ * foi escolhido: o mais perto ganha, e o empate não existe.
+ */
+const RAIO_CLIQUE = 30;
+
 /** O fio da circunferência, igual ao de `.globe-air` (globals.css). */
 const BORDA_ALFA = 0.22;
 const BORDA_FIO = 1.5;
@@ -631,6 +654,30 @@ const HeroGlobe3D = dynamic(() => import("./HeroGlobe3D"), { ssr: false });
 /** De quanto em quanto se olha o relógio da entrada, em ms. */
 const PORTAO_PASSO = 100;
 
+/* --------------------------------------------------------------------------
+   A PARADA MAIS LONGA DO TOUR: SÃO PAULO
+
+   Pedido do dono, 17/10: "quando a bolinha parar no brasil, aumente o zoom e
+   mostre como se fosse imagens de satélite reais detalhando a cidade de são
+   paulo, essa pausa da bolinha vai ser a mais longa dentre os outros países".
+
+   São 11,2 s contra 1,8 s das outras seis, e o modelo de tempo disso vive em
+   `mergulhoSP.ts` — puro, sem DOM e sem three, como o `voo.ts` ao lado. Aqui só
+   se LÊ: a cada quadro da parada em São Paulo este laço chama `mergulhoSP(ms)`
+   com o tempo decorrido dentro do pouso e publica o resultado no contrato.
+
+   QUEM NÃO MERGULHA: o canvas 2D. Ele é o placeholder, o fallback sem WebGL e o
+   caminho do movimento reduzido, e não tem cidade nenhuma para mostrar — a
+   textura noturna e os prédios são geometria 3D. Então, nos 11,2 s, ele fica no
+   enquadramento de pouso (1,35×) e espera. É por isso que a escala do mergulho
+   mora em `cena.sp.zoom` e não sobrescreve `cena.escala`.
+
+   SÃO PAULO É O ÍNDICE 0 porque a lista é `payments.table.countries` e o Brasil
+   abre a fila — mas a comparação abaixo é pelo CÓDIGO, não pelo índice: a ordem
+   é do dicionário, e um dia ela pode mudar sem que ninguém se lembre daqui.
+   -------------------------------------------------------------------------- */
+const CIDADE_MERGULHO = "BRL";
+
 /**
  * QUANTO O PORTÃO ESPERA O LCP ASSENTAR, em ms, e o TETO dessa espera.
  *
@@ -716,6 +763,7 @@ export function HeroGlobe({
   running,
   onCidade,
   onVoo,
+  simulacao,
   alvoRef,
 }: {
   /** Na ordem de `payments.table.countries` — sete desde 15/10. */
@@ -741,6 +789,13 @@ export function HeroGlobe({
    * e lá ele só começa quando a cena 3D monta, bem depois do LCP.
    */
   onVoo?: (voando: boolean) => void;
+  /**
+   * O texto "SIMULAÇÃO" (`ui.simulation`), para o rótulo que acompanha a torre
+   * da Wone no fundo do mergulho. Vem de fora porque o dicionário é do `Hero` —
+   * e porque nenhum texto novo entrou em `pt.ts`/`en.ts` para isto: a página já
+   * rotula a ficção do palco com esta mesma palavra, em cima do ticket.
+   */
+  simulacao?: string;
   /** O nó em que o arco termina: o ticket do palco (ver `HeroTicket`). */
   alvoRef?: RefObject<HTMLElement | null>;
 }) {
@@ -756,6 +811,8 @@ export function HeroGlobe({
    * depois disso.
    */
   const limbo = useRef<HTMLSpanElement>(null);
+  /** O rótulo de ficção da torre, no fundo do mergulho (ver `simulacao`). */
+  const rotuloSP = useRef<HTMLSpanElement>(null);
   const marca = useRef<HTMLSpanElement>(null);
   const alfinetes = useRef<(HTMLSpanElement | null)[]>([]);
   const nuvem = useRef<Nuvem | null>(null);
@@ -790,6 +847,31 @@ export function HeroGlobe({
    * por quadro, e uma função nova a cada render do `Hero` remontaria o efeito
    * de desenho — ou seja, reiniciaria o voo — a cada troca de país.
    */
+  /**
+   * O VISITANTE ESCOLHEU UM PAÍS NO GLOBO (pedido do dono, 17/10).
+   *
+   * "Quero agora que cada país seja clicável, no globo, e quando clicar no
+   * ponto de São Paulo continue o efeito."
+   *
+   * O que o clique faz é POR O RELÓGIO DO VOO no pouso daquela cidade — e nada
+   * mais. Não há um segundo caminho de câmera, não há animação própria, não há
+   * estado novo: a cidade escolhida vira a cidade da vez e o ciclo de sempre
+   * (pouso → voo → pouso) recomeça dali. É a mesma regra que vale desde 17/10,
+   * quando a bolinha e a câmera passaram a sair do mesmo modelo — um dono do
+   * tempo, e o clique só mexe no ponteiro dele.
+   *
+   * E É ISSO QUE FAZ O PEDIDO DE SÃO PAULO FUNCIONAR SOZINHO: a parada de lá
+   * dura `DURACAO_SP_MS` e o mergulho é função do tempo DENTRO dela, então
+   * zerar o relógio no índice do Brasil é, literalmente, "continuar o efeito".
+   * Clicar em São Paulo durante o próprio mergulho o reinicia do alto; clicar
+   * vindo de outro país faz a câmera pousar lá e descer.
+   *
+   * Num `ref` como o resto: ele é lido pelo JSX a cada render, e uma função
+   * nova por render remontaria o efeito de desenho — ou seja, reiniciaria o voo
+   * — a cada troca de país.
+   */
+  const escolher = useRef<(indice: number) => void>(() => {});
+
   const avisar = useRef(onCidade);
   useEffect(() => {
     avisar.current = onCidade;
@@ -1108,6 +1190,7 @@ export function HeroGlobe({
     palco.nuvem = dados;
     palco.codigos = lista;
     palco.leve = celular;
+    palco.rotuloSP = rotuloSP.current;
     /**
      * O laço está de pé? É a condição do movimento que depende de TEMPO — o
      * voo, o rastro, a bolinha e o pulso do pino. Fora dela o globo é um quadro
@@ -1921,6 +2004,13 @@ export function HeroGlobe({
              desvanece pela distância ao centro contra o raio, na mesma faixa
              curta do limbo. Em repouso esta rampa coincide com a de `z2` (é a
              mesma, em raio em vez de cosseno) e por isso nada muda. */
+          /* A posição na tela também é publicada por este caminho: é dela que
+             o clique de "cada país é clicável" mede a distância, e sem WebGL
+             ela não chegaria de lugar nenhum. */
+          palco.telaPinos[j * 3] = pxz;
+          palco.telaPinos[j * 3 + 1] = pyz;
+          palco.telaPinos[j * 3 + 2] = z2;
+
           const rad = Math.sqrt((pxz - R) * (pxz - R) + (pyz - R) * (pyz - R)) / R;
           const naVigia =
             rad >= VIGIA_FORA
@@ -1943,12 +2033,18 @@ export function HeroGlobe({
               : rad >= CHEGOU_FORA
                 ? 0
                 : (CHEGOU_FORA - rad) / (CHEGOU_FORA - CHEGOU_DENTRO);
+          /* As MESMAS duas opacidades da cena 3D (ver `PISO_PONTO` lá): o
+             ponto fica, o rótulo é que se retira. Os dois caminhos têm de
+             escrever o mesmo número, ou a troca entre eles seria um salto. */
+          const texto = chegou * (rotulos + (1 - rotulos) * focos[j]);
           const efetiva =
-            Math.min(visivel, naVigia) *
-            chegou *
-            (rotulos + (1 - rotulos) * focos[j]);
+            Math.min(visivel, naVigia) * Math.max(chegou, PISO_PONTO_2D);
           el.hidden = efetiva <= 0.004;
           el.style.opacity = efetiva >= 0.999 ? "" : efetiva.toFixed(3);
+          el.style.setProperty(
+            "--rotulo-op",
+            (efetiva > 0.001 ? Math.min(1, texto / efetiva) : 0).toFixed(3),
+          );
           el.style.transform = `translate3d(${(pxz - g.repouso[j].x).toFixed(1)}px, ${(pyz - g.repouso[j].y).toFixed(1)}px, 0)`;
 
           /* O DESTAQUE do rótulo da cidade em que se pousou: bandeira + cidade
@@ -2111,6 +2207,67 @@ export function HeroGlobe({
       olho.bolaVisivel = vb.z > 0;
     }
 
+    /**
+     * Quanto dura o pouso na cidade `i`. São Paulo é a exceção do tour.
+     *
+     * NO CANVAS 2D A PARADA DURA O MESMO, e isso é de propósito: o relógio do
+     * voo é um só, e a cidade da vez tem de trocar no mesmo instante nos dois
+     * caminhos. O que muda é o que se VÊ durante ela — no 3D, a cidade; no 2D,
+     * o planeta parado no enquadramento de pouso.
+     */
+    function pousoDe(i: number) {
+      return lista[i] === CIDADE_MERGULHO ? DURACAO_SP_MS : POUSO_MS;
+    }
+
+    /**
+     * Calcula o mergulho e o publica no contrato.
+     *
+     * NO CELULAR ELE É MAIS CURTO E MAIS RASO (etapa 6 levada a sério): a
+     * câmera para em `ZOOM_CIDADE` em vez de ir aos 14.000 da torre, e os prédios
+     * não sobem. 3.769 prédios são 62 mil triângulos e 4,4 MB de buffer — é
+     * mais do que um aparelho de entrada deve segurar por um momento de 2 s, e
+     * a 405 de escala o disco tem 49,7 m/px, onde um prédio comum mede 0,6 px e
+     * a placa da marca, 0,9: nada do que foi cortado era visível ali. O que
+     * sobra — a cidade inteira vista do alto, com o mapa noturno de verdade —
+     * é a parte que cabe na tela de um celular.
+     *
+     * As visibilidades são recalculadas a partir da escala JÁ limitada, e não
+     * copiadas do estado: é o que mantém as camadas coerentes com o que a
+     * câmera está realmente mostrando (ver `visibilidades()`).
+     */
+    function mergulha(voando: Estado) {
+      const sp = palco.sp;
+      /* DUAS CONDIÇÕES, e a segunda custou um defeito medido: a cidade tem de
+         ser São Paulo E o voo tem de estar no POUSO. Sem a segunda, `de`
+         continua sendo São Paulo durante a perna inteira até a Cidade do
+         México — `msPouso` fica preso em 11.200, `mergulhoSP` devolve "fim", e
+         a cena 3D ficaria cravada no enquadre de São Paulo enquanto o canvas
+         2D voa para o México. O planeta congelava por 2,3 s em cima de uma
+         cidade que a câmera já tinha deixado. */
+      if (lista[voando.de] !== CIDADE_MERGULHO || voando.fase !== "pouso") {
+        sp.ativo = false;
+        return;
+      }
+      const e = mergulhoSP(voando.msPouso);
+      const zoom = celular ? Math.min(e.zoom, ZOOM_CIDADE) : e.zoom;
+      const v = celular ? visibilidades(zoom) : e;
+      const q = enquadraSP(e);
+      sp.ativo = true;
+      sp.fase = e.fase;
+      sp.zoom = zoom;
+      sp.inclinacao = e.inclinacao;
+      sp.orbita = e.orbita;
+      sp.pitch = q.pitch;
+      sp.yaw = q.yaw;
+      sp.x = q.x;
+      sp.y = q.y;
+      sp.pontos = v.pontos;
+      sp.mapa = v.mapa;
+      /* No celular os prédios (e, com eles, a torre e a marca) não existem. */
+      sp.predios = celular ? 0 : v.predios;
+      sp.logo = celular ? 0 : v.logo;
+    }
+
     /** A bolinha em px da CAIXA, já com a matriz do zoom: é o que a medição lê. */
     function projetaBola(
       cy: number,
@@ -2129,6 +2286,22 @@ export function HeroGlobe({
         z: z2,
       };
     }
+
+    /* O clique: põe o relógio no pouso da cidade escolhida. Escrito aqui, e
+       não no corpo do componente, porque é aqui que `lista` e o relógio do voo
+       existem — e porque o efeito se refaz quando o idioma ou a largura mudam,
+       e o atalho tem de acompanhar. */
+    escolher.current = (indice: number) => {
+      if (indice < 0 || indice >= lista.length) return;
+      ativo.current = indice;
+      relogio.current.ms = 0;
+      /* Se o clique chegar antes de a entrada acabar, ela é dada por encerrada:
+         o visitante pediu uma cidade, e fazê-lo esperar o mergulho de abertura
+         seria ignorar o pedido. */
+      relogio.current.mergulhou = true;
+      palco.sp.ativo = false;
+      avisar.current?.(indice);
+    };
 
     mede();
     const umQuadro = () =>
@@ -2226,6 +2399,9 @@ export function HeroGlobe({
     const secao = caixa.current?.closest("section") ?? null;
     const moveu = (ev: PointerEvent) => {
       if (ev.pointerType !== "mouse") return;
+      /* O cursor avisa que há país debaixo do ponteiro (ver "O PAÍS CLICÁVEL",
+         abaixo). Barato: a conta é de sete distâncias. */
+      marcaCursor(perto(ev) >= 0);
       const box = caixa.current?.getBoundingClientRect();
       if (!box) return;
       /* Posição do cursor em relação ao CENTRO do disco, normalizada pelo raio
@@ -2239,8 +2415,77 @@ export function HeroGlobe({
     const saiu = () => {
       alvoForca = 0;
     };
+    /* ----------------------------------------------- O PAÍS CLICÁVEL
+
+       Pedido do dono, 17/10: "quero agora que cada país seja clicável, no
+       globo, e quando clicar no ponto de São Paulo continue o efeito".
+
+       A escuta fica na SEÇÃO e o alvo é calculado, não apontado — e isso não é
+       atalho, é a única forma que funciona aqui. O alfinete é um nó DOM de
+       tamanho zero dentro de uma camada `pointer-events: none` que o navegador
+       pinta ANTES da coluna de texto; medido em 17/10, um alvo de 36 px posto
+       no alfinete nunca recebia o clique, porque a primeira linha do título
+       (`.hero-linha`) cobre aquele ponto da tela. Devolver o ponteiro ao globo
+       o tiraria dos botões do hero, que é exatamente o que a camada existe para
+       evitar.
+
+       Então: a cena já PUBLICA onde cada pino caiu na tela (`cena.telaPinos`,
+       escrito pela matriz da câmera a cada quadro). O clique mede a distância
+       até cada um deles e escolhe o mais perto, se estiver dentro de
+       `RAIO_CLIQUE` e se aquele pino estiver visível. Nenhum nó novo, nenhuma
+       camada nova, e funciona para os sete.
+
+       O CURSOR acompanha: `pointermove` já roda aqui para o empurrão do planeta,
+       e marcar a seção com `cursor: pointer` quando o ponteiro está em cima de
+       um país é o que avisa que ali há o que clicar. É uma escrita de estilo só
+       quando o estado MUDA, nunca por quadro.
+
+       Um clique em cima de um link ou botão nunca chega aqui: o `closest` o
+       devolve a quem é dele. */
+    const perto = (ev: PointerEvent) => {
+      const b = caixa.current?.getBoundingClientRect();
+      const g = geo.current;
+      const tela = palco.telaPinos;
+      if (!b || !g || !tela.length) return -1;
+      const x = ev.clientX - b.left;
+      const y = ev.clientY - b.top;
+      let melhor = -1;
+      let menor = RAIO_CLIQUE * RAIO_CLIQUE;
+      for (let j = 0; j < lista.length; j += 1) {
+        const el = alfinetes.current[j];
+        if (!el || el.hidden) continue;
+        const dx = tela[j * 3] - x;
+        const dy = tela[j * 3 + 1] - y;
+        const d = dx * dx + dy * dy;
+        if (d < menor) {
+          menor = d;
+          melhor = j;
+        }
+      }
+      return melhor;
+    };
+
+    let cursorLigado = false;
+    const marcaCursor = (ligado: boolean) => {
+      if (ligado === cursorLigado || !secao) return;
+      cursorLigado = ligado;
+      /* A camada do palco é `pointer-events: none`, então o cursor tem de ser
+         escrito na SEÇÃO, que é quem recebe o ponteiro. */
+      (secao as HTMLElement).style.cursor = ligado ? "pointer" : "";
+    };
+
+    const escolheu = (ev: PointerEvent) => {
+      if (ev.pointerType === "mouse" && ev.button !== 0) return;
+      const alvoDom = ev.target as HTMLElement | null;
+      if (alvoDom?.closest("a,button,input,textarea,select,label")) return;
+      const j = perto(ev);
+      if (j < 0) return;
+      escolher.current(j);
+    };
+
     secao?.addEventListener("pointermove", moveu, { passive: true });
     secao?.addEventListener("pointerleave", saiu);
+    secao?.addEventListener("pointerdown", escolheu);
 
     const quadro = (t: number) => {
       raf = requestAnimationFrame(quadro);
@@ -2273,6 +2518,11 @@ export function HeroGlobe({
       let esc: number;
 
       if (!r.mergulhou) {
+        /* A ENTRADA NÃO MERGULHA: o mergulho em São Paulo só existe depois de a
+           câmera ter pousado lá pela primeira vez. Desligar a caixa aqui é o
+           que impede um estado velho de sobreviver a uma remontagem do efeito
+           no meio da parada. */
+        palco.sp.ativo = false;
         r.entrada += dt;
         if (r.entrada <= ESPERA_MS) {
           cam = centroProj;
@@ -2311,7 +2561,7 @@ export function HeroGlobe({
         }
       } else {
         r.ms += dt;
-        let e = voo(cidades, ativo.current, r.ms);
+        let e = voo(cidades, ativo.current, r.ms, pousoDe(ativo.current));
         if (r.ms >= e.ciclo) {
           r.ms -= e.ciclo;
           ativo.current = e.para;
@@ -2322,13 +2572,18 @@ export function HeroGlobe({
              já desenhe a cidade nova — um quadro de discordância entre o
              desenho e o rótulo seria visível a 1,8×. */
           avisar.current?.(e.para);
-          e = voo(cidades, ativo.current, r.ms);
+          e = voo(cidades, ativo.current, r.ms, pousoDe(ativo.current));
         }
         cam = e.camera;
         esc = e.zoom;
         fase = e.fase;
-        msFase = e.fase === "pouso" ? r.ms : r.ms - POUSO_MS;
+        msFase = e.fase === "pouso" ? e.msPouso : r.ms - e.pouso;
         uBola = e.u;
+
+        /* O MERGULHO EM SÃO PAULO. `e.msPouso` é o tempo dentro da parada, que é
+           exatamente o relógio que `mergulhoSP` pede. Fora de São Paulo a caixa
+           fica desligada e nada nela é lido. */
+        mergulha(e);
 
         /* O RASTRO é remontado UMA vez por perna, no primeiro quadro do voo: os
            25 pontos do grande círculo, já na base da projeção. Durante o pouso
@@ -2433,6 +2688,8 @@ export function HeroGlobe({
       observador?.disconnect();
       secao?.removeEventListener("pointermove", moveu);
       secao?.removeEventListener("pointerleave", saiu);
+      secao?.removeEventListener("pointerdown", escolheu);
+      marcaCursor(false);
     };
   }, [codes, running, modo, voa, trocaParada, entrada]);
 
@@ -2570,6 +2827,35 @@ export function HeroGlobe({
             corta o canvas, agora em CSS — uma vigia, dois materiais. */}
         <span className="globe-vigia">
           <span ref={limbo} className="globe-limbo block" />
+        </span>
+
+        {/* O RÓTULO DE FICÇÃO DA TORRE, no fundo do mergulho em São Paulo.
+
+            A cidade embaixo é geometria REAL (contornos do OpenStreetMap, mapa
+            noturno de verdade); a torre com a marca da Wone na fachada NÃO é —
+            é ilustração. Esta página rotula toda ficção onde ela acontece: o
+            ticket do palco já diz "SIMULAÇÃO" em cima dos valores, e a torre
+            ganha a mesma palavra ao lado dela, no instante em que a marca
+            acende. Nenhum texto novo entrou no dicionário: é `ui.simulation`.
+
+            DOM e não textura, pela razão de sempre — um leitor de tela lê, o
+            seletor de idioma troca, e o texto não depende da resolução em que o
+            prédio foi desenhado.
+
+            A posição é CRAVADA no centro da caixa mais um deslocamento, e isso
+            não é preguiça: `enquadraSP` existe justamente para manter a TORRE no
+            meio do disco durante a contemplação (é a translação que devolve o
+            alvo ao centro depois de inclinar). O meio do disco É a base da
+            torre, em qualquer quadro da contemplação, e os 76 px à direita e
+            44 px acima põem o rótulo encostado no topo dela — a torre mede 88
+            px de altura e 40 de fachada no fundo do mergulho. */}
+        <span
+          ref={rotuloSP}
+          aria-hidden
+          hidden
+          className="hero-rotulo-sp"
+        >
+          {simulacao}
         </span>
 
         {/* Os pinos. Abaixo de `lg` não existem (globo atrás do aparelho).

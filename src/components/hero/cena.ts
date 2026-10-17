@@ -126,6 +126,21 @@ export const VIGIA_FORA = 0.999;
 export const CHEGOU_DENTRO = 0.34;
 export const CHEGOU_FORA = 0.52;
 
+/**
+ * A CAMADA DO BRILHO do pós-processamento (etapa 5).
+ *
+ * Ela mora AQUI, e não no módulo do compositor, por uma razão medida: um
+ * `import` estático de qualquer coisa daquele arquivo arrasta o grafo inteiro
+ * dele — `postprocessing` incluído — para o chunk de quem importou, e o
+ * `next/dynamic` ao lado vira enfeite. Medido em produção: o celular, que não
+ * tem compositor nenhum, baixava os 27,8 kB mesmo assim.
+ *
+ * 11 e não a 10 padrão do `@react-three/postprocessing`: a 10 é o que ele usa
+ * quando ninguém diz nada, e um dia alguém acrescenta um segundo efeito seletivo
+ * nesta cena sem saber que a 10 já estava tomada.
+ */
+export const CAMADA_BRILHO = 11;
+
 /** Quanto dura o pulso do pino no pouso, em ms. */
 export const PULSO_MS = 600;
 
@@ -266,6 +281,53 @@ export type Cena = {
   telaPinos: Float32Array;
   /** Último valor de destaque escrito no DOM, por pino. 2 = ainda não sei. */
   destacado: Uint8Array;
+  /**
+   * O rótulo "SIMULAÇÃO" que acompanha a torre no fundo do mergulho. DOM, como
+   * os outros rótulos, e pela mesma razão: a torre da Wone é ficção de
+   * ilustração, e esta página rotula toda ficção com texto de verdade — não com
+   * uma textura que nenhum leitor de tela lê e nenhum tradutor traduz.
+   */
+  rotuloSP: HTMLSpanElement | null;
+
+  /* ------------------------------- o mergulho em São Paulo (integração) ---
+
+     Ele é um BLOCO À PARTE, e não campos soltos ao lado de `escala`, por uma
+     razão que é o contrato inteiro desta integração: durante os 11,2 s da
+     parada em São Paulo existem DUAS câmeras, e elas discordam de propósito.
+
+     O canvas 2D — que é o placeholder, o fallback sem WebGL e o caminho de
+     movimento reduzido — continua no enquadramento de POUSO, 1,35×, pelos 11,2
+     segundos inteiros. Ele não tem cidade para mostrar: a textura noturna, os
+     3.769 prédios e a torre são geometria 3D. Mandá-lo seguir a escala até
+     14.000 seria pedir que ele ampliasse 5.102 pontos de Fibonacci até cada um
+     virar um disco de meio quilômetro — uma lupa sobre o nada.
+
+     Então `escala`, `yaw` e `pitch` continuam sendo os do VOO (o que o 2D
+     desenha e o que o 3D usa fora do mergulho), e tudo o que o mergulho muda
+     mora aqui dentro. Fora dele, `sp.ativo` é `false` e nada nesta caixa é lido.
+     ------------------------------------------------------------------------ */
+  sp: {
+    /** O mergulho está em curso? `false` nas outras seis cidades. */
+    ativo: boolean;
+    /** A fase do mergulho (ver `mergulhoSP`). */
+    fase: string;
+    /** A escala do mergulho — de 1,35 a 14.000 (ou a 405, no celular). */
+    zoom: number;
+    /** Obliquidade e órbita, em radianos. */
+    inclinacao: number;
+    orbita: number;
+    /** O enquadre de `enquadraSP`: rotação do grupo e translação que devolve
+        a torre ao centro do disco. */
+    pitch: number;
+    yaw: number;
+    x: number;
+    y: number;
+    /** As quatro visibilidades, todas derivadas da ESCALA. */
+    pontos: number;
+    mapa: number;
+    predios: number;
+    logo: number;
+  };
 
   /* ------------------------------------------------------------- a ponte */
   nuvem: Nuvem | null;
@@ -356,6 +418,22 @@ const ESTADO: Cena = {
   repousoY: new Float32Array(0),
   telaPinos: new Float32Array(0),
   destacado: new Uint8Array(0),
+  rotuloSP: null,
+  sp: {
+    ativo: false,
+    fase: "",
+    zoom: 1,
+    inclinacao: 0,
+    orbita: 0,
+    pitch: 0,
+    yaw: 0,
+    x: 0,
+    y: 0,
+    pontos: 1,
+    mapa: 0,
+    predios: 0,
+    logo: 0,
+  },
   nuvem: null,
   avanca: null,
   pronto: false,

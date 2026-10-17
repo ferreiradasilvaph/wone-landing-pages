@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import dynamic from "next/dynamic";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import {
   AdditiveBlending,
@@ -9,6 +10,7 @@ import {
   Color,
   type Group,
   type Mesh,
+  type Object3D,
   type OrthographicCamera,
   type Points,
   type ShaderMaterial,
@@ -28,6 +30,7 @@ import { LineSegmentsGeometry } from "three/examples/jsm/lines/LineSegmentsGeome
 
 import {
   ARCO_PASSOS,
+  CAMADA_BRILHO,
   cena,
   type Cena,
   CHEGOU_DENTRO,
@@ -43,6 +46,25 @@ import {
   type Nuvem,
 } from "./cena";
 import { alvo, EUROPEUS, rede, REDE_PASSOS, REDE_PERNAS } from "./globeMath";
+import SaoPauloCena from "./SaoPauloCena";
+
+/* --------------------------------------------------------------------------
+   ETAPA 5 — O PÓS-PROCESSAMENTO, NUM CHUNK PRÓPRIO E SÓ NO DESKTOP
+
+   `postprocessing` e `@react-three/postprocessing` são as ÚNICAS bibliotecas
+   novas das seis etapas, e elas entram por aqui — `next/dynamic` com
+   `ssr: false` — para que o celular não baixe o chunk. Não é só não EXECUTAR:
+   o pedido é explícito ("o chunk não deve nem baixar lá"), e um import estático
+   o traria junto com a cena mesmo com o componente nunca renderizado.
+
+   O `loading` é `null` e não um esqueleto: o que carrega é um efeito sobre uma
+   cena que já está desenhada. Enquanto o chunk não chega, o planeta aparece sem
+   brilho — que é exatamente o fallback certo.
+   -------------------------------------------------------------------------- */
+const HeroGlobePos = dynamic(() => import("./HeroGlobePos"), {
+  ssr: false,
+  loading: () => null,
+});
 
 /* --------------------------------------------------------------------------
    O PLANETA EM 3D — ETAPAS 1, 2 E 3
@@ -99,6 +121,31 @@ import { alvo, EUROPEUS, rede, REDE_PASSOS, REDE_PERNAS } from "./globeMath";
  * mais longa das sete), ou seja nunca mostra além de `r = 0,90`.
  */
 const RAIO_ESFERA = 0.9985;
+
+/* --------------------------------------------------------------------------
+   A GAMA DO ALFA — o preço do compositor, pago em um número
+
+   Dentro do `EffectComposer` (etapa 5) a cena é desenhada num RENDER TARGET, e
+   o three trata todo alvo como LINEAR: `linearToOutputTexel()` vira a
+   identidade lá dentro, e a conversão para sRGB passa a acontecer no fim da
+   cadeia. A cor final de um pixel OPACO é a mesma — mas a MISTURA ALFA deixa
+   de acontecer em sRGB e passa a acontecer em linear, e isso muda tudo o que é
+   translúcido, que neste planeta é tudo.
+
+   A conta: em sRGB, uma camada de alfa `a` sobre preto aparece como `a·sRGB(L)`;
+   em linear, como `sRGB(a·L)`. Como sRGB(x) ≈ 1,055·x^(1/2,4), a segunda é a
+   primeira com o alfa elevado a 1/2,4 — ou seja muito maior para alfa baixo.
+   Medido: a atmosfera, laranja a 26% de alfa, saltava de 0,156 para 0,33 de
+   luminância, e o fio da borda do disco virava uma faixa acesa de 76 px. Um
+   halo de néon que o pedido proíbe com todas as letras — e que aparecia com o
+   bloom em ZERO, o que foi o que entregou a causa.
+
+   O conserto é a inversa exata, aplicada ao ALFA e num lugar só por shader:
+   com o compositor de pé `uGamaAlfa` vale 2,4 e o alfa sai elevado a isso antes
+   da mistura; sem ele vale 1 e nada muda. Os dois caminhos passam a mostrar o
+   MESMO planeta — o que importa porque o celular não tem compositor nenhum.
+   -------------------------------------------------------------------------- */
+const GAMA_SRGB = 2.4;
 
 /** A duração do crossfade, igual à do `.globe-tres` em `hero.css`. */
 const FADE_MS = 600;
@@ -184,6 +231,10 @@ const atmosferaFrag = /* glsl */ `
   uniform float uForca;
   uniform float uExp;
   uniform float uZoom;
+  /* A VELA: 1 fora do mergulho em São Paulo, 0 no fundo dele. O nome é o da
+     coisa — é a cortina que fecha sobre o planeta para a cidade entrar. */
+  uniform float uVela;
+  uniform float uGamaAlfa;
   varying vec3 vP;
   void main() {
     /* rs = 1 EXATAMENTE na borda da vigia, em qualquer zoom: a vigia mostra o
@@ -202,6 +253,7 @@ const atmosferaFrag = /* glsl */ `
     #else
       float f = pow(b, uExp) * uForca;
     #endif
+    f = pow(f * uVela, uGamaAlfa);
     /* SEM discard: o fragmento descartado não escreve PROFUNDIDADE, e é a
        profundidade desta esfera que esconde o hemisfério de trás. No corpo do
        disco ele escreve (0,0,0,0) — zero tinta, zero alfa — e a página
@@ -285,6 +337,8 @@ const pontosVert = /* glsl */ `
   uniform vec3 uFria;
   uniform vec3 uFriaDir;
   uniform float uFriaForca;
+  uniform float uVela;
+  uniform float uGamaAlfa;
   varying vec4 vCor;
 
   void main() {
@@ -367,7 +421,7 @@ const pontosVert = /* glsl */ `
 
     float raio = rb * (0.72 + 0.4 * lit + 0.12 * realce) * vol * extra * uGrao;
     gl_PointSize = raio * uDpr * ${SPRITE.toFixed(2)};
-    vCor = vec4(cor, alfa);
+    vCor = vec4(cor, pow(alfa * uVela, uGamaAlfa));
   }
 `;
 
@@ -377,11 +431,9 @@ const pontosFrag = /* glsl */ `
     float d = length(gl_PointCoord - 0.5);
     float m = 1.0 - smoothstep(0.40, 0.5, d);
     if (m <= 0.002) discard;
-    gl_FragColor = vec4(vCor.rgb, vCor.a * m);
-    /* Linear para sRGB: ver a nota no shader da atmosfera. Aqui o alfa e
-       direto (a mistura normal do three multiplica por ele no blend), entao o
-       include padrao serve — ele toca so o rgb. */
-    #include <colorspace_fragment>
+    /* Linear para sRGB: ver PARA_SRGB, acima. O alfa é direto — a mistura
+       normal do three multiplica por ele no blend. */
+    gl_FragColor = vec4(linearToOutputTexel(vec4(vCor.rgb, 1.0)).rgb, vCor.a * m);
   }
 `;
 
@@ -462,11 +514,13 @@ const cometaVert = /* glsl */ `
   uniform float uGrao;
   uniform vec3 uCabeca;
   uniform vec3 uRastro;
+  uniform float uVela;
+  uniform float uGamaAlfa;
   varying vec4 vCor;
   void main() {
     gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
     gl_PointSize = aPeso.x * uDpr * uGrao * ${SPRITE.toFixed(2)};
-    vCor = vec4(mix(uRastro, uCabeca, aPeso.z), aPeso.y);
+    vCor = vec4(mix(uRastro, uCabeca, aPeso.z), pow(aPeso.y * uVela, uGamaAlfa));
   }
 `;
 
@@ -583,11 +637,34 @@ function emSegmentos(pts: Float32Array, inicio: number, n: number) {
  */
 function Planeta({
   aoDesenhar,
+  aoBrilhar,
+  composto,
   leve,
 }: {
   aoDesenhar: () => void;
+  /** Os objetos que o bloom da etapa 5 ilumina. Avisado uma vez, na montagem. */
+  aoBrilhar: (objetos: Object3D[]) => void;
+  /** O compositor da etapa 5 está de pé? Ver `GAMA_SRGB`. */
+  composto: boolean;
   leve: boolean;
 }) {
+  /**
+   * AS TRÊS VISIBILIDADES DA CIDADE, e elas são o ÚNICO estado de React desta
+   * cena — tudo o mais é escrito direto em uniformes e matrizes, por quadro.
+   *
+   * Aqui não dá para fugir: `SaoPauloCena` é um componente, e o que ele monta
+   * (o chão, os prédios, as placas da marca) depende dessas três props. Mas o
+   * preço está contido por DEGRAUS: o estado só é reescrito quando um dos três
+   * números muda mais de 1/64, o que dá no máximo ~64 renders ao longo dos 11,2
+   * segundos da parada — contra os ~670 quadros que ela tem. Nos outros 94% dos
+   * quadros o React não é incomodado.
+   *
+   * 1/64 e não 1/256: o que estes números controlam é opacidade de chão, altura
+   * de prédio e opacidade de marca, e um degrau de 1,6% em qualquer um deles é
+   * menos que o ruído do próprio mapa noturno.
+   */
+  const [cidadeSP, setCidadeSP] = useState({ mapa: 0, predios: 0, logo: 0 });
+  const ultimaSP = useRef({ mapa: 0, predios: 0, logo: 0 });
   const grupo = useRef<Group>(null);
   const terra = useRef<Points>(null);
   const cometaNo = useRef<Points>(null);
@@ -632,6 +709,8 @@ function Planeta({
       uFria: { value: cores.fria },
       uFriaDir: { value: FRIA_DIR },
       uFriaForca: { value: FRIA_FORCA },
+      uVela: { value: 1 },
+      uGamaAlfa: { value: 1 },
     };
 
     /* ----------------------------------------------------------- a esfera */
@@ -643,6 +722,8 @@ function Planeta({
       uForca: { value: ATM_FORCA },
       uExp: { value: ATM_EXP },
       uZoom: { value: 1 },
+      uVela: { value: 1 },
+      uGamaAlfa: { value: 1 },
     };
 
     /* ------------------------------------------------------- os arcos (3) */
@@ -744,6 +825,8 @@ function Planeta({
       uGrao: { value: 1 },
       uCabeca: { value: cores.paisNucleo },
       uRastro: { value: cores.costa },
+      uVela: { value: 1 },
+      uGamaAlfa: { value: 1 },
     };
     /* Sorteio determinístico das faíscas: a mesma cena em todo recarregamento,
        sem `Math.random` — a mesma regra do resto do globo. */
@@ -776,6 +859,8 @@ function Planeta({
          suposto. */
       uTeto: { value: 64 },
       uCor: { value: cores.laranja },
+      uVela: { value: 1 },
+      uGamaAlfa: { value: 1 },
     };
 
     return {
@@ -832,6 +917,10 @@ function Planeta({
   );
 
   const escala = useRef(0);
+  /** A última gama de alfa aplicada (ver `GAMA_SRGB`). */
+  const gama = useRef(-1);
+  /** A última "vela" aplicada: 1 fora do mergulho, 0 no fundo dele. */
+  const vela = useRef(1);
   const cidade = useRef(-1);
   const quadros = useRef(0);
   const tela = useRef(0);
@@ -850,30 +939,95 @@ function Planeta({
     const marcas3d = marcasNo.current;
     if (!g || !rede3d || !flash3d || !cometa3d || !marcas3d) return;
 
-    /* A CÂMERA DO QUADRO, lida e não calculada: os três números são os mesmos
-       que o `desenha()` do 2D acabou de usar. */
-    g.rotation.set(q.pitch, q.yaw, 0);
+    /* ------------------------------------------- a câmera do quadro
+
+       DUAS CÂMERAS, E O MERGULHO MANDA QUANDO EXISTE. Fora da parada em São
+       Paulo valem `yaw`, `pitch` e `escala` do voo — os mesmos três números que
+       o `desenha()` do canvas 2D acabou de usar, e é essa igualdade que mantém
+       os pinos colados na esfera. Durante os 11,2 s de São Paulo, o enquadre
+       vem de `enquadraSP`: rotação E TRANSLAÇÃO.
+
+       A translação é o que o roteiro não previa e sem a qual a cena fica preta
+       (está medido em `mergulhoSP.ts`): o grupo gira em torno do CENTRO DA
+       TERRA, então tombá-lo 32° leva São Paulo 3.376 km para fora do quadro —
+       em zoom 14.000, onde o disco mostra 910 m, são quatro mil larguras de
+       tela. `position` devolve a torre ao meio do disco, e o resultado é uma
+       órbita em volta DELA. */
+    const mergulho = q.sp.ativo;
+    const zoom = mergulho ? q.sp.zoom : q.escala;
+    if (mergulho) {
+      g.rotation.set(q.sp.pitch, q.sp.yaw, 0);
+      g.position.set(q.sp.x, q.sp.y, 0);
+    } else {
+      g.rotation.set(q.pitch, q.yaw, 0);
+      g.position.set(0, 0, 0);
+    }
 
     /* O ZOOM pela `zoom` da câmera ortográfica, que é precisamente o que a
        matriz do canvas 2D faz: com o frustum em ±1, `zoom = Z` recorta o
        frustum para ±1/Z, e um ponto em `x₁` cai em `R + Z·R·x₁` — a conta do
        2D, sem um fator de ajuste. `updateProjectionMatrix` só quando muda:
        durante o pouso a escala é constante por 1,8 s. */
-    if (q.escala !== escala.current) {
-      escala.current = q.escala;
-      camera.zoom = q.escala;
+    if (zoom !== escala.current) {
+      escala.current = zoom;
+      camera.zoom = zoom;
       camera.updateProjectionMatrix();
       /* `grao` = Z^0,6: o ponto cresce por MENOS que a escala, então os vãos
          entre eles ABREM e aproximar REVELA a nuvem em vez de só ampliá-la. É
          a mesma curva do canvas 2D, escrita do outro lado da conta. */
-      const grao = Math.pow(q.escala, 0.6);
+      const grao = Math.pow(zoom, 0.6);
       const mt = terra.current?.material as ShaderMaterial | undefined;
       const mc = cometa3d.material as ShaderMaterial;
       if (mt) mt.uniforms.uGrao.value = grao;
       mc.uniforms.uGrao.value = grao;
       /* A atmosfera precisa do zoom para saber ONDE fica a borda da vigia. */
       const ma = esferaNo.current?.material as ShaderMaterial | undefined;
-      if (ma) ma.uniforms.uZoom.value = q.escala;
+      if (ma) ma.uniforms.uZoom.value = zoom;
+    }
+
+    /* ------------------------------------------- o planeta cede a vez
+
+       As quatro camadas do globo — os pontos de terra, os dois fios dos arcos,
+       o cometa e a atmosfera — desvanecem por `pontos`, que `mergulhoSP`
+       deriva da ESCALA e não do tempo. Por isso elas somem na descida e voltam
+       na subida no MESMO zoom, sem uma segunda tabela de instantes e sem o
+       degrau clássico de "apagou num momento e acendeu noutro".
+
+       E somem porque TÊM de sumir: a espiral de Fibonacci da terra tem 1,4° de
+       passo, ou seja 156 km entre vizinhos. Em zoom 14 esse passo já mede 108
+       px — meia dúzia de pontos soltos no disco, que é constelação e não
+       planeta. É nessa faixa que eles dão lugar ao chão de verdade. */
+    /* A GAMA DO ALFA (ver `GAMA_SRGB`), escrita quando o compositor entra ou
+       sai. Daqui e não de um efeito: são os MESMOS materiais que este laço
+       muta, e tocá-los nos dois lugares é o que o compilador do React proíbe —
+       com razão, porque a ordem entre efeito e quadro não é garantida. */
+    const gamaAlvo = composto ? GAMA_SRGB : 1;
+    if (gamaAlvo !== gama.current) {
+      gama.current = gamaAlvo;
+      const mt = terra.current?.material as ShaderMaterial | undefined;
+      const ma = esferaNo.current?.material as ShaderMaterial | undefined;
+      if (mt) mt.uniforms.uGamaAlfa.value = gamaAlvo;
+      if (ma) ma.uniforms.uGamaAlfa.value = gamaAlvo;
+      (cometa3d.material as ShaderMaterial).uniforms.uGamaAlfa.value = gamaAlvo;
+      (marcas3d.material as ShaderMaterial).uniforms.uGamaAlfa.value = gamaAlvo;
+    }
+
+    const velaGlobo = mergulho ? q.sp.pontos : 1;
+    if (velaGlobo !== vela.current) {
+      vela.current = velaGlobo;
+      const mt = terra.current?.material as ShaderMaterial | undefined;
+      if (mt) mt.uniforms.uVela.value = velaGlobo;
+      (cometa3d.material as ShaderMaterial).uniforms.uVela.value = velaGlobo;
+      const ma = esferaNo.current?.material as ShaderMaterial | undefined;
+      if (ma) ma.uniforms.uVela.value = velaGlobo;
+      (rede3d.material as LineMaterial).opacity = REDE_ALFA * velaGlobo;
+      const mn = nucleoNo.current?.material as LineMaterial | undefined;
+      if (mn) mn.opacity = NUCLEO_ALFA * velaGlobo;
+      (marcas3d.material as ShaderMaterial).uniforms.uVela.value = velaGlobo;
+      rede3d.visible = velaGlobo > 0.004;
+      if (nucleoNo.current) {
+        nucleoNo.current.visible = !leve && velaGlobo > 0.004;
+      }
     }
 
     /* O PAÍS DA VEZ: um `uniform`, não um buffer reescrito. */
@@ -916,6 +1070,21 @@ function Planeta({
     desenhaCometa(q, cena3d, cometa3d);
     desenhaMarcas(q, marcas3d, cena3d.marcas);
 
+    /* A cidade, em degraus de 1/64 (ver `cidadeSP`). */
+    const alvoSP = mergulho
+      ? { mapa: q.sp.mapa, predios: q.sp.predios, logo: q.sp.logo }
+      : ZERO_SP;
+    const u = ultimaSP.current;
+    if (
+      Math.abs(alvoSP.mapa - u.mapa) > DEGRAU_SP ||
+      Math.abs(alvoSP.predios - u.predios) > DEGRAU_SP ||
+      Math.abs(alvoSP.logo - u.logo) > DEGRAU_SP ||
+      (alvoSP.mapa === 0) !== (u.mapa === 0)
+    ) {
+      ultimaSP.current = alvoSP;
+      setCidadeSP(alvoSP);
+    }
+
     /* AS MATRIZES, ATUALIZADAS À MÃO — e só então os pinos.
 
        O `useFrame` roda ANTES do `gl.render`, e é o `render` que normalmente
@@ -927,6 +1096,7 @@ function Planeta({
     camera.updateMatrixWorld();
     camera.matrixWorldInverse.copy(camera.matrixWorld).invert();
     posicionaPinos(q, camera, g);
+    rotulaTorre(q);
 
     q.chamadas = estado.gl.info.render.calls;
     q.pontos = estado.gl.info.render.points;
@@ -940,7 +1110,24 @@ function Planeta({
        um canvas que não desenhou nada seria um piscar de preto sobre o planeta
        2D. */
     quadros.current += 1;
-    if (quadros.current === 2) aoDesenhar();
+    if (quadros.current === 2) {
+      aoDesenhar();
+      /* A SELEÇÃO DO BRILHO (etapa 5), avisada UMA vez — daqui e não de um
+         efeito porque é AQUI que os nós já existem com certeza, e porque tocar
+         estes mesmos refs num efeito e mutá-los neste laço é o que o
+         compilador do React (com razão) não deixa.
+
+         São os quatro objetos que o pedido nomeia e que vivem nesta cena: o
+         cometa (cabeça, rastro e faíscas), os dois anéis do pouso e o fio creme
+         por dentro dos arcos. A marca da torre é o quinto, e entra na camada
+         por conta própria lá dentro do `SaoPauloCena`. */
+      if (!leve) {
+        const alvos: Object3D[] = [cometa3d, marcas3d];
+        const fio = nucleoNo.current;
+        if (fio) alvos.push(fio);
+        aoBrilhar(alvos);
+      }
+    }
   });
 
   if (!cena3d.geoTerra) return null;
@@ -1011,6 +1198,27 @@ function Planeta({
           uniforms={cena3d.uMarcas}
         />
       </points>
+
+      {/* SÃO PAULO, no fundo do mergulho (pedido do dono, 17/10).
+
+          DENTRO do grupo que gira, como irmã dos pontos de terra: a cidade é um
+          pedaço da superfície do planeta, não um objeto por cima dele. O
+          componente devolve `null` enquanto `mapa` é zero, então fora da parada
+          em São Paulo ele não custa um `drawcall` nem um triângulo.
+
+          As três props vêm todas da ESCALA (ver `visibilidades`), e por isso a
+          cidade aparece na subida no mesmo zoom em que apareceu na descida.
+          No celular `predios` e `logo` chegam zerados pelo `HeroGlobe`: 3.769
+          prédios são 62 mil triângulos, e a câmera de lá para em 405, onde um
+          prédio comum mede 0,6 px. */}
+      <SaoPauloCena
+        mapa={cidadeSP.mapa}
+        predios={cidadeSP.predios}
+        logo={cidadeSP.logo}
+        /* A marca na fachada é o quinto objeto do bloom da etapa 5. No celular
+           não há compositor nenhum, e a camada não é pedida. */
+        camadaBrilho={leve ? undefined : CAMADA_BRILHO}
+      />
 
       {/* O COMETA (etapa 3): cabeça, rastro e partículas num `Points` só.
 
@@ -1254,6 +1462,25 @@ function posicionaPinos(q: Cena, camera: OrthographicCamera, grupo: Group) {
   const atual = q.cidade;
   const noPouso = q.fase === "pouso";
 
+  /* ------------------------------- os pinos no mergulho em São Paulo
+
+     Eles somem com os pontos de terra, pela mesma razão e no mesmo zoom: um
+     alfinete de cidade sobre um quadro que mostra 910 metros é um alfinete
+     apontando para um quarteirão. A EXCEÇÃO é São Paulo, que fica até o chão da
+     cidade encher metade da sua opacidade (mapa > 0,5, por volta de zoom 29) —
+     é ele que diz ONDE se está chegando enquanto a câmera desce, e entregá-lo
+     junto com os outros deixaria a descida sem legenda. Na subida a ordem se
+     inverte sozinha, porque as duas visibilidades saem da ESCALA e não do
+     tempo. */
+  const mergulho = q.sp.ativo;
+  const veuPinos = mergulho ? q.sp.pontos : 1;
+  /* UMA RAMPA, E NÃO UM DEGRAU, em volta do 0,5 que o pedido fixou. Medido na
+     integração: com o corte seco o pino de São Paulo ia de 1 a 0 em UM quadro,
+     por volta de zoom 29 — um estalo no meio de uma descida que é toda
+     contínua. A faixa de 0,42 a 0,58 de `mapa` é atravessada em ~0,18 s, o que
+     dá onze quadros de desvanecimento e mantém o limiar onde ele foi pedido. */
+  const veuSP = mergulho ? 1 - suavinha(q.sp.mapa, 0.42, 0.58) : 1;
+
   for (let j = 0; j < pinos.length; j += 1) {
     const el = pinos[j];
     if (!el) continue;
@@ -1294,17 +1521,43 @@ function posicionaPinos(q: Cena, camera: OrthographicCamera, grupo: Group) {
 
     const foco = q.focos[j] ?? 0;
     const vol = volume(z2);
+    const veu =
+      q.codigos[j] === CIDADE_MERGULHO ? Math.max(veuPinos, veuSP) : veuPinos;
+
+    /* DUAS OPACIDADES, E É O QUE TORNA O PAÍS CLICÁVEL (ver `.hero-rotulo`).
+
+       O ALFINETE obedece só à geometria — hemisfério, vigia, volume — e a um
+       PISO: longe do meio do disco ele desvanece até `PISO_PONTO` e para ali,
+       em vez de sumir. É um ponto de 6 px: ele não briga com o `<h1>` e não
+       polui o planeta, e é o que dá ao visitante um alvo para escolher o país.
+       O RÓTULO, que é a caixa de texto capaz de invadir a coluna do título,
+       continua com a régua inteira. */
+    const texto = chegou * (q.rotulos + (1 - q.rotulos) * foco);
     const efetiva =
       Math.min(visivel, naVigia) *
-      chegou *
-      (q.rotulos + (1 - q.rotulos) * foco) *
+      Math.max(chegou, PISO_PONTO) *
       /* A queda de volume entra NA OPACIDADE junto com o tamanho: no limbo o
          pino não é só menor, é mais fraco — é esse par que o olho lê como
          curvatura, e é o mesmo par que os 5.458 pontos de terra usam. */
-      vol;
+      vol *
+      veu;
 
-    el.hidden = efetiva <= 0.004;
+    /* Apagado é apagado: sem transform, sem variável, sem opacidade. No fundo
+       do mergulho a projeção devolve coordenadas de milhares de pixels (o disco
+       mostra 910 m), e escrever isso num nó que ninguém vê é pagar invalidação
+       de estilo por quadro para não desenhar nada. */
+    if (efetiva <= 0.004) {
+      if (!el.hidden) el.hidden = true;
+      continue;
+    }
+    el.hidden = false;
     el.style.opacity = efetiva >= 0.999 ? "" : efetiva.toFixed(3);
+    /* A opacidade do rótulo é RELATIVA à do alfinete (o CSS a multiplica pela
+       herdada), então o que se escreve aqui é só o que FALTA. */
+    el.style.setProperty(
+      "--rotulo-op",
+      (efetiva > 0.001 ? Math.min(1, texto / efetiva) : 0).toFixed(3),
+    );
     el.style.transform = `translate3d(${(px - q.repousoX[j]).toFixed(1)}px, ${(py - q.repousoY[j]).toFixed(1)}px, 0)`;
     /* `--pino-vol` é lido só pelo PONTO (ver `.hero-ponto`, em `hero.css`): o
        rótulo não escala, porque um texto que encolhe perto do limbo é um texto
@@ -1328,6 +1581,57 @@ function posicionaPinos(q: Cena, camera: OrthographicCamera, grupo: Group) {
     q.telaPinos[j * 3 + 1] = py;
     q.telaPinos[j * 3 + 2] = z2;
   }
+}
+
+/** Smoothstep entre dois limites — a mesma curva da casa. */
+function suavinha(x: number, a: number, b: number) {
+  const u = Math.max(0, Math.min(1, (x - a) / (b - a)));
+  return u * u * (3 - 2 * u);
+}
+
+/**
+ * O PISO do alfinete: quanto do ponto sobra quando a régua da coluna de texto
+ * manda o rótulo embora.
+ *
+ * 0,38 é medido contra o fundo: o ponto é creme a 60% de alfa no país inativo,
+ * e a 0,38 disso ele fica em 23% sobre o oceano do globo — visível quando se
+ * procura, invisível quando se lê o título. Abaixo de ~0,25 ele some de
+ * verdade e o país volta a não ter alvo; acima de ~0,55 os sete pontos
+ * aparecem com o mesmo peso e o planeta perde o foco que o voo está afirmando.
+ */
+const PISO_PONTO = 0.38;
+
+/** Onde o rótulo da torre fica, em px de tela a partir do centro do disco. */
+const ROTULO_TORRE_X = 76;
+const ROTULO_TORRE_Y = -44;
+
+/**
+ * O RÓTULO DE FICÇÃO DA TORRE: acende com a marca e some com ela.
+ *
+ * A POSIÇÃO É O CENTRO DA CAIXA mais um deslocamento fixo, e isso é exato, não
+ * aproximado: enquadraSP existe para manter a TORRE no meio do disco durante a
+ * contemplação — é a translação que devolve o alvo ao centro depois de
+ * inclinar. O meio do disco É a base da torre em todo quadro da contemplação.
+ *
+ * +76 e −44 px: no fundo do mergulho a torre mede 88 px de altura e 40 de
+ * fachada, então o rótulo nasce encostado no topo dela, à direita, sem cobrir a
+ * marca. Em px de TELA, não de mundo: é legenda, não geometria.
+ *
+ * A opacidade só começa a subir quando a marca passa de 0,5 — a régua que o
+ * pedido fixou —, para o texto não aparecer junto com um borrão laranja que
+ * ainda não se lê como logotipo.
+ */
+function rotulaTorre(q: Cena) {
+  const el = q.rotuloSP;
+  if (!el) return;
+  const aceso = q.sp.ativo ? Math.max(0, (q.sp.logo - 0.5) * 2) : 0;
+  if (aceso <= 0.01) {
+    if (!el.hidden) el.hidden = true;
+    return;
+  }
+  el.hidden = false;
+  el.style.opacity = aceso.toFixed(3);
+  el.style.transform = "translate3d(" + ROTULO_TORRE_X + "px, " + ROTULO_TORRE_Y + "px, 0)";
 }
 
 /* --------------------------------------------------------------------------
@@ -1357,6 +1661,13 @@ function posicionaPinos(q: Cena, camera: OrthographicCamera, grupo: Group) {
    de verdade, portanto — soma luz ao que está atrás, como o rastro.
    -------------------------------------------------------------------------- */
 
+/** O código de moeda da cidade que ganha o mergulho. Ver o HeroGlobe. */
+const CIDADE_MERGULHO = "BRL";
+
+/** O degrau mínimo que faz a cidade de São Paulo valer um render de React. */
+const DEGRAU_SP = 1 / 64;
+const ZERO_SP = { mapa: 0, predios: 0, logo: 0 };
+
 /** Espessura do fio dos dois anéis, em px de CSS. */
 const ANEL_FIO = 1.4;
 /**
@@ -1377,6 +1688,8 @@ const marcasVert = /* glsl */ `
   uniform float uFio;
   uniform float uFolga;
   uniform float uTeto;      /* o maior gl_PointSize que esta GPU aceita */
+  uniform float uVela;
+  uniform float uGamaAlfa;
   varying float vAnel;
   varying float vMeia;
   varying float vAA;
@@ -1391,7 +1704,7 @@ const marcasVert = /* glsl */ `
     vAnel = (aMarca.x * uDpr) / max(sprite, 1.0);
     vMeia = (uFio * 0.5 * uDpr) / max(sprite, 1.0);
     vAA = 1.0 / max(sprite, 1.0);
-    vAlfa = aMarca.y;
+    vAlfa = pow(aMarca.y * uVela, uGamaAlfa);
   }
 `;
 
@@ -1467,6 +1780,8 @@ function desenhaMarcas(q: Cena, no: Points, marcas: Float32Array) {
  */
 export default function HeroGlobe3D({ leve = false }: { leve?: boolean }) {
   const [vivo, setVivo] = useState(false);
+  /** Os objetos que o bloom da etapa 5 ilumina (ver `HeroGlobePos`). */
+  const [brilho, setBrilho] = useState<Object3D[]>([]);
 
   /* O 2D só larga a terra quando o 3D já está CHEIO. Durante os 600 ms os dois
      pintam — e podem, porque pintam a mesma geometria no mesmo pixel: o que se
@@ -1540,7 +1855,18 @@ export default function HeroGlobe3D({ leve = false }: { leve?: boolean }) {
         if (faixa && faixa.length > 1) TETO_SPRITE.valor = faixa[1];
       }}
     >
-      <Planeta aoDesenhar={() => setVivo(true)} leve={leve} />
+      <Planeta
+        aoDesenhar={() => setVivo(true)}
+        aoBrilhar={setBrilho}
+        composto={!leve && brilho.length > 0}
+        leve={leve}
+      />
+      {/* O compositor, DEPOIS do planeta: ele assume a renderização por um
+          `useFrame` de prioridade alta, e esse `useFrame` tem de ser registrado
+          depois dos que escrevem a câmera e a cidade. Sem seleção ainda (os
+          primeiros quadros, antes de os nós existirem) ele não é montado: um
+          bloom sobre nada é uma passada de tela por quadro para somar zero. */}
+      {!leve && brilho.length > 0 ? <HeroGlobePos selecao={brilho} /> : null}
     </Canvas>
   );
 }

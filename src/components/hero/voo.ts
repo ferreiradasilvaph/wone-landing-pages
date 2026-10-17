@@ -52,6 +52,18 @@ export type Estado = {
   arco: number;
   /** Duração do voo desta perna, em ms. */
   duracao: number;
+  /** Quanto dura o pouso NESTA cidade, em ms. */
+  pouso: number;
+  /**
+   * Quanto tempo já se passou DENTRO do pouso, em ms — preso em `pouso` assim
+   * que o voo começa.
+   *
+   * Existe desde 17/10 por causa do MERGULHO EM SÃO PAULO: `mergulhoSP(ms)`
+   * quer exatamente este número, e deduzi-lo fora daqui significaria repetir a
+   * conta de qual é a duração do pouso desta cidade — que é justamente o que
+   * deixou de ser uma constante.
+   */
+  msPouso: number;
   /** Pouso + voo, em ms: é quando a cidade da vez troca. */
   ciclo: number;
   /** Quanto falta para a troca, em ms. */
@@ -355,17 +367,33 @@ export function perna(
  * (aba oculta, hero fora da tela, movimento reduzido) param de somar, e ao
  * voltar o voo retoma de onde estava em vez de aparecer três cidades adiante.
  */
-export function voo(cidades: Ponto[], indice: number, ms: number): Estado {
+export function voo(
+  cidades: Ponto[],
+  indice: number,
+  ms: number,
+  /**
+   * Quanto dura o POUSO nesta cidade. Padrão: `POUSO_MS`, os 1,8 s de seis das
+   * sete paradas.
+   *
+   * É PARÂMETRO, e não uma tabela aqui dentro, por uma razão de dependência:
+   * quem sabe que São Paulo para por 11,2 s é `mergulhoSP.ts`, e ele já importa
+   * deste arquivo (`POUSO_MS`, `suave`, `ZOOM_DETALHE`). Importar de volta fecharia um
+   * ciclo entre os dois módulos — e, pior, faria este arquivo, que é PURO e
+   * fala só de esferas e relógios, conhecer uma cidade específica. Quem integra
+   * passa o número; o modelo continua sem saber de São Paulo.
+   */
+  pouso: number = POUSO_MS,
+): Estado {
   const n = cidades.length;
   const de = ((indice % n) + n) % n;
   const para = (de + 1) % n;
 
   const arco = distancia(cidades[de], cidades[para]);
   const duracao = duracaoDe(arco);
-  const ciclo = POUSO_MS + duracao;
+  const ciclo = pouso + duracao;
 
-  const pousado = ms < POUSO_MS;
-  const t = pousado ? 0 : Math.min(1, (ms - POUSO_MS) / duracao);
+  const pousado = ms < pouso;
+  const t = pousado ? 0 : Math.min(1, (ms - pouso) / duracao);
   const q = perna(
     cidades[de],
     cidades[para],
@@ -384,6 +412,8 @@ export function voo(cidades: Ponto[], indice: number, ms: number): Estado {
     zoom: q.zoom,
     arco,
     duracao,
+    pouso,
+    msPouso: pousado ? ms : pouso,
     ciclo,
     restante: Math.max(0, ciclo - ms),
   };
