@@ -94,27 +94,67 @@ const RAIO_CHEIO = 950;
 const RAIO_BORDA = 1200;
 
 /**
- * A TORRE (ficção).
+ * A TORRE (ficção) — agora com ARQUITETURA, não um prisma.
  *
- * 240 m e 58 m de lado. O pedido sugeria 160 m; a conta do zoom final
- * (1,44 m/px, veja `ZOOM_TORRE` em `mergulhoSP.ts`) põe 160 m em 59 px de
- * altura contra os 39 px do prédio mais alto do OSM aqui em volta — pouco para
- * "em destaque". 240 m dá 88 px, 2,3 vezes o vizinho mais alto, que é a
- * proporção que um marco tem numa foto aérea de verdade.
+ * Era um paralelepípedo de 58×58×240 com uma faixa laranja no topo. No zoom
+ * final isso dá 88 px de altura sem uma única quebra que diga "prédio": lia
+ * como um bloco apoiado na maquete. O pedido do dono foi "um prédio mais
+ * bonito", e o que faz um arranha-céu ser bonito a esta distância são duas
+ * coisas só — a SILHUETA, que são os recuos, e as FIADAS de janela, que são a
+ * única coisa capaz de dar escala humana a uma massa escura.
+ *
+ * O corte, de baixo para cima:
+ *
+ *     0 –  15 m   embasamento (76 m de lado) e a marquise em balanço
+ *    15 – 108 m   fuste A (58 m), 25 andares
+ *   108 – 180 m   fuste B (50 m), 19 andares — primeiro recuo
+ *   180 – 240 m   fuste C (42 m), 16 andares — segundo recuo, e a marca
+ *   240 – 278 m   coroa (34 m), esguia
+ *   278 – 284 m   remate laranja (36 m) e o terraço escuro
+ *
+ * Os 240 m de parapeito são os mesmos de antes — a conta de pixels que os
+ * escolheu (2,3× o vizinho mais alto do OSM, que tem 105,8 m) continua valendo
+ * palavra por palavra. O que subiu foi só a coroa, que leva o topo a 284 m,
+ * 2,7× o vizinho. O lado de baixo, 58 m, também não mudou: é o fuste A.
+ *
+ * Por que os recuos são de 8 m e não de 2 ou de 20: no fim do mergulho um
+ * pixel vale 1,44 m, então um recuo de 2 m é um pixel e não existe; um de 20 m
+ * deixaria a coroa com 18 m de lado, estreita demais para a placa do terraço,
+ * que é a que carrega o reconhecimento da marca (ver constroiLogo).
  */
-const TORRE_ALTURA = 240;
-const TORRE_LADO = 58;
-/** A coroa: a faixa laranja do topo, 2 m mais larga que o fuste. */
-const COROA_ALTURA = 14;
-const COROA_SOBRA = 2;
-/** A largura das quatro arestas acesas do fuste. */
-const ARESTA = 3.2;
+const PE_DIREITO = 3.7;
+const EMBASAMENTO = { z0: 0, z1: 15, lado: 76 } as const;
+const MARQUISE = { z0: 11.6, z1: 14.4, lado: 88 } as const;
+const FUSTES = [
+  { z0: 15, z1: 108, lado: 58 },
+  { z0: 108, z1: 180, lado: 50 },
+  { z0: 180, z1: 240, lado: 42 },
+] as const;
+const COROA = { z0: 240, z1: 278, lado: 34 } as const;
+const REMATE = { z0: 278, z1: 284, lado: 36 } as const;
+const TORRE_TOPO = REMATE.z1;
 
-/** A marca: 46 m de largura, na proporção 642×400 do `logo-icon.png`. */
-const LOGO_LARGURA = 46;
+/**
+ * A largura das arestas acesas: eram 3,2 m, e o pedido foi "mais finas e
+ * contínuas até a coroa". 1,8 m dá 1,25 px no fim do mergulho — ainda acima de
+ * um pixel, que é o piso abaixo do qual uma fita some entre dois quadros.
+ */
+const ARESTA = 1.8;
+
+/**
+ * A marca: 32 m de largura na fachada (cabe no fuste C, que tem 42) e 28 m no
+ * terraço (que tem 36). As duas na proporção 642×400 do logo-icon.png.
+ */
+const LOGO_LARGURA = 22;
 const LOGO_ALTURA = (LOGO_LARGURA * 400) / 642;
-/** A altura do centro da placa na fachada. */
-const LOGO_FACHADA_Z = 172;
+const LOGO_TELHADO = 24;
+const LOGO_TELHADO_H = (LOGO_TELHADO * 400) / 642;
+/**
+ * A altura do centro da placa na fachada. A fachada vai de 15 a 240 m; o terço
+ * de cima é 165–240 e o meio dele é 202. 206 põe a placa inteira dentro do
+ * fuste C (180–240) com 14 m de folga em cima para a moldura.
+ */
+const LOGO_FACHADA_Z = 206;
 
 /**
  * O CHÃO ESCURECE NO FUNDO DO MERGULHO — agora muito menos.
@@ -199,6 +239,23 @@ const TORRE_CORPO = tom("#101018");
 const TORRE_LUZ = tom("#45455f");
 const LARANJA = tom("#ff7700");
 
+/* AS QUATRO CORES QUE A REFORMA DE 17/10 TROUXE — nenhuma nova: as três da
+   página e o âmbar que já estava aqui.
+
+   - VIDRO e VIDRO_LUZ são a fachada da torre. São mais ESCUROS que a parede
+     da cidade de propósito: a torre tem de ler como vidro (quase preto, com
+     reflexo) contra o concreto dos vizinhos, e é esse contraste de MATERIAL,
+     não o de tamanho, que faz um marco parecer um marco.
+   - CREME é o paper do globals.css (#FFFFE3), o mesmo da tipografia. Entra na
+     marquise da rua e na faixa de luz sob a marca — os dois lugares onde um
+     prédio de verdade põe luz branca, e os únicos onde ela aparece aqui.
+   - OCLUSAO é o preto do contato com o chão. Não é uma cor que se veja: é a
+     ausência dela na base de cada prédio, que é o que dá PESO à maquete. */
+const VIDRO = tom("#0c0c14");
+const VIDRO_LUZ = tom("#2a2a3e");
+const CREME = tom("#ffffe3");
+const OCLUSAO = tom("#04040a");
+
 /**
  * A DIREÇÃO DA LUZ ASSADA, no referencial local (x leste, y norte, z para
  * cima): de noroeste e de cima.
@@ -278,6 +335,8 @@ type AnelPronto = {
   readonly n: number;
   readonly altura: number;
   readonly semente: number;
+  /** A distância do centroide à torre, em metros — a régua das janelas. */
+  readonly dist: number;
 };
 
 function degrau(x: number) {
@@ -368,7 +427,7 @@ function preparaAneis(): AnelPronto[] {
       }
     }
 
-    aneis.push({ pts, n, altura, semente: i });
+    aneis.push({ pts, n, altura, semente: i, dist: Math.hypot(cx, cy) });
   }
 
   return aneis;
@@ -386,21 +445,48 @@ function preparaAneis(): AnelPronto[] {
  * um índice compartilhado obrigaria a duplicar os vértices do mesmo jeito.
  */
 function constroiPredios(aneis: AnelPronto[]) {
-  let arestas = 0;
-  let telhados = 0;
+  /**
+   * QUANTAS FATIAS TEM CADA PAREDE.
+   *
+   * Uma parede era UM quadrilátero do chão ao telhado, com a cor escura
+   * embaixo e clara em cima. Isso basta para um prédio de 10 m, onde o
+   * degradê inteiro cabe em três pixels, e é pouco para um de 90: o
+   * escurecimento da base, que é o que dá PESO à maquete, escorre por toda a
+   * fachada e vira uma cortina em vez de uma sombra de contato.
+   *
+   * Então a parede ganha cortes horizontais, e só onde eles pagam:
+   *
+   *   até 40 m    1 fatia  — o degradê simples, como era (2.896 prédios)
+   *   40 a 60 m   2 fatias — a oclusão presa nos 9 m de baixo (627 prédios)
+   *   acima de 60 2 fatias + o FIO: os 1,2 m de cima mais claros (245 prédios)
+   *
+   * O fio é o pedido "telhados com um fio de aresta mais claro nos prédios
+   * acima de 60 m". Ele é uma fatia da PAREDE e não uma fita no plano do
+   * telhado — e isso é deliberado: no plano do telhado ele seria coplanar com
+   * ele, e a esta escala (o palco tem 12.742 km de profundidade e um buffer de
+   * 24 bits) um desnível de 15 cm não chega a um degrau do z-buffer. A fita
+   * brigaria com o telhado em z-fighting. Na parede, vista a 32° de
+   * obliquidade, ela lê exatamente como a aresta acesa do parapeito.
+   */
+  const fatias = (altura: number) => (altura > 40 ? (altura > 60 ? 3 : 2) : 1);
+
+  let triangulos = 0;
   for (const a of aneis) {
-    arestas += a.n;
-    telhados += a.n - 2;
+    triangulos += a.n * 2 * fatias(a.altura); // as paredes
+    triangulos += a.n - 2; // o telhado
   }
-  const triangulos = arestas * 2 + telhados;
   const posicoes = new Float32Array(triangulos * 9);
   const cores = new Float32Array(triangulos * 9);
 
   let p = 0;
   const cor: Tom = [0, 0, 0];
   const corTopo: Tom = [0, 0, 0];
+  const corPe: Tom = [0, 0, 0];
+  const corFio: Tom = [0, 0, 0];
   const luzLinear: Tom = [0, 0, 0];
   const topoLinear: Tom = [0, 0, 0];
+  const peLinear: Tom = [0, 0, 0];
+  const fioLinear: Tom = [0, 0, 0];
   const v2: Vector2[] = [];
   const poco: Vector2[] = [];
 
@@ -414,8 +500,60 @@ function constroiPredios(aneis: AnelPronto[]) {
     p += 3;
   };
 
+  /** Uma fatia de parede entre dois z, com a cor de baixo e a de cima. */
+  const tira = (
+    ax: number,
+    ay: number,
+    bx: number,
+    by: number,
+    z0: number,
+    z1: number,
+    cb: Tom,
+    ct: Tom,
+  ) => {
+    poe(ax, ay, z0, cb);
+    poe(bx, by, z0, cb);
+    poe(bx, by, z1, ct);
+    poe(ax, ay, z0, cb);
+    poe(bx, by, z1, ct);
+    poe(ax, ay, z1, ct);
+  };
+
   for (const anel of aneis) {
-    const { pts, n, altura, semente } = anel;
+    const { pts, n, altura, semente, dist } = anel;
+
+    /**
+     * O TOM ANDA COM A ALTURA.
+     *
+     * Num mapa noturno real os prédios altos são mais claros no alto (eles
+     * pegam a luz que vem de cima e não têm vizinho que os sombreie) e os
+     * baixos somem no escuro do quarteirão. A maquete que havia aqui tratava
+     * os dois igual: a mesma mistura de 0,45 para o topo de um galpão de 9 m e
+     * de uma torre de 100. O resultado era uma cidade PLANA em tom, onde só a
+     * geometria separava os volumes.
+     *
+     * Agora o topo vai de 0,26 (galpão) a 0,60 (torre) e a base dos baixos
+     * desce mais 22% para o preto. A faixa 12–95 m é a dos dados: 95 m é o
+     * nonagésimo nono percentil daqui (o mais alto tem 105,8).
+     */
+    const grauAlt = degrau((altura - 12) / (95 - 12));
+
+    /**
+     * A DENSIDADE DE JANELAS CAI COM A DISTÂNCIA DA TORRE.
+     *
+     * Era uma constante: 17% das paredes acesas em todo o disco de 1.200 m.
+     * O pedido foi "maior perto da Paulista e caindo com a distância", e a
+     * razão é de leitura, não de realismo: o olho entra no quadro pelo centro
+     * (é onde a torre está, é onde o mergulho termina), e um gradiente de luz
+     * que aponta para o centro é o que o segura lá. 30% no pé da torre, 9% na
+     * franja — onde os prédios já estão derretendo no chão de qualquer jeito.
+     */
+    const densidade = 0.3 - 0.21 * degrau(dist / RAIO_BORDA);
+
+    const nFatias = fatias(altura);
+    const temFio = nFatias === 3;
+    const zFio = temFio ? altura - 1.2 : altura;
+    const zOclusao = nFatias >= 2 ? 9 : 0;
 
     /* AS PAREDES. Para um anel anti-horário, a normal para fora da aresta
        a→b é (dy, −dx) normalizada: na aresta de baixo de um quadrado
@@ -432,31 +570,46 @@ function constroiPredios(aneis: AnelPronto[]) {
 
       const luz = Math.max(0, (dy * LUZ.x - dx * LUZ.y) / comp) / LUZ_MAX;
       mistura(cor, PAREDE_SOMBRA, PAREDE_LUZ, luz);
+      if (grauAlt < 1) mistura(cor, cor, PAREDE_SOMBRA, (1 - grauAlt) * 0.22);
 
       /* O TOPO É MAIS CLARO. Não é um truque de estilo: é o que desenha a
          silhueta de cada prédio contra o telhado do vizinho num quadro em que
          o prédio todo tem 4 px. */
-      mistura(corTopo, cor, PAREDE_TOPO, 0.45);
+      mistura(corTopo, cor, PAREDE_TOPO, 0.26 + 0.34 * grauAlt);
 
-      /* AS JANELAS ACESAS. Uma parede em cada seis, só em prédios de pelo
-         menos 12 m, ganha âmbar na borda de cima — com a cor interpolando até
-         a base, o que se vê é a luz escorrendo dos últimos andares. É o mínimo
+      /* O fio do parapeito sai do topo SEM a janela: creme sobre âmbar daria
+         um rosa que não está na página, e o fio é estrutura, não luz de sala. */
+      if (temFio) mistura(corFio, corTopo, CREME, 0.3);
+
+      /* AS JANELAS ACESAS. Uma parede sorteada, só em prédios de pelo menos
+         12 m, ganha âmbar na borda de cima — com a cor interpolando até a
+         base, o que se vê é a luz escorrendo dos últimos andares. É o mínimo
          que faz a cidade parecer ligada; mais do que isso e o âmbar começa a
          competir com as vias da textura, que são o desenho principal. */
-      if (altura >= 12 && sorteio(semente * 97 + k) < 0.17) {
+      if (altura >= 12 && sorteio(semente * 97 + k) < densidade) {
         mistura(corTopo, corTopo, JANELA, 0.38);
       }
 
+      /* A OCLUSÃO DE CONTATO. O prédio não encosta no chão: ele AFUNDA nele.
+         Onde há duas fatias ela é forte e curta (62% de preto nos 9 m de
+         baixo); onde há uma só ela é mais fraca, porque vai se diluir pela
+         fachada inteira. */
+      mistura(corPe, cor, OCLUSAO, nFatias >= 2 ? 0.62 : 0.42);
+
+      paraLinear(peLinear, corPe);
       paraLinear(luzLinear, cor);
       paraLinear(topoLinear, corTopo);
 
-      // dois triângulos, no sentido que deixa a face para FORA
-      poe(ax, ay, 0, luzLinear);
-      poe(bx, by, 0, luzLinear);
-      poe(bx, by, altura, topoLinear);
-      poe(ax, ay, 0, luzLinear);
-      poe(bx, by, altura, topoLinear);
-      poe(ax, ay, altura, topoLinear);
+      if (nFatias >= 2) {
+        tira(ax, ay, bx, by, 0, zOclusao, peLinear, luzLinear);
+        tira(ax, ay, bx, by, zOclusao, zFio, luzLinear, topoLinear);
+      } else {
+        tira(ax, ay, bx, by, 0, zFio, peLinear, topoLinear);
+      }
+      if (temFio) {
+        paraLinear(fioLinear, corFio);
+        tira(ax, ay, bx, by, zFio, altura, fioLinear, fioLinear);
+      }
     }
 
     /* O TELHADO. `ShapeUtils.triangulateShape` é o earcut que o próprio three
@@ -476,7 +629,7 @@ function constroiPredios(aneis: AnelPronto[]) {
     /* O telhado clareia com a altura — é o que separa a torre de escritórios
        do galpão ao lado quando os dois medem poucos pixels — e um em cada
        dezesseis puxa para o âmbar, que é a laje iluminada. */
-    mistura(cor, TELHADO, PAREDE_TOPO, degrau(altura / 140));
+    mistura(cor, TELHADO, PAREDE_TOPO, grauAlt);
     if (sorteio(semente * 31 + 7) < 0.06) mistura(cor, cor, JANELA, 0.1);
     paraLinear(topoLinear, cor);
     for (const f of faces) {
@@ -580,126 +733,289 @@ function constroiChao() {
    A TORRE
    -------------------------------------------------------------------------- */
 
-/** Um prisma reto de base retangular, com cor por face e por altura. */
-function prisma(
-  dest: { poe: (x: number, y: number, z: number, c: Tom) => void },
-  cx: number,
-  cy: number,
-  lado: number,
-  z0: number,
-  z1: number,
-  corBase: Tom,
-  corTopo: Tom,
-  tampa: Tom | null,
-) {
-  const m = lado / 2;
-  const q: [number, number][] = [
-    [cx - m, cy - m],
-    [cx + m, cy - m],
-    [cx + m, cy + m],
-    [cx - m, cy + m],
-  ];
-  const cor: Tom = [0, 0, 0];
-  const topo: Tom = [0, 0, 0];
-  const corL: Tom = [0, 0, 0];
-  const topoL: Tom = [0, 0, 0];
-  for (let k = 0; k < 4; k++) {
-    const [ax, ay] = q[k];
-    const [bx, by] = q[(k + 1) % 4];
-    const dx = bx - ax;
-    const dy = by - ay;
-    const comp = Math.hypot(dx, dy);
-    const luz = Math.max(0, (dy * LUZ.x - dx * LUZ.y) / comp) / LUZ_MAX;
-    mistura(cor, corBase, corTopo, 0.15 + 0.85 * luz);
-    mistura(topo, cor, PAREDE_TOPO, 0.3);
-    paraLinear(corL, cor);
-    paraLinear(topoL, topo);
-    dest.poe(ax, ay, z0, corL);
-    dest.poe(bx, by, z0, corL);
-    dest.poe(bx, by, z1, topoL);
-    dest.poe(ax, ay, z0, corL);
-    dest.poe(bx, by, z1, topoL);
-    dest.poe(ax, ay, z1, topoL);
-  }
-  if (tampa) {
-    const c = paraLinear([0, 0, 0], tampa);
-    dest.poe(q[0][0], q[0][1], z1, c);
-    dest.poe(q[1][0], q[1][1], z1, c);
-    dest.poe(q[2][0], q[2][1], z1, c);
-    dest.poe(q[0][0], q[0][1], z1, c);
-    dest.poe(q[2][0], q[2][1], z1, c);
-    dest.poe(q[3][0], q[3][1], z1, c);
-  }
-}
-
 /**
- * A torre: fuste, quatro arestas acesas, coroa e tampa — tudo numa geometria
- * só, porque tudo é cor de vértice no mesmo material.
+ * A TORRE, numa geometria só — fuste com fiadas, recuos, arestas, coroa,
+ * marquise, moldura e faixa de luz. Tudo é cor de vértice no mesmo material,
+ * então "tudo numa geometria" aqui não é economia de memória: é economia de
+ * DRAW CALL, que é a moeda que importa dentro do mergulho.
  *
- * As arestas são FITAS de 3,2 m encostadas nos cantos do fuste (4 cm para
- * fora), e não linhas: uma linha de WebGL tem 1 px de dispositivo e some na
- * metade do mergulho; uma fita de 3,2 m mede 2 px no fundo do mergulho, cresce
- * com a aproximação e desaparece junto com o resto quando a câmera sobe.
+ * As listas são number[] comuns e não um Float32Array dimensionado no começo,
+ * ao contrário dos prédios: a torre tem ~1.600 triângulos (contra 62 mil), e
+ * contar triângulos à mão para poupar uma realocação que acontece UMA vez na
+ * vida da página é o tipo de precisão que só serve para quebrar quando alguém
+ * acrescentar um andar.
  */
 function constroiTorre() {
-  const triangulos =
-    4 * 2 + 2 /* fuste */ + 4 * (4 * 2) /* arestas */ + 4 * 2 + 2 /* coroa */;
-  const posicoes = new Float32Array(triangulos * 9);
-  const cores = new Float32Array(triangulos * 9);
-  let p = 0;
-  const dest = {
-    poe(x: number, y: number, z: number, c: Tom) {
-      posicoes[p] = x;
-      posicoes[p + 1] = y;
-      posicoes[p + 2] = z;
-      cores[p] = c[0];
-      cores[p + 1] = c[1];
-      cores[p + 2] = c[2];
-      p += 3;
-    },
+  const pos: number[] = [];
+  const cores: number[] = [];
+  const poe = (x: number, y: number, z: number, c: Tom) => {
+    pos.push(x, y, z);
+    cores.push(c[0], c[1], c[2]);
+  };
+  /* Toda cor sai daqui em LINEAR, e a mistura toda acontece antes, em sRGB —
+     é o contrato do bloco de cores lá em cima. */
+  const L = (t: Tom) => paraLinear([0, 0, 0], t);
+
+  const cantos = (lado: number, cx = 0, cy = 0) => {
+    const m = lado / 2;
+    return [
+      [cx - m, cy - m],
+      [cx + m, cy - m],
+      [cx + m, cy + m],
+      [cx - m, cy + m],
+    ] as [number, number][];
   };
 
-  prisma(dest, 0, 0, TORRE_LADO, 0, TORRE_ALTURA, TORRE_CORPO, TORRE_LUZ, null);
+  /** A luz da aresta a→b de um contorno anti-horário (normal para fora). */
+  const luzDa = (ax: number, ay: number, bx: number, by: number) => {
+    const dx = bx - ax;
+    const dy = by - ay;
+    const c = Math.hypot(dx, dy);
+    return Math.max(0, (dy * LUZ.x - dx * LUZ.y) / c) / LUZ_MAX;
+  };
 
-  const m = TORRE_LADO / 2 + 0.04;
-  const laranjaFraco = mistura([0, 0, 0], LARANJA, TORRE_CORPO, 0.25);
-  for (const [sx, sy] of [
-    [-1, -1],
-    [1, -1],
-    [1, 1],
-    [-1, 1],
-  ] as const) {
-    prisma(
-      dest,
-      sx * (m - ARESTA / 2),
-      sy * (m - ARESTA / 2),
-      ARESTA,
-      0,
-      TORRE_ALTURA + COROA_ALTURA,
-      laranjaFraco,
-      LARANJA,
-      null,
-    );
+  const parede = (
+    ax: number,
+    ay: number,
+    bx: number,
+    by: number,
+    z0: number,
+    z1: number,
+    cb: Tom,
+    ct: Tom,
+  ) => {
+    poe(ax, ay, z0, cb);
+    poe(bx, by, z0, cb);
+    poe(bx, by, z1, ct);
+    poe(ax, ay, z0, cb);
+    poe(bx, by, z1, ct);
+    poe(ax, ay, z1, ct);
+  };
+
+  const tampa = (lado: number, z: number, t: Tom, cx = 0, cy = 0) => {
+    const q = cantos(lado, cx, cy);
+    const c = L(t);
+    poe(q[0][0], q[0][1], z, c);
+    poe(q[1][0], q[1][1], z, c);
+    poe(q[2][0], q[2][1], z, c);
+    poe(q[0][0], q[0][1], z, c);
+    poe(q[2][0], q[2][1], z, c);
+    poe(q[3][0], q[3][1], z, c);
+  };
+
+  /** Um bloco reto: quatro paredes com luz por face e, se pedida, a tampa. */
+  const bloco = (
+    lado: number,
+    z0: number,
+    z1: number,
+    base: Tom,
+    topo: Tom,
+    tam: Tom | null,
+    cx = 0,
+    cy = 0,
+  ) => {
+    const q = cantos(lado, cx, cy);
+    const a: Tom = [0, 0, 0];
+    const b: Tom = [0, 0, 0];
+    for (let k = 0; k < 4; k++) {
+      const [ax, ay] = q[k];
+      const [bx, by] = q[(k + 1) % 4];
+      const luz = luzDa(ax, ay, bx, by);
+      mistura(a, base, topo, 0.15 + 0.85 * luz);
+      mistura(b, a, PAREDE_TOPO, 0.3);
+      parede(ax, ay, bx, by, z0, z1, L(a), L(b));
+    }
+    if (tam) tampa(lado, z1, tam, cx, cy);
+  };
+
+  /**
+   * Uma chapa plana numa fachada norte-sul, para a moldura e a faixa de luz.
+   * `sul` dá a normal para −y; o norte é o espelho em x, senão a chapa sai
+   * virada para dentro e some no FrontSide.
+   */
+  const chapa = (
+    sul: boolean,
+    y: number,
+    x0: number,
+    x1: number,
+    z0: number,
+    z1: number,
+    c: Tom,
+  ) => {
+    const e = sul ? x0 : x1;
+    const d = sul ? x1 : x0;
+    poe(e, y, z0, c);
+    poe(d, y, z0, c);
+    poe(d, y, z1, c);
+    poe(e, y, z0, c);
+    poe(d, y, z1, c);
+    poe(e, y, z1, c);
+  };
+
+  /* ---------------------------------------------------------- embasamento */
+
+  bloco(
+    EMBASAMENTO.lado,
+    EMBASAMENTO.z0,
+    EMBASAMENTO.z1,
+    TORRE_CORPO,
+    TORRE_LUZ,
+    TELHADO,
+  );
+
+  /* A MARQUISE: a laje em balanço no nível da rua, com a borda acesa em creme.
+     É o único branco da base, e é ele que diz "aqui se entra" — sem ele o
+     embasamento é só uma caixa mais larga embaixo de outra caixa. O TOPO da
+     laje fica escuro: de cima se vê o telhado dela, e uma laje branca inteira
+     viraria uma mancha do tamanho de um quarteirão. */
+  {
+    const q = cantos(MARQUISE.lado);
+    const borda = mistura([0, 0, 0], CREME, LARANJA, 0.22);
+    const pe = mistura([0, 0, 0], borda, TORRE_CORPO, 0.5);
+    const bl = L(borda);
+    const pl = L(pe);
+    for (let k = 0; k < 4; k++) {
+      const [ax, ay] = q[k];
+      const [bx, by] = q[(k + 1) % 4];
+      parede(ax, ay, bx, by, MARQUISE.z0, MARQUISE.z1, pl, bl);
+    }
+    tampa(MARQUISE.lado, MARQUISE.z1, TELHADO);
   }
 
-  prisma(
-    dest,
-    0,
-    0,
-    TORRE_LADO + COROA_SOBRA * 2,
-    TORRE_ALTURA,
-    TORRE_ALTURA + COROA_ALTURA,
+  /* ------------------------------------------------- os fustes e as fiadas */
+
+  /**
+   * O ANDAR ACESO É SORTEADO POR ANDAR, não por janela.
+   *
+   * É a diferença entre um prédio e um ruído: num edifício de escritórios à
+   * noite o que se vê de longe é um ANDAR inteiro aceso (a laje toda, porque é
+   * uma laje só) e o de cima apagado. Sorteando por janela sai uma textura de
+   * sal e pimenta que, a 1,44 m/px, vira cinza uniforme — exatamente o que não
+   * se quer. Um em cada cinco fica apagado; os acesos variam de brilho, para a
+   * fachada não virar uma grade perfeita.
+   */
+  const fiada = (andar: number) => {
+    if (sorteio(andar * 131 + 7) < 0.34) return 0;
+    return 0.42 + 0.58 * sorteio(andar * 17 + 3);
+  };
+
+  let andar = 0;
+  for (const seg of FUSTES) {
+    const q = cantos(seg.lado);
+    const n = Math.max(1, Math.round((seg.z1 - seg.z0) / PE_DIREITO));
+    const pe = (seg.z1 - seg.z0) / n;
+    const vidro: Tom = [0, 0, 0];
+    const acesa: Tom = [0, 0, 0];
+    for (let k = 0; k < 4; k++) {
+      const [ax, ay] = q[k];
+      const [bx, by] = q[(k + 1) % 4];
+      mistura(vidro, VIDRO, VIDRO_LUZ, luzDa(ax, ay, bx, by));
+      const vl = L(vidro);
+      for (let a = 0; a < n; a++) {
+        const z0 = seg.z0 + a * pe;
+        /* 62% de vidro escuro embaixo e 38% de fiada em cima: a janela de um
+           andar fica na parte de CIMA do pé-direito, acima do peitoril. */
+        const zf = z0 + pe * 0.7;
+        parede(ax, ay, bx, by, z0, zf, vl, vl);
+        const nivel = fiada(andar + a);
+        if (nivel > 0) {
+          mistura(acesa, vidro, JANELA, 0.05 + 0.26 * nivel);
+          const al = L(acesa);
+          parede(ax, ay, bx, by, zf, z0 + pe, al, al);
+        } else {
+          parede(ax, ay, bx, by, zf, z0 + pe, vl, vl);
+        }
+      }
+    }
+    /* O TERRAÇO DO RECUO. Uma tampa inteira, e não um anel: o fuste de cima
+       nasce exatamente neste z e cobre o miolo, então o anel visível sai de
+       graça e sem um único triângulo em L para calcular. */
+    tampa(seg.lado, seg.z1, TELHADO);
+    andar += n;
+  }
+
+  /* ---------------------------------------------------- a coroa e o remate */
+
+  /* A coroa é vidro liso, sem fiadas: é a casa de máquinas, e um prédio de
+     verdade não tem escritório no último lance. O que a desenha é a silhueta
+     mais estreita e as quatro arestas que continuam subindo. */
+  bloco(COROA.lado, COROA.z0, COROA.z1, VIDRO, VIDRO_LUZ, null);
+
+  const laranjaFraco = mistura([0, 0, 0], LARANJA, TORRE_CORPO, 0.3);
+  bloco(
+    REMATE.lado,
+    REMATE.z0,
+    REMATE.z1,
     laranjaFraco,
     LARANJA,
-    /* A TAMPA DA COROA É ESCURA, e isso é a diferença entre ver a marca e não
-       ver: a placa do telhado é laranja chapado, e laranja sobre laranja é um
+    /* A TAMPA DO REMATE É ESCURA, e isso é a diferença entre ver a marca e não
+       ver: a placa do terraço é laranja chapado, e laranja sobre laranja é um
        borrão. Sobre o terraço escuro ela é a única coisa acesa no topo. */
     TORRE_CORPO,
   );
 
+  /* -------------------------------------------------- as arestas verticais */
+
+  /* Fitas de 1,8 m encostadas nos cantos (5 cm para fora), e não linhas: uma
+     linha de WebGL tem 1 px de dispositivo e some na metade do mergulho. Elas
+     acompanham cada recuo — por isso uma por segmento — e vão sem corte dos
+     15 m ao alto da coroa, que é o "contínuas até a coroa" do pedido. */
+  for (const seg of [...FUSTES, COROA]) {
+    const m = seg.lado / 2 + 0.05;
+    for (const [sx, sy] of [
+      [-1, -1],
+      [1, -1],
+      [1, 1],
+      [-1, 1],
+    ] as const) {
+      bloco(
+        ARESTA,
+        seg.z0,
+        seg.z1,
+        laranjaFraco,
+        LARANJA,
+        null,
+        sx * (m - ARESTA / 2),
+        sy * (m - ARESTA / 2),
+      );
+    }
+  }
+
+  /* ------------------------------------ a moldura e a faixa de luz da marca */
+
+  /* O LETREIRO. A placa da marca sozinha, colada num vidro escuro, lê como um
+     adesivo; o que a transforma em letreiro de topo de prédio são as duas
+     coisas que todo letreiro real tem: uma MOLDURA fina que a destaca do fundo
+     e uma FAIXA DE LUZ logo abaixo, que é o refletor que a ilumina de baixo
+     para cima. A moldura é laranja (a cor da marca) e a faixa é creme (a luz
+     branca da página), as duas a 0,35 m da parede, atrás da placa, que fica a
+     0,6 m. Vão nas duas fachadas pelo mesmo motivo das placas: o SINAL da
+     obliquidade é de quem integra o mergulho, e tombar a esfera para o outro
+     lado não pode custar o letreiro. */
+  {
+    const fuste = FUSTES[FUSTES.length - 1];
+    const lw = LOGO_LARGURA / 2;
+    const lh = LOGO_ALTURA / 2;
+    const mx = lw + 1.5; // a moldura, com 1,5 m de respiro em volta da arte
+    const mz = lh + 1.5;
+    const fio = 0.9; // a espessura do fio da moldura
+    const molduraL = L(mistura([0, 0, 0], LARANJA, TORRE_CORPO, 0.12));
+    const faixaL = L(mistura([0, 0, 0], CREME, LARANJA, 0.18));
+    const Z = LOGO_FACHADA_Z;
+    for (const sul of [true, false]) {
+      const y = (sul ? -1 : 1) * (fuste.lado / 2 + 0.35);
+      chapa(sul, y, -mx, mx, Z + mz - fio, Z + mz, molduraL);
+      chapa(sul, y, -mx, mx, Z - mz, Z - mz + fio, molduraL);
+      chapa(sul, y, -mx, -mx + fio, Z - mz, Z + mz, molduraL);
+      chapa(sul, y, mx - fio, mx, Z - mz, Z + mz, molduraL);
+      // a faixa de luz, logo abaixo da moldura
+      chapa(sul, y, -mx + 1.2, mx - 1.2, Z - mz - 3.2, Z - mz - 1.7, faixaL);
+    }
+  }
+
   const geo = new BufferGeometry();
-  geo.setAttribute("position", new BufferAttribute(posicoes.subarray(0, p), 3));
-  geo.setAttribute("color", new BufferAttribute(cores.subarray(0, p), 3));
+  geo.setAttribute("position", new BufferAttribute(new Float32Array(pos), 3));
+  geo.setAttribute("color", new BufferAttribute(new Float32Array(cores), 3));
   geo.computeBoundingSphere();
   return geo;
 }
@@ -707,18 +1023,17 @@ function constroiTorre() {
 /**
  * AS TRÊS PLACAS DA MARCA, numa geometria só.
  *
- * 1. no TOPO da coroa, deitada, com o "para cima" da arte apontando para o
+ * 1. no TERRAÇO do remate, deitada, com o "para cima" da arte apontando para o
  *    NORTE — é a que carrega o reconhecimento, porque numa vista a 32° um
  *    telhado encolhe só 15% (cos 32°) enquanto uma fachada encolhe 47%
- *    (sen 32°): a mesma arte lê com 32 px de largura no telhado contra 20 px
- *    de altura útil na fachada;
- * 2. na fachada SUL, que é o pedido ao pé da letra;
+ *    (sen 32°);
+ * 2. na fachada SUL, no terço de cima, dentro da moldura que a torre desenha;
  * 3. na fachada NORTE, espelhada, porque o SINAL da inclinação é de quem
- *    integra (veja `EstadoSP.inclinacao`): tombar a esfera para o outro lado
- *    não pode custar a marca.
+ *    integra (veja EstadoSP.inclinacao): tombar a esfera para o outro lado não
+ *    pode custar a marca.
  *
- * A arte é `logo-icon.png`, laranja chapado com fundo transparente — num
- * `MeshBasicMaterial` ela já sai com a cor cheia, que é o que "emissivo"
+ * A arte é logo-icon.png, laranja chapado com fundo transparente — num
+ * MeshBasicMaterial ela já sai com a cor cheia, que é o que "emissivo"
  * significa numa cena sem luz.
  */
 function constroiLogo() {
@@ -734,28 +1049,33 @@ function constroiLogo() {
       uv.push(uvs[i][0], uvs[i][1]);
     }
   };
-  const lw = LOGO_LARGURA / 2;
-  const lh = LOGO_ALTURA / 2;
+  const uvQuad: [number, number][] = [
+    [0, 0],
+    [1, 0],
+    [1, 1],
+    [0, 1],
+  ];
 
-  // 1. no telhado: no plano XY, u para leste, v para o norte.
-  const zTelhado = TORRE_ALTURA + COROA_ALTURA + 0.4;
+  // 1. no terraço: no plano XY, u para leste, v para o norte.
+  const tw = LOGO_TELHADO / 2;
+  const th = LOGO_TELHADO_H / 2;
+  const zTelhado = TORRE_TOPO + 0.4;
   quad(
     [
-      [-lw, -lh, zTelhado],
-      [lw, -lh, zTelhado],
-      [lw, lh, zTelhado],
-      [-lw, lh, zTelhado],
+      [-tw, -th, zTelhado],
+      [tw, -th, zTelhado],
+      [tw, th, zTelhado],
+      [-tw, th, zTelhado],
     ],
-    [
-      [0, 0],
-      [1, 0],
-      [1, 1],
-      [0, 1],
-    ],
+    uvQuad,
   );
 
+  const lw = LOGO_LARGURA / 2;
+  const lh = LOGO_ALTURA / 2;
+  const fuste = FUSTES[FUSTES.length - 1];
+
   // 2. fachada sul (y negativo), 0,6 m à frente da parede.
-  const ys = -(TORRE_LADO / 2 + 0.6);
+  const ys = -(fuste.lado / 2 + 0.6);
   quad(
     [
       [-lw, ys, LOGO_FACHADA_Z - lh],
@@ -763,16 +1083,11 @@ function constroiLogo() {
       [lw, ys, LOGO_FACHADA_Z + lh],
       [-lw, ys, LOGO_FACHADA_Z + lh],
     ],
-    [
-      [0, 0],
-      [1, 0],
-      [1, 1],
-      [0, 1],
-    ],
+    uvQuad,
   );
 
   // 3. fachada norte: o u anda para OESTE, senão a marca sai espelhada.
-  const yn = TORRE_LADO / 2 + 0.6;
+  const yn = fuste.lado / 2 + 0.6;
   quad(
     [
       [lw, yn, LOGO_FACHADA_Z - lh],
@@ -780,12 +1095,7 @@ function constroiLogo() {
       [-lw, yn, LOGO_FACHADA_Z + lh],
       [lw, yn, LOGO_FACHADA_Z + lh],
     ],
-    [
-      [0, 0],
-      [1, 0],
-      [1, 1],
-      [0, 1],
-    ],
+    uvQuad,
   );
 
   const geo = new BufferGeometry();

@@ -54,11 +54,16 @@ import {
   REPOUSO,
 } from "./globeMath";
 import {
+  ATRASO,
   distancia,
   duracaoDe,
   interpola,
   mergulho,
+  perna,
   POUSO_MS,
+  suave,
+  vista,
+  VISTA_DETALHE,
   voo,
   ZOOM_DETALHE,
   type Estado,
@@ -373,6 +378,68 @@ const PISO_PONTO_2D = 0.38;
  * foi escolhido: o mais perto ganha, e o empate não existe.
  */
 const RAIO_CLIQUE = 30;
+
+/**
+ * A DURAÇÃO MÍNIMA de um desvio, em ms.
+ *
+ * A régua do tour (`duracaoDe`) dá 1.200 ms de base mais 500 a cada 30° de
+ * arco, e ela foi escrita para pernas entre capitais, que nunca são curtas. Um
+ * desvio pode ser curtíssimo: clicar em Quito com a câmera já quase em cima
+ * dela são 2° de arco — 1.233 ms pela régua, mas caminho nenhum, e o olho lê um
+ * pisca. 900 ms é o piso em que um movimento de câmera ainda se lê como
+ * movimento.
+ */
+const DESVIO_MINIMO_MS = 900;
+
+/**
+ * Em que fração do desvio a obliquidade do mergulho volta a zero.
+ *
+ * 0,40, e é a mesma ideia da fase `sobe` do `mergulhoSP` (lá são 70% de uma
+ * fase bem mais curta): endireitar ANTES de afastar é o que se lê como
+ * "levantar voo". Afastar com a cidade ainda tombada mostra o limbo da esfera
+ * entrando pelo topo do quadro, que é o defeito que a nota de `INCLINACAO_MAX`
+ * já descrevia.
+ */
+const DESVIO_ENDIREITA = 0.4;
+
+/**
+ * Quanto tempo o desvio dá a cada "nat" de esforço (arco + escala), em ms.
+ *
+ * 300, e o número vem da fase `sobe` do mergulho em São Paulo, que o dono
+ * aprovou: 9,24 nats em 2,4 s são 260 ms por nat. Com a folga de 300, a subida
+ * mais cara que existe — da torre a 9.200 até uma capital do outro lado do
+ * Atlântico — leva 2,7 s em vez dos 2,6 s de uma perna comum, e a escala anda a
+ * 3,4 nats por segundo em vez de 15.
+ */
+const DESVIO_MS_POR_NAT = 300;
+
+/* --------------------------------------------------------------------------
+   O GIRO LIVRE: os quatro números do gesto
+
+   A inclinação é presa em ±35° porque acima disso o polo entra no disco e a
+   projeção ortográfica deixa de mostrar um planeta — mostra uma tampa. É o
+   mesmo limite que qualquer globo manipulável usa, e aqui ele também protege o
+   enquadramento do voo, que continua contando por baixo.
+
+   A INÉRCIA é curta de propósito: `e^(−4t)` tira 98% da velocidade em um
+   segundo. O gesto tem de responder e acabar — um planeta que continua rodando
+   sozinho depois do dedo é um planeta que roubou o voo.
+
+   A MOLA DE VOLTA tem constante de 0,8 s, e ela é o "levemente" do pedido: o
+   deslocamento livre sempre volta a zero, então o enquadramento que o voo está
+   afirmando nunca se perde. O visitante empurra, o planeta responde, e o palco
+   retoma a sua história.
+
+   O EMPURRÃO do clique seco leva o ponto clicado 25% do caminho até o meio.
+   Mais do que isso e um clique distraído tira a cidade do foco; menos e o
+   clique não se lê como resposta.
+   -------------------------------------------------------------------------- */
+const LIVRE_PITCH_MAX = (35 * Math.PI) / 180;
+const LIVRE_INERCIA_MS = 250;
+const LIVRE_MOLA_MS = 800;
+const EMPURRAO = 0.25;
+const CLIQUE_SECO_PX = 6;
+const CLIQUE_SECO_MS = 300;
 
 /** O fio da circunferência, igual ao de `.globe-air` (globals.css). */
 const BORDA_ALFA = 0.22;
@@ -870,6 +937,58 @@ export function HeroGlobe({
    * nova por render remontaria o efeito de desenho — ou seja, reiniciaria o voo
    * — a cada troca de país.
    */
+  /**
+   * O DESVIO: a perna de voo que um clique abre, de onde a câmera ESTÁ até a
+   * cidade escolhida.
+   *
+   * Pedido do dono, 17/10: "a transição no click deve ser suave". Antes disto o
+   * clique era um corte — `ativo = indice; ms = 0` e a câmera aparecia no pouso
+   * da cidade nova. Agora ele é uma PERNA como as outras sete: mesmo
+   * grande-círculo, mesma curva de van Wijk, mesmo atraso de câmera, mesmo
+   * cometa. A única diferença é que ela não começa numa capital — começa onde
+   * quer que a câmera estivesse, inclusive em cima da torre de São Paulo a
+   * 9.200 de escala.
+   *
+   * Num `ref` de COMPONENTE e não numa variável do efeito: o efeito de desenho
+   * se refaz quando um freio é puxado (aba oculta, hero fora da tela), e um
+   * desvio pela metade não pode morrer porque alguém trocou de aba — ele
+   * PAUSA, como o relógio do voo ao lado, e retoma de onde estava.
+   */
+  const desvio = useRef<{
+    de: Ponto;
+    para: Ponto;
+    indice: number;
+    /** A largura de vista de ONDE se partiu — o w₀ da curva de van Wijk. */
+    w0: number;
+    /** Obliquidade e órbita do mergulho no instante do clique, para desfazer. */
+    incl0: number;
+    orb0: number;
+    ms: number;
+    duracao: number;
+    /** O rastro desta perna já foi montado? */
+    montado: boolean;
+  } | null>(null);
+
+  /**
+   * O ÚLTIMO QUADRO, guardado para o clique poder partir de onde a câmera está.
+   *
+   * O clique acontece FORA do laço (é um `pointerdown`), e naquele instante não
+   * há `cam` nem `esc` na mão de ninguém — eles são variáveis locais de um
+   * quadro que já terminou. Sem isto o desvio teria de partir da capital em que
+   * o voo estava, e não do ponto do céu onde o espectador está olhando: no meio
+   * de uma perna seriam até 42° de salto, e em cima da torre de São Paulo, um
+   * corte de 9.200 para 1,35 de escala.
+   *
+   * `escVista` é a escala que o espectador VÊ — no mergulho de São Paulo é a da
+   * caixa `sp`, não a do voo, que lá fica parada em 1,35 para o canvas 2D.
+   */
+  const ultimoQuadro = useRef<{
+    cam: Ponto;
+    escVista: number;
+    incl: number;
+    orb: number;
+  }>({ cam: { lat: LAT0, lon: LON0 }, escVista: 1, incl: 0, orb: 0 });
+
   const escolher = useRef<(indice: number) => void>(() => {});
 
   const avisar = useRef(onCidade);
@@ -1227,6 +1346,29 @@ export function HeroGlobe({
      * porque `malha()` também o lê — e nenhum dos dois pode decidir isso por si.
      */
     let planeta2d = true;
+    /**
+     * QUANTO DO PLANETA 2D AINDA APARECE — e por que esta variável existe.
+     *
+     * Defeito que o dono viu em produção, 17/10: "tire o tracejado laranja no
+     * último zoom, o que aparece a maquete da cidade". As linhas eram a GRADE
+     * DE MERIDIANOS do canvas 2D.
+     *
+     * A cadeia é esta: durante a parada de São Paulo o canvas 2D fica em 1,35×
+     * (ele não tem cidade para mostrar), e continua pintando a grade e a trama
+     * do mar — eu as havia deixado de propósito, porque não estão em etapa
+     * nenhuma do plano e compunham por baixo dos pontos 3D. Só que no fundo do
+     * mergulho o canvas 3D é quase todo TRANSPARENTE: entre um prédio e outro
+     * se vê o que está embaixo, e o que está embaixo é um meridiano do planeta
+     * em escala de planeta — um traço reto de 600 px cruzando uma maquete de
+     * 1,4 km.
+     *
+     * Então a grade e a trama desvanecem pela MESMA rampa das visibilidades da
+     * cidade (`1 − sp.mapa`): quando o chão de São Paulo chega, o planeta que
+     * sobrava por baixo já saiu. Não é um corte — é a mesma curva, lida ao
+     * contrário, e por isso a subida as devolve no mesmo zoom em que a descida
+     * as levou.
+     */
+    let veu2d = 1;
     /** 1 = os sete rótulos; 0 = só o da cidade da vez. Ver `ROTULO_SAI_MS`. */
     let rotulos = 1;
     /** A fase e o relógio do voo no quadro, lidos pelo desenho. */
@@ -1420,7 +1562,7 @@ export function HeroGlobe({
           else ctx!.moveTo(sx, sv);
           caneta = true;
         }
-        ctx!.globalAlpha = (forte ? 0.09 : 0.06) * forca * g.ganho;
+        ctx!.globalAlpha = (forte ? 0.09 : 0.06) * forca * g.ganho * veu2d;
         ctx!.strokeStyle = LARANJA;
         /* `fio` mantém a grade em 1px DE TELA dentro do zoom: ver o
            comentário dos dois corretores de espessura, acima. */
@@ -1677,7 +1819,7 @@ export function HeroGlobe({
           ctx!.moveTo(sx + r, sv);
           ctx!.arc(sx, sv, r, 0, TAU);
         }
-        ctx!.globalAlpha = alfa * g.ganho;
+        ctx!.globalAlpha = alfa * g.ganho * veu2d;
         ctx!.fillStyle = LARANJA;
         ctx!.fill();
       };
@@ -1729,6 +1871,8 @@ export function HeroGlobe({
          câmera e não do terreno, junto com os PINOS e os RÓTULOS, que são DOM
          (etapa 4 só muda quem os posiciona). */
       planeta2d = !palco.pronto;
+      /* O planeta 2D cede lugar à cidade (ver `veu2d`). */
+      veu2d = palco.sp.ativo ? 1 - palco.sp.mapa : 1;
 
       /* -------------------------------------------------- a matriz do zoom
 
@@ -1822,8 +1966,12 @@ export function HeroGlobe({
         );
       }
 
-      sob(() => grade(cy, sy, cp, sp));
-      sob(() => trama(cy, sy, cp, sp));
+      /* Zerado, nem se desenha: no fundo do mergulho seriam 16 `stroke` e 2.700
+         arcos para somar nada. */
+      if (veu2d > 0.004) {
+        sob(() => grade(cy, sy, cp, sp));
+        sob(() => trama(cy, sy, cp, sp));
+      }
 
       let n = 0;
       let usados = 0;
@@ -2121,8 +2269,14 @@ export function HeroGlobe({
       if (escala > 1.0005) {
         ctx!.beginPath();
         ctx!.arc(R, R, R - BORDA_FIO / 2, 0, TAU);
+        /* A circunferência fica — ela é a BORDA do disco, e a maquete também
+           precisa de uma —, mas cede metade do peso para a cidade: sobre o mapa
+           noturno o fio a 22% competia com as avenidas. */
         ctx!.globalAlpha =
-          BORDA_ALFA * Math.min(1, (escala - 1) * 12) * g.ganho;
+          BORDA_ALFA *
+          Math.min(1, (escala - 1) * 12) *
+          g.ganho *
+          (0.5 + 0.5 * veu2d);
         ctx!.strokeStyle = LARANJA;
         ctx!.lineWidth = BORDA_FIO;
         ctx!.stroke();
@@ -2257,8 +2411,12 @@ export function HeroGlobe({
       sp.zoom = zoom;
       sp.inclinacao = e.inclinacao;
       sp.orbita = e.orbita;
-      sp.pitch = q.pitch;
-      sp.yaw = q.yaw;
+      /* O deslocamento livre vale TAMBÉM no mergulho: a câmera da cidade é o
+         centro mais o gesto. A translação de `enquadraSP` continua valendo —
+         ela põe a torre no meio do disco, e o gesto a desloca de lá, que é o
+         que o visitante pediu ao arrastar. */
+      sp.pitch = q.pitch + livrePitch;
+      sp.yaw = q.yaw + livreYaw;
       sp.x = q.x;
       sp.y = q.y;
       sp.pontos = v.pontos;
@@ -2287,21 +2445,123 @@ export function HeroGlobe({
       };
     }
 
-    /* O clique: põe o relógio no pouso da cidade escolhida. Escrito aqui, e
-       não no corpo do componente, porque é aqui que `lista` e o relógio do voo
-       existem — e porque o efeito se refaz quando o idioma ou a largura mudam,
-       e o atalho tem de acompanhar. */
+    /**
+     * O ENQUADRE, para um alvo QUALQUER — o irmão geral do `enquadraSP`.
+     *
+     * Aquele serve à torre, que é um ponto fixo; este serve ao ponto que a
+     * câmera está centralizando AGORA, que no desvio anda a cada quadro. A
+     * conta é a mesma, e a razão de ela existir é a mesma: o grupo da esfera
+     * gira em torno do CENTRO DA TERRA, então inclinar leva o alvo para longe
+     * do meio do disco (3.376 km a 32°), e a translação o traz de volta.
+     *
+     * Com `inclinacao = 0` e `orbita = 0` ele devolve exatamente o que
+     * `centraliza()` já devolvia, e x = y = 0: fora do mergulho nada muda.
+     */
+    function enquadra(alvoP: Ponto, inclinacao: number, orbita: number) {
+      const base = centraliza(alvoP.lat, alvoP.lon);
+      const pitch = base.pitch - inclinacao;
+      const yaw = base.yaw + orbita;
+      const [x, y, z] = baseVector(alvoP.lat, alvoP.lon);
+      const cy = Math.cos(yaw);
+      const sy = Math.sin(yaw);
+      const x1 = cy * x + sy * z;
+      const z1 = -sy * x + cy * z;
+      const cp = Math.cos(pitch);
+      const sp = Math.sin(pitch);
+      const y2 = cp * y - sp * z1;
+      return { pitch, yaw, x: -x1, y: -y2 };
+    }
+
+    /** Monta o rastro (plano para o 2D, erguido para o cometa) de uma perna. */
+    function montaRastro(de: Ponto, para: Ponto) {
+      for (let k = 0; k <= RASTRO_PASSOS; k += 1) {
+        const u = k / RASTRO_PASSOS;
+        const q = interpola(de, para, u);
+        const v = baseVector(q.lat, q.lon);
+        rastro[k * 3] = v[0];
+        rastro[k * 3 + 1] = v[1];
+        rastro[k * 3 + 2] = v[2];
+        const sobe = 1 + REDE_SOBE * Math.sin(Math.PI * u);
+        palco.arco[k * 3] = v[0] * sobe;
+        palco.arco[k * 3 + 1] = v[1] * sobe;
+        palco.arco[k * 3 + 2] = v[2] * sobe;
+      }
+    }
+
+    /**
+     * O CLIQUE NUM PAÍS ABRE UM DESVIO (pedido do dono, 17/10: "a transição no
+     * click deve ser suave").
+     *
+     * Ele NÃO põe a câmera no pouso da cidade — ele abre uma PERNA DE VOO de
+     * onde a câmera está até lá, pela mesma `perna()` de `voo.ts` que as sete
+     * do tour usam: mesmo grande-círculo, mesma curva de van Wijk, mesmo atraso
+     * de câmera, mesmo cometa correndo à frente. No fim dela o relógio normal
+     * assume e a cidade pousa como qualquer outra — com pulso, rótulo cheio e,
+     * em São Paulo, o mergulho depois dos 1,8 s.
+     *
+     * O w₀ é a largura de vista de ONDE SE PARTE, e é ele que faz a curva de van
+     * Wijk se comportar: partindo do pouso (1,35×) ela abre e fecha como uma
+     * perna qualquer; partindo da torre de São Paulo (9.200×) ela SOBE — a
+     * mesma curva, lida com outra ponta, sem um `if` de caso especial.
+     *
+     * O piso de 900 ms existe para o clique num país vizinho (Bogotá a Quito
+     * são 6,6° de arco, 1.308 ms pela régua do tour, mas o desvio pode começar
+     * de muito mais perto) não virar um pisca.
+     */
     escolher.current = (indice: number) => {
       if (indice < 0 || indice >= lista.length) return;
-      ativo.current = indice;
-      relogio.current.ms = 0;
+      const r = relogio.current;
+      /* Já estamos lá, parados? Então não há o que fazer — reabrir um desvio de
+         duração zero seria um tranco no lugar de uma transição. */
+      if (
+        indice === ativo.current &&
+        !desvio.current &&
+        r.mergulhou &&
+        palco.fase === "pouso" &&
+        !palco.sp.ativo
+      ) {
+        return;
+      }
+      const u = ultimoQuadro.current;
+      const de = u.cam;
+      const para = cidades[indice] ?? de;
+      const w0 = vista(u.escVista);
+      /* A DURAÇÃO CONTA O ESFORÇO INTEIRO, não só o arco.
+
+         A régua do tour (`duracaoDe`) mede DISTÂNCIA, e ela basta para pernas
+         entre capitais, que começam e terminam no mesmo zoom. Um desvio pode
+         começar em cima da torre de São Paulo: ali são 1,49 rad de arco E 8,94
+         nats de escala para subir, e dar a esse movimento os 2,6 s de uma perna
+         comum faz a escala andar 15 nats por segundo — medido em 0,28 nat entre
+         dois quadros vizinhos, um tranco visível.
+
+         O esforço é a hipotenusa dos dois (é a mesma ideia do `w_max` da curva
+         de van Wijk, que também é uma hipotenusa), e a cadência é a da fase
+         `sobe` do mergulho, que o dono já aprovou: 9,24 nats em 2,4 s, ou seja
+         260 ms por nat. Com folga, 300. */
+      const arcoDesvio = distancia(de, para);
+      const esforco = Math.hypot(arcoDesvio, Math.log(VISTA_DETALHE / w0));
+      desvio.current = {
+        de,
+        para,
+        indice,
+        w0,
+        incl0: u.incl,
+        orb0: u.orb,
+        ms: 0,
+        duracao: Math.max(
+          DESVIO_MINIMO_MS,
+          duracaoDe(arcoDesvio),
+          esforco * DESVIO_MS_POR_NAT,
+        ),
+        montado: false,
+      };
       /* Se o clique chegar antes de a entrada acabar, ela é dada por encerrada:
          o visitante pediu uma cidade, e fazê-lo esperar o mergulho de abertura
          seria ignorar o pedido. */
-      relogio.current.mergulhou = true;
-      palco.sp.ativo = false;
-      avisar.current?.(indice);
+      r.mergulhou = true;
     };
+    palco.escolher = escolher.current;
 
     mede();
     const umQuadro = () =>
@@ -2399,9 +2659,11 @@ export function HeroGlobe({
     const secao = caixa.current?.closest("section") ?? null;
     const moveu = (ev: PointerEvent) => {
       if (ev.pointerType !== "mouse") return;
-      /* O cursor avisa que há país debaixo do ponteiro (ver "O PAÍS CLICÁVEL",
-         abaixo). Barato: a conta é de sete distâncias. */
-      marcaCursor(perto(ev) >= 0);
+      /* O cursor avisa o que o clique vai fazer ali. Barato: sete distâncias e
+         uma comparação de raio. */
+      if (arrastando) marcaCursor(0);
+      else if (perto(ev) >= 0) marcaCursor(2);
+      else marcaCursor(noDisco(ev) ? 1 : -1);
       const box = caixa.current?.getBoundingClientRect();
       if (!box) return;
       /* Posição do cursor em relação ao CENTRO do disco, normalizada pelo raio
@@ -2465,27 +2727,181 @@ export function HeroGlobe({
       return melhor;
     };
 
-    let cursorLigado = false;
-    const marcaCursor = (ligado: boolean) => {
-      if (ligado === cursorLigado || !secao) return;
-      cursorLigado = ligado;
-      /* A camada do palco é `pointer-events: none`, então o cursor tem de ser
-         escrito na SEÇÃO, que é quem recebe o ponteiro. */
-      (secao as HTMLElement).style.cursor = ligado ? "pointer" : "";
+    /* TRÊS CURSORES, e é com eles que o globo conta que é manipulável: `pointer`
+       em cima de um país (ali o clique escolhe), `grab` no resto do disco (ali
+       o clique gira), `grabbing` enquanto o dedo está em cima. Fora do disco,
+       nenhum — o cursor é da seção inteira, e o texto ao lado não pode herdar
+       mão de arrastar.
+       Escrito só na MUDANÇA: tocar o `style` 60 vezes por segundo paga
+       invalidação de graça. */
+    let cursorEstado = -1;
+    const marcaCursor = (estado: number) => {
+      if (estado === cursorEstado || !secao) return;
+      cursorEstado = estado;
+      (secao as HTMLElement).style.cursor =
+        estado === 2 ? "pointer" : estado === 1 ? "grab" : estado === 0 ? "grabbing" : "";
     };
 
-    const escolheu = (ev: PointerEvent) => {
+    /* ------------------------------------------- O GLOBO INTEIRO SE GIRA
+
+       Pedido do dono, 17/10: "o globo como um todo deve ser clicável e, ao
+       clicar em qualquer lugar do globo, girá-lo conforme o sentido do clique —
+       girá-lo levemente, mas livre".
+
+       O gesto é um DESLOCAMENTO DE CÂMERA somado por cima do que o voo manda:
+       `livreYaw` e `livrePitch`. O voo nunca para — ele continua contando, e o
+       planeta aparece deslocado. É isso que faz o gesto ser "leve": o visitante
+       empurra, o planeta responde, e o enquadramento volta sozinho para onde o
+       voo o quer.
+
+       A CONTA É A PROJEÇÃO ORTOGRÁFICA INVERTIDA. Um ponto da superfície cai em
+       `R + Z·R·x₁`, então um deslocamento de Δx px pede `Δyaw = Δx / (R·Z)`. É
+       dividir pela escala EFETIVA que faz um dedo de 100 px girar o mesmo tanto
+       de TELA no planeta inteiro (1,35×) e em cima da torre de São Paulo
+       (9.200×) — sem isso, o mesmo gesto que no globo é um empurrão seria, na
+       maquete, quatro mil larguras de tela.
+
+       QUEM GANHA O CLIQUE. Dentro do disco e a ≤ 30 px de um pino, é país (o
+       desvio, acima). Dentro do disco e longe de todos, é gesto. Fora do disco,
+       nada — a camada do palco cobre a seção inteira e não pode roubar o clique
+       de quem está em cima do texto.
+       ------------------------------------------------------------------- */
+    let livreYaw = 0;
+    let livrePitch = 0;
+    let velYaw = 0;
+    let velPitch = 0;
+    let arrastando = false;
+    let arrastouPx = 0;
+    let tDown = 0;
+    let xUlt = 0;
+    let yUlt = 0;
+    let ponteiroId = -1;
+
+    /** Onde o ponteiro caiu, em px da caixa do globo, e se está no disco. */
+    const noDisco = (ev: PointerEvent) => {
+      const b = caixa.current?.getBoundingClientRect();
+      if (!b) return null;
+      const R = b.width / 2;
+      const x = ev.clientX - b.left;
+      const y = ev.clientY - b.top;
+      const dx = x - R;
+      const dy = y - R;
+      return dx * dx + dy * dy <= R * R ? { x, y, R } : null;
+    };
+
+    /** A escala que o espectador VÊ: no mergulho é a da caixa `sp`. */
+    const escalaVista = () =>
+      palco.sp.ativo ? palco.sp.zoom : Math.max(1, angulo.current.escala);
+
+    const aoPressionar = (ev: PointerEvent) => {
       if (ev.pointerType === "mouse" && ev.button !== 0) return;
       const alvoDom = ev.target as HTMLElement | null;
       if (alvoDom?.closest("a,button,input,textarea,select,label")) return;
+      const d = noDisco(ev);
+      if (!d) return;
+
+      /* País tem prioridade: um pino debaixo do dedo é uma escolha, não um
+         empurrão. */
       const j = perto(ev);
-      if (j < 0) return;
-      escolher.current(j);
+      if (j >= 0) {
+        escolher.current(j);
+        return;
+      }
+
+      arrastando = true;
+      arrastouPx = 0;
+      tDown = performance.now();
+      xUlt = ev.clientX;
+      yUlt = ev.clientY;
+      velYaw = 0;
+      velPitch = 0;
+      ponteiroId = ev.pointerId;
+      /* A captura segue o dedo para fora da seção: soltar o botão em cima do
+         cabeçalho não pode deixar o planeta preso no último deslocamento. */
+      try {
+        (secao as HTMLElement)?.setPointerCapture(ev.pointerId);
+      } catch {
+        /* Navegador sem captura de ponteiro: o `pointerup` na seção basta. */
+      }
+      marcaCursor(0);
+    };
+
+    const aoArrastar = (ev: PointerEvent) => {
+      if (!arrastando || ev.pointerId !== ponteiroId) return;
+      const b = caixa.current?.getBoundingClientRect();
+      if (!b) return;
+      const R = b.width / 2;
+      const Z = escalaVista();
+      const dx = ev.clientX - xUlt;
+      /* NO TOQUE SÓ O HORIZONTAL GIRA: o vertical é rolagem de página, e
+         sequestrá-lo seria prender o visitante no hero. É a mesma regra das
+         placas de Prêmios. */
+      const dy = ev.pointerType === "mouse" ? ev.clientY - yUlt : 0;
+      xUlt = ev.clientX;
+      yUlt = ev.clientY;
+      arrastouPx += Math.abs(dx) + Math.abs(dy);
+
+      const passoYaw = dx / (R * Z);
+      const passoPitch = dy / (R * Z);
+      livreYaw += passoYaw;
+      livrePitch = Math.max(
+        -LIVRE_PITCH_MAX,
+        Math.min(LIVRE_PITCH_MAX, livrePitch + passoPitch),
+      );
+      /* A velocidade do ÚLTIMO movimento é o que vira inércia ao soltar. Em
+         radianos por ms, a unidade do laço. */
+      const dt = Math.max(1, performance.now() - tDown);
+      velYaw = passoYaw / Math.min(32, dt);
+      velPitch = passoPitch / Math.min(32, dt);
+      tDown = performance.now();
+    };
+
+    const aoSoltar = (ev: PointerEvent) => {
+      if (!arrastando || ev.pointerId !== ponteiroId) return;
+      arrastando = false;
+      ponteiroId = -1;
+      try {
+        (secao as HTMLElement)?.releasePointerCapture(ev.pointerId);
+      } catch {
+        /* idem */
+      }
+
+      /* CLIQUE SECO = EMPURRÃO "conforme o sentido do clique": o ponto da
+         superfície debaixo do dedo anda um quarto do caminho até o meio do
+         disco. Clicar à direita traz a direita para o centro, um pouco — e a
+         mola, logo abaixo, devolve o enquadramento ao voo. */
+      const seco =
+        arrastouPx < CLIQUE_SECO_PX &&
+        performance.now() - tDown < CLIQUE_SECO_MS;
+      if (seco) {
+        const d = noDisco(ev);
+        if (d) {
+          const Z = escalaVista();
+          livreYaw += (-EMPURRAO * (d.x - d.R)) / (d.R * Z);
+          livrePitch = Math.max(
+            -LIVRE_PITCH_MAX,
+            Math.min(
+              LIVRE_PITCH_MAX,
+              livrePitch + (EMPURRAO * (d.R - d.y)) / (d.R * Z),
+            ),
+          );
+        }
+      }
+
+      /* O CURSOR VOLTA NO SOLTAR, e não no próximo movimento. Medido: soltando
+         o botão sem mexer o ponteiro, a mão fechada continuava desenhada até o
+         usuário arrastar o mouse de novo — porque só o pointermove reavaliava
+         o estado. Quem solta já não está mais segurando. */
+      if (perto(ev) >= 0) marcaCursor(2);
+      else marcaCursor(noDisco(ev) ? 1 : -1);
     };
 
     secao?.addEventListener("pointermove", moveu, { passive: true });
+    secao?.addEventListener("pointermove", aoArrastar, { passive: true });
     secao?.addEventListener("pointerleave", saiu);
-    secao?.addEventListener("pointerdown", escolheu);
+    secao?.addEventListener("pointerdown", aoPressionar);
+    secao?.addEventListener("pointerup", aoSoltar);
+    secao?.addEventListener("pointercancel", aoSoltar);
 
     const quadro = (t: number) => {
       raf = requestAnimationFrame(quadro);
@@ -2516,8 +2932,99 @@ export function HeroGlobe({
       const r = relogio.current;
       let cam: Ponto;
       let esc: number;
+      const d = desvio.current;
 
-      if (!r.mergulhou) {
+      if (d) {
+        /* ------------------------------------------------- O DESVIO DO CLIQUE
+
+           Uma perna de voo como as sete do tour, só que de onde a câmera estava
+           até a cidade escolhida. Ver `escolher.current`, acima. */
+        d.ms += dt;
+        const tt = Math.min(1, d.ms / d.duracao);
+        const q = perna(d.de, d.para, d.w0, VISTA_DETALHE, tt, ATRASO);
+        cam = q.camera;
+        fase = "voo";
+        msFase = d.ms;
+        uBola = q.u;
+
+        /* A ESCALA EM DOIS CANAIS, exatamente como no mergulho de São Paulo: o
+           que passa de `ZOOM_DETALHE` vai para a caixa `sp` (que é quem a cena
+           3D lê) e o canvas 2D fica em 1,35×. É o que impede o 2D de tentar
+           ampliar 5.458 pontos de Fibonacci por 9.200 quando o desvio começa em
+           cima da torre — e é o mesmo mecanismo, não um segundo. */
+        /* A ESCALA DO DESVIO fica na curva de van Wijk.
+
+           Eu tentei trocá-la por uma interpolação logarítmica da escala, como
+           a da fase sobe do mergulho: de 8.566x para 1,35x são 8,7 nats, e num
+           primeiro olhar a hipérbole de van Wijk me pareceu concentrar demais
+           o movimento. Medi as duas pela taxa no tempo de ANIMAÇÃO (o headless
+           prende o relógio no teto de 100 ms por quadro, então um passo de lá
+           vale seis daqui): van Wijk dá pico de 3,03 nats/s, o logaritmo
+           suavizado dá 4,42. Van Wijk ganha, e tinha de ganhar — é exatamente
+           o problema que ela resolve: minimizar a velocidade PERCEBIDA ao
+           longo do caminho, não só distribuir a escala por igual. */
+        const alto = q.zoom > ZOOM_DETALHE + 1e-3;
+        esc = alto ? ZOOM_DETALHE : q.zoom;
+
+        /* A CIDADE SE DESFAZ NO CAMINHO, não some.
+
+           As visibilidades saem da ESCALA (nunca do tempo), então subir é a
+           descida ao contrário e as camadas se apagam na ordem em que
+           apareceram. A obliquidade e a órbita, que o mergulho tinha deixado em
+           32° e ±5°, voltam a zero nos primeiros 40% do desvio: endireitar
+           primeiro e afastar depois é a mesma leitura de "levantar voo" que a
+           fase `sobe` do mergulho já usa. */
+        const sp = palco.sp;
+        if (alto) {
+          const v = visibilidades(q.zoom);
+          const k = 1 - suave(Math.min(1, tt / DESVIO_ENDIREITA));
+          const incl = d.incl0 * k;
+          const orb = d.orb0 * k;
+          const en = enquadra(cam, incl, orb);
+          sp.ativo = true;
+          sp.fase = "desvio";
+          sp.zoom = q.zoom;
+          sp.inclinacao = incl;
+          sp.orbita = orb;
+          sp.pitch = en.pitch + livrePitch;
+          sp.yaw = en.yaw + livreYaw;
+          sp.x = en.x;
+          sp.y = en.y;
+          sp.pontos = v.pontos;
+          sp.mapa = v.mapa;
+          sp.predios = celular ? 0 : v.predios;
+          sp.logo = celular ? 0 : v.logo;
+        } else {
+          sp.ativo = false;
+        }
+
+        /* O rastro da perna do desvio, montado UMA vez. */
+        if (!d.montado) {
+          d.montado = true;
+          temRastro = true;
+          rastroDe = -1;
+          montaRastro(d.de, d.para);
+        }
+        const vd = baseVector(q.bola.lat, q.bola.lon);
+        bolaBase = vd;
+        const sobeD = 1 + REDE_SOBE * Math.sin(Math.PI * q.u);
+        palco.bola[0] = vd[0] * sobeD;
+        palco.bola[1] = vd[1] * sobeD;
+        palco.bola[2] = vd[2] * sobeD;
+        palco.de = ativo.current;
+        palco.para = d.indice;
+
+        /* CHEGOU: daqui em diante é o pouso normal — pulso, rótulo cheio e, em
+           São Paulo, o mergulho depois dos 1,8 s. O relógio do tour recomeça do
+           zero naquela cidade, e o desvio deixa de existir. */
+        if (tt >= 1) {
+          ativo.current = d.indice;
+          r.ms = 0;
+          desvio.current = null;
+          rastroDe = -1;
+          avisar.current?.(d.indice);
+        }
+      } else if (!r.mergulhou) {
         /* A ENTRADA NÃO MERGULHA: o mergulho em São Paulo só existe depois de a
            câmera ter pousado lá pela primeira vez. Desligar a caixa aqui é o
            que impede um estado velho de sobreviver a uma remontagem do efeito
@@ -2622,6 +3129,18 @@ export function HeroGlobe({
         palco.para = e.para;
       }
 
+      /* O ÚLTIMO QUADRO, para o clique poder partir de onde a câmera está (ver
+         `ultimoQuadro`). Guardado DEPOIS de tudo decidido, e incluindo a escala
+         que o espectador vê — que no mergulho é a da caixa `sp`, não a do voo. */
+      palco.livreYaw = livreYaw;
+      palco.livrePitch = livrePitch;
+
+      const uq = ultimoQuadro.current;
+      uq.cam = cam;
+      uq.escVista = palco.sp.ativo ? palco.sp.zoom : esc;
+      uq.incl = palco.sp.ativo ? palco.sp.inclinacao : 0;
+      uq.orb = palco.sp.ativo ? palco.sp.orbita : 0;
+
       /* OS RÓTULOS: saem no começo do voo, voltam depois do pouso. `suave` é o
          smoothstep de sempre, para a opacidade não ter canto nas pontas. */
       const rp =
@@ -2632,6 +3151,26 @@ export function HeroGlobe({
               Math.max(0, (msFase - ROTULO_ESPERA_MS) / ROTULO_VOLTA_MS),
             );
       rotulos = rp * rp * (3 - 2 * rp);
+
+      /* O GESTO, por quadro: inércia curta e mola de volta a zero.
+
+         As duas acontecem JUNTAS, e não em sequência: somadas, o que se vê é um
+         planeta que continua um instante na direção do empurrão e volta — que é
+         exatamente o gesto de um globo de mesa. Em sequência seria um
+         deslizamento seguido de um retorno, duas coisas, e o olho veria a
+         emenda. Com o dedo em cima nada disto roda: ali quem manda é o dedo. */
+      if (!arrastando) {
+        livreYaw += velYaw * dt;
+        livrePitch += velPitch * dt;
+        const amortece = Math.exp(-dt / LIVRE_INERCIA_MS);
+        velYaw *= amortece;
+        velPitch *= amortece;
+        const volta = 1 - Math.exp(-dt / LIVRE_MOLA_MS);
+        livreYaw -= livreYaw * volta;
+        livrePitch -= livrePitch * volta;
+        if (Math.abs(livreYaw) < 1e-6) livreYaw = 0;
+        if (Math.abs(livrePitch) < 1e-6) livrePitch = 0;
+      }
 
       /* O cursor, com a mesma suavização de sempre (~0,28 s). `dt` está em ms
          aqui, daí o divisor de 280. */
@@ -2661,9 +3200,12 @@ export function HeroGlobe({
          `globeMath`), e no centro dela devolve (0, 0) — o ângulo do servidor. */
       const base = centraliza(cam.lat, cam.lon);
       const agora = performance.now();
+      /* O DESLOCAMENTO LIVRE entra aqui, somado ao que o voo manda e ao
+         empurrão do cursor. Três fontes, uma câmera — e os pinos, que a cena 3D
+         projeta pela mesma matriz, acompanham sem uma linha a mais. */
       desenha(
-        base.yaw + curYaw * forca * CURSOR_PESO,
-        base.pitch + curPitch * forca * CURSOR_PESO,
+        base.yaw + curYaw * forca * CURSOR_PESO + livreYaw,
+        base.pitch + curPitch * forca * CURSOR_PESO + livrePitch,
         esc,
       );
       const olho = medidor();
@@ -2687,9 +3229,12 @@ export function HeroGlobe({
       cancelAnimationFrame(raf);
       observador?.disconnect();
       secao?.removeEventListener("pointermove", moveu);
+      secao?.removeEventListener("pointermove", aoArrastar);
       secao?.removeEventListener("pointerleave", saiu);
-      secao?.removeEventListener("pointerdown", escolheu);
-      marcaCursor(false);
+      secao?.removeEventListener("pointerdown", aoPressionar);
+      secao?.removeEventListener("pointerup", aoSoltar);
+      secao?.removeEventListener("pointercancel", aoSoltar);
+      marcaCursor(-1);
     };
   }, [codes, running, modo, voa, trocaParada, entrada]);
 

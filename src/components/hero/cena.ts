@@ -238,6 +238,24 @@ export type Cena = {
   /** Os sete códigos de moeda, na ordem da fila. */
   codigos: string[];
   /**
+   * ESCOLHER UM PAÍS — o mesmo caminho que o clique no globo usa.
+   *
+   * Ele abre um DESVIO: uma perna de voo de onde a câmera está até a cidade
+   * pedida (ver `escolher` no `HeroGlobe`). Está no contrato por duas razões:
+   * é por aqui que a medição no navegador prova o desvio partindo de lugares
+   * que o ponteiro não alcança — do fundo do mergulho, por exemplo, onde não há
+   * pino nenhum na tela —, e é o gancho pronto para o dia em que outro controle
+   * da página (a `StageStatus`, um seletor) quiser mandar o globo a um país.
+   */
+  escolher: ((indice: number) => void) | null;
+  /**
+   * O DESLOCAMENTO LIVRE do gesto, em radianos — o quanto o dedo do visitante
+   * afastou a câmera do que o voo manda. Publicado para a medição poder isolá-lo
+   * do movimento do próprio voo, que nunca para de contar por baixo.
+   */
+  livreYaw: number;
+  livrePitch: number;
+  /**
    * A VERSÃO LEVE, abaixo de 1024 (etapa 6): metade dos pontos, `dpr` 1,
    * fresnel sem `pow`, arcos sem o fio creme por dentro e metade das faíscas.
    * Mora no contrato porque quem decide é a largura (o `HeroGlobe`) e quem
@@ -408,6 +426,9 @@ const ESTADO: Cena = {
   bola: new Float32Array([0, 0, 1]),
   arco: new Float32Array(ARCO_PASSOS * 3),
   codigos: [],
+  escolher: null,
+  livreYaw: 0,
+  livrePitch: 0,
   leve: false,
   pinos: [],
   focos: new Float32Array(0),
