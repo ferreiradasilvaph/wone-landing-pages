@@ -1153,3 +1153,12 @@ visual que está aplicado seja mais rapido e sutil ao mesmo tempo (me refiro aos
 efeitos visuais que pedi pra voce se referencias no site da dotfy.com.br)
 
 deixe o globo interativo ao passar o cursor por cima deve se mexer
+
+
+===============================================================================
+[132] 2026-10-17
+===============================================================================
+melhor que isso, deixe o globo girando livre levemente, para cada sessão
+(usuário que aderir à url "https://pedrinho.wone.bot") de usuário.
+
+clarear mais o globo / em específico, os continentes

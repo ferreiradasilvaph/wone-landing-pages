@@ -193,11 +193,21 @@ function curva(p: number) {
  * e 3 dos países em creme. São dez `fill` por quadro, não um por ponto.
  *
  * O laranja pede mais alfa que o creme pedia para a mesma presença: a 0,42 o
- * creme sobre o preto dá um cinza de luminância ~0,42, e o #FF7700 dá ~0,25 —
- * daí a rampa subir até 0,52 no ponto mais aceso. Os países sobem até 0,86
- * porque é deles que o olho precisa sair com a informação.
- */
-const ALFA = [0.05, 0.14, 0.23, 0.32, 0.42, 0.52, 0.42, 0.26, 0.5, 0.86];
+ * creme sobre o preto dá um cinza de luminância ~0,42, e o #FF7700 dá ~0,25.
+ * Os países sobem até 0,86 porque é deles que o olho precisa sair com a
+ * informação.
+ *
+ * A RAMPA DA TERRA SUBIU EM 17/10, a pedido do dono ("clarear mais o globo, em
+ * específico os continentes"): de 0,05–0,52 para 0,09–0,70. O degrau entre os
+ * níveis cresceu junto (era ~0,094, agora ~0,12), e isso é de propósito — com o
+ * planeta mais aceso, um degrau pequeno demais empastaria o relevo que a luz
+ * de cima-à-esquerda desenha. O PISO subiu quase o dobro porque é ele que
+ * decide se a terra no lado escuro EXISTE: a 0,05 o continente sumia antes do
+ * limbo e a silhueta do planeta se desfazia.
+ *
+ * O mar, a costa e os países NÃO mudaram: o pedido era dos continentes, e
+ * subir o resto junto só devolveria o mesmo contraste de antes, mais claro. */
+const ALFA = [0.09, 0.21, 0.33, 0.45, 0.57, 0.7, 0.56, 0.26, 0.5, 0.86];
 const COR = [...TERRA, COSTA, PAIS_BORDA, PAIS_BORDA, PAIS_NUCLEO];
 /** Quantos baldes o laço percorre. */
 const BALDES = ALFA.length;
@@ -951,7 +961,20 @@ export function HeroGlobe({
           const z1 = -sy * x + cy * z;
           const y2 = cp * y - sp * z1;
           const z2 = sp * y + cp * z1;
-          el.hidden = z2 < 0;
+          /* O pino SOME NO LIMBO, e some por opacidade, nao por `hidden`.
+
+             Com a oscilacao de antes nenhum pino chegava a virar a esquina, e
+             um `hidden` binario nunca aparecia em cena. Com o giro livre (16/10)
+             todos cruzam o limbo o tempo todo, e cortar o no de uma vez faria o
+             rotulo PISCAR na borda do disco - a cada volta, sete vezes.
+             A rampa de 0,05 a 0,30 de `z2` e a largura do limbo: o pino entra e
+             sai desvanecendo, como um ponto que dobra o horizonte. Abaixo de
+             0,05 ele sai do fluxo de vez, para nao pagar layout do outro lado
+             da bola. */
+          const borda = (z2 - 0.05) / 0.25;
+          const visivel = borda <= 0 ? 0 : borda >= 1 ? 1 : borda;
+          el.hidden = visivel === 0;
+          el.style.opacity = visivel === 1 ? "" : visivel.toFixed(3);
           const px = R + x1 * R;
           const py2 = R - y2 * R;
           el.style.transform = `translate3d(${(px - g.repouso[j].x).toFixed(1)}px, ${(py2 - g.repouso[j].y).toFixed(1)}px, 0)`;
@@ -1023,6 +1046,14 @@ export function HeroGlobe({
     let ultimo = -1;
     let recYaw = angulo.current.yaw;
     let recPitch = angulo.current.pitch;
+
+    /* Uma volta em 180 s, e um meridiano sorteado por sessão.
+       O sorteio é uma vez por montagem do laço — recarregar a página dá outro.
+       O ângulo é ACUMULADO e não "seg × velocidade": integrar a velocidade é o
+       que deixa a rampa de entrada mexer no ritmo sem criar salto no ângulo. */
+    const GIRO_VEL = TAU / 180;
+    const faseSessao = Math.random() * TAU;
+    let giroAcumulado = 0;
 
     /* O CURSOR MOVE O PLANETA (pedido do dono, 16/10: "deixe o globo interativo,
        ao passar o cursor por cima deve se mexer").
@@ -1112,7 +1143,37 @@ export function HeroGlobe({
          sem um salto na entrada. A inclinação fica em 1,5° e com período primo
          em relação ao da guinada (46 s contra 28), para os dois não voltarem
          juntos ao mesmo ponto e o movimento nunca parecer um pêndulo. */
-      const balancoYaw = 0.1571 * Math.sin((TAU * seg) / 26);
+      /* O GIRO LIVRE, E UMA FASE POR SESSÃO (pedido do dono, 17/10: "deixe o
+         globo girando livre levemente, para cada sessão de usuário").
+
+         Isto SUBSTITUI a oscilação de ±9° que vivia aqui, e substitui também a
+         razão dela. O comentário antigo defendia a oscilação assim: numa
+         rotação contínua metade dos pinos estaria sempre do outro lado da bola
+         e as etiquetas sumiriam em rodízio, e a primeira dobra perderia a prova
+         dos "7 países". Esse argumento caiu hoje por conta própria — a prova
+         dos sete passou a ser a FILEIRA DE BANDEIRAS ao lado do título, que
+         mostra os sete ao mesmo tempo e não gira. Liberado disso, o planeta
+         pode fazer o que um planeta faz.
+
+         A VELOCIDADE é "levemente": uma volta em 180 s, 2°/s. O pico da
+         oscilação antiga era 1,35°/s, então é a mesma ordem de leitura — só que
+         sem voltar atrás.
+
+         A FASE DA SESSÃO é o que faz duas pessoas não verem a mesma tela: cada
+         carregamento sorteia um meridiano. Ela NÃO entra de uma vez, e isso não
+         é enfeite: o servidor pinta o globo no ângulo zero, e aplicar um ângulo
+         sorteado no primeiro quadro do cliente seria um salto visível bem em
+         cima do elemento de LCP. A rampa leva 2,2 s — o tempo da entrada —, e
+         como ela multiplica também a VELOCIDADE, o planeta parte parado e
+         ganha curso. O primeiro quadro do laço cai exatamente sobre o que o
+         servidor pintou, que é a regra que já valia aqui.
+
+         A inclinação continua oscilando: o eixo de um planeta não gira, cabeceia
+         — e 2° de cabeceio em 43 s mantém o movimento de parecer um carrossel. */
+      const rampa = Math.min(1, seg / 2.2);
+      const entrada2 = rampa * rampa * (3 - 2 * rampa);
+      giroAcumulado += dt * GIRO_VEL * entrada2;
+      const balancoYaw = faseSessao * entrada2 + giroAcumulado;
       const balancoPitch = 0.0349 * Math.sin((TAU * seg) / 43);
 
       /* O cursor assume o balanco: mesma suavizacao do recuo (~1,2 s). */
