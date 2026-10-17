@@ -1168,3 +1168,20 @@ clarear mais o globo / em específico, os continentes
 [133] 2026-10-17
 ===============================================================================
 deixe o foco da rotação apenas nos países que estão destacados no globo
+
+
+===============================================================================
+[124] 2026-10-17
+===============================================================================
+melhor, o giro deve acompanhar a bolinha que interage no globo, quero ver seus
+super-poderes: a cada pais que a bolinha passar, a cada 3 paises quero que de
+um efeito visual de zoom. um zoom que acompanha mais 2 passagens da bolinha por
+outros paises que ela va percorrer. depois do 2 pais que ela passar, volte ao
+zoom original do globo. faca algo visualmente espetacular...
+
+
+===============================================================================
+[127] 2026-10-17
+===============================================================================
+lembra que falei dos artigos na sequencia em "plataforma"? em "acesso" la no
+rodape deve estar da mesma forma. o texto todo para a esquerda da tela

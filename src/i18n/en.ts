@@ -934,7 +934,7 @@ export const en: Content = {
 
   cta: {
     kicker: "Access",
-    title: "Join the list. The next batch goes out in sign-up order.",
+    titleLines: ["You join the list.", "Batches go in order.", "Wone calls you."],
     lead: "No card. Access is invite-only, released in batches, and yours arrives by email.",
     bullets: [
       { term: "Sign-up", detail: "name, email and country; Telegram and phone if you like" },

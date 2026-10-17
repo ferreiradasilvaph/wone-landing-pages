@@ -130,7 +130,7 @@ export function WaitlistSection() {
            inteira de vão entre os dois. */
         asideStart={7}
         kicker={cta.kicker}
-        title={cta.title}
+        titleLines={[cta.titleLines[0], cta.titleLines[1], cta.titleLines[2]]}
         lead={cta.lead}
         aside={formulario}
       >

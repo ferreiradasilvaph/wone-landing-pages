@@ -1351,7 +1351,28 @@ export const pt = {
 
   cta: {
     kicker: "Acesso",
-    title: "Entre na lista. A próxima leva sai por ordem de inscrição.",
+    /**
+     * Três frases em linhas próprias, como em Como funciona ("Você liga tudo. /
+     * O cliente paga. / A Wone entrega.") e na Plataforma ("O cliente paga. /
+     * A Wone confere. / O convite chega.") — pedido do dono, 17/10: "em acesso
+     * lá no rodapé deve estar da mesma forma, o texto todo para a esquerda".
+     *
+     * O que a quebra cravada faz é o que ele chama de "jogar para a esquerda":
+     * sem ela o título era um parágrafo de duas frases que quebrava onde a
+     * largura mandasse, e cada linha começava num lugar diferente. Com as três
+     * linhas, toda frase nasce na mesma margem e o bloco lê como uma escada.
+     *
+     * As três cabem na coluna, e isso é medido, não estimado: a coluna do h2
+     * tem 488px a 54px de corpo, e as linhas dão 461, 462 e 437 — a mesma folga
+     * das linhas da Plataforma (361, 396 e 404). Passar de 488 traria a quebra
+     * automática de volta, que é justamente o que saiu.
+     *
+     * O vocabulário é o que a seção já usa: "lista" do título antigo, "leva" do
+     * lead ("liberado por convite, em levas") e a Wone como sujeito do último
+     * passo, igual às outras duas seções. O POR E-MAIL continua no lead, logo
+     * abaixo — não cabia em 488px e não é o que o título precisa dizer.
+     */
+    titleLines: ["Você entra na lista.", "A leva é por ordem.", "A Wone te chama."],
     lead: "Sem cartão. O acesso é liberado por convite, em levas, e o seu chega por e-mail.",
     /** Lista "termo — complemento", a mesma forma das linhas de Segurança. */
     bullets: [
