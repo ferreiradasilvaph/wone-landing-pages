@@ -96,6 +96,10 @@ export function StepRail({ show }: { show: StepShow }) {
 
           {steps.map((step, index) => {
             const isActive = index === active;
+            /* Só o numeral ATIVO rola, e só com movimento permitido: os outros
+               três ficam parados em `faint`, que é o que faz o ativo ser o
+               ativo (leva2.css, "O TRILHO DOS PASSOS"). */
+            const rola = isActive && !reduced;
 
             return (
               <button
@@ -134,10 +138,22 @@ export function StepRail({ show }: { show: StepShow }) {
                   isActive ? "bg-ink-800" : "hover:bg-ink-850"
                 }`}
               >
+                {/* O ROLO DE 8px (leva 2): o numeral que entra vem de baixo —
+                    o gesto mínimo que diz "virou a página", porque até aqui a
+                    troca de passo era só uma troca de COR no lugar.
+
+                    A `key` é o que RECOMEÇA a animação a cada troca: o numeral
+                    não tem o `data-hiw-on` do palco (ele vive no trilho, fora
+                    das camadas), e `animation` com o mesmo nome não reinicia
+                    sozinha — nó novo, animação nova. Com movimento reduzido a
+                    chave é constante nos quatro: sem classe, e sem remontar à
+                    toa. Os 2,5rem e o `h-10` abaixo não mudam, então nada
+                    disto toca o layout (CLS 0). */}
                 <span
+                  key={rola ? `rola-${active}` : "parado"}
                   className={`tnum text-[2.5rem] leading-[1.1] font-semibold transition-colors duration-300 ${
                     isActive ? "text-cream" : "text-faint"
-                  }`}
+                  }${rola ? " hiw-rolo" : ""}`}
                 >
                   {step.step}
                 </span>
@@ -165,7 +181,17 @@ export function StepRail({ show }: { show: StepShow }) {
           quatro descrições nos dois idiomas, a mais longa (81 caracteres, em
           inglês) cabe nas duas linhas a 412 e a 1440. Se uma revisão de copy
           passar do teto, ela corta em vez de empurrar a barra do relógio. */}
-      <p className="mt-3 line-clamp-2 h-[42px] text-[14px] leading-[1.5] text-muted">
+      {/* A descrição entra ATRÁS do numeral (leva 2): 60ms depois e com metade
+          do curso (4px) — ela acompanha, não compete. Mesma `key` por passo,
+          pelo mesmo motivo do numeral (sem nó novo a animação não recomeça), e
+          constante com movimento reduzido. O compartimento tem 42px cravados
+          desde o primeiro quadro, então remontar o parágrafo não move nada. */}
+      <p
+        key={reduced ? "desc" : `desc-${active}`}
+        className={`mt-3 line-clamp-2 h-[42px] text-[14px] leading-[1.5] text-muted${
+          reduced ? "" : " hiw-desc"
+        }`}
+      >
         {steps[active].description}
       </p>
 

@@ -144,10 +144,17 @@
 }
 
 [data-hiw-on="1"] .hiw-digitando {
-  animation: hiw-digitando 1.05s linear both;
+  animation: hiw-digitando 1.5s linear both;
 }
 
-/* 85% de 1,05 s = 892 ms: o indicador fica ~900 ms e some em 150. */
+/* 85% de 1,5 s = 1.275 ms: o indicador fica ~1,3 s e some em 225.
+   ERA 1,05 s, E O NÚMERO MUDOU EM 18/10 (leva 2) POR UM MOTIVO DE PALCO: a
+   faísca do fio encosta no aparelho em 1,35 s (0,4 de atraso + 0,95 de
+   travessia, em `StageWire`), e a oferta entrava aos 900 ms — 450 ms ANTES de
+   a notícia chegar. Eram dois relógios contando a mesma coisa em horas
+   diferentes, e a seção inteira existe para mostrar que é UM evento com dois
+   lados. Agora o bot digita enquanto a faísca viaja e a bolha cai no quadro em
+   que ela chega. Mexeu num dos dois números, remede o outro. */
 @keyframes hiw-digitando {
   0%,
   85% {
@@ -181,11 +188,13 @@
   }
 }
 
-/* A bolha da oferta entra DEPOIS do "digitando" — os mesmos 900 ms de atraso,
-   250 ms de travessia. `both` segura o primeiro quadro (invisível) durante a
-   espera; sem ele a oferta apareceria inteira e o indicador seria mentira. */
+/* A bolha da oferta entra DEPOIS do "digitando" e NO QUADRO EM QUE A FAÍSCA
+   CHEGA: 1,35 s é a soma do atraso e da travessia da faísca (`StageWire`), e é
+   também o fim do "digitando" acima — os três números são um só. `both` segura
+   o primeiro quadro (invisível) durante a espera; sem ele a oferta apareceria
+   inteira e o indicador seria mentira. */
 [data-hiw-on="1"] .hiw-bolha-entra {
-  animation: hiw-bolha-entra 250ms var(--ease-out-expo) 900ms both;
+  animation: hiw-bolha-entra 250ms var(--ease-out-expo) 1350ms both;
 }
 
 @keyframes hiw-bolha-entra {

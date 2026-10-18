@@ -167,8 +167,29 @@ export function CustomerDevice({ step, className = "" }: { step: number; classNa
           </span>
 
           {/* Cabeçalho do chat — 44. É nele que o fio do palco chega: a notícia
-              entra POR CIMA da conversa, não pelo meio da tela. */}
-          <div className="flex h-11 shrink-0 items-center gap-2 border-b border-line px-3">
+              entra POR CIMA da conversa, não pelo meio da tela.
+
+              E DESDE 18/10 ELE RESPONDE (leva 2): quando a faísca encosta —
+              1,35s depois da troca de passo, que é a soma dos dois números do
+              `StageWire` — o cabeçalho dá a batida de 3px da leva 1
+              (`.apa-chegada`). O fio terminava num cabeçalho imóvel; agora a
+              chegada tem destinatário.
+
+              `key={step}` é o que RECOMEÇA a animação a cada passo, e é o
+              mesmo recurso que a faísca usa (nó novo, animação nova): o
+              cabeçalho vive fora das camadas do `StepLayer`, então não tem o
+              `data-hiw-on` que serve de gatilho ao resto do chat. O subtítulo
+              é estático, então remontar seis nós por troca não custa nada.
+
+              SÓ NOS PASSOS 01-03: no 04 a faísca viaja no sentido contrário
+              (do cliente para o seu painel), e bater no cabeçalho do chat ali
+              diria o oposto do que a seção afirma. */}
+          <div
+            key={step}
+            className={`flex h-11 shrink-0 items-center gap-2 border-b border-line px-3${
+              step < 3 ? " apa-chegada" : ""
+            }`}
+          >
             <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand/15">
               <WoneIcon className="h-3 w-auto" />
             </span>

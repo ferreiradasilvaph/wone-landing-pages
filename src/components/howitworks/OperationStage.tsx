@@ -62,6 +62,14 @@ const FLOOR =
  *     lado a lado a 412 cada metade teria 156px, e 11px de texto dentro disso é
  *     ilegível.
  *
+ *  4. A PARALAXE DA PASSAGEM, desde 18/10 (leva 2 do pacote criativo). Os dois
+ *     objetos andam em planos diferentes enquanto a seção cruza a janela — o
+ *     painel 10px e o aparelho 18, que é o da FRENTE da cena. É o que faz a
+ *     perspectiva do item 2 deixar de ser um decalque e virar espaço. Zero
+ *     JavaScript e zero relógio: `view-timeline` nomeado neste card (o
+ *     `overflow-hidden` dele obriga o nome — ver `leva2.css`) e lido pelo
+ *     compositor, só em `xl` com ponteiro fino e movimento permitido.
+ *
  * ALTURA CRAVADA, CLS 0. A 1440 o palco tem 560px e os quatro estados de cada
  * objeto ficam montados, em camadas absolutas (ver `StepLayer`) — o relógio
  * pode rodar a noite inteira sem mover um pixel. Abaixo de `xl` a altura é a
@@ -149,7 +157,13 @@ export function OperationStage({ show }: { show: StepShow }) {
 
              A altura é a mesma nos quatro passos (as camadas do `StepLayer` são
              absolutas), então o relógio pode rodar sem mover um pixel: CLS 0. */
-          className="apa-respira-painel h-[280px] w-full sm:h-[330px] xl:absolute xl:top-[38px] xl:left-16 xl:h-[432px] xl:w-[640px] xl:[transform:rotateY(-12deg)_rotateX(3deg)]"
+          /* O GIRO DA CENA NÃO ESTÁ MAIS ESCRITO AQUI: `--giro` vem de
+             `.palco-painel` (leva2.css), e esta linha só o aplica. O motivo é
+             a paralaxe de rolagem, que anima `transform` e portanto precisa
+             reescrever o giro em cada quadro — com os ângulos no JSX eles
+             teriam de ser repetidos nos `@keyframes`, e dois lugares com os
+             mesmos dois ângulos divergem na primeira revisão do palco. */
+          className="palco-painel apa-respira-painel h-[280px] w-full sm:h-[330px] xl:absolute xl:top-[38px] xl:left-16 xl:h-[432px] xl:w-[640px] xl:[transform:var(--giro)]"
         />
 
         {/* Um fio por eixo: o eixo do movimento muda de breakpoint, e nem
@@ -165,7 +179,9 @@ export function OperationStage({ show }: { show: StepShow }) {
              dentro dos 1216×560 do card. Abaixo de `xl` nada disso vale: ali
              ele empilha de frente, com as mesmas alturas de antes (o orçamento
              da seção a 412 não mudou). */
-          className="h-[360px] w-[240px] sm:h-[400px] xl:absolute xl:top-3 xl:left-[828px] xl:h-[520px] xl:w-[270px] xl:[transform:rotateY(14deg)_rotateX(2deg)]"
+          /* `--giro` vem de `.palco-aparelho` (leva2.css), pelo mesmo motivo
+             do painel acima: a paralaxe anima `transform` e precisa do giro. */
+          className="palco-aparelho h-[360px] w-[240px] sm:h-[400px] xl:absolute xl:top-3 xl:left-[828px] xl:h-[520px] xl:w-[270px] xl:[transform:var(--giro)]"
         />
 
         <StageWire axis="x" step={active} className="hidden xl:block" />

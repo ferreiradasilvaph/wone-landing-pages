@@ -1,10 +1,18 @@
 "use client";
 
+import { useRef, type CSSProperties } from "react";
 import { useContent } from "@/i18n";
 import { CheckoutBoard } from "@/components/CheckoutBoard";
 import { Section } from "@/components/Section";
 import { SectionHead } from "@/components/SectionHead";
 import { TrackingFlow } from "@/components/TrackingFlow";
+import { useContagem } from "@/lib/useContagem";
+
+/* O CURSO DA CASCATA DAS GARANTIAS, em ms: 3 × 80 de atraso entre os quatro
+   numerais, mais os 480 que cada um leva para assentar de laranja em `faint`. É
+   o tempo total do percurso, que é o que o `useContagem` espera receber — este
+   bloco não tem número contando, então o `t` serve só para dizer "já largou". */
+const GARANTIAS_MS = 720;
 
 /**
  * O cartaz "Checkout INTERNACIONAL" (variante A, caps) sobre a tabela dos sete
@@ -24,6 +32,16 @@ import { TrackingFlow } from "@/components/TrackingFlow";
  */
 export function PaymentsSection() {
   const { payments } = useContent();
+
+  /* A CASCATA DOS NUMERAIS, no par `gar`/`gar--roda` da leva 1 (é exactamente o
+     que a trilha do prefácio da vitrine faz com `trilha`/`trilha--roda`):
+     `animar` diz que esta visita tem movimento e a lista foi ARMADA abaixo da
+     dobra — só então as classes são penduradas —, e `t > 0` diz que o percurso
+     largou, o que solta o `animation-play-state`. Sem isto o HTML do servidor
+     traria os quatro numerais já na tela e o leitor veria o "01" piscar de volta
+     ao começo. Um gancho, um relógio, quatro atrasos. */
+  const garantias = useRef<HTMLOListElement>(null);
+  const { t, animar } = useContagem(garantias, GARANTIAS_MS, { amount: 0.3 });
 
   return (
     <Section anchor="pagamentos" tone="ink-950">
@@ -54,10 +72,26 @@ export function PaymentsSection() {
           {/* O respiro caiu de 24/20 para 20/16: com o quarto item e as sete
               linhas da tabela, a seção passava de 1.900px a 1440, e é a altura
               que a espec limita. */}
-          <ol className="lg:col-span-5">
+          <ol
+            ref={garantias}
+            className={`lg:col-span-5${animar ? " gar" : ""}${
+              animar && t > 0 ? " gar--roda" : ""
+            }`}
+          >
             {payments.guarantees.map((item, posicao) => (
               <li key={item.num} className="mt-5 border-t border-line pt-4 first:mt-0">
-                <p className="tnum text-[13px] text-faint">{item.num}</p>
+                {/* 80ms por item, na ordem em que vão ser lidos. O numeral nasce
+                    LARANJA e assenta em `faint`: é a marca de chegada do motivo
+                    da página — onde a bolinha passa, acende e esfria — no único
+                    lugar deste bloco em que ela cabe sem tirar o destaque do
+                    item 01, que é o único laranja de repouso que a diretoria
+                    pediu aqui. */}
+                <p
+                  className="gar-num tnum text-[13px] text-faint"
+                  style={{ "--d": `${posicao * 80}ms` } as CSSProperties}
+                >
+                  {item.num}
+                </p>
                 <p
                   className={`mt-2 text-[15px] font-semibold ${
                     posicao === 0 ? "text-brand" : "text-cream"

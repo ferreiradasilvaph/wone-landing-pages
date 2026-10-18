@@ -297,9 +297,36 @@ export function WonePanel({ step, className = "" }: { step: number; className?: 
                   {demo.botOnline}
                 </span>
               </span>
-              <Chip tone="ok" className="ml-auto shrink-0">
-                {panel.webhook}
-              </Chip>
+              {/* A PARTIDA DA FAÍSCA (leva 2): 0,4s depois da troca de passo a
+                  faísca sai deste painel pelo fio, e quem a produziu dá sinal
+                  de vida — o webhook é literalmente o que dispara o evento que
+                  corre até o aparelho. Um anel de 1px abre 12% sobre a pílula e
+                  apaga em 620ms, uma vez (`.apa-pulso`, leva2.css).
+
+                  O ANEL NASCE INVISÍVEL por utilitário (`opacity-0`) e a
+                  animação sobrescreve de 0,55 a 0: em repouso — e com movimento
+                  reduzido, que desliga a animação — não há anel nenhum, só a
+                  pílula.
+
+                  O gatilho é o `data-hiw-on` da camada (nenhuma lógica nova
+                  aqui): com as quatro camadas do `StepLayer` sempre montadas,
+                  uma animação escrita solta rodaria uma vez na vida da página.
+
+                  O `ml-auto shrink-0` desceu do Chip para o invólucro porque
+                  agora é ELE o item da fileira — a pílula continua encostada à
+                  direita e sem encolher. `flex` no invólucro, e não o `inline`
+                  padrão: a pílula é `inline-flex`, e num invólucro de bloco o
+                  descenso da linha de base somaria ~5px abaixo dela — o anel é
+                  `inset-0`, então ele sairia mais alto que a pílula de 28px e
+                  descentrado. Como flex container, a caixa do invólucro é
+                  exatamente a da pílula. */}
+              <span className="relative ml-auto flex shrink-0">
+                <Chip tone="ok">{panel.webhook}</Chip>
+                <span
+                  aria-hidden
+                  className="apa-pulso pointer-events-none absolute inset-0 rounded-full border border-emerald-400 opacity-0"
+                />
+              </span>
             </div>
 
             {/* O checklist é ESTADO DE TELA, não promessa: são as três coisas

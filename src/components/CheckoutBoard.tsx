@@ -1,11 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import { Chip } from "./Chip";
 import { CtaButton } from "./CtaButton";
 import { FlagMark } from "./FlagMark";
 import { useContent } from "@/i18n";
 import { eMoeda, numero, simbolo } from "@/lib/money";
+
+/* A LATÊNCIA QUE A SIMULAÇÃO ENCENA, em ms. Não é duração de animação: é o que
+   o estado leva para virar "Pagamento aprovado", com movimento ou sem ele. O
+   mesmo número está na travessia da bolinha (`.pix-carro`, leva2.css, 0,7s) —
+   lá como o tempo do percurso, aqui como o relógio. Se um mudar, o outro muda:
+   a bolinha tem de encostar no botão no quadro em que ele troca de rótulo. */
+const SIM_MS = 700;
 
 /**
  * A tabela dos sete países do checkout internacional — país, com o que o
@@ -59,6 +66,13 @@ import { eMoeda, numero, simbolo } from "@/lib/money";
  *    clica —, nunca o preço de novo, que foi exatamente o defeito do quadro
  *    antigo.
  *
+ * E O BOTÃO RODA, desde 18/10 (leva 2): três estados em sequência — parado,
+ * rodando, aprovado —, 700ms entre o clique e o "Pagamento aprovado", a bolinha
+ * da leva 1 atravessando a fileira de métodos durante a espera (de `xl` para
+ * cima) e o "Acesso liberado" entrando ao lado da palavra "Simulação". Nenhum
+ * rótulo novo: os dois são os do telefone do hero e os da demo da Plataforma. O
+ * porquê de cada medida está em `leva2.css`, no bloco "O CHECKOUT DO CLIENTE".
+ *
  * Nada inventado: países, métodos, símbolos e moedas vêm de
  * `payments.table.countries`, os valores de `highlights.demos.checkout.prices`
  * e os rótulos do painel (`payWith`, `productNote`) do mesmo bloco do checkout
@@ -72,7 +86,7 @@ import { eMoeda, numero, simbolo } from "@/lib/money";
  * valor de máquina.
  */
 export function CheckoutBoard() {
-  const { payments, highlights, ui } = useContent();
+  const { payments, highlights, ui, phone } = useContent();
   const table = payments.table;
   const checkout = highlights.demos.checkout;
   const prices = checkout.prices;
@@ -85,6 +99,41 @@ export function CheckoutBoard() {
      no HTML, sem nada esperando JavaScript e sem segundo layout. */
   const [pais, setPais] = useState(0);
   const [metodo, setMetodo] = useState(0);
+
+  /* A SIMULAÇÃO, em três estados: "idle" → "rodando" → "aprovado".
+     Um estado só para o quadro inteiro, e não um por linha, porque há sempre
+     exactamente UM painel aberto (o do país escolhido) — e trocar de país ou de
+     método devolve tudo a "idle": o que foi aprovado foi aquele método naquele
+     país, não este. Nasce "idle", igual no servidor e no cliente; quem pede a
+     corrida é o clique. */
+  const [sim, setSim] = useState<"idle" | "rodando" | "aprovado">("idle");
+
+  /* Movimento permitido, lido DEPOIS da montagem (regra: `matchMedia` só dentro
+     de efeito, para o primeiro render do cliente ser o do servidor). Ele decide
+     só o ENFEITE — a bolinha que atravessa a fileira e a subida do chip de
+     acesso. O clique, os 700ms e o "Pagamento aprovado" acontecem igual sem
+     ele: a simulação é informação, não animação. */
+  const [movimento, setMovimento] = useState(false);
+
+  useEffect(() => {
+    const query = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const sync = () => setMovimento(!query.matches);
+    sync();
+    query.addEventListener("change", sync);
+    return () => query.removeEventListener("change", sync);
+  }, []);
+
+  /* O ÚNICO RELÓGIO DO QUADRO, e ele só existe enquanto a corrida corre: o
+     `return` do efeito cancela o `setTimeout` se o leitor trocar de país ou de
+     método no meio, então nenhum "aprovado" chega para um painel que já é
+     outro. Clicar de novo depois de aprovado passa por "rodando" outra vez, e
+     a corrida repete sem nenhum relógio novo. */
+  useEffect(() => {
+    if (sim !== "rodando") return;
+
+    const id = window.setTimeout(() => setSim("aprovado"), SIM_MS);
+    return () => window.clearTimeout(id);
+  }, [sim]);
 
   /* Grade de quatro colunas a partir de `lg`; abaixo disso cada país é um card
      empilhado de três linhas, na ordem em que se lê: quem é, como paga, quanto
@@ -146,7 +195,13 @@ export function CheckoutBoard() {
                   ser a linha. Quem escolhe o método é o painel, abaixo.
                   `aria-expanded` e não só `aria-pressed`: o que o clique faz,
                   do ponto de vista de quem não vê a tela, é abrir o checkout
-                  daquele país. */}
+                  daquele país.
+
+                  `pais-linha` é o GATILHO da resposta ao ponteiro (leva2.css):
+                  o `:hover`/`:focus-visible` dela é que faz a bandeira bater os
+                  3px da leva 1 e as pílulas de "Paga com" acenderem em fila, de
+                  60 em 60ms. Nenhuma lógica nova, nenhum estado: é CSS pendurado
+                  no botão que já existia. */}
               <button
                 type="button"
                 onClick={() => {
@@ -155,14 +210,19 @@ export function CheckoutBoard() {
                      Brasil ("Cartão até 12x · 3DS") não quer dizer nada em
                      Portugal, que tem um método só. */
                   setMetodo(0);
+                  /* País novo, corrida nova: o "Pagamento aprovado" que estava
+                     no botão era do método do país anterior. */
+                  setSim("idle");
                 }}
                 aria-expanded={escolhido}
-                className={`w-full cursor-pointer px-5 py-3.5 text-left transition-colors lg:px-6 lg:py-5 ${COLUNAS} ${
+                className={`pais-linha w-full cursor-pointer px-5 py-3.5 text-left transition-colors lg:px-6 lg:py-5 ${COLUNAS} ${
                   escolhido ? "bg-ink-800" : "hover:bg-ink-800/60"
                 }`}
               >
                 <span className="flex items-center gap-3">
-                  <FlagMark code={country.code} className="h-6 w-9 shrink-0" />
+                  {/* `pais-bandeira` soma às medidas, não as substitui: 36×24 é
+                      a medida da tabela e continua aqui. */}
+                  <FlagMark code={country.code} className="pais-bandeira h-6 w-9 shrink-0" />
                   <span className="text-[17px] font-semibold text-cream">{country.name}</span>
                   {/* No celular esta é a única aparição do ISO. */}
                   <code className="lg:hidden">{country.code}</code>
@@ -170,10 +230,20 @@ export function CheckoutBoard() {
 
                 {/* O primeiro método de cada país em laranja: é o principal
                     dele, e é o que a diretoria pediu para se ler primeiro
-                    (15/10). Pelo índice, nunca pelo nome — ver o cabeçalho. */}
+                    (15/10). Pelo índice, nunca pelo nome — ver o cabeçalho.
+
+                    `pais-chip` em todos, sem atraso inline: o atraso de 60ms
+                    por pílula vem do `nth-child` do CSS (seis regras, que é o
+                    máximo da tabela — o Brasil), e é por isso que estes chips
+                    são os ÚNICOS filhos desta caixa. Pôr qualquer outro nó aqui
+                    desloca a contagem e a fila acende fora de ordem. */}
                 <span className="mt-2.5 flex flex-wrap gap-2 lg:mt-0">
                   {country.methods.map((method, posicao) => (
-                    <Chip key={method} tone={posicao === 0 ? "brand" : "neutral"}>
+                    <Chip
+                      key={method}
+                      tone={posicao === 0 ? "brand" : "neutral"}
+                      className="pais-chip"
+                    >
                       {method}
                     </Chip>
                   ))}
@@ -212,13 +282,28 @@ export function CheckoutBoard() {
               {escolhido ? (
                 <div className="flex flex-col gap-3.5 bg-ink-900 px-5 py-3.5 lg:flex-row lg:items-center lg:justify-between lg:gap-8 lg:px-6 lg:py-4">
                   <div className="min-w-0">
-                    <span className="t-label">{ui.simulation}</span>
+                    {/* A LINHA DO RÓTULO TEM ALTURA CRAVADA (h-7, os 28px do
+                        chip) desde o primeiro quadro, vazia: é o que deixa o
+                        "Acesso liberado" entrar sem empurrar a nota de baixo
+                        nem a fileira de métodos ao lado (CLS 0). O chip é o que
+                        a simulação AFIRMA, e por isso ele fica ao lado da
+                        palavra "Simulação", não dentro da fileira. */}
+                    <span className="flex h-7 items-center gap-3">
+                      <span className="t-label">{ui.simulation}</span>
+                      {sim === "aprovado" ? (
+                        <Chip tone="ok" className={movimento ? "pix-liberado" : ""}>
+                          {highlights.demos.delivery.done}
+                        </Chip>
+                      ) : null}
+                    </span>
                     <p className="mt-1 text-[13px] leading-snug text-faint">
                       {checkout.productNote}
                     </p>
                   </div>
 
-                  <div className="flex flex-wrap items-center gap-3">
+                  {/* `relative` por causa da bolinha: ela é absoluta dentro
+                      desta fileira, e o percurso dela é a largura dela. */}
+                  <div className="relative flex flex-wrap items-center gap-3">
                     {/* A ESCOLHA DO MÉTODO, o único controle do quadro. Pílulas
                         de 36px com os 44 do portão vindos do `py` da fileira —
                         o alvo é medido, não o desenho. O escolhido é creme
@@ -234,6 +319,9 @@ export function CheckoutBoard() {
                           onClick={() => {
                             setPais(indice);
                             setMetodo(posicao);
+                            /* Método novo, corrida nova — pelo mesmo motivo da
+                               troca de país. */
+                            setSim("idle");
                           }}
                           aria-pressed={ativo}
                           className={`relative flex h-9 cursor-pointer items-center rounded-full px-4 text-[13px] font-medium transition-colors before:absolute before:inset-x-0 before:-inset-y-1 before:content-[''] ${
@@ -248,13 +336,70 @@ export function CheckoutBoard() {
                     })}
 
                     {/* O botão de produto: a pílula `object`, a mesma de
-                        "Rodar" e "Simular de novo". Desabilitado de propósito —
-                        é o botão do CLIENTE, não uma ação desta página — e o
-                        rótulo é o método escolhido, nunca o preço: o preço está
-                        na coluna Plano, a 40px daqui. */}
-                    <CtaButton size="object" disabled className="whitespace-nowrap">
-                      {checkout.payWith} {metodoAtivo}
+                        "Rodar" e "Simular de novo". O rótulo é o método
+                        escolhido, nunca o preço: o preço está na coluna Plano,
+                        a 40px daqui.
+
+                        ERA `disabled` DE PROPÓSITO — "é o botão do CLIENTE, não
+                        uma ação desta página" — e deixou de ser porque a linha
+                        inteira se declara "Simulação" a 40px dali: quem clica
+                        não paga nada, RODA a simulação, que é exactamente o que
+                        a palavra diz. Aprovado, o rótulo passa a ser o
+                        "Pagamento aprovado" que o telefone do hero já usa
+                        (`phone.approved`) — nenhum texto novo no dicionário —, e
+                        um clique a mais roda de novo.
+
+                        `loading` enquanto roda: ele desabilita o botão durante
+                        os 700ms (sem corrida dupla) e marca `aria-busy`, que é
+                        o que diz a quem não vê a tela que algo está em curso. */}
+                    <CtaButton
+                      size="object"
+                      loading={sim === "rodando"}
+                      onClick={() => setSim("rodando")}
+                      className="whitespace-nowrap"
+                    >
+                      {sim === "aprovado"
+                        ? phone.approved
+                        : `${checkout.payWith} ${metodoAtivo}`}
                     </CtaButton>
+
+                    {/* A BOLINHA DA LEVA 1 ATRAVESSANDO A FILEIRA, da primeira
+                        pílula ao botão, nos mesmos 700ms do relógio. Montada só
+                        enquanto roda — e o `.pix-carro` tem a animação no
+                        próprio montar, então cada corrida recomeça o percurso
+                        sem `key` e sem relógio nenhum.
+
+                        `absolute inset-x-0 top-1/2`: ela sai do fluxo, então o
+                        `flex-wrap` da fileira não vê diferença, e o trilho é a
+                        largura inteira da fileira (é o que faz `translateX(100%)`
+                        bastar, sem medir um pixel no DOM).
+
+                        SÓ DE `xl` PARA CIMA, e é geometria: de 1280 em diante a
+                        fileira cabe numa linha só e um fio horizontal atravessa
+                        pílulas; abaixo disso ela quebra em três ou quatro linhas
+                        e o fio cortaria o vazio entre elas. No celular ficam a
+                        aprovação e o acesso, que são o que a simulação afirma.
+
+                        A cauda aponta para a ESQUERDA (`--cx: -5px`): é de lá
+                        que ela veio. */}
+                    {sim === "rodando" && movimento ? (
+                      <span
+                        aria-hidden
+                        className="pointer-events-none absolute inset-x-0 top-1/2 hidden xl:block"
+                      >
+                        <span className="pix-carro">
+                          <span
+                            className="bolinha"
+                            style={{ "--cx": "-5px", "--cy": "0px" } as CSSProperties}
+                          >
+                            <i />
+                            <i />
+                            <i />
+                            <i />
+                          </span>
+                        </span>
+                      </span>
+                    ) : null}
                   </div>
                 </div>
               ) : null}

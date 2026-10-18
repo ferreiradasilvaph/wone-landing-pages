@@ -1,0 +1,763 @@
+/* ==========================================================================
+   LEVA 2 — O MOTIVO DA BOLINHA NO MIOLO DA PÁGINA
+
+   A leva 1 levou o cometa do hero para três lugares do TOPO (o cabeçalho, o
+   prefácio da vitrine, o painel da Plataforma). Sobrou o miolo: "Como
+   funciona", "Recursos" e "Pagamentos" — as três seções mais longas do site e
+   as três em que o leitor passa mais tempo. Elas não eram paradas (o palco tem
+   a faísca no fio, o carrossel tem profundidade e arrasto, o rastreio tem a
+   linha que cresce), mas o movimento que tinham era de MOLDURA: as peças
+   trocavam de estado sem que nada FOSSE de um lugar ao outro.
+
+   Esta leva põe o mesmo bicho a percorrer caminho em quatro lugares novos — a
+   fileira de métodos do checkout, a coluna do rastreio, o índice de Recursos e
+   a passagem da sala de operação pela janela — e, onde já havia gesto, afina o
+   TEMPO para que as duas metades de cada peça caiam juntas.
+
+   POR QUE UM SEGUNDO ARQUIVO, e não mais 400 linhas no `leva1.css`: o leva1 é
+   o ARGUMENTO (a bolinha, a cauda, a trilha, o fio que se desenha) e continua
+   sendo lido como tal; este é a APLICAÇÃO dele em três seções que já tinham
+   vida própria. Quem for mexer no carrossel não precisa ler a trilha do
+   prefácio, e quem for mexer na trilha não deve esbarrar nos dez cards.
+
+   O que vem de lá e NÃO se repete aqui: `.bolinha` (cabeça e três cópias, com
+   a direção da cauda em `--cx`/`--cy`), `@keyframes log-batida` (a batida de
+   3px) e `@keyframes log-chip` (a entrada do "Acesso liberado"). Três peças da
+   leva 1 reusadas literalmente, por nome — é o que faz as duas levas lerem
+   como uma língua e não como dois dialetos.
+
+   AS MESMAS TRÊS REGRAS DURAS DA LEVA 1 valem palavra por palavra:
+   mover é `transform`/`opacity`; o repouso de toda peça é o estado FINAL (quem
+   pede a animação é o componente, e só quando há movimento permitido); e
+   `prefers-reduced-motion` não decide nada no primeiro render — o bloco no pé
+   deste arquivo é a segunda rede, e a primeira é o componente não pendurar
+   classe nenhuma.
+   ========================================================================== */
+
+/* ==========================================================================
+   A — "COMO FUNCIONA": A SALA DE OPERAÇÃO GANHA PROFUNDIDADE E SINCRONIA
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   A PARALAXE DA PASSAGEM — o painel e o aparelho em planos diferentes
+
+   O palco é uma CENA: dois objetos de pé num chão, em perspectiva, com um fio
+   entre eles. Faltava a coisa que diz que são dois objetos a distâncias
+   diferentes do olho — e num palco imóvel quem dá essa informação é o
+   deslocamento relativo enquanto a cena passa pela janela.
+
+   10px no painel e 18px no aparelho, do começo ao fim da passagem. Não é uma
+   escolha de gosto: o painel está a 88..701 de x e o aparelho a 833..1089, ou
+   seja, o aparelho é o objeto da FRENTE da cena (mais perto do olho, mais à
+   direita e mais baixo no chão), e o que está mais perto anda mais. A razão
+   1,8 é discreta o bastante para ninguém "ver a paralaxe" e suficiente para a
+   cena deixar de ser um decalque.
+
+   ZERO JAVASCRIPT E ZERO RELÓGIO: `view-timeline` é o tempo da ROLAGEM, lido
+   pelo compositor. Não há listener, não há `rAF`, não há estado — e, por
+   construção, não há nada acontecendo quando a seção está fora da tela.
+
+   O TIMELINE É NOMEADO, e isso é obrigatório aqui: `view()` anônimo procura o
+   scroll container mais próximo do SUJEITO, e o palco (`#hiw-stage`) tem
+   `overflow-hidden` — ele É um scroll container para efeito de CSS, então um
+   `view()` escrito no painel mediria o painel dentro do palco (que não rola
+   nunca) e a animação nasceria morta. Declarando `--palco` NO palco, quem é
+   medido é o CARD inteiro contra o documento, que é o que a espec pede: "ao
+   longo da passagem da seção pela janela". Os descendentes enxergam o nome sem
+   `timeline-scope` porque o palco é ancestral deles.
+
+   `--giro` é a perspectiva de cada objeto, escrita AQUI e usada no JSX
+   (`xl:[transform:var(--giro)]`, em `OperationStage`). Uma fonte só, e não
+   duas: a animação precisa reescrever `transform` inteiro a cada quadro (é
+   assim que `transform` funciona), então os ângulos teriam de aparecer também
+   nos `@keyframes` — e dois lugares com os mesmos dois ângulos é exatamente o
+   tipo de coisa que diverge na primeira revisão do palco. Com a variável, o
+   JSX e os keyframes leem o mesmo valor.
+
+   Por que não `translate` (a propriedade individual), que seria mais simples:
+   ela já está ocupada. `.apa-respira` e `.apa-respira-painel` (aparelho.css)
+   são a respiração de 7s dos dois objetos e animam `translate`/`rotate` —
+   duas animações na mesma propriedade não se compõem, a última ganha. As três
+   camadas convivem porque cada uma mora numa propriedade sua:
+   respiração em `translate`+`rotate`, cena e paralaxe em `transform`.
+
+   SÓ DESKTOP COM PONTEIRO FINO: abaixo de `xl` os dois objetos empilham, de
+   frente, e não há cena onde haver planos. E só com movimento permitido — a
+   media query decide, nunca o `matchMedia`, então o primeiro render do
+   servidor e o do cliente são o mesmo.
+   -------------------------------------------------------------------------- */
+
+.palco-painel {
+  --giro: rotateY(-12deg) rotateX(3deg);
+}
+
+.palco-aparelho {
+  --giro: rotateY(14deg) rotateX(2deg);
+}
+
+@supports (view-timeline-name: --palco) {
+  @media (min-width: 1280px) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+    #hiw-stage {
+      view-timeline-name: --palco;
+    }
+
+    .palco-painel,
+    .palco-aparelho {
+      animation-duration: 1s;
+      animation-timing-function: linear;
+      animation-fill-mode: both;
+      animation-timeline: --palco;
+    }
+
+    .palco-painel {
+      animation-name: palco-painel;
+    }
+
+    .palco-aparelho {
+      animation-name: palco-aparelho;
+    }
+  }
+}
+
+/* O curso é simétrico em torno do zero: no meio da passagem — a seção centrada
+   na janela, que é onde ela é lida — os dois objetos estão EXATAMENTE onde o
+   desenho medido os pôs. A paralaxe é o que acontece na chegada e na saída. */
+@keyframes palco-painel {
+  from {
+    transform: var(--giro) translateY(5px);
+  }
+  to {
+    transform: var(--giro) translateY(-5px);
+  }
+}
+
+@keyframes palco-aparelho {
+  from {
+    transform: var(--giro) translateY(9px);
+  }
+  to {
+    transform: var(--giro) translateY(-9px);
+  }
+}
+
+/* --------------------------------------------------------------------------
+   A CHEGADA DA FAÍSCA — o cabeçalho do chat leva a batida
+
+   A faísca sai do painel em 0,4s e cruza o fio em 0,95s: ela ENCOSTA no
+   aparelho em 1,35s, na altura do cabeçalho do chat (o ponto (840,69) do
+   `StageWire`, escolhido justamente por ser por onde a notícia entra). Até
+   aqui ela encostava e nada acontecia — o fio terminava num cabeçalho imóvel,
+   e a bolha nova do passo 02 entrava 450ms ANTES, aos 900ms, pelo relógio do
+   chat, que ninguém tinha casado com o do fio.
+
+   Agora os dois números são o mesmo número. `--chegada` é a soma que o
+   `StageWire` escreve em JS (SPARK_DELAY_FORWARD + SPARK_DURATION), e o
+   "digitando"/"bolha entra" de `howitworks.css` foi reatrasado para ela: o bot
+   digita enquanto a faísca viaja e a oferta cai no quadro em que ela chega.
+
+   A batida é `log-batida`, da leva 1, sem uma linha nova: 3px para a direita e
+   volta, em 280ms. Para a direita porque o fio vem da ESQUERDA — o empurrão
+   tem a direção de quem chega. Escala, não: 11px de texto ampliado em 4% sai
+   borrado em tela sem dpr de sobra (nota do `.log-batida`).
+
+   PASSOS 01-03 E NÃO 04: no 04 a faísca vai no sentido contrário (o cliente
+   paga, a notícia sobe para o SEU painel), e uma batida no cabeçalho do chat
+   ali diria o oposto do que a seção está dizendo. Quem decide é o
+   `CustomerDevice`, que só pendura a classe nos três primeiros.
+   -------------------------------------------------------------------------- */
+
+.apa-chegada {
+  --chegada: 1.35s;
+  animation: log-batida 0.28s var(--ease-out-expo) var(--chegada) both;
+}
+
+/* --------------------------------------------------------------------------
+   A PARTIDA DA FAÍSCA — a pílula "Webhook ativo" bate uma vez
+
+   A outra ponta do mesmo fio: quando a faísca SAI do painel (0,4s depois da
+   troca de passo), o que a produziu dá sinal de vida. A pílula "Webhook ativo"
+   é a peça do painel que diz exatamente isso — o webhook é o que dispara o
+   evento que corre pelo fio.
+
+   UMA BATIDA, NUNCA CONTÍNUA: um anel de 1px que abre 12% e apaga em 620ms, e
+   só. É o anel de pouso do cometa do hero (`trilha-pulso`, leva 1) do tamanho
+   de uma pílula — lá ele abre 4,4× porque marca uma cidade num mapa, aqui 12%
+   porque marca uma etiqueta de 28px de altura. Sem blur, sem halo: um fio.
+
+   A pílula só existe no passo 01 (é a tela de Bots), então a regra vale para
+   ele. Quem recomeça a animação é o `data-hiw-on` da camada ativa — o mesmo
+   gatilho das animações do chat, pelo mesmo motivo (as quatro camadas ficam
+   montadas, e sem o atributo a animação rodaria uma vez na vida).
+   -------------------------------------------------------------------------- */
+
+[data-hiw-on="1"] .apa-pulso {
+  animation: apa-pulso 0.62s var(--ease-out-expo) 0.4s both;
+}
+
+@keyframes apa-pulso {
+  from {
+    opacity: 0.55;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(1.12);
+  }
+}
+
+/* --------------------------------------------------------------------------
+   O TRILHO DOS PASSOS — o numeral rola, a descrição entra atrás
+
+   Os quatro numerais de 2,5rem são a peça gráfica do trilho, e a troca de
+   passo era uma transição de COR: "01" apagava e "02" acendia, no lugar. Com
+   oito dígitos em linha e nenhum deles se mexendo, a troca de passo lia como
+   um estado que mudou sozinho — não como alguém avançando.
+
+   O rolo de 8px é o gesto mínimo que diz "virou a página": o numeral que entra
+   vem de baixo. A descrição entra 60ms depois e com metade do curso (4px) —
+   ela ACOMPANHA, não compete; o compartimento dela tem altura cravada (42px,
+   duas linhas), então nada disto toca o layout.
+
+   Só o numeral ATIVO rola: os outros três continuam parados em `faint`, que é
+   o que faz o ativo ser o ativo. */
+
+.hiw-rolo {
+  animation: hiw-rolo 0.22s var(--ease-out-expo) both;
+}
+
+@keyframes hiw-rolo {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.hiw-desc {
+  animation: hiw-desc 0.26s var(--ease-out-expo) 60ms both;
+}
+
+@keyframes hiw-desc {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ==========================================================================
+   B — "RECURSOS": O CARTÃO DO MEIO DEMONSTRA A SI MESMO
+
+   A seção promete dez recursos e mostra dez PLACAS — cada uma com o mecanismo
+   do seu recurso montado com dado que já existe no dicionário. Elas estavam
+   certas e estavam paradas: a placa do order bump mostrava a caixa JÁ marcada
+   e o "+$57.00" JÁ na tela, isto é, mostrava o RESULTADO de uma coisa que o
+   card inteiro existe para explicar.
+
+   O que entra aqui é o verbo. Quando o cartão chega ao centro, a placa dele
+   ACONTECE uma vez, em 0,8 a 1,3 segundos: a caixa marca e o adicional entra,
+   a prévia se revela, o aro do prazo fecha, os quatro blocos de IA acendem em
+   cascata. Nenhum texto novo, nenhum número novo — o que muda é a ORDEM em que
+   o que já estava lá aparece. É a mesma regra do tempo da conversa em
+   `howitworks.css`, aplicada dez vezes.
+
+   TRÊS FREIOS, e os três são o componente que os aciona (`FeatureCarousel`):
+   só o cartão do CENTRO (os vizinhos estão a 26% e 62% de opacidade, e animar
+   ali seria movimento periférico sem leitura); só com a seção à vista e a aba
+   visível; nunca com movimento reduzido. O gatilho é `data-feat`, que vai a
+   "1" quando a demonstração pode correr — e volta a "0" no arrasto, o que
+   devolve cada peça ao estado final (o repouso de todas elas É o estado final)
+   e, ao soltar, recomeça. Daí "clicar no cartão do meio repete": o toque passa
+   por `pointerdown`/`pointerup`, que é o mesmo caminho do arrasto.
+
+   AS CLASSES GENÉRICAS — `feat-entra`, `feat-entra-x` e `feat-acende` —
+   resolvem sete das dez placas, com `--d` (o atraso) vindo inline de quem
+   monta a placa. As específicas existem só onde o gesto É a informação: a
+   marca que cai na caixa, a prévia que se revela, o aro que fecha, o cursor
+   que pisca, o selo que pisca, as réguas que se desenham.
+   ========================================================================== */
+
+[data-feat="1"] .feat-entra {
+  animation: feat-entra 0.42s var(--ease-out-expo) var(--d, 0ms) both;
+}
+
+@keyframes feat-entra {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* A variante horizontal é para o VALOR que entra à direita de um rótulo (o
+   "+$57.00" do order bump): de baixo ele colidiria com a linha de cima da
+   placa; da direita ele chega de onde um total chega. */
+[data-feat="1"] .feat-entra-x {
+  animation: feat-entra-x 0.42s var(--ease-out-expo) var(--d, 0ms) both;
+}
+
+@keyframes feat-entra-x {
+  from {
+    opacity: 0;
+    transform: translateX(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* "Acende" é para a linha que JÁ ESTÁ LÁ e passa a valer — a primeira via do
+   upsell, cada plano da lista. De 25% a 100%, nunca de zero: a linha não
+   nasce, ela se acende, e é a diferença entre as duas coisas que faz a lista
+   de planos ler como uma régua sendo percorrida. Mesma curva e mesmo intervalo
+   da sequência das sete bandeiras (leva 1). */
+[data-feat="1"] .feat-acende {
+  animation: feat-acende 0.45s var(--ease-out-expo) var(--d, 0ms) both;
+}
+
+@keyframes feat-acende {
+  from {
+    opacity: 0.25;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* ORDER BUMP: a marca cai na caixa. `scale` aqui é legítimo — o alvo é um
+   ícone vetorial de 12px, não texto, e o que se quer dizer é que ALGUÉM
+   marcou. */
+[data-feat="1"] .feat-marca {
+  animation: feat-marca 0.3s var(--ease-out-expo) 0.3s both;
+}
+
+@keyframes feat-marca {
+  from {
+    opacity: 0;
+    transform: scale(0.3);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* PACKS: a prévia se REVELA, da esquerda para a direita.
+
+   `clip-path` e não `scaleX`: a etiqueta tem texto dentro, e esticá-la de zero
+   espremeria a palavra "Prévia" durante os 500ms. O recorte não toca o layout
+   (a caixa continua do tamanho que sempre teve, CLS 0) e é literalmente o
+   gesto de descobrir — que é o que a prévia de um pack é. */
+[data-feat="1"] .feat-revela {
+  animation: feat-revela 0.5s var(--ease-out-expo) var(--d, 0ms) both;
+}
+
+@keyframes feat-revela {
+  from {
+    clip-path: inset(0 100% 0 0);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+/* ASSINATURA: o aro de prazo fecha.
+
+   O card dizia "Lembrete enviado" e não dizia de QUE prazo — era a placa mais
+   magra das dez. O aro é o prazo: 1px de laranja que fecha a volta em 900ms
+   sobre um trilho de creme a 15%, e o lembrete entra quando ele fecha. Nada de
+   número: quantos dias são é coisa que o dicionário não diz e esta página não
+   inventa (o próprio `features.mockup.reminder` tem a nota).
+
+   50,3 é o perímetro do círculo de raio 8 do SVG (2π·8 = 50,265), e é a mesma
+   mecânica do `chart-draw` do gráfico de faturamento: o traço inteiro, e o
+   `dashoffset` indo do perímetro a zero. Linear porque é TEMPO. */
+.feat-aro-fio {
+  stroke-dasharray: 50.3;
+  stroke-dashoffset: 0;
+}
+
+[data-feat="1"] .feat-aro-fio {
+  animation: feat-aro 0.9s linear both;
+}
+
+@keyframes feat-aro {
+  from {
+    stroke-dashoffset: 50.3;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* PIX LIVRE: o cursor pisca três vezes e para.
+
+   A espec pedia "o valor se digita". Não há valor: a faixa do PIX livre não
+   existe no dicionário, e a placa foi desenhada justamente para mostrar o
+   MECANISMO (o símbolo da moeda e o campo aberto) em vez de cunhar um número —
+   inventar um aqui para ter o que digitar seria quebrar a regra que fez a
+   placa existir. O que dá para animar com honestidade é o campo ESPERANDO: o
+   cursor pisca três vezes e fica. Três e não infinitas: relógio que não para é
+   relógio, e a página tem um só por viewport.
+
+   `steps(1)` porque cursor não esmaece — ele liga e desliga. */
+[data-feat="1"] .feat-cursor {
+  animation: feat-cursor 0.34s steps(1, end) 0.3s 3 both;
+}
+
+@keyframes feat-cursor {
+  0%,
+  49% {
+    opacity: 1;
+  }
+  50%,
+  99% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+/* MODO DE TESTE: o selo pisca UMA vez. É o carimbo "Sem cobrança real" — a
+   coisa que o modo de teste garante — e um piscar só é o que um carimbo faz. */
+[data-feat="1"] .feat-pisca {
+  animation: feat-pisca 0.42s var(--ease-out-expo) var(--d, 0ms) both;
+}
+
+@keyframes feat-pisca {
+  0% {
+    opacity: 1;
+  }
+  35% {
+    opacity: 0.15;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+/* REMARKETING: as duas réguas do teste A/B se DESENHAM, uma depois da outra.
+
+   É o envio: a campanha sai pelos dois caminhos, e o que se vê é a mesma
+   divisão de sempre chegando ao lugar em vez de já estar lá. `scaleX` com
+   origem à esquerda — o mesmo fio que se desenha da leva 1, deitado. */
+[data-feat="1"] .feat-barra {
+  transform-origin: left;
+  animation: feat-barra 0.6s var(--ease-out-expo) var(--d, 0ms) both;
+}
+
+@keyframes feat-barra {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+/* ENTREGA AUTOMÁTICA: "Acesso liberado" entra como entra na Plataforma.
+
+   Literal: `@keyframes log-chip` é o da leva 1, o mesmo 6px subindo que a demo
+   do PIX usa quando o acesso sai. Duas seções, um gesto, uma definição — é a
+   razão de as duas levas partilharem nomes. */
+[data-feat="1"] .feat-chip {
+  animation: log-chip 0.32s var(--ease-out-expo) var(--d, 0ms) both;
+}
+
+/* --------------------------------------------------------------------------
+   O ÍNDICE 01-10 — o marcador que desliza
+
+   O índice ao lado do título é o sumário da seção e também um controle: dez
+   itens, dois por cinco, e o ativo só se distinguia por creme contra faint.
+   Com o carrossel rodando sozinho a cada 4,5s, o que mudava de cor estava a
+   600px do que se estava olhando — e nada ligava uma coisa à outra.
+
+   O sublinhado de 1px é o mesmo nó do cabeçalho (`.header-sub`, leva 1): UM
+   elemento que vai de um item ao outro por `transform`, não dez elementos
+   trocando de opacidade. Aqui ele anda nos DOIS eixos, porque a grade é 5×2 —
+   e a diagonal que ele desenha ao pular da quinta para a sexta linha é a
+   própria leitura da grade.
+
+   As medidas vêm do `FeaturesSection`, com `getBoundingClientRect` só quando o
+   ativo muda e no `resize` — nunca por quadro. Largura por `scaleX` sobre 1px,
+   que é o que permite um nó só servir a dez larguras de texto diferentes. */
+.feat-marcador {
+  transform-origin: left;
+  transform: translate(var(--x, 0px), var(--y, 0px)) scaleX(var(--w, 0));
+  transition:
+    transform 0.38s var(--ease-out-expo),
+    opacity 0.18s linear;
+}
+
+/* AS SETAS: 2px de deslocamento no hover.
+
+   A seta interna anda para o lado para onde ela leva, e só ela — o botão
+   redondo fica parado. É o menor sinal possível de que aquilo é um controle
+   direcional e não um ícone, e `:focus-visible` entra junto porque quem anda
+   de teclado merece o mesmo aviso. */
+.seta-interna {
+  transition: transform 0.2s var(--ease-out-expo);
+}
+
+.seta-prev:hover .seta-interna,
+.seta-prev:focus-visible .seta-interna {
+  transform: translateX(-2px);
+}
+
+.seta-next:hover .seta-interna,
+.seta-next:focus-visible .seta-interna {
+  transform: translateX(2px);
+}
+
+/* ==========================================================================
+   C — "PAGAMENTOS": A TABELA RESPONDE, O PIX ACONTECE, O DADO VIAJA
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   A TABELA DOS SETE PAÍSES — os métodos acendem da esquerda para a direita
+
+   A linha inteira já é um botão e já troca de fundo no hover. O que ela não
+   dizia é QUE a coluna "Paga com" é a informação da linha: seis pílulas
+   chegavam juntas, como um bloco.
+
+   60ms por pílula, da esquerda para a direita, de 35% a 100% de opacidade: a
+   fila se lê na ordem em que foi escrita, e a ordem é a da diretoria (o
+   primeiro método é o principal do país, e é por isso que ele é o laranja).
+   Seis é o máximo (Brasil), daí as seis regras de `nth-child` — delay inline
+   pediria um `style` no `Chip`, e o kit não se toca por um atraso.
+
+   A bandeira leva a batida de 3px da leva 1, no mesmo instante em que a
+   primeira pílula acende: é o país que responde ao ponteiro, e o resto da fila
+   vem atrás dele.
+
+   `:focus-within` junto do `:hover` porque a linha é um botão: quem chega de
+   teclado vê a mesma coisa que quem chega de ponteiro.
+   -------------------------------------------------------------------------- */
+
+.pais-linha:hover .pais-bandeira,
+.pais-linha:focus-visible .pais-bandeira {
+  animation: log-batida 0.28s var(--ease-out-expo) both;
+}
+
+.pais-linha:hover .pais-chip,
+.pais-linha:focus-visible .pais-chip {
+  animation: feat-acende 0.3s var(--ease-out-expo) both;
+}
+
+.pais-linha:hover .pais-chip:nth-child(2),
+.pais-linha:focus-visible .pais-chip:nth-child(2) {
+  animation-delay: 60ms;
+}
+.pais-linha:hover .pais-chip:nth-child(3),
+.pais-linha:focus-visible .pais-chip:nth-child(3) {
+  animation-delay: 120ms;
+}
+.pais-linha:hover .pais-chip:nth-child(4),
+.pais-linha:focus-visible .pais-chip:nth-child(4) {
+  animation-delay: 180ms;
+}
+.pais-linha:hover .pais-chip:nth-child(5),
+.pais-linha:focus-visible .pais-chip:nth-child(5) {
+  animation-delay: 240ms;
+}
+.pais-linha:hover .pais-chip:nth-child(6),
+.pais-linha:focus-visible .pais-chip:nth-child(6) {
+  animation-delay: 300ms;
+}
+
+/* --------------------------------------------------------------------------
+   O CHECKOUT DO CLIENTE — a bolinha atravessa os métodos até o botão
+
+   O painel que se abre na linha escolhida mostra o que o comprador do país vê,
+   e o botão dele era `disabled` por uma razão boa: é o botão do CLIENTE, não
+   uma ação desta página. O que mudou é que a linha inteira se declara
+   "Simulação" a 40px dali — então o botão deixa de ser um adereço desabilitado
+   e passa a ser o que a palavra diz: quem clica RODA a simulação.
+
+   O percurso é a bolinha da leva 1 atravessando a fileira de métodos, da
+   primeira pílula ao botão, em 700ms lineares — e os 700ms não são um tempo de
+   animação inventado, são a latência que a simulação encena (é o mesmo tempo
+   que o estado leva para virar "Pagamento aprovado", com ou sem movimento).
+
+   SÓ A PARTIR DE `xl`, e é geometria: de 1280 para cima o container mede 1216
+   fixos e a fileira cabe numa linha só — um trilho horizontal atravessa
+   pílulas. Abaixo disso a fileira quebra em três ou quatro linhas, e um fio
+   reto cortaria o vazio entre elas. No celular ficam a aprovação e o acesso,
+   que são o que a simulação AFIRMA.
+
+   `width: 100%` no carro, como no log da Plataforma: assim `translateX(100%)`
+   é a largura da fileira e nenhum pixel precisa ser medido no DOM.
+   -------------------------------------------------------------------------- */
+
+.pix-carro {
+  position: relative;
+  display: block;
+  width: 100%;
+  animation: pix-carro 0.7s linear both;
+}
+
+@keyframes pix-carro {
+  0% {
+    transform: translateX(0);
+    opacity: 0;
+  }
+  8% {
+    opacity: 1;
+  }
+  92% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+}
+
+/* "Acesso liberado" entra à direita da nota de simulação, no vão que já existe
+   entre ela e a fileira de métodos — com a mesma subida de 6px do chip da
+   Plataforma (`log-chip`, leva 1). A caixa dele está reservada desde o
+   primeiro quadro, vazia: é o que mantém a fileira imóvel quando ele entra. */
+.pix-liberado {
+  animation: log-chip 0.32s var(--ease-out-expo) both;
+}
+
+/* --------------------------------------------------------------------------
+   O RASTREIO — a bolinha desce a coluna e o UTM viaja com ela
+
+   Os cinco nós acendiam em sequência de 900ms e o traço entre eles crescia:
+   estava certo e faltava o VIAJANTE. "Servidor a servidor" é a tese do bloco,
+   e o que viaja num rastreio é o DADO — não a linha.
+
+   Duas peças, um relógio (o `setTimeout` encadeado que já existia):
+
+   1. A BOLINHA desce a coluna de nó em nó. Ela não tem animação de CSS: o
+      componente escreve `translateY` em pixels medidos (o centro de cada nó) e
+      a transição de 900ms LINEAR faz a perna — exatamente o intervalo do
+      relógio dos nós. É o que garante que ela POUSE no nó no quadro em que ele
+      acende, e não 200ms antes ou depois: as cinco linhas têm alturas
+      diferentes (a primeira tem quatro etiquetas), então uma animação de
+      porcentagem chegaria sempre na hora errada.
+
+   2. O `utm_source` SAI do passo 01 e POUSA no passo 02, ao lado do `/start` —
+      que é a história literal do rastreio server-to-server: "UTM e código de
+      venda guardados" é o que o passo 02 diz, e o que ele guarda é aquilo. Vai
+      junto com a bolinha na primeira perna (900ms lineares, o mesmo tempo),
+      fica um batimento e volta para casa quando a bolinha segue.
+
+      O POUSO é um `utm_source` invisível no fim da fileira do passo 02 — ele
+      reserva a vaga desde o primeiro quadro e é o alvo que o componente mede.
+      No fim da fila, e não no começo, porque um vão reservado ANTES do
+      `/start` seria um buraco visível para sempre; depois dele, o espaço
+      reservado é a margem direita, que já era vazia.
+   -------------------------------------------------------------------------- */
+
+.rastro-carro {
+  transition: transform 0.9s linear;
+}
+
+.rastro-utm {
+  transition: transform 0.9s linear;
+}
+
+/* --------------------------------------------------------------------------
+   AS QUATRO GARANTIAS — o numeral entra em cascata
+
+   Quatro itens numerados com régua em cima, e os quatro chegavam juntos. A
+   cascata de 80ms é curta de propósito: não é uma entrada encenada, é a
+   diferença entre quatro linhas que aparecem e quatro linhas que se APRESENTAM
+   na ordem em que vão ser lidas.
+
+   O numeral nasce LARANJA e assenta em `faint` nos mesmos 480ms do curso. É a
+   marca de chegada do motivo da página — onde a bolinha passa, acende e
+   esfria — no único lugar deste bloco em que ela cabe: pôr quatro numerais
+   laranja em repouso tiraria o destaque do item 01, que é o único laranja que
+   a diretoria pediu neste bloco.
+
+   `paused`/`--roda` é o par da leva 1: as classes são penduradas quando a
+   lista está ARMADA (abaixo da dobra, com movimento permitido) e só correm
+   quando ela chega à vista — assim o HTML do servidor traz os quatro numerais
+   na tela e ninguém vê um "01" piscar para o começo.
+   -------------------------------------------------------------------------- */
+
+.gar .gar-num {
+  animation-name: gar-num;
+  animation-duration: 0.48s;
+  animation-timing-function: var(--ease-out-expo);
+  animation-fill-mode: both;
+  animation-play-state: paused;
+  animation-delay: var(--d, 0ms);
+}
+
+.gar--roda .gar-num {
+  animation-play-state: running;
+}
+
+@keyframes gar-num {
+  from {
+    opacity: 0;
+    color: var(--brand);
+    transform: translateX(6px);
+  }
+  to {
+    opacity: 1;
+    color: var(--faint);
+    transform: none;
+  }
+}
+
+/* ==========================================================================
+   MOVIMENTO REDUZIDO: NADA DISTO ANIMA.
+
+   A regra global do `globals.css` zera a DURAÇÃO e não o ATRASO, e metade do
+   que está aqui conta a história no atraso (a chegada da faísca em 1,35s, a
+   cascata de 80ms, os 400ms entre "Comprou" e "Recusou"). Com a duração zerada
+   e o atraso de pé, a peça ficaria um segundo invisível — que é pior que não
+   animar.
+
+   Então a animação sai inteira, e o repouso de cada peça já é o estado final:
+   a marca na caixa, a prévia revelada, o aro fechado, o numeral em `faint`. A
+   maior parte destas classes nem chega ao DOM com movimento reduzido (quem
+   decide é o componente); este bloco é a segunda rede.
+   ========================================================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  .apa-chegada,
+  [data-hiw-on="1"] .apa-pulso,
+  .hiw-rolo,
+  .hiw-desc,
+  [data-feat="1"] .feat-entra,
+  [data-feat="1"] .feat-entra-x,
+  [data-feat="1"] .feat-acende,
+  [data-feat="1"] .feat-marca,
+  [data-feat="1"] .feat-revela,
+  [data-feat="1"] .feat-aro-fio,
+  [data-feat="1"] .feat-cursor,
+  [data-feat="1"] .feat-pisca,
+  [data-feat="1"] .feat-barra,
+  [data-feat="1"] .feat-chip,
+  .pais-linha:hover .pais-bandeira,
+  .pais-linha:focus-visible .pais-bandeira,
+  .pais-linha:hover .pais-chip,
+  .pais-linha:focus-visible .pais-chip,
+  .pix-carro,
+  .pix-liberado,
+  .gar .gar-num {
+    animation: none;
+  }
+
+  .rastro-carro,
+  .rastro-utm {
+    transition: none;
+  }
+}

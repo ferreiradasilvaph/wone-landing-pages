@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
 import { ArrowDownRight, ArrowLeft, ArrowRight, ArrowUpRight, Check } from "lucide-react";
 import { useContent } from "@/i18n";
 import { useOnScreen } from "@/lib/useOnScreen";
@@ -44,6 +44,19 @@ const DEPTH = [
 const TX = { anual: 0, trimestral: 1, mensal: 2, pack: 3, bump: 4 } as const;
 
 /**
+ * O atraso de uma peça da placa, inline. `--d` é o que as classes `feat-…` do
+ * `leva2.css` leem — nenhuma delas traz atraso cravado, justamente porque a
+ * ORDEM é a informação de cada placa (a marca cai, depois o total entra) e ela
+ * muda de placa para placa.
+ *
+ * Mesma forma do `atraso()` do `HeroFacts`: uma função e um `as CSSProperties`,
+ * em vez do cast repetido em dez lugares.
+ */
+function atraso(ms: number): CSSProperties {
+  return { "--d": `${ms}ms` } as CSSProperties;
+}
+
+/**
  * A PLACA DE SIMULAÇÃO que abre o card, na forma Operação da referência: uma
  * moldura escura com um pedaço de produto dentro, e o título embaixo.
  *
@@ -70,6 +83,15 @@ const TX = { anual: 0, trimestral: 1, mensal: 2, pack: 3, bump: 4 } as const;
  * entre celular e desktop. O cabeçalho da placa (rótulo "Simulação" à esquerda,
  * número do recurso à direita, régua embaixo) é o que a fez virar PLACA e não
  * caixa: é a mesma anatomia dos painéis das demos da página.
+ *
+ * DESDE 18/10 A PLACA ACONTECE (leva 2): cada peça leva uma classe `feat-…` e,
+ * onde a ordem importa, o atraso em `--d`. Nenhuma delas anima por conta
+ * própria — todas as regras do `leva2.css` pedem o `[data-feat="1"]` que o
+ * palco pendura no slot do CENTRO, e só quando a demonstração pode correr. Em
+ * repouso (vizinho, arrasto, aba escondida, movimento reduzido) o que está no
+ * DOM é o ESTADO FINAL: a marca na caixa, a prévia revelada, o aro fechado.
+ * Por isso nada aqui depende de estado deste componente, e o HTML do servidor
+ * já é a placa pronta.
  */
 function FeatureMockup({
   id,
@@ -93,13 +115,18 @@ function FeatureMockup({
 
   if (id === "plans") {
     /* Três dos cinco planos, o anual marcado: é a escolha que o cliente faz no
-       checkout, e o degrau de preço entre eles é a informação. */
+       checkout, e o degrau de preço entre eles é a informação.
+
+       `feat-acende` de 120 em 120ms, de cima para baixo: a lista se lê como uma
+       RÉGUA PERCORRIDA (de 25% a 100% de opacidade, nunca de zero — a linha não
+       nasce, ela passa a valer), e a última a acender é a marcada. */
     conteudo = (
       <ul className="flex flex-col gap-1">
         {[TX.mensal, TX.trimestral, TX.anual].map((index, posicao) => (
           <li
             key={tx[index].label}
-            className={`${linha} rounded-[8px] px-2 py-1 ${
+            style={atraso(posicao * 120)}
+            className={`feat-acende ${linha} rounded-[8px] px-2 py-1 ${
               posicao === 2 ? "bg-cream/8" : ""
             }`}
           >
@@ -112,18 +139,26 @@ function FeatureMockup({
   }
 
   if (id === "bump") {
+    /* A placa que mais precisava do verbo: ela mostrava a caixa JÁ marcada e o
+       adicional JÁ somado, isto é, o resultado do que o card existe para
+       explicar. Agora a marca CAI na caixa (`feat-marca`, 300ms depois do
+       gatilho) e o total entra pela direita 420ms depois — de onde um total
+       chega, e não de baixo, onde colidiria com a linha de cima. */
     conteudo = (
       <div className={`${linha} px-2`}>
         <span className="flex min-w-0 items-center gap-2">
           <span
             aria-hidden
-            className="flex h-4 w-4 shrink-0 items-center justify-center rounded-[4px] bg-brand text-ink-950"
+            className="feat-marca flex h-4 w-4 shrink-0 items-center justify-center rounded-[4px] bg-brand text-ink-950"
           >
             <Check className="h-3 w-3" strokeWidth={3} />
           </span>
           <span className={rotulo}>{features.mockup.bump}</span>
         </span>
-        <span className="tnum shrink-0 text-[13px] font-semibold text-brand">
+        <span
+          style={atraso(420)}
+          className="feat-entra-x tnum shrink-0 text-[13px] font-semibold text-brand"
+        >
           +{tx[TX.bump].amount}
         </span>
       </div>
@@ -131,25 +166,67 @@ function FeatureMockup({
   }
 
   if (id === "packs") {
+    /* O pack entra e a prévia se REVELA 250ms depois, da esquerda para a
+       direita — o gesto de descobrir, que é o que a prévia de um pack é.
+
+       O `Chip` aceita `className` e NÃO `style`, e o kit não ganha prop por
+       causa de um atraso: quem carrega o `--d` é um `span` de uma linha em
+       volta, e o `self-start` sai do chip e vai para ele (senão a pílula
+       esticaria na largura da coluna). O recorte do `feat-revela` acontece na
+       caixa do wrapper, que é exatamente a caixa da pílula. */
     conteudo = (
       <div className="flex flex-col gap-2 px-2">
-        <div className={linha}>
+        <div className={`feat-entra ${linha}`}>
           <span className={rotulo}>{tx[TX.pack].label}</span>
           <span className={valor}>{tx[TX.pack].amount}</span>
         </div>
-        <Chip className="self-start">{features.mockup.preview}</Chip>
+        <span className="feat-revela inline-flex self-start" style={atraso(250)}>
+          <Chip>{features.mockup.preview}</Chip>
+        </span>
       </div>
     );
   }
 
   if (id === "subscription") {
+    /* O ARO É O PRAZO, e é o que fazia desta a placa mais magra das dez: ela
+       dizia "Lembrete enviado" sem dizer de que prazo. 1px de laranja fechando
+       a volta em 900ms sobre um trilho de creme a 15%, e o lembrete entra
+       QUANDO ELE FECHA (`--d` 900ms) — nenhum número de dias, que é coisa que o
+       dicionário não diz e esta página não inventa.
+
+       O SVG é de 20×20 com círculo de raio 8: 2π·8 = 50,265, que é o
+       `stroke-dasharray` de 50,3 do `.feat-aro-fio`. O `rotate(-90 10 10)` põe o
+       começo do traço ao norte, que é de onde um prazo começa a correr. */
     conteudo = (
       <div className="flex flex-col gap-2 px-2">
         <span className={rotulo}>{tx[TX.anual].label}</span>
         {/* Sem prazo: "renova em 12 dias" era número sem fonte. */}
-        <Chip tone="ok" className="self-start">
-          {features.mockup.reminder}
-        </Chip>
+        <span className="flex items-center gap-2">
+          <svg aria-hidden viewBox="0 0 20 20" className="h-5 w-5 shrink-0">
+            <circle
+              cx={10}
+              cy={10}
+              r={8}
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={1}
+              className="text-cream/15"
+            />
+            <circle
+              cx={10}
+              cy={10}
+              r={8}
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={1}
+              transform="rotate(-90 10 10)"
+              className="feat-aro-fio text-brand"
+            />
+          </svg>
+          <span className="feat-entra inline-flex" style={atraso(900)}>
+            <Chip tone="ok">{features.mockup.reminder}</Chip>
+          </span>
+        </span>
       </div>
     );
   }
@@ -165,14 +242,23 @@ function FeatureMockup({
     /* Os dois caminhos depois do checkout, lado a lado: quem comprou vê a
        oferta maior (o plano anual), quem recusou vê a menor (o mensal). Os dois
        preços são os de `phone.transactions`, e a seta diz para que lado a
-       oferta vai — é o `Upsell`/`Downsell` do editor em duas linhas. */
+       oferta vai — é o `Upsell`/`Downsell` do editor em duas linhas.
+
+       As duas linhas não chegam juntas, e o intervalo é a informação: a
+       primeira via ACENDE no gatilho (ela já estava lá — é o caminho de quem
+       comprou) e a segunda ENTRA 400ms depois, que é o tempo de o cliente ter
+       recusado. Daí uma `feat-acende` e uma `feat-entra`, e não duas iguais. */
     conteudo = (
       <ul className="flex flex-col gap-1.5">
         {[
-          { rot: features.mockup.bought, i: TX.anual, up: true },
-          { rot: features.mockup.declined, i: TX.mensal, up: false },
+          { rot: features.mockup.bought, i: TX.anual, up: true, gesto: "feat-acende", d: 0 },
+          { rot: features.mockup.declined, i: TX.mensal, up: false, gesto: "feat-entra", d: 400 },
         ].map((caminho) => (
-          <li key={caminho.rot} className={`${linha} rounded-[8px] bg-cream/6 px-2 py-1`}>
+          <li
+            key={caminho.rot}
+            style={atraso(caminho.d)}
+            className={`${caminho.gesto} ${linha} rounded-[8px] bg-cream/6 px-2 py-1`}
+          >
             <span className="flex min-w-0 items-center gap-1.5">
               {caminho.up ? (
                 <ArrowUpRight aria-hidden className="h-3.5 w-3.5 shrink-0 text-brand" />
@@ -192,14 +278,18 @@ function FeatureMockup({
     /* A faixa de valor do PIX livre NÃO existe em pt.ts, e continua não
        existindo: a placa mostra o campo aberto — o símbolo da moeda do Brasil
        (de `payments.table.countries`, onde o PIX é o método) e o cursor —, e
-       quem escreve o número é o cliente. Zero número cunhado. */
+       quem escreve o número é o cliente. Zero número cunhado.
+
+       E é por isso que o que anima aqui é o CURSOR: sem valor no dicionário,
+       não há "o valor se digita" para encenar. `feat-cursor` o pisca três vezes
+       e para — três e não infinitas, que relógio que não para é relógio. */
     conteudo = (
       <div className="flex flex-col gap-2 px-2">
         <div className="flex items-center gap-2 rounded-[8px] bg-cream/6 px-2.5 py-2">
           <span className="text-[15px] font-semibold text-cream">
             {payments.table.countries[0].symbol}
           </span>
-          <span aria-hidden className="h-4 w-px bg-brand" />
+          <span aria-hidden className="feat-cursor h-4 w-px bg-brand" />
         </div>
         <span className="text-[13px] leading-snug text-muted">
           {features.mockup.freeAmount}
@@ -210,7 +300,11 @@ function FeatureMockup({
 
   if (id === "testMode") {
     /* O plano mensal com o valor RISCADO e o aviso: no modo de teste o funil
-       inteiro roda e a cobrança não acontece. */
+       inteiro roda e a cobrança não acontece.
+
+       O selo pisca UMA vez, 300ms depois do gatilho: "Sem cobrança real" é o
+       carimbo do modo de teste, e piscar uma vez é o que um carimbo faz. O
+       `--d` vai no `span` em volta porque o `Chip` não leva `style`. */
     conteudo = (
       <div className="flex flex-col gap-2 px-2">
         <div className={linha}>
@@ -219,9 +313,9 @@ function FeatureMockup({
             {tx[TX.mensal].amount}
           </span>
         </div>
-        <Chip tone="warn" className="self-start">
-          {features.mockup.noCharge}
-        </Chip>
+        <span className="feat-pisca inline-flex self-start" style={atraso(300)}>
+          <Chip tone="warn">{features.mockup.noCharge}</Chip>
+        </span>
       </div>
     );
   }
@@ -229,7 +323,12 @@ function FeatureMockup({
   if (id === "remarketing") {
     /* O teste A/B em duas réguas: o tráfego reparte entre dois caminhos, e os
        nomes das saídas são os do editor (`branchA`/`branchB`). Sem porcentagem
-       escrita — a divisão se vê, e um "50%" aqui seria número sem fonte. */
+       escrita — a divisão se vê, e um "50%" aqui seria número sem fonte.
+
+       As duas réguas se DESENHAM, uma depois da outra (220ms de intervalo): é o
+       ENVIO — a campanha sai pelos dois caminhos —, e não a divisão já pronta.
+       `feat-barra` é `scaleX` com origem à esquerda, então o trilho de 1,5px de
+       altura não se mexe e a largura de 50% continua sendo a do repouso. */
     conteudo = (
       <div className="flex flex-col gap-2.5 px-2">
         <span className={rotulo}>{features.mockup.abTest}</span>
@@ -237,12 +336,13 @@ function FeatureMockup({
           {[
             { nome: highlights.demos.blocks.builder.branchA, forte: true },
             { nome: highlights.demos.blocks.builder.branchB, forte: false },
-          ].map((saida) => (
+          ].map((saida, posicao) => (
             <li key={saida.nome} className="flex items-center gap-2.5">
               <span className="t-label w-3 shrink-0">{saida.nome}</span>
               <span aria-hidden className="h-1.5 flex-1 rounded-full bg-line-track">
                 <span
-                  className={`block h-full w-1/2 rounded-full ${
+                  style={atraso(posicao * 220)}
+                  className={`feat-barra block h-full w-1/2 rounded-full ${
                     saida.forte ? "bg-brand" : "bg-cream/25"
                   }`}
                 />
@@ -256,15 +356,19 @@ function FeatureMockup({
 
   if (id === "delivery") {
     /* As duas pontas da entrega, com as palavras da demo de entrega: o convite
-       sai e o acesso está liberado. */
+       sai e o acesso está liberado.
+
+       E o "Acesso liberado" entra como entra na Plataforma: `feat-chip` é o
+       `log-chip` da leva 1, os mesmos 6px subindo, 300ms depois do convite.
+       Duas seções, um gesto, uma definição. */
     conteudo = (
       <div className="flex flex-col gap-2 px-2">
         <span className={rotulo}>
           {highlights.demos.delivery.steps[3].label}
         </span>
-        <Chip tone="ok" className="self-start">
-          {highlights.demos.delivery.done}
-        </Chip>
+        <span className="feat-chip inline-flex self-start" style={atraso(300)}>
+          <Chip tone="ok">{highlights.demos.delivery.done}</Chip>
+        </span>
       </div>
     );
   }
@@ -273,14 +377,20 @@ function FeatureMockup({
     /* Os quatro blocos de IA, com os nomes que o editor usa. A categoria de IA
        é a ÚLTIMA de `blocks.categories` por construção (ela fecha a lista dos
        28 nos dois idiomas); se um dia deixar de ser, a placa fica vazia em vez
-       de mostrar bloco errado — e vazio se vê na revisão, bloco errado não. */
+       de mostrar bloco errado — e vazio se vê na revisão, bloco errado não.
+
+       Os quatro acendem em cascata de 90ms, na ordem da leitura da grade 2×2:
+       é a cadeia de blocos sendo MONTADA, que é o que a IA faz no editor. 90ms
+       é curto de propósito — quatro vezes 90 fecha em 270, dentro do 0,8 a 1,3s
+       que a leva dá a uma placa inteira. */
     const ia = highlights.demos.blocks.categories.at(-1);
     conteudo = ia ? (
       <ul className="grid grid-cols-2 gap-1.5">
-        {ia.items.slice(0, 4).map((bloco) => (
+        {ia.items.slice(0, 4).map((bloco, posicao) => (
           <li
             key={bloco.name}
-            className="rounded-[8px] bg-cream/6 px-2 py-1.5 text-[13px] leading-tight text-cream"
+            style={atraso(posicao * 90)}
+            className="feat-entra rounded-[8px] bg-cream/6 px-2 py-1.5 text-[13px] leading-tight text-cream"
           >
             {bloco.name}
           </li>
@@ -393,6 +503,17 @@ export function FeatureCarousel({
      da mão. */
   const paused = hovering || focused || tabHidden || touching || !onScreen;
   const playing = !reduced && !paused;
+
+  /* OS TRÊS FREIOS DA DEMONSTRAÇÃO DA PLACA (leva 2). `data-feat="1"` é o que
+     faz a placa do card do meio acontecer uma vez (ver `leva2.css`), e ele só
+     vai a "1" quando: a seção está à vista, a aba está na frente e o movimento
+     é permitido. Note que `hovering`/`focused` NÃO entram — eles param o
+     rodízio, e parar o rodízio é justamente o convite para olhar a placa.
+     `touching` entra: durante o arrasto o atributo volta a "0", o que devolve
+     cada peça ao estado final, e soltar recomeça. É daí que vem "clicar no
+     cartão do meio repete" — o toque passa por `pointerdown`/`pointerup`, o
+     mesmo caminho do arrasto, sem um relógio novo e sem estado novo. */
+  const demo = onScreen && !tabHidden && !reduced && !touching;
 
   /* `useReducedMotion` do motion não serve aqui: este componente é renderizado
      no servidor, e o hook devolve `false` no primeiro render de qualquer forma.
@@ -544,6 +665,7 @@ export function FeatureCarousel({
               aria-roledescription="slide"
               aria-label={item.title}
               aria-hidden={far}
+              data-feat={isCenter && demo ? "1" : "0"}
               className={`feature-slot absolute top-0 left-1/2 ease-[cubic-bezier(0.16,1,0.3,1)] ${
                 drag ? "" : "transition-[transform,opacity] duration-[600ms]"
               }`}
@@ -648,12 +770,27 @@ export function FeatureCarousel({
           labelRight={`${current + 1} ${ui.of} ${count}`}
         />
 
+        {/* `seta-prev`/`seta-next` existem só para o hover da leva 2: o ÍCONE
+            anda 2px para o lado para onde ele leva e o botão redondo fica
+            parado — o menor sinal possível de que aquilo é um controle
+            direcional. `:focus-visible` entra junto no CSS, para quem anda de
+            teclado ver a mesma coisa. */}
         <div className="flex shrink-0 items-center gap-2">
-          <button type="button" onClick={() => go(-1)} aria-label={features.prev} className={seta}>
-            <ArrowLeft className="h-4 w-4" />
+          <button
+            type="button"
+            onClick={() => go(-1)}
+            aria-label={features.prev}
+            className={`${seta} seta-prev`}
+          >
+            <ArrowLeft className="seta-interna h-4 w-4" />
           </button>
-          <button type="button" onClick={() => go(1)} aria-label={features.next} className={seta}>
-            <ArrowRight className="h-4 w-4" />
+          <button
+            type="button"
+            onClick={() => go(1)}
+            aria-label={features.next}
+            className={`${seta} seta-next`}
+          >
+            <ArrowRight className="seta-interna h-4 w-4" />
           </button>
         </div>
       </div>
