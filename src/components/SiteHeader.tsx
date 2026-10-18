@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type MouseEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type MouseEvent } from "react";
 import { Menu, X } from "lucide-react";
 import { useContent } from "@/i18n";
 import { CtaButton } from "./CtaButton";
@@ -103,13 +103,29 @@ function reiniciarEntrada(evento: MouseEvent<HTMLAnchorElement>) {
  * Header fixo de 64px: transparente sobre o hero, sólido depois de 24px de
  * rolagem. Acompanha a seção visível e traz o menu móvel.
  *
- * A barra de progresso de leitura saiu: era o único elemento da página, fora do
- * palco 3D, acoplado à rolagem, e pagava um `useSpring` por quadro para
- * desenhar um fio de 1px que ninguém lê.
+ * O FIO DE PROGRESSO E O SUBLINHADO DESLIZANTE VOLTARAM EM 18/10, com a leva 1
+ * do pacote criativo — e não é o mesmo par que saiu em 14/10. O que saiu
+ * naquela limpeza (e os comentários que o diziam estão no histórico) eram duas
+ * peças do motion: uma barra de progresso que pagava um `useSpring` POR QUADRO
+ * para desenhar 1px, e uma pílula `layoutId` por baixo do item ativo, que
+ * pedia o pacote de layout do motion neste arquivo — que está na primeira
+ * dobra, e cujo import punha 42,2 kB no caminho crítico do FCP.
  *
- * A pílula `layoutId` do item ativo também saiu. O estado do nav é só cor —
- * creme para a seção à vista, muted para as outras —, que é o que a referência
- * faz e o que evita um segundo laranja ao lado do CTA.
+ * O que volta não custa nada disso:
+ *
+ *  - o fio é `transform: scaleX()` escrito DIRETO no nó, dentro do rAF que o
+ *    listener de rolagem já tinha para decidir o fundo sólido. Sem estado de
+ *    React (o fio nunca re-renderiza o header), sem mola, sem biblioteca: uma
+ *    multiplicação e uma escrita de estilo por quadro rolado;
+ *  - o sublinhado é UM elemento de 1px posicionado por `translateX` e esticado
+ *    por `scaleX`, com `getBoundingClientRect` só quando a seção à vista muda
+ *    (e no `resize`). Não é a pílula de antes: é um fio de 2px, da espessura
+ *    do sistema, que SAI de um item e CHEGA no outro — o mesmo motivo da
+ *    bolinha que a leva 1 leva para o resto da página, no menor espaço que a
+ *    página tem.
+ *
+ * A cor do item ativo continua sendo o estado principal (creme para a seção à
+ * vista, muted para as outras); o fio é o percurso entre elas.
  *
  * O MENU MÓVEL SAIU DO MOTION. Era um `AnimatePresence`, e este arquivo está na
  * primeira dobra: medido em 14/10, o import de `motion/react` aqui era um dos
@@ -129,6 +145,14 @@ export function SiteHeader() {
   const [activeSection, setActiveSection] = useState("");
   const { nav, hero } = useContent();
 
+  /** O fio de progresso de leitura, escrito por `transform` fora do React. */
+  const fioRef = useRef<HTMLSpanElement>(null);
+  /** O sublinhado deslizante e o trilho em que ele se mede. */
+  const subRef = useRef<HTMLSpanElement>(null);
+  const navRef = useRef<HTMLElement>(null);
+  /** Já está embaixo de algum item? Decide se a próxima troca desliza. */
+  const subNoLugar = useRef(false);
+
   const menuOpen = menu === "aberto";
   const fecharMenu = () => setMenu((atual) => (atual === "aberto" ? "fechando" : atual));
 
@@ -141,12 +165,111 @@ export function SiteHeader() {
     return () => window.clearTimeout(id);
   }, [menu]);
 
-  useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 24);
-    onScroll();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
+  /**
+   * Põe o sublinhado embaixo do item ativo.
+   *
+   * Quem diz qual é o item é o DOM, não um índice guardado à parte: o link da
+   * seção à vista já leva `aria-current`, então a medida sai de uma consulta e
+   * não existe um segundo estado para divergir do primeiro.
+   *
+   * Duas medidas (`getBoundingClientRect` do item e do nav) e duas escritas de
+   * variável, e só quando a seção muda — nunca por quadro de rolagem.
+   */
+  const posicionaSub = useCallback(() => {
+    const barra = subRef.current;
+    const trilho = navRef.current;
+    if (!barra || !trilho) return;
+
+    const item = trilho.querySelector<HTMLElement>("a[aria-current]");
+    const caixa = item?.getBoundingClientRect();
+    /* Abaixo de `md` o nav está em `display: none` e mede zero — e no topo da
+       página nenhuma seção está à vista. Nos dois casos não há item a
+       sublinhar, e o fio sai de cena por opacidade (nunca por `display`: o
+       percurso da próxima troca parte de onde ele está). */
+    if (!caixa || caixa.width === 0) {
+      barra.style.opacity = "0";
+      subNoLugar.current = false;
+      return;
+    }
+
+    const base = trilho.getBoundingClientRect();
+    /* A PRIMEIRA APARIÇÃO NÃO DESLIZA. Sem isto o fio viria da borda esquerda
+       do nav até o primeiro item ativo, um percurso que não aconteceu — o
+       leitor rolou a página, não trocou de seção. Desligar a transição, medir
+       e religar custa um reflow forçado, uma vez por visita. */
+    if (!subNoLugar.current) barra.style.transition = "none";
+    barra.style.setProperty("--x", `${(caixa.left - base.left).toFixed(1)}px`);
+    barra.style.setProperty("--w", caixa.width.toFixed(1));
+    barra.style.opacity = "1";
+    if (!subNoLugar.current) {
+      void barra.offsetWidth;
+      barra.style.transition = "";
+      subNoLugar.current = true;
+    }
   }, []);
+
+  /* UM LISTENER DE ROLAGEM, UM rAF, e as duas peças escritas no mesmo quadro.
+     O fundo sólido já dependia da rolagem; o fio de progresso entra no mesmo
+     caminho em vez de abrir um segundo (regra: um relógio por viewport).
+
+     Coalescido: dezenas de eventos de rolagem por quadro viram UMA escrita, e
+     o `frame` guardado é o que impede o enfileiramento. Passivo, porque nada
+     aqui cancela a rolagem.
+
+     `setScrolled` com o mesmo valor não re-renderiza (o React descarta a
+     atualização idêntica), então o header só repinta nas duas travessias dos
+     24px — o fio, que muda sempre, não passa pelo React: ele é `transform`
+     escrito no nó. */
+  useEffect(() => {
+    let frame = 0;
+    let remedir = false;
+
+    const escreve = () => {
+      frame = 0;
+      setScrolled(window.scrollY > 24);
+
+      const fio = fioRef.current;
+      if (fio) {
+        /* O curso é o que SOBRA de página: altura do documento menos a janela.
+           Zero (ou negativo) numa página que não rola — e aí o fio fica
+           recolhido em vez de nascer cheio por divisão por zero. */
+        const curso = document.documentElement.scrollHeight - window.innerHeight;
+        const andado = curso > 0 ? Math.min(1, Math.max(0, window.scrollY / curso)) : 0;
+        fio.style.transform = `scaleX(${andado.toFixed(4)})`;
+      }
+
+      if (remedir) {
+        remedir = false;
+        posicionaSub();
+      }
+    };
+
+    const pede = () => {
+      if (!frame) frame = requestAnimationFrame(escreve);
+    };
+    /* Mudou a largura, mudou o lugar do item: o sublinhado remede no mesmo
+       quadro em que o fio é reescrito (a altura da janela também entra no
+       curso da rolagem). */
+    const naMedida = () => {
+      remedir = true;
+      pede();
+    };
+
+    escreve();
+    window.addEventListener("scroll", pede, { passive: true });
+    window.addEventListener("resize", naMedida, { passive: true });
+    return () => {
+      if (frame) cancelAnimationFrame(frame);
+      window.removeEventListener("scroll", pede);
+      window.removeEventListener("resize", naMedida);
+    };
+  }, [posicionaSub]);
+
+  /* A troca de seção é o que move o sublinhado. `nav` entra na lista porque
+     trocar de idioma troca a largura dos rótulos. */
+  useEffect(() => {
+    posicionaSub();
+  }, [activeSection, nav, posicionaSub]);
 
   /* Observa `[data-section]`, não o `href` do link. O id de âncora passou a
      viver no BLOCO DO TÍTULO (com `scroll-mt-24`, para a rolagem parar abaixo
@@ -191,7 +314,7 @@ export function SiteHeader() {
        do grão, que é a outra camada fixa de tela cheia da página. */
     <header className="fixed inset-x-0 top-0 z-[70] transform-gpu backface-hidden will-change-transform">
       <div
-        className={`transition-colors duration-500 ${
+        className={`relative transition-colors duration-500 ${
           scrolled
             ? "border-b border-line bg-ink-950"
             : "border-b border-transparent bg-transparent"
@@ -215,7 +338,7 @@ export function SiteHeader() {
             <WoneIcon className="h-7 w-auto sm:h-8" />
           </a>
 
-          <nav className="hidden items-center gap-6 md:flex">
+          <nav ref={navRef} className="relative hidden items-center gap-6 md:flex">
             {nav.map((link) => {
               const isActive = activeSection === link.href.slice(1);
               return (
@@ -234,6 +357,16 @@ export function SiteHeader() {
                 </a>
               );
             })}
+
+            {/* O SUBLINHADO. Um nó, 1px de largura, esticado por `--w` e levado
+                por `--x` (ver `.header-sub` em leva1.css). Fica DENTRO do nav:
+                é ali que ele se mede, e é o que o faz desaparecer sozinho
+                abaixo de `md`, onde o nav é `display: none`. */}
+            <span
+              ref={subRef}
+              aria-hidden
+              className="header-sub pointer-events-none absolute -bottom-2 left-0 h-0.5 w-px bg-brand opacity-0"
+            />
           </nav>
 
           <div className="flex items-center gap-2">
@@ -264,6 +397,24 @@ export function SiteHeader() {
             </button>
           </div>
         </div>
+
+        {/* O FIO DE PROGRESSO DE LEITURA: 2px laranja na borda de baixo da
+            barra, do mesmo peso do marcador de aba ativa da Plataforma — a
+            página tem uma espessura de fio, não três.
+
+            `-bottom-px` o põe por cima da régua de 1px da barra (a mesma
+            solução do marcador da Plataforma): ele cobre a linha em vez de
+            somar uma segunda, e não ocupa um pixel de layout — o header
+            continua com os mesmos 65px, e o CLS da leva é zero.
+
+            Em `scaleX(0)` até a primeira rolagem: sobre o hero, onde a barra é
+            transparente, um fio laranja atravessado seria uma régua no meio da
+            cena de abertura. */}
+        <span
+          ref={fioRef}
+          aria-hidden
+          className="header-fio absolute inset-x-0 -bottom-px h-0.5 bg-brand"
+        />
       </div>
 
       {menu !== "fechado" && (

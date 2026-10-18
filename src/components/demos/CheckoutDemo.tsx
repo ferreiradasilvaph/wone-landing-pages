@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, type CSSProperties } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import dynamic from "next/dynamic";
 import { Info } from "lucide-react";
@@ -120,7 +120,23 @@ export function CheckoutDemo() {
             const isActive = entryIndex === index;
 
             return (
-              <li key={entry.code} className="w-[3.4rem]">
+              /* AS SETE ACENDEM EM SEQUÊNCIA ao montar (leva 1, 18/10), na
+                 ordem em que o cometa do hero visita as cidades: São Paulo,
+                 Cidade do México, Buenos Aires, Bogotá, Quito, Lisboa,
+                 Londres. A ordem bate porque a fonte é a mesma lista
+                 (`payments.table.countries`) — o índice da bandeira é a perna
+                 do voo, e não uma sequência inventada aqui.
+
+                 É animação de MONTAGEM: a demo monta quando o lead abre a aba,
+                 então acender na entrada é acender quando ele chega. 90 ms por
+                 bandeira, 630 para as sete — o tempo de ler a fileira.
+                 `opacity` e nada mais: o seletor é peça de uso, e mover o que
+                 se clica é outra conversa. */
+              <li
+                key={entry.code}
+                className={reduced ? "w-[3.4rem]" : "bandeira-acende w-[3.4rem]"}
+                style={{ "--i": entryIndex } as CSSProperties}
+              >
                 <button
                   type="button"
                   onClick={() => setIndex(entryIndex)}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import dynamic from "next/dynamic";
 import { AlertTriangle, Webhook, RefreshCw, MousePointerClick } from "lucide-react";
@@ -62,6 +62,12 @@ export function ConfirmationDemo() {
 
   const alive = down.filter((isDown) => !isDown).length;
   const delivered = alive > 0;
+  /* A VIA QUE CONFIRMA: a primeira que está de pé. É a que ganha o fio laranja
+     (leva 1, 18/10) — e é informação, não enfeite: a demo existe para mostrar
+     que uma via basta, e esta é a única peça dela que diz QUAL das três está
+     cumprindo o trabalho neste momento. Desligou a primeira, o fio desce na
+     segunda; derrubou as três, `-1` e não há fio nenhum. */
+  const confirma = down.findIndex((isDown) => !isDown);
 
   /* A sequência da caixa é consequência do clique, não de um efeito observando
      o estado: a troca de fase sai daqui, do próprio evento. Os temporizadores
@@ -156,10 +162,30 @@ export function ConfirmationDemo() {
                 onMouseLeave={() =>
                   setHot((current) => (current === index ? null : current))
                 }
-                className={`rounded-field flex items-center gap-3 px-3.5 py-2.5 transition-colors duration-300 ${
-                  isDown ? "bg-red-500/10" : "bg-brand/8"
-                }`}
+                /* `via-entra` é a cascata de entrada das três linhas, 110 ms
+                   entre elas: a lista se apresenta uma via por vez em vez de
+                   aparecer inteira junto com o guindaste, que é a figura da
+                   demo e merece o primeiro olhar. Montagem, então corre uma vez
+                   só — quem abre a aba, vê. */
+                className={`rounded-field relative flex items-center gap-3 px-3.5 py-2.5 transition-colors duration-300 ${
+                  reduced ? "" : "via-entra "
+                }${isDown ? "bg-red-500/10" : "bg-brand/8"}`}
+                style={{ "--i": index } as CSSProperties}
               >
+                {/* O FIO DA VIA QUE CONFIRMA: 2px laranja desenhado de cima
+                    para baixo. Ele monta e desmonta com a troca, e é isso que
+                    o redesenha quando o lead derruba a via de cima — animação
+                    de montagem, sem classe para alternar. Recuado 10px em cima
+                    e embaixo para ficar no trecho RETO da borda: `rounded-field`
+                    são 12px de raio, e um fio de ponta a ponta sairia pelo
+                    canto transparente. */}
+                {index === confirma && (
+                  <span
+                    aria-hidden
+                    className="via-fio absolute top-2.5 bottom-2.5 left-0 w-[2px] rounded-full bg-brand"
+                  />
+                )}
+
                 <span
                   className={`flex h-9 w-9 shrink-0 items-center justify-center transition-colors duration-300 ${
                     isDown ? "text-red-400" : "text-brand"

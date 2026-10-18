@@ -594,13 +594,20 @@ export function FlowEditorDemo() {
                         />
                       </div>
 
+                      {/* O fio entre dois blocos. Ele SE DESENHA quando o
+                          pulso passa (leva 1, 18/10): no desktop o canvas já
+                          tem o sinal percorrendo a aresta curva, e aqui ele era
+                          o único lugar da execução em que a passagem não tinha
+                          direção — um retângulo de 1×16 que trocava de cor num
+                          quadro. Duas camadas, porque uma só não daria: o
+                          trilho de creme fica, e o laranja cresce POR CIMA com
+                          `scaleY` a partir do alto. */}
                       {index < slots.length - 1 && (
-                        <span
-                          aria-hidden
-                          className={`ml-5 block h-4 w-px transition-colors duration-200 ${
-                            done ? "bg-brand/70" : "bg-line-strong"
-                          }`}
-                        />
+                        <span aria-hidden className="relative ml-5 block h-4 w-px bg-line-strong">
+                          {done && (
+                            <span className="fluxo-desenha absolute inset-0 block bg-brand/70" />
+                          )}
+                        </span>
                       )}
                     </motion.li>
                   );

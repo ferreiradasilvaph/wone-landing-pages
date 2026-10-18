@@ -2319,9 +2319,39 @@ export function HeroGlobe({
          é quando o limbo volta a aparecer e a borda pode ceder de novo ao fio
          do CSS. */
       ctx!.restore();
-      if (escala > 1.0005) {
+      /* O RAIO DA BORDA, e não o do disco: o contorno é traçado no MEIO da
+         espessura, logo em `R − BORDA_FIO/2`. E essa subtração é o único raio
+         de `arc` em todo o arquivo que pode ficar NEGATIVO — era ela que punha
+         no console, uma vez por quadro desenhado,
+         `IndexSizeError: The radius provided (-0.25) is negative`.
+
+         A conta fica negativa quando a CAIXA É DEGENERADA, e ela existe: o
+         lado vem de `box.clientWidth` em `mede()`, o `clientWidth` é inteiro, e
+         `--globo` é `min(44vw, 100svh − 140px)` (`min(42vw, 100svh − 324px)`
+         entre 1024 e 1399) — uma janela muito baixa resolve a fórmula para 0 ou
+         1px. Com lado 1, R vale 0,5 e o raio da borda é −0,25 — o número que
+         apareceu no console; com lado 0, R é 0 e o raio é −0,75. Reproduzido a
+         1100×324, onde a caixa mede 0 e a chamada ia com −0,75; o −0,25 é a
+         MESMA conta com a caixa em 1px, que é o que uma janela de altura
+         fracionária (zoom de 125%, por exemplo) resolve.
+
+         O remédio é a CONDIÇÃO, não um `Math.max(0, …)` cego, e a diferença não
+         é de estilo: um raio preso em zero desenharia um ponto de 1,5px de fio
+         no canto superior esquerdo do disco, que é uma sujeira a mais e não a
+         ausência de uma borda. Um disco menor que o próprio fio NÃO TEM
+         circunferência para traçar — é isso que a linha abaixo diz, e é por
+         isso que ela mede o raio da borda e não o da caixa.
+
+         Os outros seis `arc` do arquivo são seguros por construção, e por isso
+         nenhum deles ganha guarda: os dois do planeta e o da trama são produtos
+         de fatores não negativos (`rb`, `vol`, `grao`, `lit` preso em [0,1]); o
+         da cauda é `(1,1 + 1,6·c)·c·fio` com `c` em (0,1]; os dois do pino são
+         `4 + k·x` com `x` ≥ 0 (`revela` preso em [0,1] e `pulso` já filtrado
+         acima); e o do recorte é o próprio R, que não é negativo nunca. */
+      const rBorda = R - BORDA_FIO / 2;
+      if (escala > 1.0005 && rBorda > 0) {
         ctx!.beginPath();
-        ctx!.arc(R, R, R - BORDA_FIO / 2, 0, TAU);
+        ctx!.arc(R, R, rBorda, 0, TAU);
         /* A circunferência fica — ela é a BORDA do disco, e a maquete também
            precisa de uma —, mas cede metade do peso para a cidade: sobre o mapa
            noturno o fio a 22% competia com as avenidas. */

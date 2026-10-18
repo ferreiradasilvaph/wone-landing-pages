@@ -1,0 +1,578 @@
+/* ==========================================================================
+   LEVA 1 — O MOTIVO DA BOLINHA FORA DO HERO
+
+   O hero tem um cometa: um ponto laranja com três cópias atrás dele que voa
+   entre os países, pousa com um pulso e mergulha em São Paulo. Até 17/10 ele
+   era um bicho do palco 3D e morria no pé do hero — o resto da página era
+   estática, e a diferença de temperatura entre a primeira dobra e a segunda
+   era a coisa mais visível do site.
+
+   Esta leva leva o MESMO gesto para o topo da página: um ponto laranja que
+   PERCORRE UM CAMINHO e acende o que encontra pelo caminho. Três lugares, o
+   mesmo bicho:
+
+     · o cabeçalho — o fio de progresso de leitura e o sublinhado que desliza
+       de um item do nav para o outro;
+     · o prefácio da vitrine — a bolinha percorre a trilha dos quatro marcos,
+       desenhando o fio e acendendo cada parada (10K → 1M);
+     · o painel da Plataforma — a bolinha desce o log do PIX até o acesso, e
+       cada evento acende quando ela chega.
+
+   POR QUE UM ARQUIVO À PARTE, e não mais 300 linhas no globals.css: o motivo é
+   UM e vale para peças de três seções diferentes. Com as regras espalhadas,
+   "o tamanho da bolinha" e "a duração da travessia" viravam seis números em
+   seis lugares — que é exatamente o que já aconteceu com o lado do globo antes
+   de o `hero.css` existir. Aqui a cauda é uma regra, a travessia é uma
+   variável, e quem usa só escolhe a direção.
+
+   TRÊS REGRAS DURAS, que valem para tudo o que está aqui:
+
+   1. MOVER É `transform` OU `opacity`, nunca `left`/`top`/`height`. Todo
+      deslocamento desta leva é `translate`/`scale` em porcentagem do PRÓPRIO
+      elemento — é o que faz o percurso ser responsivo sem medir nada no DOM
+      (a bolinha anda `translateX(0 → 100%)` dentro de um trilho que tem a
+      largura do trecho). CLS medido da leva: 0,000.
+
+   2. O ESTADO DE REPOUSO DE TODA PEÇA É O ESTADO FINAL. Nenhuma regra daqui
+      pode ser o que torna o conteúdo visível: o numeral nasce creme pleno, a
+      linha de faturamento nasce na tela, o fio nasce inteiro. Quem pede a
+      animação é o componente, e só quando (a) há movimento permitido e (b) a
+      peça ainda está fora da vista — por isso o `paused` abaixo. É a mesma
+      disciplina da entrada do hero (`html.wone-entrando`, globals.css).
+
+   3. `prefers-reduced-motion` não chega aqui: o componente não põe nenhuma
+      classe, e a regra global do globals.css (duração zerada) é a segunda
+      rede, não a primeira.
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   A BOLINHA — o motivo, em quatro pontos
+
+   Cabeça de 6px e três cópias atrás, menores e mais fracas. Não é invenção
+   desta leva: é a transcrição do cometa do `HeroGlobe`, que desenha quatro
+   arcos (`BOLA_CAUDA = 4`) com o raio e o alfa caindo junto. Lá o alfa cai com
+   o QUADRADO da posição na cauda (`0.95 · cauda²`), e é essa curva que está
+   nos quatro `opacity` daqui — uma cauda linear fica com cara de tracejado.
+
+   A DIREÇÃO é de quem usa, por `--cx`/`--cy`: a cauda é o vetor "um passo para
+   trás", repetido três vezes. Na trilha do prefácio ela aponta para a esquerda
+   (a bolinha anda para a direita); no log do PIX aponta para cima.
+
+   Sem blur, sem glow e sem degradê: quatro círculos chapados. O rastro em
+   `linear-gradient` do `StageWire` é da faísca do palco de "Como funciona" e
+   fica lá — aqui o número de cópias é o mesmo do cometa, que é o bicho que
+   esta leva está repetindo.
+   -------------------------------------------------------------------------- */
+.bolinha {
+  --cx: -5px;
+  --cy: 0px;
+  position: absolute;
+  top: 0;
+  left: 0;
+  /* Caixa de tamanho zero: a bolinha é um PONTO, e as quatro cópias penduram
+     nele por margem. Assim o trilho pode ser `width: 100%` e a conta do
+     percurso não precisa descontar o tamanho do bicho. */
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+.bolinha > i {
+  position: absolute;
+  display: block;
+  border-radius: 9999px;
+  background: var(--brand);
+}
+
+.bolinha > i:nth-child(1) {
+  width: 6px;
+  height: 6px;
+  margin: -3px 0 0 -3px;
+}
+.bolinha > i:nth-child(2) {
+  width: 5px;
+  height: 5px;
+  margin: -2.5px 0 0 -2.5px;
+  left: var(--cx);
+  top: var(--cy);
+  opacity: 0.5;
+}
+.bolinha > i:nth-child(3) {
+  width: 4px;
+  height: 4px;
+  margin: -2px 0 0 -2px;
+  left: calc(var(--cx) * 2);
+  top: calc(var(--cy) * 2);
+  opacity: 0.28;
+}
+.bolinha > i:nth-child(4) {
+  width: 3px;
+  height: 3px;
+  margin: -1.5px 0 0 -1.5px;
+  left: calc(var(--cx) * 3);
+  top: calc(var(--cy) * 3);
+  opacity: 0.14;
+}
+
+/* --------------------------------------------------------------------------
+   O CABEÇALHO
+
+   Duas peças, um listener. O fio de progresso e o sublinhado do nav são
+   escritos pelo MESMO rAF coalescido do `SiteHeader` (o que já existia para o
+   fundo sólido depois de 24px): um relógio por viewport é regra do projeto, e
+   dois listeners de rolagem no elemento que vive em cima de tudo são dois
+   relógios.
+   -------------------------------------------------------------------------- */
+
+/* O FIO DE PROGRESSO DE LEITURA: 2px laranja na borda de baixo do header,
+   escrito por `scaleX`.
+
+   Um fio de progresso já existiu aqui e SAIU em 14/10, com motivo anotado no
+   componente: ele pagava um `useSpring` do motion por quadro para desenhar
+   1px que ninguém lê. O que volta não é o mesmo bicho — é `transform` escrito
+   direto no nó, sem estado de React, sem mola e sem biblioteca, no rAF que a
+   barra já tinha. E volta com 2px, que é a espessura do marcador de aba ativa
+   da Plataforma: o fio do sistema tem uma espessura só.
+
+   `transform-origin: left` e `scaleX(0)` em repouso: no topo da página o
+   progresso é zero, então o fio não existe sobre o hero — que é onde o
+   cabeçalho é transparente e um fio laranja atravessado seria uma régua. */
+.header-fio {
+  transform-origin: left;
+  transform: scaleX(0);
+}
+
+/* O SUBLINHADO QUE DESLIZA entre os itens do nav.
+
+   Um elemento só, de 1px de largura, posicionado por `translateX` e esticado
+   por `scaleX` — a mesma mecânica do `.facts-fio` do hero. Os dois números
+   vêm em `--x` e `--w`, medidos com `getBoundingClientRect` SÓ quando a seção
+   à vista muda (e no `resize`), nunca por quadro.
+
+   Por que não um elemento por item, com `opacity` trocando: porque o que se
+   quer é o percurso. O sublinhado SAI de um item e CHEGA no outro, como a
+   bolinha — é a mesma afirmação do resto da leva, no menor espaço possível.
+
+   A travessia é `transform`, então a transição não toca o layout do header
+   (65px, camada própria). Com movimento reduzido a regra global zera a
+   duração: o sublinhado troca de lugar sem percurso, que é o pedido. */
+.header-sub {
+  transform-origin: left;
+  transform: translateX(var(--x, 0px)) scaleX(var(--w, 0));
+  transition:
+    transform 0.34s var(--ease-out-expo),
+    opacity 0.18s linear;
+}
+
+/* --------------------------------------------------------------------------
+   O PREFÁCIO DA VITRINE — a trilha dos quatro marcos
+
+   A seção é uma régua de quatro paradas (10K, 100K, 500K, 1M) e diz, em
+   título, que "o caminho até o milhão tem quatro paradas". Faltava o caminho.
+
+   A trilha é um fio de 1px à altura do vão entre a ilustração do troféu e o
+   numeral, com um pino em cada marco, e a bolinha o percorre UMA VEZ da
+   esquerda para a direita. Ela não corre POR CIMA de um fio pronto: ela o
+   DESENHA — o fio é `scaleX(0 → 1)` na mesma duração e na mesma curva do
+   percurso, então a bolinha é a ponta da caneta. Um gesto, não dois.
+
+   LINEAR, e não uma curva de entrada: cada marco acende por `animation-delay`,
+   e o atraso é tempo. Com qualquer easing no percurso, a bolinha chegaria ao
+   pino antes (ou depois) do atraso que o acende — é o mesmo argumento do
+   `.facts-fio` do hero, onde o fio que mede tempo é o único linear da página.
+   2,2 s para 4 paradas: 550 ms de perna, o passo de quem caminha olhando.
+
+   SÓ A PARTIR DE `lg`, e isso é geometria, não gosto: abaixo de 1024 a régua
+   é 2×2, e um fio horizontal ligando "10K" a "100K" na primeira fileira e
+   "500K" a "1M" na segunda desenharia duas trilhas paralelas onde existe uma.
+   No celular ficam a contagem dos numerais e a entrada das linhas de
+   faturamento, que são o que a trilha ACENDE — o gesto sobrevive sem a
+   geometria mentir.
+
+   `paused` e `--trilha-roda`: as animações são penduradas quando a seção está
+   ARMADA (fora da vista, com movimento permitido) e só CORREM quando ela
+   chega à vista. Enquanto pausada, `both` mantém o primeiro quadro — o fio
+   recolhido, o pino apagado, a linha de faturamento fora da tela. É o que
+   permite ao HTML do servidor pintar o estado final e, ainda assim, ninguém
+   ver o conteúdo "piscar para o começo": o arme acontece com a seção abaixo
+   da dobra. Ver `useContagem`.
+   -------------------------------------------------------------------------- */
+
+.trilha-palco {
+  /* O vão entre a arte do troféu e o numeral, medido a partir da borda de
+     cima da régua: 24px de `pt-6` + 168px de ilustração + 16px de `mt-4` do
+     numeral = o fio cai em 200, no meio dos 16px de respiro. Está em px e
+     cravado porque a caixa da ilustração também está (`lg:h-[168px]`, com a
+     proporção do arquivo): são um fato só, escrito em dois lugares. Mexeu na
+     altura da arte, remede esta linha. */
+  top: 200px;
+}
+
+@keyframes trilha-fio {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+@keyframes trilha-bolinha {
+  0% {
+    transform: translateX(0);
+    opacity: 0;
+  }
+  4% {
+    opacity: 1;
+  }
+  93% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+}
+
+/* O pino do marco: nasce do nada quando a bolinha passa e FICA. É o pouso do
+   cometa do hero — lá a cidade ganha um anel que cresce e assenta; aqui o
+   marco ganha um ponto. */
+@keyframes trilha-pino {
+  from {
+    opacity: 0;
+    transform: scale(0.3);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* O anel do pouso: um fio de 1px que abre de 5px para 22px e apaga. Um por
+   marco, uma vez. Não é glow — é o mesmo anel que o `HeroGlobe` desenha no
+   `arc` do pulso, com a mesma curva (saída rápida, chegada mansa) e a mesma
+   espessura de 1px. */
+@keyframes trilha-pulso {
+  from {
+    opacity: 0.55;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(4.4);
+  }
+}
+
+/* O NUMERAL QUE CONTA É CENTRADO POR `transform`, e isto é CLS, não capricho.
+
+   O numeral vive sobre um fantasma invisível que reserva a largura do maior
+   valor (ver `AwardsPrefaceSection`), então a CAIXA não muda de tamanho
+   enquanto o número corre. O que muda é o TEXTO dentro dela: medido no
+   navegador, com `tnum` e a Geist em 2rem, "0K" mede 41,5px, "10K" 61,5 e
+   "100K" 81,4 — e, centrado por `text-align`, cada dígito a mais empurra a
+   palavra inteira 10px para a esquerda. O Chrome conta isso: 0,00121 de CLS no
+   celular, com os quatro numerais como fonte, medido com `PerformanceObserver`.
+
+   Centrar por `translateX(-50%)` resolve na raiz, e pela regra que vale para a
+   leva inteira: o que se move por `transform` não é layout shift — nem para o
+   navegador, nem para o olho. Mesmo desenho, mesma posição, CLS 0,000.
+
+   `white-space: nowrap` porque o número não tem como quebrar: fora do fluxo e
+   sem largura, ele é mais estreito que a palavra em algumas medidas de janela. */
+.trilha-num {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+
+/* O numeral acende: de creme a 45% para creme pleno.
+
+   `opacity`, e não `color`: o numeral já tem `transition-colors` e vira
+   laranja no hover da célula, e uma animação com `fill: both` sobre a
+   propriedade `color` venceria o hover PARA SEMPRE depois de correr — o marco
+   deixaria de responder ao cursor. Com `opacity` as duas coisas convivem. */
+@keyframes trilha-acende {
+  from {
+    opacity: 0.45;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* A linha de faturamento ("$10,000 em faturamento") entra quando o marco
+   acende: 4px e opacidade, o mesmo curso curto da entrada do hero desde 16/10
+   (o que lê como "assentar" em vez de "entrar" é o curso, não a duração). */
+@keyframes trilha-valor {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* As cinco animações da trilha, penduradas e PAUSADAS. `--i` é o índice do
+   marco (0..3) e `--atraso` resolve onde a bolinha está: ela larga na borda
+   esquerda da régua e os pinos ficam em 12,5%, 37,5%, 62,5% e 87,5% da
+   largura, logo 275 ms + 550 ms por marco. */
+.trilha .trilha-fio,
+.trilha .trilha-bolinha,
+.trilha .trilha-pino,
+.trilha .trilha-pulso,
+.trilha .trilha-acende,
+.trilha .trilha-valor {
+  animation-play-state: paused;
+  animation-fill-mode: both;
+}
+
+.trilha--roda .trilha-fio,
+.trilha--roda .trilha-bolinha,
+.trilha--roda .trilha-pino,
+.trilha--roda .trilha-pulso,
+.trilha--roda .trilha-acende,
+.trilha--roda .trilha-valor {
+  animation-play-state: running;
+}
+
+.trilha .trilha-fio {
+  animation-name: trilha-fio;
+  animation-duration: 2.2s;
+  animation-timing-function: linear;
+  transform-origin: left;
+}
+
+.trilha .trilha-bolinha {
+  animation-name: trilha-bolinha;
+  animation-duration: 2.2s;
+  animation-timing-function: linear;
+}
+
+.trilha .trilha-pino {
+  animation-name: trilha-pino;
+  animation-duration: 0.42s;
+  animation-timing-function: var(--ease-out-expo);
+  animation-delay: var(--atraso);
+}
+
+.trilha .trilha-pulso {
+  animation-name: trilha-pulso;
+  animation-duration: 0.9s;
+  animation-timing-function: var(--ease-out-expo);
+  animation-delay: var(--atraso);
+}
+
+.trilha .trilha-acende {
+  animation-name: trilha-acende;
+  animation-duration: 0.5s;
+  animation-timing-function: var(--ease-out-expo);
+  animation-delay: var(--atraso);
+}
+
+.trilha .trilha-valor {
+  animation-name: trilha-valor;
+  animation-duration: 0.5s;
+  animation-timing-function: var(--ease-out-expo);
+  animation-delay: var(--atraso);
+}
+
+/* A INCLINAÇÃO DAS PLACAS AO CURSOR, até 4°.
+
+   `perspective` em cada célula e não na régua inteira: com um ponto de fuga
+   só para os quatro, as placas das pontas giram em torno do centro da fileira
+   e saem cisalhadas — cada troféu tem de ser olhado de frente pelo seu
+   próprio olho. 700px é perspectiva curta o bastante para 4° se LEREM e longa
+   o bastante para a arte não distorcer.
+
+   A transição de 220ms faz as duas coisas que o movimento pede: amortece o
+   acompanhamento (o ponteiro salta pixels; a placa chega mansa) e devolve a
+   placa ao prumo quando o cursor sai da seção, que é quando o componente
+   escreve zero nas duas variáveis. Nenhum rAF fica vivo depois disso.
+
+   Desktop com ponteiro fino e movimento permitido, e só: quem decide é o
+   `AwardsPrefaceSection`, no efeito — nunca no primeiro render, para a
+   hidratação não divergir. No celular as variáveis nunca são escritas e a
+   regra abaixo é uma identidade. */
+.trilha-placa {
+  perspective: 700px;
+}
+
+.trilha-placa > a {
+  transform: rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg));
+  transition: transform 0.22s var(--ease-out-expo);
+}
+
+/* --------------------------------------------------------------------------
+   A PLATAFORMA — o log do PIX até o acesso
+
+   A demo já media o tempo (o anel de 1,2 s e os quatro carimbos acendendo no
+   segundo deles) com UM rAF, o único relógio automático da seção. O que
+   faltava era o percurso: os quatro eventos aconteciam em sequência mas nada
+   ia de um ao outro, e "do PIX ao acesso" é justamente o trajeto.
+
+   O fio e a bolinha moram na CALHA do log — os 12px de `gap-x-3` entre a
+   coluna dos carimbos e a dos eventos. Não é um lugar emprestado: é a calha
+   que um log de verdade tem entre a hora e o que aconteceu, e usá-la custa
+   zero px de layout (a demo tem altura reservada no esqueleto do painel; um
+   pixel a mais aqui seria CLS na troca de aba).
+
+   Quem anda não é uma animação de CSS: é o `--u` que o rAF da demo escreve,
+   o mesmo número que preenche o anel e escreve "0,8 s". Uma fonte de tempo,
+   três desenhos — e o botão "Simular de novo" reinicia os três de graça.
+   -------------------------------------------------------------------------- */
+
+/* O trecho andado, em laranja, sobre o trilho de creme fraco. `scaleY` com
+   origem no alto: o fio CRESCE do primeiro evento para baixo. */
+.log-andado {
+  transform-origin: top;
+  transform: scaleY(var(--u, 0));
+}
+
+/* A bolinha desce o fio. O filho tem a altura do trilho, então `translateY`
+   em porcentagem é a altura do trilho — nenhum px medido no DOM, e o percurso
+   acompanha a demo quando as linhas crescem no celular. */
+.log-carro {
+  height: 100%;
+  transform: translateY(calc(var(--u, 0) * 100%));
+}
+
+/* A BATIDA do evento que acende: 3px para a direita e volta, 280 ms, uma vez.
+
+   É o pulso que a espec pede, em `transform` e não em `scale`: texto de 13px
+   ampliado por 4% durante 280 ms sai borrado em tela sem dpr de sobra, e o
+   que se quer dizer é "chegou", que um empurrãozinho diz melhor. A classe
+   entra quando o evento acende e sai quando a simulação recomeça — por isso a
+   animação corre uma vez por corrida, sem `key` e sem remontar nada. */
+@keyframes log-batida {
+  0% {
+    transform: none;
+  }
+  35% {
+    transform: translateX(3px);
+  }
+  100% {
+    transform: none;
+  }
+}
+
+.log-batida {
+  animation: log-batida 0.28s var(--ease-out-expo) both;
+}
+
+/* "Acesso liberado" entra subindo 6px. O chip nasce no fim da corrida, então
+   é animação de MONTAGEM — e a caixa dele já existe desde o primeiro quadro,
+   vazia, com 28px de altura (é o que mantém o CLS em zero). */
+@keyframes log-chip {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.log-chip {
+  animation: log-chip 0.32s var(--ease-out-expo) both;
+}
+
+/* --------------------------------------------------------------------------
+   AS OUTRAS TRÊS DEMOS — acabamento, não reforma
+
+   As três já tinham movimento próprio, e movimento bom: o editor de fluxos
+   acende os blocos em cascata quando o funil roda, o guindaste corta a corda
+   e deixa a caixa cair, o globo gira até pôr o país escolhido de frente. O
+   que falta nelas não é gesto, é o MESMO gesto — então o que entra aqui é a
+   cascata de entrada e o fio que se desenha, nunca uma segunda animação
+   disputando a atenção com a que já está lá.
+   -------------------------------------------------------------------------- */
+
+/* AS 3 VIAS: a via que confirma ganha um fio laranja que se DESENHA de cima
+   para baixo.
+
+   É informação, não enfeite: a via que confirma é a primeira que está de pé,
+   e o fio troca de linha quando o lead desliga um interruptor — desligou a
+   primeira, o fio desce na segunda na hora. A demo existe para mostrar que
+   uma via basta, e esta é a única peça dela que diz QUAL. */
+@keyframes via-fio {
+  from {
+    transform: scaleY(0);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
+
+.via-fio {
+  transform-origin: top;
+  animation: via-fio 0.42s var(--ease-out-expo) both;
+}
+
+/* A entrada das três vias, em cascata de 110ms. Elas montam quando o lead
+   abre a aba, então é animação de montagem: a lista se apresenta uma linha
+   por vez em vez de aparecer inteira junto com o guindaste. */
+@keyframes via-entra {
+  from {
+    opacity: 0;
+    transform: translateX(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.via-entra {
+  animation: via-entra 0.4s var(--ease-out-expo) both;
+  animation-delay: calc(var(--i, 0) * 110ms);
+}
+
+/* OS 7 PAÍSES: as bandeiras acendem em sequência, na ORDEM DAS CIDADES DO
+   GLOBO do hero — São Paulo, Cidade do México, Buenos Aires, Bogotá, Quito,
+   Lisboa, Londres. Não é coincidência que a ordem bata: o seletor lê
+   `payments.table.countries`, que é a mesma lista na mesma ordem que o cometa
+   visita lá em cima. O índice da bandeira é a perna do voo.
+
+   `opacity` de 0,25 a 1 e nada mais: a bandeira do país ativo já tem o fundo
+   um tom acima e opacidade plena, e somar movimento ao seletor seria mexer na
+   peça que o lead usa para escolher. 90 ms por bandeira — 630 ms para as
+   sete, que é o tempo de ler a fileira. */
+@keyframes bandeira-acende {
+  from {
+    opacity: 0.25;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.bandeira-acende {
+  animation: bandeira-acende 0.45s var(--ease-out-expo) both;
+  animation-delay: calc(var(--i, 0) * 90ms);
+}
+
+/* OS 28 BLOCOS, no celular: o fio entre dois blocos se DESENHA quando o pulso
+   passa, em vez de só trocar de cor.
+
+   No desktop o canvas já tem o sinal percorrendo a aresta curva — o gesto
+   está lá e não se mexe nele. Na pilha vertical do celular o fio era um
+   retângulo de 1×16 que mudava de creme para laranja num quadro, e era o
+   único lugar da leva em que a passagem do pulso não tinha direção. */
+@keyframes fluxo-desenha {
+  from {
+    transform: scaleY(0);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
+
+.fluxo-desenha {
+  transform-origin: top;
+  animation: fluxo-desenha 0.2s linear both;
+}

@@ -3,8 +3,15 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { useContent, useLanguage } from "@/i18n";
+import { useContagem } from "@/lib/useContagem";
 import { Section } from "./Section";
 import { SectionHead } from "./SectionHead";
+
+/** Quanto dura a contagem das quatro figuras da grade de spec, em ms. */
+const CONTAGEM_MS = 900;
+
+/** A mesma curva do resto da leva: saída rápida, chegada mansa. */
+const suave = (u: number) => 1 - (1 - u) * (1 - u) * (1 - u);
 
 /* --------------------------------------------------------------------------
    Demos sob demanda
@@ -173,6 +180,12 @@ export function Highlights() {
   const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const panelRef = useRef<HTMLDivElement>(null);
   const nearPanel = useNearViewport(panelRef);
+  /* A grade de spec é o que a contagem observa (e não a seção inteira: ela é
+     mais alta que a janela, e um `threshold` nela nunca fecharia). Um relógio
+     para as quatro figuras, uma vez só — ver `useContagem`. */
+  const gradeRef = useRef<HTMLDivElement>(null);
+  const { t } = useContagem(gradeRef, CONTAGEM_MS, { amount: 0.5 });
+  const conta = suave(Math.min(1, t / CONTAGEM_MS));
 
   const select = useCallback((index: number) => {
     setActive(index);
@@ -206,13 +219,30 @@ export function Highlights() {
 
   /* As quatro figuras são inteiras hoje, mas o separador decimal continua
      acompanhando o idioma (vírgula em português, ponto em inglês) para o dia em
-     que uma delas não for. A figura é estática — o número já é a prova, não
-     precisa contar. */
+     que uma delas não for.
+
+     AS FIGURAS CONTAM, e isto voltou em 18/10 com a leva 1 do pacote criativo.
+     O comentário que estava aqui dizia o contrário ("a figura é estática — o
+     número já é a prova, não precisa contar"), e ele era sobre OUTRA coisa: os
+     quatro cards com ícone que a E1 removeu tinham contadores que rodavam
+     sozinhos, em laço, ao lado de um painel que já se movia — três relógios
+     decorativos na mesma seção.
+
+     O que volta é uma contagem só, de 900 ms, UMA vez por visita, no relógio
+     da seção (`useContagem`) e com o mesmo gesto do resto da página: a leva
+     inteira é a bolinha do hero acendendo o que encontra pelo caminho, e aqui
+     o que ela acende são os quatro números que o painel ao lado demonstra. Com
+     movimento reduzido, ou com a seção já à vista na montagem, a figura nasce
+     pronta — o número continua sendo a prova, e o HTML do servidor continua
+     trazendo "28". */
   const figura = (value: number, decimals: number, suffix: string) =>
-    `${value.toLocaleString(locale === "pt" ? "pt-BR" : "en-US", {
-      minimumFractionDigits: decimals,
-      maximumFractionDigits: decimals,
-    })}${suffix}`;
+    `${(conta >= 1 ? value : value * conta).toLocaleString(
+      locale === "pt" ? "pt-BR" : "en-US",
+      {
+        minimumFractionDigits: decimals,
+        maximumFractionDigits: decimals,
+      },
+    )}${suffix}`;
 
   /* A grade de spec, na coluna do texto: quatro números com rótulo, duas
      colunas, réguas entre as células. O `border-b` em todas e o `border-l` nas
@@ -220,6 +250,7 @@ export function Highlights() {
      régua solta na borda direita da primeira linha. */
   const grade = (
     <div
+      ref={gradeRef}
       role="tablist"
       aria-label={titulo.join(" ")}
       className="grid max-w-[29rem] grid-cols-2 border-t border-line"

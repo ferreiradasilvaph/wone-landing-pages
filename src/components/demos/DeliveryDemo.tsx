@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
 import { useInView, useReducedMotion } from "motion/react";
 import { RotateCcw } from "lucide-react";
 import { useContent, useLanguage } from "@/i18n";
@@ -42,6 +42,15 @@ const ALVO_44 =
  * vertical e um "check" entrando em cada passo — três coisas dizendo a mesma
  * coisa, e 180px mais alta. O log diz o mesmo com texto e ritmo: passo de 44px,
  * sem réguas entre as linhas (a referência também não as tem).
+ *
+ * O FIO VERTICAL VOLTOU EM 18/10, com a leva 1 do pacote criativo, e não é o
+ * que saiu. O que saiu eram QUATRO marcadores parados (uma bolinha numerada
+ * por passo) mais um fio mais um "check": três sinais para o mesmo evento, em
+ * 180px de altura. O que entra é UM sinal que ANDA — a bolinha do hero
+ * descendo a calha do log, acendendo cada evento ao chegar —, dentro dos 12px
+ * de `gap-x-3` que já separavam o carimbo do texto. Custo em layout: zero. E
+ * ela não repete o cronômetro ao lado: o anel diz QUANTO falta, a bolinha diz
+ * ONDE o pagamento está.
  *
  * O relógio das 03:14 saiu daqui: o subtítulo do painel já diz "um pagamento às
  * 03:14, com ninguém da equipe acordado", e o card repetia a mesma frase dentro
@@ -99,6 +108,11 @@ export function DeliveryDemo() {
   }, []);
 
   const finished = elapsed >= TOTAL_S;
+  /* O ANDADO, de 0 a 1. É o mesmo número que preenche o anel e escreve o
+     carimbo de segundos — uma fonte de tempo para os três desenhos. Vai para o
+     CSS em `--u`, onde o fio laranja o lê como `scaleY` e a bolinha como
+     `translateY` (ver `.log-andado` e `.log-carro`, leva1.css). */
+  const andado = Math.min(1, elapsed / TOTAL_S);
   /* Carimbo de tempo: vírgula em português, ponto em inglês — o separador
      acompanha o idioma como o da grade de spec ao lado. */
   const segundos = (value: number) =>
@@ -113,8 +127,42 @@ export function DeliveryDemo() {
       className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between sm:gap-8"
     >
       {/* O log. Sem réguas entre as linhas: o passo de 44px já separa, e quatro
-          fios aqui dentro brigariam com a borda do painel. */}
-      <ol className="min-w-0 flex-1">
+          fios aqui dentro brigariam com a borda do painel.
+
+          A CALHA DO LOG é onde a bolinha desce, e ela não custa um pixel de
+          layout: são os 12px de `gap-x-3` que já existem entre a coluna dos
+          carimbos (60px) e a coluna dos eventos. O fio cai em x=66, o meio da
+          calha, e a bolinha de 6px ocupa de 63 a 69 — dentro dela, sem tocar
+          nem o carimbo nem o texto. Um pixel a mais na caixa da demo seria CLS
+          na troca de aba (a altura dela está reservada no esqueleto do painel,
+          em `Highlights`), e é por isso que a calha é emprestada e não nova.
+
+          O trilho vai do CENTRO da primeira linha ao da última: com quatro
+          linhas de altura igual, meia linha é 12,5% da caixa — em porcentagem
+          e não nos 22px da linha, para a conta continuar certa quando o texto
+          do evento quebrar em duas linhas no celular. */}
+      <div className="relative min-w-0 flex-1">
+        <span
+          aria-hidden
+          className="pointer-events-none absolute top-[12.5%] bottom-[12.5%] left-[66px] block w-px"
+          style={{ "--u": andado } as CSSProperties}
+        >
+          {/* O trilho vazio, o trecho andado em laranja, e a bolinha na ponta
+              dele — a mesma leitura do fio do prefácio, de pé. */}
+          <span className="absolute inset-0 bg-cream/14" />
+          <span className="log-andado absolute inset-0 bg-brand" />
+          <span className="log-carro absolute inset-x-0 top-0 block">
+            {/* A cauda aponta para CIMA: é de lá que ela veio. */}
+            <span className="bolinha" style={{ "--cx": "0px", "--cy": "-5px" } as CSSProperties}>
+              <i />
+              <i />
+              <i />
+              <i />
+            </span>
+          </span>
+        </span>
+
+        <ol>
         {demo.steps.map((step, index) => {
           const done = elapsed >= STEP_AT[index];
 
@@ -136,9 +184,13 @@ export function DeliveryDemo() {
                 {step.at}
               </span>
               <span className="min-w-0 leading-tight">
+                {/* A BATIDA: quando a bolinha chega, o título dá um passo de
+                    3px e volta (`.log-batida`). A classe entra com o `done` e
+                    sai no recomeço da simulação, então a animação corre uma
+                    vez por corrida — sem `key`, sem remontar nada. */}
                 <span
                   className={`block text-[13px] font-semibold transition-colors duration-300 ${
-                    done ? "text-cream" : "text-faint"
+                    done ? "log-batida text-cream" : "text-faint"
                   }`}
                 >
                   {step.label}
@@ -154,7 +206,8 @@ export function DeliveryDemo() {
             </li>
           );
         })}
-      </ol>
+        </ol>
+      </div>
 
       {/* Cronômetro à direita. No celular ele deita ao lado do estado e do
           botão em vez de empilhar: são ~110px a menos de altura numa seção que
@@ -193,7 +246,10 @@ export function DeliveryDemo() {
             existe desde o primeiro quadro, vazia. */}
         <div className="min-w-0 flex-1 sm:w-full">
           <div className="flex h-7 items-center">
-            {finished ? <Chip tone="ok">{demo.done}</Chip> : null}
+            {/* "Acesso liberado" sobe 6px ao entrar: é o fim do percurso, e o
+                único lugar da demo em que algo NASCE — por isso é animação de
+                montagem (`.log-chip`) e não transição de estado. */}
+            {finished ? <Chip tone="ok" className="log-chip">{demo.done}</Chip> : null}
           </div>
 
           {/* Botão de produto dentro da demo: o `object` do CtaButton, a mesma
