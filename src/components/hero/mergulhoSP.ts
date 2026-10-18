@@ -9,8 +9,8 @@
  *
  * Este arquivo é PURO: não conhece DOM, React nem three. Ele devolve, para um
  * instante em ms desde o começo da parada, a escala da câmera, a obliquidade,
- * a órbita e as QUATRO VISIBILIDADES das camadas. Quem desenha (o `HeroGlobe3D`
- * e o `SaoPauloCena`) só aplica.
+ * a órbita e as VISIBILIDADES das camadas. Quem desenha (o `HeroGlobe3D` e o
+ * `SaoPauloCena`) só aplica.
  *
  * AS VISIBILIDADES SAEM DO ZOOM, NÃO DO TEMPO. É de propósito: o mesmo zoom
  * mostra a mesma coisa descendo e subindo, então a volta não precisa de uma
@@ -71,6 +71,8 @@ export type EstadoSP = {
   readonly mapa: number;
   /** 0 = prédios rentes ao chão; 1 = na altura real. */
   readonly predios: number;
+  /** 0 = as vias do mapa acesas (néon); 1 = apagadas (asfalto). */
+  readonly avenidas: number;
   /** 0 = marca apagada na torre; 1 = acesa. */
   readonly logo: number;
   /** 0 = só o mapa de 22 km; 1 = o recorte de 4 km do centro por cima. */
@@ -309,6 +311,38 @@ export const LIMIAR = {
    */
   predios: [1600, 5000],
   /**
+   * AS AVENIDAS APAGAM NA MESMA RAMPA EM QUE OS PRÉDIOS SOBEM — pedido do dono,
+   * 17/10: "no último zoom, na cidade de São Paulo (…) têm duas linhas
+   * tracejadas em laranja que se cruzam. Preciso que, nesse zoom da maquete,
+   * esse tracejado suma."
+   *
+   * O QUE ELE VIU. As duas linhas não são da rede de arcos (essa já está
+   * apagada desde Z = 14, por `pontos`): são as vias de classe `expressa` da
+   * textura noturna — laranja da marca com NÚCLEO CREME, 2,2 px de textura a
+   * 1,95 m/px, ou seja 4,3 m de creme quase branco. No zoom da cidade isso é
+   * meio pixel de filamento e é lindo; no zoom da torre, a 2,19 m/px, é uma
+   * fita de 2 px de brilho máximo passando por baixo de uma maquete — e, como
+   * os prédios a cortam em pedaços, ela lê como TRACEJADO. O defeito não é a
+   * via existir, é ela continuar sendo néon depois que o chão virou maquete.
+   *
+   * POR QUE O MESMO PAR DE `predios`, E NÃO UM PRÓPRIO. Porque é a mesma
+   * troca, lida dos dois lados: a cidade tem uma quantidade de luz, e quem a
+   * carrega muda de dono no meio da aproximação. Até Z = 1.600 quem acende o
+   * quadro é o chão (as vias são a FONTE DE LUZ do mapa noturno, e é por isso
+   * que o `CHAO_NO_FUNDO` do `SaoPauloCena` caiu de 30% para 12%); de 5.000 em
+   * diante quem acende são as arestas e as janelas dos prédios, que crescem
+   * com `brilho = predios^1,35`. Fazer as duas rampas com o mesmo par é o que
+   * mantém o total de luz do quadro aproximadamente constante na travessia —
+   * com um par próprio, mais tarde, haveria um trecho com as duas acesas
+   * (clarão) e, mais cedo, um trecho com nenhuma (buraco escuro).
+   *
+   * E O ZOOM DA CIDADE NÃO É TOCADO, por construção: em Z = 405 esta rampa
+   * ainda vale ZERO (405 < 1.600), e o mapa noturno de São Paulo inteira —
+   * que o dono aprovou e não pediu para mexer — continua exatamente como era.
+   * No celular, que para em 405 e não tem prédios, ela nunca sai de zero.
+   */
+  avenidas: [1600, 5000],
+  /**
    * A MARCA é a última coisa a acender, e só no fim: em Z = 5.000 a placa de
    * 46 m mede 11 px (a marca ainda seria um borrão laranja); em 9.000 mede
    * 21 px e os dois anéis do símbolo se separam; no fundo do mergulho, 32 px.
@@ -338,15 +372,21 @@ function entre(x: number, a: number, b: number) {
 }
 
 /**
- * As quatro visibilidades para uma escala qualquer — exportada à parte porque
- * ela, e não o relógio, é o contrato: quem integra pode chamá-la com o zoom que
- * tiver na mão (inclusive fora do mergulho) e receber um estado coerente.
+ * As visibilidades para uma escala qualquer — exportada à parte porque ela, e
+ * não o relógio, é o contrato: quem integra pode chamá-la com o zoom que tiver
+ * na mão (inclusive fora do mergulho) e receber um estado coerente.
+ *
+ * `avenidas` sai do MESMO par de `predios` (ver `LIMIAR.avenidas`) e por isso
+ * vale, em todo zoom, exatamente o mesmo número. É de propósito, e é o que
+ * deixa o `SaoPauloCena` ler o sinal do fio que ele já recebe em vez de pedir
+ * um quinto: enquanto os dois pares forem iguais, não há o que transportar.
  */
 export function visibilidades(zoom: number) {
   return {
     pontos: 1 - entre(zoom, LIMIAR.pontos[0], LIMIAR.pontos[1]),
     mapa: entre(zoom, LIMIAR.mapa[0], LIMIAR.mapa[1]),
     predios: entre(zoom, LIMIAR.predios[0], LIMIAR.predios[1]),
+    avenidas: entre(zoom, LIMIAR.avenidas[0], LIMIAR.avenidas[1]),
     logo: entre(zoom, LIMIAR.logo[0], LIMIAR.logo[1]),
     detalhe: entre(zoom, LIMIAR.detalhe[0], LIMIAR.detalhe[1]),
   };

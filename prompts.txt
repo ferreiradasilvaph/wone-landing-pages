@@ -1388,3 +1388,11 @@ organize essa logica
 [155] 2026-10-17
 ===============================================================================
 vamos chat... o que e esse Issues? parece um erro, corrija-o
+
+
+===============================================================================
+[156] 2026-10-17
+===============================================================================
+chat, no ultimo zoom, na cidade de sao paulo - me refiro ao zoom que mostra a
+maquete da cidade. nesse zoom em questao tem duas linhas tracejadas em laranja
+que se cruzam. preciso, que nesse zoom, da maquete, esse tracejado suma

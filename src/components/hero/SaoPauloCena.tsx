@@ -51,6 +51,7 @@ import {
   TextureLoader,
   Vector2,
   Vector3,
+  type WebGLProgramParametersWithUniforms,
 } from "three";
 
 import { baseVector } from "./globeMath";
@@ -186,6 +187,46 @@ const LOGO_FACHADA_Z = 206;
  * no fundo" (ela só sai de zero acima de Z = 5.000).
  */
 const CHAO_NO_FUNDO = 0.12;
+
+/**
+ * O TETO DAS VIAS NA MAQUETE — o número que apaga o "tracejado laranja".
+ *
+ * Pedido do dono, 17/10: "no último zoom, na cidade de São Paulo — o zoom que
+ * mostra a maquete da cidade — têm duas linhas tracejadas em laranja que se
+ * cruzam. Preciso que, nesse zoom da maquete, esse tracejado suma."
+ *
+ * O QUE É O TRACEJADO: as vias `expressa` da textura noturna, que são laranja
+ * da marca com NÚCLEO CREME (ver `VIA_ESTILO_CENTRO` em `scripts/gera-sp.mjs`).
+ * Compostas sobre o preto, elas chegam a 0,956 de sRGB no núcleo — branco, na
+ * prática — e os prédios da maquete, por cima, cortam essa fita em pedaços: é
+ * daí que sai a leitura de "tracejado". Ver `LIMIAR.avenidas` em `mergulhoSP`
+ * para QUANDO isto acontece; aqui está QUANTO.
+ *
+ * O CORTE É UM TETO, NÃO UMA MULTIPLICAÇÃO — e a diferença é de gama. A
+ * textura é sRGB e o `diffuseColor` do fragmento já está em LINEAR: multiplicar
+ * o linear por 0,18, que é o reflexo de quem pensa em sRGB, devolve o núcleo
+ * em 0,34 de sRGB, ou seja ainda uma linha acesa. Um TETO resolve os dois
+ * lados de uma vez: tudo o que já está abaixo dele passa INTACTO (as quadras,
+ * os telhados, o parque, a água, os halos fracos — o chão escuro em volta não
+ * muda de tom nem um degrau), e tudo o que passa dele desce na mesma razão nos
+ * três canais, ou seja perde brilho SEM perder a cor. A avenida continua sendo
+ * uma faixa laranja desenhada entre os prédios; ela só para de ser lâmpada.
+ *
+ * 0,030 EM LINEAR = 0,190 em sRGB. A escada, medida na paleta do gerador:
+ *
+ *   quadras e telhados   0,007–0,0075 linear   (0,080–0,082 sRGB)  ← intactos
+ *   TETO                 0,030                 (0,190)
+ *   halo largo da via    0,042                 (0,227)             ← mal encosta
+ *   núcleo laranja       0,527                 (0,753)             ← 17× abaixo
+ *   núcleo creme         0,902                 (0,956)             ← 30× abaixo
+ *
+ * Fica 2,3× mais claro que a quadra (em sRGB), que é o bastante para o traçado
+ * da avenida continuar legível por baixo da maquete, e a luminância da faixa
+ * cai para 0,026 — abaixo do `BLOOM_LIMIAR` de 0,12 do `HeroGlobePos`, de modo
+ * que ela também deixa de sangrar luz no pós-processamento. Era o bloom que
+ * engrossava o tracejado para além dos seus 2 px.
+ */
+const VIA_TETO = 0.03;
 
 /* ------------------------------------------------------------------ cores
 
@@ -1173,6 +1214,23 @@ export type SaoPauloCenaProps = {
   mapa: number;
   /** A altura dos prédios: 0 = rentes ao chão, 1 = altura real. */
   predios: number;
+  /**
+   * AS AVENIDAS DO MAPA: 0 = acesas (o néon do mapa noturno), 1 = apagadas
+   * (asfalto escuro, ver `VIA_TETO`).
+   *
+   * O PADRÃO É `predios`, E ISSO NÃO É ATALHO: `LIMIAR.avenidas` é o MESMO par
+   * de `LIMIAR.predios` (a luz do quadro troca de dono — sai do chão, entra nas
+   * arestas e janelas), então `visibilidades(zoom).avenidas` devolve, em todo
+   * zoom, exatamente `visibilidades(zoom).predios`. Puxar um quinto fio pelo
+   * `cena.ts`, pelo `HeroGlobe` e pelo `HeroGlobe3D` para transportar um número
+   * que já chega igual seria três arquivos de encanamento sem um pixel de
+   * diferença — e o fio de `predios` já vem zerado no celular, que é
+   * exatamente o que esta rampa precisa lá.
+   *
+   * A prop existe para o dia em que os dois pares se separarem: quando isso
+   * acontecer, é aqui que o valor próprio entra, e nada mais muda.
+   */
+  avenidas?: number;
   /** A marca na torre: 0 = apagada, 1 = acesa. */
   logo: number;
   /**
@@ -1217,6 +1275,7 @@ export default function SaoPauloCena({
   predios,
   logo,
   detalhe,
+  avenidas = predios,
   querDetalhe = false,
   camadaBrilho,
 }: SaoPauloCenaProps) {
@@ -1287,6 +1346,55 @@ export default function SaoPauloCena({
   }, [gl, invalidate, querDetalhe]);
 
   const materiais = useMemo(() => {
+    /**
+     * O UNIFORME DAS AVENIDAS é UM só para os dois chãos: o grande e o recorte
+     * de detalhe trocam de lugar por crossfade, e um quadro em que os dois
+     * estivessem em pontos diferentes da rampa mostraria justamente a emenda
+     * que o `LIMIAR.detalhe` existe para esconder. `onBeforeCompile` entrega o
+     * MESMO `{ value }` aos dois materiais: escrever nele é escrever nos dois.
+     *
+     * Ele nasce aqui dentro e sai pela função `poeAvenidas`, e não como
+     * objeto: um uniforme é estado da GPU, não estado de React, e tudo o que
+     * sai de um `useMemo` é imutável para quem o recebe (`react-hooks`). A
+     * função é o jeito honesto de dizer "quem manda nisto é o material".
+     */
+    const uAvenidas = { value: 0 };
+
+    /**
+     * A INJEÇÃO. Uma função SÓ, compartilhada pelos dois materiais, e isso não
+     * é estilo: o three monta a chave do cache de programas com
+     * `onBeforeCompile.toString()` (ver `Material.customProgramCacheKey`), então
+     * duas funções com o mesmo corpo já compartilhariam o programa — mas uma
+     * função só deixa isso explícito e garante que as duas injeções não possam
+     * divergir.
+     *
+     * O corte entra DEPOIS de `<map_fragment>`, que é onde `diffuseColor`
+     * acabou de receber o texel, e ANTES de `<color_fragment>` (a cor de
+     * vértice, que aqui é branca e só carrega o alfa da borda) e de
+     * `<colorspace_fragment>` (a conversão de saída). Ou seja: mexe na cor
+     * DIFUSA, em linear, antes de qualquer gama — o resultado é o mesmo com e
+     * sem o compositor da etapa 5.
+     *
+     * `max(viaPico, VIA_TETO)` no denominador em vez de um `if`: ele tira a
+     * divisão por zero do chão preto e já devolve k = 1 para tudo que está
+     * abaixo do teto, sem desvio no fragmento.
+     */
+    const teto = VIA_TETO.toFixed(4);
+    const apagaVias = (shader: WebGLProgramParametersWithUniforms) => {
+      shader.uniforms.uAvenidas = uAvenidas;
+      shader.fragmentShader = shader.fragmentShader
+        .replace("#include <common>", "#include <common>\nuniform float uAvenidas;")
+        .replace(
+          "#include <map_fragment>",
+          [
+            "#include <map_fragment>",
+            "float viaPico = max(diffuseColor.r, diffuseColor.g);",
+            `float viaK = ${teto} / max(viaPico, ${teto});`,
+            "diffuseColor.rgb *= mix(1.0, viaK, uAvenidas);",
+          ].join("\n"),
+        );
+    };
+
     const chao = new MeshBasicMaterial({
       map: texturas.chao,
       transparent: true,
@@ -1334,7 +1442,22 @@ export default function SaoPauloCena({
       side: DoubleSide,
       forceSinglePass: true,
     });
-    return { chao, chaoCentro, predio, torre, marca };
+    chao.onBeforeCompile = apagaVias;
+    if (chaoCentro) chaoCentro.onBeforeCompile = apagaVias;
+
+    /* O ESPELHO DO UNIFORME NO `userData`, pelo mesmo motivo do `espia3d` do
+       `HeroGlobe3D`: é por ele que a medição liga e desliga o teto no MESMO
+       quadro — mesma escala, mesma órbita, mesma sessão — em vez de comparar
+       duas builds e discutir se a diferença é da mudança ou do ângulo. Não
+       custa um byte no desenho; `userData` nunca é lido pelo renderizador. */
+    chao.userData.uAvenidas = uAvenidas;
+    if (chaoCentro) chaoCentro.userData.uAvenidas = uAvenidas;
+
+    const poeAvenidas = (v: number) => {
+      uAvenidas.value = v;
+    };
+
+    return { chao, chaoCentro, predio, torre, marca, poeAvenidas };
   }, [texturas]);
 
   /* Devolver tudo ao driver no desmonte: o canvas do hero morre quando o
@@ -1358,6 +1481,21 @@ export default function SaoPauloCena({
     },
     [pecas, materiais, texturas],
   );
+
+  /* O TETO DAS VIAS, escrito no uniforme que os dois chãos compartilham.
+     É UMA ESCRITA POR MUDANÇA DE PROP, não por quadro: as props já chegam em
+     degraus de 1/64 (ver `cidadeSP`, em `HeroGlobe3D`), de modo que o mergulho
+     inteiro custa no máximo ~64 escritas contra os seus ~670 quadros — e
+     nenhuma alocação, porque o `{ value }` nasceu no `useMemo` dos materiais e
+     vive com eles.
+
+     Num efeito e não no corpo porque escrever durante o render é mutação no
+     meio do render (`react-hooks/immutability`). O atraso é o mesmo de
+     qualquer prop de material do r3f — as opacidades aqui do lado chegam à GPU
+     no mesmo quadro que este número. */
+  useEffect(() => {
+    materiais.poeAvenidas(avenidas);
+  }, [materiais, avenidas]);
 
   /* Fora do mergulho a cena some inteira: nada de material transparente com
      opacidade zero ocupando um draw call em todo quadro do tour. */
