@@ -6,9 +6,10 @@
  *
  * Ela monta DENTRO do grupo da esfera do `HeroGlobe3D` (o grupo que gira em
  * guinada e inclinação); não tem câmera, não tem luz e não tem relógio. Quem
- * manda no tempo é `mergulhoSP.ts`, que devolve as três visibilidades que este
- * componente recebe como props. Fora do mergulho, `mapa = 0` e a cena inteira
- * fica `visible = false`: zero draw call, zero custo.
+ * manda no tempo é `mergulhoSP.ts`, que devolve as visibilidades que este
+ * componente recebe como props — todas derivadas da ESCALA, inclusive a
+ * `fachada`, que é a do retrato de perto. Fora do mergulho, `mapa = 0` e a cena
+ * inteira devolve `null`: zero draw call, zero custo.
  *
  * A TORRE É FICÇÃO. A Wone não tem prédio na Avenida Paulista: `SP_MAPA.torre`
  * é um ponto de ilustração ao lado do MASP, e tudo que nasce dele — o prisma de
@@ -187,6 +188,34 @@ const LOGO_FACHADA_Z = 206;
  * no fundo" (ela só sai de zero acima de Z = 5.000).
  */
 const CHAO_NO_FUNDO = 0.12;
+
+/**
+ * E ESCURECE MAIS 45% NO RETRATO DA TORRE (fase `fachada`, 18/10).
+ *
+ * É a mesma decisão do `CHAO_NO_FUNDO`, tomada uma escala adiante e com o sinal
+ * trocado. A conta: o recorte de detalhe tem 1,95 m por texel, e a 9.200 a
+ * câmera está em 2,19 m/px — 0,89 texel por pixel, ou seja NÍTIDO. Em 34.000
+ * ela está em 0,59 m/px: são 3,3 px por texel, e um filamento de luz de rua
+ * ampliado 3,3× deixa de ser filamento e vira um QUADRADO de cor. O chão, que
+ * na maquete era a fonte de luz do quadro, no retrato é a única peça que não
+ * tem resolução para a distância.
+ *
+ * 45% e não 100%: apagar o chão de todo deixaria o prédio flutuando no preto, e
+ * o que faz o retrato parecer real é justamente a cidade embaixo dele. Com os
+ * dois sinais cheios o chão fica a 48% (0,88 do `CHAO_NO_FUNDO` vezes 0,55
+ * daqui): as avenidas continuam legíveis como traçado e ainda alimentam o
+ * bloom, só param de competir com a fachada. Quem carrega o quadro aqui são os
+ * prédios — que ganham janela por vão nas tarefas F e V — e os postes das ruas
+ * da tarefa L, que nascem desta MESMA textura e trocam os filamentos borrados
+ * por lâmpadas de verdade.
+ *
+ * MULTIPLICA o `CHAO_NO_FUNDO` em vez de somar-se a ele: os dois sinais sobem
+ * em escalas diferentes (`logo` entre 5.000 e 9.000, `fachada` entre 12.000 e
+ * 26.000), e um produto de fatores nunca sai de [0,1] nem precisa de limite —
+ * a soma dos dois descontos (0,57) precisaria, e numa terceira camada
+ * passaria de 1 e viraria opacidade negativa.
+ */
+const CHAO_NA_FACHADA = 0.45;
 
 /**
  * O TETO DAS VIAS NA MAQUETE — o número que apaga o "tracejado laranja".
@@ -1241,6 +1270,51 @@ export type SaoPauloCenaProps = {
    */
   detalhe: number;
   /**
+   * O DETALHE DE PERTO: 0 = o mergulho de sempre, 1 = o RETRATO DA TORRE.
+   *
+   * Pedido do dono, 18/10: "adicione mais um zoom, no globo, onde mostra a
+   * torre mais detalhada em uma vista mais próxima (...) capriche nos detalhes
+   * do prédio".
+   *
+   * Sai da ESCALA como as outras visibilidades (`LIMIAR.fachada` em
+   * `mergulhoSP`: acende entre Z = 12.000 e 26.000), e por isso vale ZERO em
+   * todo o mergulho que existia até 9.200 — nada do que ele acende aparece na
+   * contemplação, e a volta se desfaz sozinha na subida e em qualquer desvio
+   * por clique. No celular chega sempre zerado, como `predios`.
+   *
+   * É o sinal de "um pixel vale 0,59 m agora": é ele que autoriza as peças que
+   * medem menos de um pixel na maquete — as janelas por vão (montante de
+   * 0,3 m), a caixa de luz do letreiro, a cinta da coroa (1,2 m), as balizas
+   * dos mastros (1 m) e a vitrine do saguão. Padrão 0: a cena montada sem este
+   * fio é exatamente a cena de 17/10.
+   */
+  fachada?: number;
+  /**
+   * A ESCALA DE TELA DA CÂMERA, em degraus de 1/16 de nat (ver `cidadeSP` no
+   * `HeroGlobe3D`). O padrão de quem a consumir é `ZOOM_TORRE` (9.200), o fim
+   * da contemplação — é o que `ZERO_SP` publica quando não há mergulho.
+   *
+   * POR QUE UMA CENA SEM CÂMERA PRECISA DO ZOOM. Ela não precisa dele para
+   * NADA que seja geometria: tudo aqui é medido em metros, e metro não depende
+   * de escala. Ele existe para as peças cujo tamanho é em PIXELS — os sprites
+   * de luz dos postes das ruas (`SaoPauloLuzes`), que são pontos e não malhas,
+   * e cujo `gl_PointSize` tem de sair de uma conta de px por metro:
+   *
+   *     px por metro = (largura do canvas em CSS / 2) · zoom / 6.371.000
+   *
+   * Em DEGRAUS e não por quadro porque este é um componente de React, e um
+   * número contínuo aqui seria um render por quadro. 1/16 de nat é a resolução
+   * em que um sprite de 1,8 m muda menos de meio pixel no fundo do mergulho.
+   *
+   * A TAREFA T SÓ LIGA O FIO, e por isso ele é declarado aqui e NÃO
+   * desestruturado no corpo: quem lê este número é a tarefa L (os postes das
+   * ruas), e um parâmetro com valor e sem leitor é aviso de lint — a régua
+   * desta base é `pnpm lint` sem uma linha de saída. Quando o leitor existir,
+   * é só acrescentar `zoom = ZOOM_TORRE` à desestruturação; o fio já chega
+   * ligado do `HeroGlobe3D`, em degraus, desde 18/10.
+   */
+  zoom?: number;
+  /**
    * Baixar ou não a textura de detalhe. Falso no celular: são 214 kB, e a
    * câmera de lá para em Z = 405, onde o recorte nem começaria a aparecer.
    */
@@ -1275,6 +1349,7 @@ export default function SaoPauloCena({
   predios,
   logo,
   detalhe,
+  fachada = 0,
   avenidas = predios,
   querDetalhe = false,
   camadaBrilho,
@@ -1525,7 +1600,9 @@ export default function SaoPauloCena({
       <mesh
         geometry={pecas.chaoGeo}
         material={materiais.chao}
-        material-opacity={mapa * (1 - CHAO_NO_FUNDO * logo)}
+        material-opacity={
+          mapa * (1 - CHAO_NO_FUNDO * logo) * (1 - CHAO_NA_FACHADA * fachada)
+        }
         renderOrder={2}
         ref={(no) => {
           /* O CHÃO ENTRA NO BLOOM (etapa 5, pedido de 17/10 por "um belo
@@ -1557,7 +1634,12 @@ export default function SaoPauloCena({
           geometry={pecas.centroGeo}
           material={materiais.chaoCentro}
           position={deslocamento}
-          material-opacity={mapa * detalhe * (1 - CHAO_NO_FUNDO * logo)}
+          material-opacity={
+            mapa *
+            detalhe *
+            (1 - CHAO_NO_FUNDO * logo) *
+            (1 - CHAO_NA_FACHADA * fachada)
+          }
           renderOrder={2.2}
           ref={(no) => {
             /* Entra no bloom pela mesma razão do chão grande: as vias dele

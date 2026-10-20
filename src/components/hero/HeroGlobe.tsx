@@ -23,6 +23,8 @@ import { CountryTag } from "./CountryTag";
 import {
   DURACAO_SP_MS,
   enquadraSP,
+  fatorAlvo,
+  INCLINACAO_MAX,
   mergulhoSP,
   visibilidades,
   ZOOM_CIDADE,
@@ -406,10 +408,13 @@ const DESVIO_ENDIREITA = 0.4;
  * Quanto tempo o desvio dá a cada "nat" de esforço (arco + escala), em ms.
  *
  * 300, e o número vem da fase `sobe` do mergulho em São Paulo, que o dono
- * aprovou: 9,24 nats em 2,4 s são 260 ms por nat. Com a folga de 300, a subida
- * mais cara que existe — da torre a 9.200 até uma capital do outro lado do
- * Atlântico — leva 2,7 s em vez dos 2,6 s de uma perna comum, e a escala anda a
- * 3,4 nats por segundo em vez de 15.
+ * aprovou: 10,13 nats em 2,7 s são 267 ms por nat (eram 9,24 em 2,4 s, ou 260,
+ * antes da fase `fachada` empurrar o fundo do mergulho de 9.200 para 34.000 —
+ * a folga de 300 absorveu a mudança sem ninguém precisar mexer aqui). Com ela,
+ * a subida mais cara que existe — do retrato da torre a 34.000 até uma capital
+ * do outro lado do Atlântico, 1,49 rad de arco e 10,13 nats de escala, esforço
+ * 10,24 — leva 3,1 s em vez dos 2,6 s de uma perna comum, e a escala anda a
+ * 3,3 nats por segundo em vez de 15.
  */
 const DESVIO_MS_POR_NAT = 300;
 
@@ -772,14 +777,14 @@ const PORTAO_PASSO = 100;
    mostre como se fosse imagens de satélite reais detalhando a cidade de são
    paulo, essa pausa da bolinha vai ser a mais longa dentre os outros países".
 
-   São 11,2 s contra 1,8 s das outras seis, e o modelo de tempo disso vive em
+   São 17,7 s contra 1,8 s das outras seis, e o modelo de tempo disso vive em
    `mergulhoSP.ts` — puro, sem DOM e sem three, como o `voo.ts` ao lado. Aqui só
    se LÊ: a cada quadro da parada em São Paulo este laço chama `mergulhoSP(ms)`
    com o tempo decorrido dentro do pouso e publica o resultado no contrato.
 
    QUEM NÃO MERGULHA: o canvas 2D. Ele é o placeholder, o fallback sem WebGL e o
    caminho do movimento reduzido, e não tem cidade nenhuma para mostrar — a
-   textura noturna e os prédios são geometria 3D. Então, nos 11,2 s, ele fica no
+   textura noturna e os prédios são geometria 3D. Então, nos 17,7 s, ele fica no
    enquadramento de pouso (1,35×) e espera. É por isso que a escala do mergulho
    mora em `cena.sp.zoom` e não sobrescreve `cena.escala`.
 
@@ -991,7 +996,7 @@ export function HeroGlobe({
    * grande-círculo, mesma curva de van Wijk, mesmo atraso de câmera, mesmo
    * cometa. A única diferença é que ela não começa numa capital — começa onde
    * quer que a câmera estivesse, inclusive em cima da torre de São Paulo a
-   * 9.200 de escala.
+   * 34.000 de escala (o fundo da fase `fachada`).
    *
    * Num `ref` de COMPONENTE e não numa variável do efeito: o efeito de desenho
    * se refaz quando um freio é puxado (aba oculta, hero fora da tela), e um
@@ -1004,9 +1009,16 @@ export function HeroGlobe({
     indice: number;
     /** A largura de vista de ONDE se partiu — o w₀ da curva de van Wijk. */
     w0: number;
-    /** Obliquidade e órbita do mergulho no instante do clique, para desfazer. */
+    /**
+     * Obliquidade, órbita e altura do alvo do mergulho no instante do clique,
+     * para desfazer. A altura entrou com a fase `fachada`: partir do retrato
+     * da torre é partir com o alvo 130 m acima do chão, e esquecê-la seria um
+     * SALTO de 107 m de projeção (180 px a 0,59 m/px) no primeiro quadro do
+     * desvio — o tranco que esta perna existe para não ter.
+     */
     incl0: number;
     orb0: number;
+    alt0: number;
     ms: number;
     duracao: number;
     /** O rastro desta perna já foi montado? */
@@ -1021,7 +1033,7 @@ export function HeroGlobe({
    * quadro que já terminou. Sem isto o desvio teria de partir da capital em que
    * o voo estava, e não do ponto do céu onde o espectador está olhando: no meio
    * de uma perna seriam até 42° de salto, e em cima da torre de São Paulo, um
-   * corte de 9.200 para 1,35 de escala.
+   * corte de 34.000 para 1,35 de escala.
    *
    * `escVista` é a escala que o espectador VÊ — no mergulho de São Paulo é a da
    * caixa `sp`, não a do voo, que lá fica parada em 1,35 para o canvas 2D.
@@ -1031,7 +1043,15 @@ export function HeroGlobe({
     escVista: number;
     incl: number;
     orb: number;
-  }>({ cam: { lat: LAT0, lon: LON0 }, escVista: 1, incl: 0, orb: 0 });
+    /** A altura do alvo do enquadre, em metros (ver `cena.sp.alturaAlvo`). */
+    alturaAlvo: number;
+  }>({
+    cam: { lat: LAT0, lon: LON0 },
+    escVista: 1,
+    incl: 0,
+    orb: 0,
+    alturaAlvo: 0,
+  });
 
   const escolher = useRef<(indice: number) => void>(() => {});
 
@@ -2460,18 +2480,24 @@ export function HeroGlobe({
      * Calcula o mergulho e o publica no contrato.
      *
      * NO CELULAR ELE É MAIS CURTO E MAIS RASO (etapa 6 levada a sério): a
-     * câmera para em `ZOOM_CIDADE` em vez de ir aos 14.000 da torre, e os prédios
-     * não sobem. 3.769 prédios são 62 mil triângulos e 4,4 MB de buffer — é
-     * mais do que um aparelho de entrada deve segurar por um momento de 2 s, e
-     * a 405 de escala o disco tem 49,7 m/px, onde um prédio comum mede 0,6 px e
-     * a placa da marca, 0,9: nada do que foi cortado era visível ali. O que
+     * câmera para em `ZOOM_CIDADE` em vez de ir aos 34.000 da fachada, e os
+     * prédios não sobem. 3.769 prédios são 62 mil triângulos e 4,4 MB de buffer
+     * — é mais do que um aparelho de entrada deve segurar por um momento de 2 s,
+     * e a 405 de escala o disco tem 49,7 m/px, onde um prédio comum mede 0,6 px
+     * e a placa da marca, 0,9: nada do que foi cortado era visível ali. O que
      * sobra — a cidade inteira vista do alto, com o mapa noturno de verdade —
      * é a parte que cabe na tela de um celular.
      *
      * As visibilidades são recalculadas a partir da escala JÁ limitada, e não
      * copiadas do estado: é o que mantém as camadas coerentes com o que a
-     * câmera está realmente mostrando (ver `visibilidades()`).
+     * câmera está realmente mostrando (ver `visibilidades()`). Desde 18/10 a
+     * OBLIQUIDADE também é limitada lá — ver o corpo.
      */
+    /* O argumento de `enquadraSP`, reaproveitado: um objeto só, mutado por
+       quadro, porque o celular precisa pedir o enquadre com a obliquidade JÁ
+       limitada e um literal por quadro seria uma alocação por quadro. */
+    const pedeEnquadre = { inclinacao: 0, orbita: 0, alturaAlvo: 0 };
+
     function mergulha(voando: Estado) {
       const sp = palco.sp;
       /* DUAS CONDIÇÕES, e a segunda custou um defeito medido: a cidade tem de
@@ -2488,12 +2514,34 @@ export function HeroGlobe({
       const e = mergulhoSP(voando.msPouso);
       const zoom = celular ? Math.min(e.zoom, ZOOM_CIDADE) : e.zoom;
       const v = celular ? visibilidades(zoom) : e;
-      const q = enquadraSP(e);
+      /* A OBLIQUIDADE É LIMITADA NO CELULAR, e este teto nasceu com a fase
+         `fachada`: ela leva a vista a 55°, e os 55° só são seguros porque o
+         quadro do retrato mede 375 m (ver `INCLINACAO_FACHADA`). No celular a
+         escala fica presa em 405, onde o quadro mede 31,5 km — e ali, acima de
+         ~40°, a esfera entrega o LIMBO pelo topo da tela e o chão de 22 km
+         deixa de cobrir menos da metade da altura útil (é a conta que escolheu
+         `INCLINACAO_MAX`). Com o teto em 32°, o celular continua vendo
+         exatamente o enquadre que ele já via; o que ele ganha da fase nova são
+         os 4,2 s de órbita em cima da cidade.
+
+         O TETO VAI PARA O ENQUADRE TAMBÉM, e não só para o campo publicado:
+         o grupo gira por `sp.pitch`, que sai de `enquadraSP`. Limitar um e não
+         o outro seria publicar 32° e desenhar 55°. */
+      const inclinacao = celular
+        ? Math.min(e.inclinacao, INCLINACAO_MAX)
+        : e.inclinacao;
+      pedeEnquadre.inclinacao = inclinacao;
+      pedeEnquadre.orbita = e.orbita;
+      pedeEnquadre.alturaAlvo = e.alturaAlvo;
+      const q = enquadraSP(pedeEnquadre);
       sp.ativo = true;
       sp.fase = e.fase;
       sp.zoom = zoom;
-      sp.inclinacao = e.inclinacao;
+      sp.inclinacao = inclinacao;
       sp.orbita = e.orbita;
+      /* A ALTURA DO ALVO não precisa de teto: ela só sai de zero na fase
+         `fachada` e vale 130 m, que a 49,7 m/px do celular são 2,6 px. */
+      sp.alturaAlvo = e.alturaAlvo;
       /* O deslocamento livre vale TAMBÉM no mergulho: a câmera da cidade é o
          centro mais o gesto. A translação de `enquadraSP` continua valendo —
          ela põe a torre no meio do disco, e o gesto a desloca de lá, que é o
@@ -2508,6 +2556,14 @@ export function HeroGlobe({
       sp.predios = celular ? 0 : v.predios;
       sp.logo = celular ? 0 : v.logo;
       sp.detalhe = celular ? 0 : v.detalhe;
+      /* O DETALHE DE PERTO vem junto com os prédios, e por isso pelo mesmo
+         `celular ? 0`: tudo o que ele acende é geometria de prédio (janelas por
+         vão, letreiro, coroa, balizas, vitrine) ou os postes das ruas, e nada
+         disso existe lá. E a escala limitada já o zeraria sozinho — 405 está
+         muito abaixo dos 12.000 de `LIMIAR.fachada` —, mas escrever o zero
+         explicitamente é o que mantém a leitura "no celular não há cidade 3D"
+         em uma linha e não em duas inferências. */
+      sp.fachada = celular ? 0 : v.fachada;
       /* O PALCO da linha do tempo, que é o alvo do modo cinema. No celular
          não há cinema: lá o globo é um bloco em fluxo depois dos botões e
          não existe coluna ao lado para liberar. */
@@ -2542,14 +2598,32 @@ export function HeroGlobe({
      * gira em torno do CENTRO DA TERRA, então inclinar leva o alvo para longe
      * do meio do disco (3.376 km a 32°), e a translação o traz de volta.
      *
-     * Com `inclinacao = 0` e `orbita = 0` ele devolve exatamente o que
-     * `centraliza()` já devolvia, e x = y = 0: fora do mergulho nada muda.
+     * `altura` é a terceira grandeza do enquadre (ver `cena.sp.alturaAlvo`): o
+     * alvo não é um ponto da superfície, é um ponto a 30 m + `altura` dela, e
+     * por isso o vetor unitário é empurrado radialmente para fora antes da
+     * conta. O fator vem do `fatorAlvo` do `mergulhoSP` — a MESMA função que o
+     * enquadre do mergulho usa, não uma segunda cópia da fórmula: desfazer o
+     * enquadre do retrato por uma conta diferente da que o fez é a maneira
+     * mais fácil de a emenda do clique saltar meio quadro.
+     *
+     * Com `inclinacao = 0`, `orbita = 0` e `altura = 0` ele devolve o que
+     * `centraliza()` já devolvia, com x e y nos 4,7·10⁻⁶ dos 30 m do chão —
+     * 0,0015 px no zoom de repouso.
      */
-    function enquadra(alvoP: Ponto, inclinacao: number, orbita: number) {
+    function enquadra(
+      alvoP: Ponto,
+      inclinacao: number,
+      orbita: number,
+      altura: number,
+    ) {
       const base = centraliza(alvoP.lat, alvoP.lon);
       const pitch = base.pitch - inclinacao;
       const yaw = base.yaw + orbita;
-      const [x, y, z] = baseVector(alvoP.lat, alvoP.lon);
+      const v0 = baseVector(alvoP.lat, alvoP.lon);
+      const sobeAlvo = fatorAlvo(altura);
+      const x = v0[0] * sobeAlvo;
+      const y = v0[1] * sobeAlvo;
+      const z = v0[2] * sobeAlvo;
       const cy = Math.cos(yaw);
       const sy = Math.sin(yaw);
       const x1 = cy * x + sy * z;
@@ -2589,7 +2663,7 @@ export function HeroGlobe({
      *
      * O w₀ é a largura de vista de ONDE SE PARTE, e é ele que faz a curva de van
      * Wijk se comportar: partindo do pouso (1,35×) ela abre e fecha como uma
-     * perna qualquer; partindo da torre de São Paulo (9.200×) ela SOBE — a
+     * perna qualquer; partindo do retrato da torre (34.000×) ela SOBE — a
      * mesma curva, lida com outra ponta, sem um `if` de caso especial.
      *
      * O piso de 900 ms existe para o clique num país vizinho (Bogotá a Quito
@@ -2618,15 +2692,16 @@ export function HeroGlobe({
 
          A régua do tour (`duracaoDe`) mede DISTÂNCIA, e ela basta para pernas
          entre capitais, que começam e terminam no mesmo zoom. Um desvio pode
-         começar em cima da torre de São Paulo: ali são 1,49 rad de arco E 8,94
-         nats de escala para subir, e dar a esse movimento os 2,6 s de uma perna
-         comum faz a escala andar 15 nats por segundo — medido em 0,28 nat entre
-         dois quadros vizinhos, um tranco visível.
+         começar em cima da torre de São Paulo: no fundo da fase `fachada` são
+         1,49 rad de arco E 10,13 nats de escala para subir (eram 8,94 quando o
+         mergulho terminava em 9.200), e dar a esse movimento os 2,6 s de uma
+         perna comum faz a escala andar 15 nats por segundo — medido em 0,28 nat
+         entre dois quadros vizinhos, um tranco visível.
 
          O esforço é a hipotenusa dos dois (é a mesma ideia do `w_max` da curva
          de van Wijk, que também é uma hipotenusa), e a cadência é a da fase
-         `sobe` do mergulho, que o dono já aprovou: 9,24 nats em 2,4 s, ou seja
-         260 ms por nat. Com folga, 300. */
+         `sobe` do mergulho, que o dono já aprovou: 10,13 nats em 2,7 s, ou seja
+         267 ms por nat. Com folga, 300. */
       const arcoDesvio = distancia(de, para);
       const esforco = Math.hypot(arcoDesvio, Math.log(VISTA_DETALHE / w0));
       desvio.current = {
@@ -2636,6 +2711,7 @@ export function HeroGlobe({
         w0,
         incl0: u.incl,
         orb0: u.orb,
+        alt0: u.alturaAlvo,
         ms: 0,
         duracao: Math.max(
           DESVIO_MINIMO_MS,
@@ -2861,7 +2937,7 @@ export function HeroGlobe({
        `R + Z·R·x₁`, então um deslocamento de Δx px pede `Δyaw = Δx / (R·Z)`. É
        dividir pela escala EFETIVA que faz um dedo de 100 px girar o mesmo tanto
        de TELA no planeta inteiro (1,35×) e em cima da torre de São Paulo
-       (9.200×) — sem isso, o mesmo gesto que no globo é um empurrão seria, na
+       (34.000×) — sem isso, o mesmo gesto que no globo é um empurrão seria, na
        maquete, quatro mil larguras de tela.
 
        QUEM GANHA O CLIQUE. Dentro do disco e a ≤ 30 px de um pino, é país (o
@@ -3069,7 +3145,7 @@ export function HeroGlobe({
         /* A ESCALA EM DOIS CANAIS, exatamente como no mergulho de São Paulo: o
            que passa de `ZOOM_DETALHE` vai para a caixa `sp` (que é quem a cena
            3D lê) e o canvas 2D fica em 1,35×. É o que impede o 2D de tentar
-           ampliar 5.458 pontos de Fibonacci por 9.200 quando o desvio começa em
+           ampliar 5.458 pontos de Fibonacci por 34.000 quando o desvio começa em
            cima da torre — e é o mesmo mecanismo, não um segundo. */
         /* A ESCALA DO DESVIO fica na curva de van Wijk.
 
@@ -3089,22 +3165,33 @@ export function HeroGlobe({
 
            As visibilidades saem da ESCALA (nunca do tempo), então subir é a
            descida ao contrário e as camadas se apagam na ordem em que
-           apareceram. A obliquidade e a órbita, que o mergulho tinha deixado em
-           32° e ±5°, voltam a zero nos primeiros 40% do desvio: endireitar
+           apareceram. A obliquidade, a órbita e a ALTURA DO ALVO, que o
+           mergulho pode ter deixado em 55°, ±7° e 130 m (o retrato da torre),
+           voltam a zero nos primeiros 40% do desvio pelo MESMO `k`: endireitar
            primeiro e afastar depois é a mesma leitura de "levantar voo" que a
-           fase `sobe` do mergulho já usa. */
+           fase `sobe` do mergulho já usa.
+
+           A ALTURA PELO MESMO `k` E NÃO POR UM PRÓPRIO, ao contrário do que a
+           fase `sobe` faz (lá o alvo desce em 40% e a obliquidade em 70%): a
+           `sobe` conhece a sua própria duração e pode escalonar os dois
+           movimentos; o desvio dura o que o esforço pedir — de 900 ms a ~3 s —,
+           e dois tempos diferentes dentro de uma janela que varia 3× dariam
+           ora um escalonamento, ora os dois juntos. Um `k` só é previsível, e
+           é ele que já endireitava a obliquidade. */
         const sp = palco.sp;
         if (alto) {
           const v = visibilidades(q.zoom);
           const k = 1 - suave(Math.min(1, tt / DESVIO_ENDIREITA));
           const incl = d.incl0 * k;
           const orb = d.orb0 * k;
-          const en = enquadra(cam, incl, orb);
+          const alt = d.alt0 * k;
+          const en = enquadra(cam, incl, orb, alt);
           sp.ativo = true;
           sp.fase = "desvio";
           sp.zoom = q.zoom;
           sp.inclinacao = incl;
           sp.orbita = orb;
+          sp.alturaAlvo = alt;
           sp.pitch = en.pitch + livrePitch;
           sp.yaw = en.yaw + livreYaw;
           sp.x = en.x;
@@ -3114,6 +3201,7 @@ export function HeroGlobe({
           sp.predios = celular ? 0 : v.predios;
           sp.logo = celular ? 0 : v.logo;
           sp.detalhe = celular ? 0 : v.detalhe;
+          sp.fachada = celular ? 0 : v.fachada;
         } else {
           sp.ativo = false;
         }
@@ -3260,6 +3348,7 @@ export function HeroGlobe({
       uq.escVista = palco.sp.ativo ? palco.sp.zoom : esc;
       uq.incl = palco.sp.ativo ? palco.sp.inclinacao : 0;
       uq.orb = palco.sp.ativo ? palco.sp.orbita : 0;
+      uq.alturaAlvo = palco.sp.ativo ? palco.sp.alturaAlvo : 0;
 
       /* ----------------------------------------- O CINEMA E O MERGULHO
 

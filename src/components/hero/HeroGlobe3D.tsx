@@ -55,7 +55,9 @@ import {
   REDE_PERNAS,
   solXYZ,
 } from "./globeMath";
+import { ZOOM_TORRE } from "./mergulhoSP";
 import SaoPauloCena from "./SaoPauloCena";
+import SaoPauloLuzes from "./SaoPauloLuzes";
 
 /* --------------------------------------------------------------------------
    ETAPA 5 — O PÓS-PROCESSAMENTO, NUM CHUNK PRÓPRIO E SÓ NO DESKTOP
@@ -781,27 +783,51 @@ function Planeta({
   leve: boolean;
 }) {
   /**
-   * AS TRÊS VISIBILIDADES DA CIDADE, e elas são o ÚNICO estado de React desta
-   * cena — tudo o mais é escrito direto em uniformes e matrizes, por quadro.
+   * AS VISIBILIDADES DA CIDADE (cinco) E A ESCALA, e elas são o ÚNICO estado de
+   * React desta cena — tudo o mais é escrito direto em uniformes e matrizes,
+   * por quadro.
    *
    * Aqui não dá para fugir: `SaoPauloCena` é um componente, e o que ele monta
-   * (o chão, os prédios, as placas da marca) depende dessas três props. Mas o
-   * preço está contido por DEGRAUS: o estado só é reescrito quando um dos três
-   * números muda mais de 1/64, o que dá no máximo ~64 renders ao longo dos 11,2
-   * segundos da parada — contra os ~670 quadros que ela tem. Nos outros 94% dos
-   * quadros o React não é incomodado.
+   * (o chão, os prédios, as placas da marca, e desde 18/10 o detalhe de perto)
+   * depende dessas props. Mas o preço está contido por DEGRAUS: o estado só é
+   * reescrito quando um dos números muda mais de 1/64, o que dá no máximo ~64
+   * renders por sinal ao longo dos 17,7 segundos da parada — contra os ~1.060
+   * quadros que ela tem. Na esmagadora maioria dos quadros o React não é
+   * incomodado.
    *
    * 1/64 e não 1/256: o que estes números controlam é opacidade de chão, altura
    * de prédio e opacidade de marca, e um degrau de 1,6% em qualquer um deles é
    * menos que o ruído do próprio mapa noturno.
+   *
+   * `zoomLog` É A EXCEÇÃO, e tem degrau próprio. Ele é o LOGARITMO da escala, e
+   * existe porque as peças de perto precisam saber o tamanho de um metro em
+   * PIXELS (os postes da cidade são sprites, e sprite tem tamanho em px, não em
+   * metros). O degrau dele é 1/16 de nat, ou seja 6,5% de escala: é a resolução
+   * em que um sprite de 1,8 m muda menos de meio pixel entre dois degraus no
+   * fundo do mergulho, e são ~162 degraus pelos 10,13 nats da subida inteira
+   * se a cena atravessar todos — mas só os de dentro da fase `fachada` custam
+   * render, porque fora dela o componente devolve `null`.
+   *
+   * Em LOGARITMO e não na escala crua porque o degrau tem de ser RELATIVO: um
+   * limiar absoluto de 1/64 sobre um número que vai de 1,35 a 34.000 dispararia
+   * um render por quadro na metade de cima do mergulho.
    */
   const [cidadeSP, setCidadeSP] = useState({
     mapa: 0,
     predios: 0,
     logo: 0,
     detalhe: 0,
+    fachada: 0,
+    zoomLog: LN_TORRE_SP,
   });
-  const ultimaSP = useRef({ mapa: 0, predios: 0, logo: 0, detalhe: 0 });
+  const ultimaSP = useRef({
+    mapa: 0,
+    predios: 0,
+    logo: 0,
+    detalhe: 0,
+    fachada: 0,
+    zoomLog: LN_TORRE_SP,
+  });
   const grupo = useRef<Group>(null);
   const terra = useRef<Points>(null);
   const cometaNo = useRef<Points>(null);
@@ -1104,15 +1130,16 @@ function Planeta({
        DUAS CÂMERAS, E O MERGULHO MANDA QUANDO EXISTE. Fora da parada em São
        Paulo valem `yaw`, `pitch` e `escala` do voo — os mesmos três números que
        o `desenha()` do canvas 2D acabou de usar, e é essa igualdade que mantém
-       os pinos colados na esfera. Durante os 11,2 s de São Paulo, o enquadre
+       os pinos colados na esfera. Durante os 17,7 s de São Paulo, o enquadre
        vem de `enquadraSP`: rotação E TRANSLAÇÃO.
 
        A translação é o que o roteiro não previa e sem a qual a cena fica preta
        (está medido em `mergulhoSP.ts`): o grupo gira em torno do CENTRO DA
-       TERRA, então tombá-lo 32° leva São Paulo 3.376 km para fora do quadro —
-       em zoom 14.000, onde o disco mostra 910 m, são quatro mil larguras de
+       TERRA, então tombá-lo 55° leva São Paulo 6.115 km para fora do quadro —
+       em zoom 34.000, onde o disco mostra 375 m, são dezesseis mil larguras de
        tela. `position` devolve a torre ao meio do disco, e o resultado é uma
-       órbita em volta DELA. */
+       órbita em volta DELA — agora em volta do MEIO do prédio, porque na fase
+       `fachada` o alvo sobe 130 m (ver `alturaAlvo`). */
     const mergulho = q.sp.ativo;
     const zoom = mergulho ? q.sp.zoom : q.escala;
     if (mergulho) {
@@ -1473,13 +1500,16 @@ function Planeta({
     desenhaCometa(q, cena3d, cometa3d);
     desenhaMarcas(q, marcas3d, cena3d.marcas);
 
-    /* A cidade, em degraus de 1/64 (ver `cidadeSP`). */
+    /* A cidade, em degraus de 1/64 — e a escala, em degraus de 1/16 de nat
+       (ver `cidadeSP`). */
     const alvoSP = mergulho
       ? {
           mapa: q.sp.mapa,
           predios: q.sp.predios,
           logo: q.sp.logo,
           detalhe: q.sp.detalhe,
+          fachada: q.sp.fachada,
+          zoomLog: Math.log(q.sp.zoom),
         }
       : ZERO_SP;
     const u = ultimaSP.current;
@@ -1488,6 +1518,15 @@ function Planeta({
       Math.abs(alvoSP.predios - u.predios) > DEGRAU_SP ||
       Math.abs(alvoSP.logo - u.logo) > DEGRAU_SP ||
       Math.abs(alvoSP.detalhe - u.detalhe) > DEGRAU_SP ||
+      Math.abs(alvoSP.fachada - u.fachada) > DEGRAU_SP ||
+      /* A escala só vale render ENQUANTO O DETALHE DE PERTO EXISTE: fora da
+         fase `fachada` ninguém lê o `zoom` (os postes nem são montados), e
+         deixar o degrau de escala disparar sozinho poria ~90 renders de React
+         no mergulho inteiro em troca de nada. Os dois lados do `||` olham o
+         sinal — o alvo e o último publicado —, senão a última escala do
+         retrato ficaria congelada quando ele se apaga. */
+      ((alvoSP.fachada > 0 || u.fachada > 0) &&
+        Math.abs(alvoSP.zoomLog - u.zoomLog) > DEGRAU_SP_LN) ||
       (alvoSP.mapa === 0) !== (u.mapa === 0)
     ) {
       ultimaSP.current = alvoSP;
@@ -1636,16 +1675,24 @@ function Planeta({
           componente devolve `null` enquanto `mapa` é zero, então fora da parada
           em São Paulo ele não custa um `drawcall` nem um triângulo.
 
-          As três props vêm todas da ESCALA (ver `visibilidades`), e por isso a
-          cidade aparece na subida no mesmo zoom em que apareceu na descida.
-          No celular `predios` e `logo` chegam zerados pelo `HeroGlobe`: 3.769
-          prédios são 62 mil triângulos, e a câmera de lá para em 405, onde um
-          prédio comum mede 0,6 px. */}
+          As visibilidades vêm todas da ESCALA (ver `visibilidades`), e por isso
+          a cidade aparece na subida no mesmo zoom em que apareceu na descida.
+          No celular `predios`, `logo` e `fachada` chegam zerados pelo
+          `HeroGlobe`: 3.769 prédios são 62 mil triângulos, e a câmera de lá
+          para em 405, onde um prédio comum mede 0,6 px. */}
       <SaoPauloCena
         mapa={cidadeSP.mapa}
         predios={cidadeSP.predios}
         logo={cidadeSP.logo}
         detalhe={cidadeSP.detalhe}
+        /* O DETALHE DE PERTO (18/10): 0 em todo o mergulho até 9.200, 1 no
+           fundo da fase `fachada`. É o sinal que acende as janelas por vão, a
+           caixa de luz do letreiro, a cinta da coroa, as balizas e a vitrine. */
+        fachada={cidadeSP.fachada}
+        /* A ESCALA, por DEGRAUS de 1/16 de nat (ver `cidadeSP`) e já desfeita
+           do logaritmo aqui, para a cena receber a grandeza com que ela pensa.
+           Quem a lê são as peças cujo tamanho é em PIXELS e não em metros. */
+        zoom={Math.exp(cidadeSP.zoomLog)}
         /* A textura de detalhe só é BAIXADA no desktop: são 214 kB, e no
            celular a câmera para em 405 — bem abaixo dos 1.500 em que ela
            começaria a aparecer. */
@@ -1654,6 +1701,30 @@ function Planeta({
            não há compositor nenhum, e a camada não é pedida. */
         camadaBrilho={leve ? undefined : CAMADA_BRILHO}
       />
+
+      {/* OS POSTES DAS RUAS, logo depois da cena e dentro do mesmo grupo que
+          gira — eles são a continuação dela por outros meios.
+
+          POR QUE UM COMPONENTE SEPARADO e não mais uma malha lá dentro: o
+          `SaoPauloCena` é geometria em METROS, construída de dados (o OSM e a
+          ficção da torre) e desenhada com cor de vértice; isto aqui é um campo
+          de SPRITES em pixels, colhido de uma IMAGEM e desenhado com mistura
+          aditiva. São duas naturezas, dois ciclos de vida (a cena nasce com o
+          canvas, as lâmpadas nascem quando a textura decodifica) e dois
+          orçamentos. Juntá-los só porque ocupam o mesmo lugar no espaço seria
+          pagar o acoplamento sem comprar um draw call.
+
+          SÓ NO DESKTOP, e pelo mesmo motivo dos prédios: no celular `fachada`
+          chega zerado, a câmera para em Z = 405 e a textura de detalhe nem é
+          baixada — o componente não teria de onde colher. Não montá-lo é mais
+          honesto que montá-lo para devolver `null` em todo quadro. */}
+      {!leve ? (
+        <SaoPauloLuzes
+          fachada={cidadeSP.fachada}
+          zoom={Math.exp(cidadeSP.zoomLog)}
+          camadaBrilho={CAMADA_BRILHO}
+        />
+      ) : null}
 
       {/* O COMETA (etapa 3): cabeça, rastro e partículas num `Points` só.
 
@@ -2153,6 +2224,27 @@ const SOBRE = { indice: -1 };
 /** Onde o rótulo da torre fica, em px de tela a partir do centro do disco. */
 const ROTULO_TORRE_X = 76;
 const ROTULO_TORRE_Y = -44;
+/**
+ * QUANTO O RÓTULO SE AFASTA NO RETRATO DA TORRE (fase `fachada`, 18/10).
+ *
+ * Os 76/−44 de cima foram medidos para a torre de 58 px de altura e 40 de
+ * fachada da contemplação: ali o rótulo nasce encostado no topo do prédio, à
+ * direita. No retrato o mesmo prédio ocupa 71% de um disco de 375 m a
+ * 0,59 m/px, ou seja ~450 px de altura e ~98 px de fachada, e o centro do disco
+ * já não é o pé dele: o alvo subiu 130 m (ver `alturaAlvo` em `mergulhoSP`), de
+ * modo que o remate fica 126 m acima do centro — 213 px — e a esquina direita
+ * da fachada, a ~50 px do eixo.
+ *
+ * Então o rótulo sai de perto: +110 px para a direita (186 no total, ~136 px de
+ * folga da esquina) e −240 px para cima (−284 no total, 71 px acima do remate e
+ * ainda 32 px dentro da meia-altura do disco, que é 316 px a 1440×900).
+ *
+ * MEDIDO NO OLHO, NÃO NO NAVEGADOR: a tarefa T só liga o fio. Conferir no
+ * fundo da fase — o texto tem de ficar legível, fora da fachada e dentro do
+ * quadro no cinema, onde o disco cresce para ~799 px.
+ */
+const ROTULO_FACHADA_X = 110;
+const ROTULO_FACHADA_Y = -240;
 
 /**
  * O RÓTULO DE FICÇÃO DA TORRE: acende com a marca e some com ela.
@@ -2162,13 +2254,20 @@ const ROTULO_TORRE_Y = -44;
  * contemplação — é a translação que devolve o alvo ao centro depois de
  * inclinar. O meio do disco É a base da torre em todo quadro da contemplação.
  *
- * +76 e −44 px: no fundo do mergulho a torre mede 88 px de altura e 40 de
- * fachada, então o rótulo nasce encostado no topo dela, à direita, sem cobrir a
- * marca. Em px de TELA, não de mundo: é legenda, não geometria.
+ * O MEIO DO DISCO DEIXOU DE SER O PÉ DA TORRE na fase `fachada`: lá o alvo sobe
+ * 130 m para o prédio caber no quadro. A âncora continua exata — ela só mudou
+ * de ponto da torre —, e é por isso que o deslocamento tem de acompanhar: ver
+ * `ROTULO_FACHADA_X`/`_Y`.
+ *
+ * +76 e −44 px: na contemplação a torre mede 58 px de altura e 40 de fachada,
+ * então o rótulo nasce encostado no topo dela, à direita, sem cobrir a marca.
+ * Em px de TELA, não de mundo: é legenda, não geometria.
  *
  * A opacidade só começa a subir quando a marca passa de 0,5 — a régua que o
  * pedido fixou —, para o texto não aparecer junto com um borrão laranja que
- * ainda não se lê como logotipo.
+ * ainda não se lê como logotipo. E ela NÃO sobe mais no retrato: o rótulo de
+ * SIMULAÇÃO é obrigação de honestidade, não ênfase; ele já está inteiro quando
+ * a aproximação começa.
  */
 function rotulaTorre(q: Cena) {
   const el = q.rotuloSP;
@@ -2178,9 +2277,17 @@ function rotulaTorre(q: Cena) {
     if (!el.hidden) el.hidden = true;
     return;
   }
+  /* O afastamento é CONTÍNUO em `fachada`, não um salto na troca de fase: o
+     rótulo desliza para o canto junto com a aproximação, e volta junto com a
+     subida — pelo mesmo sinal, de modo que a ida e a volta usam o mesmo
+     caminho sem uma segunda tabela. */
+  const f = q.sp.ativo ? q.sp.fachada : 0;
+  const x = ROTULO_TORRE_X + ROTULO_FACHADA_X * f;
+  const y = ROTULO_TORRE_Y + ROTULO_FACHADA_Y * f;
   el.hidden = false;
   el.style.opacity = aceso.toFixed(3);
-  el.style.transform = "translate3d(" + ROTULO_TORRE_X + "px, " + ROTULO_TORRE_Y + "px, 0)";
+  el.style.transform =
+    "translate3d(" + x.toFixed(1) + "px, " + y.toFixed(1) + "px, 0)";
 }
 
 /* --------------------------------------------------------------------------
@@ -2215,7 +2322,28 @@ const CIDADE_MERGULHO = "BRL";
 
 /** O degrau mínimo que faz a cidade de São Paulo valer um render de React. */
 const DEGRAU_SP = 1 / 64;
-const ZERO_SP = { mapa: 0, predios: 0, logo: 0, detalhe: 0 };
+/**
+ * O degrau da ESCALA, em nats: 1/16 de nat são 6,5% de zoom. Ver `cidadeSP`
+ * para por que ele é separado e por que é em logaritmo.
+ */
+const DEGRAU_SP_LN = 1 / 16;
+/**
+ * O repouso: a cidade apagada, com a escala no fim da contemplação.
+ *
+ * `zoomLog` em `ZOOM_TORRE` e não em zero porque `Math.exp(0)` daria uma escala
+ * de 1, e o padrão da prop `zoom` do `SaoPauloCena` é justamente `ZOOM_TORRE` —
+ * os dois lados do fio dizem a mesma coisa quando não há mergulho. Não que
+ * importe para o pixel: com `mapa = 0` o componente devolve `null`.
+ */
+const LN_TORRE_SP = Math.log(ZOOM_TORRE);
+const ZERO_SP = {
+  mapa: 0,
+  predios: 0,
+  logo: 0,
+  detalhe: 0,
+  fachada: 0,
+  zoomLog: LN_TORRE_SP,
+};
 
 /** Espessura do fio dos dois anéis, em px de CSS. */
 const ANEL_FIO = 1.4;

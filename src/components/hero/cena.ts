@@ -396,14 +396,14 @@ export type Cena = {
   /* ------------------------------- o mergulho em São Paulo (integração) ---
 
      Ele é um BLOCO À PARTE, e não campos soltos ao lado de `escala`, por uma
-     razão que é o contrato inteiro desta integração: durante os 11,2 s da
+     razão que é o contrato inteiro desta integração: durante os 17,7 s da
      parada em São Paulo existem DUAS câmeras, e elas discordam de propósito.
 
      O canvas 2D — que é o placeholder, o fallback sem WebGL e o caminho de
-     movimento reduzido — continua no enquadramento de POUSO, 1,35×, pelos 11,2
+     movimento reduzido — continua no enquadramento de POUSO, 1,35×, pelos 17,7
      segundos inteiros. Ele não tem cidade para mostrar: a textura noturna, os
      3.769 prédios e a torre são geometria 3D. Mandá-lo seguir a escala até
-     14.000 seria pedir que ele ampliasse 5.102 pontos de Fibonacci até cada um
+     34.000 seria pedir que ele ampliasse 5.102 pontos de Fibonacci até cada um
      virar um disco de meio quilômetro — uma lupa sobre o nada.
 
      Então `escala`, `yaw` e `pitch` continuam sendo os do VOO (o que o 2D
@@ -415,24 +415,49 @@ export type Cena = {
     ativo: boolean;
     /** A fase do mergulho (ver `mergulhoSP`). */
     fase: string;
-    /** A escala do mergulho — de 1,35 a 14.000 (ou a 405, no celular). */
+    /** A escala do mergulho — de 1,35 a 34.000 (ou a 405, no celular). */
     zoom: number;
     /** Obliquidade e órbita, em radianos. */
     inclinacao: number;
     orbita: number;
+    /**
+     * A ALTURA DO ALVO do enquadre, em METROS acima do chão da cena.
+     *
+     * Zero até o fim da contemplação; sobe a 130 m na fase `fachada` (o alvo
+     * vai do pé da torre para o meio dela, senão a coroa sai pelo topo do
+     * quadro de 375 m) e volta a zero na subida. Ver `alturaAlvo` em
+     * `mergulhoSP`.
+     *
+     * ELA MORA AQUI, e não só dentro do laço, porque o DESVIO precisa dela:
+     * o clique num país abre uma perna de voo a partir de onde a câmera está,
+     * e para desfazer o enquadre do retrato ele tem de saber de que altura
+     * está partindo — como já fazia com `inclinacao` e `orbita`.
+     */
+    alturaAlvo: number;
     /** O enquadre de `enquadraSP`: rotação do grupo e translação que devolve
         a torre ao centro do disco. */
     pitch: number;
     yaw: number;
     x: number;
     y: number;
-    /** As quatro visibilidades, todas derivadas da ESCALA. */
+    /** As visibilidades, todas derivadas da ESCALA. */
     pontos: number;
     mapa: number;
     predios: number;
     logo: number;
     /** O recorte de 4 km do centro, por cima do mapa de 22 km. */
     detalhe: number;
+    /**
+     * O DETALHE DE PERTO: 0 = o mergulho de sempre, 1 = o retrato da torre.
+     *
+     * Sai da escala como as outras (acende entre Z = 12.000 e 26.000, ou seja
+     * vale ZERO em todo o mergulho até 9.200) e acende o que só existe a
+     * 0,59 m/px: as janelas por vão, a caixa de luz do letreiro, a cinta da
+     * coroa, as balizas dos mastros, a vitrine do saguão e os postes das ruas.
+     * No celular chega sempre zerado, como `predios` — a câmera de lá para em
+     * 405.
+     */
+    fachada: number;
     /**
      * O PALCO da linha do tempo (ver `linhaSP`): 0 no pouso, 1 nas quatro
      * fases de zoom, subindo na `chegada` e descendo na `despedida`.
@@ -548,6 +573,7 @@ const ESTADO: Cena = {
     zoom: 1,
     inclinacao: 0,
     orbita: 0,
+    alturaAlvo: 0,
     pitch: 0,
     yaw: 0,
     x: 0,
@@ -557,6 +583,7 @@ const ESTADO: Cena = {
     predios: 0,
     logo: 0,
     detalhe: 0,
+    fachada: 0,
     palco: 0,
   },
   nuvem: null,
