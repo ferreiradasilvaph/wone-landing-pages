@@ -511,7 +511,8 @@ const BORDA_FIO = 1.5;
    do aparelho, desenhado UMA vez, e 33 quadros de canvas na janela em que o
    `<h1>` está pintando é o tipo de gasto que o LCP mobile cobra.
 
-   O reinício pela logo chega por `wone:entrada` (ver `SiteHeader`).
+   O reinício pela logo (`wone:entrada`, ver `SiteHeader`) remonta o hero
+   inteiro (ver `Hero`): este componente nasce de novo e a onda vem junto.
    -------------------------------------------------------------------------- */
 
 /** Duração da travessia do front, em ms. Fecha com a escada do CSS (~1,2 s). */
@@ -1082,20 +1083,13 @@ export function HeroGlobe({
    */
   const ondaT0 = useRef<number | null>(null);
   const ondaPendente = useRef(true);
-  /** Sobe a cada `wone:entrada` só para refazer o efeito de desenho. */
-  const [entrada, setEntrada] = useState(0);
 
-  /* O reinício pela logo (ver `SiteHeader`): a classe do `<html>` já voltou, as
-     animações de CSS já recomeçaram, e o globo refaz a onda. O relógio do hero
-     NÃO reinicia — o país da vez continua de onde estava. */
-  useEffect(() => {
-    const refaz = () => {
-      ondaPendente.current = true;
-      setEntrada((n) => n + 1);
-    };
-    document.addEventListener("wone:entrada", refaz);
-    return () => document.removeEventListener("wone:entrada", refaz);
-  }, []);
+  /* O reinício pela logo (ver `SiteHeader`) NÃO chega mais aqui. Até 20/10 este
+     componente ouvia `wone:entrada` e só refazia a onda, deixando o relógio do
+     tour onde estava — e o dono reclamou que "o globo não reinicia com o
+     restante do site". Hoje quem ouve é o `Hero`, que remonta o hero inteiro
+     com uma `key` nova: este componente nasce de novo, `ondaPendente` já vem
+     `true`, e a onda, o portão de entrada e o tour recomeçam como num F5. */
 
   /**
    * Dois modos, por largura: o celular e o laço.
@@ -3518,7 +3512,7 @@ export function HeroGlobe({
       secao?.removeEventListener("pointercancel", aoSoltar);
       marcaCursor(-1);
     };
-  }, [codes, running, modo, voa, trocaParada, entrada]);
+  }, [codes, running, modo, voa, trocaParada]);
 
   /**
    * O arco do pino ativo até o aparelho, na troca de país.

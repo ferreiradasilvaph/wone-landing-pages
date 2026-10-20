@@ -29,8 +29,10 @@ const MENU_MS = 250;
  *   3. a classe `wone-entrando` sai, o `offsetHeight` força o reflow (sem ele o
  *      navegador agrupa remoção e adição no mesmo quadro e NADA reinicia) e a
  *      classe volta: as animações de CSS recomeçam do zero;
- *   4. `wone:entrada` avisa o globo, que é o único pedaço da coreografia que
- *      não é CSS — ele refaz a onda de pontos (ver `HeroGlobe`).
+ *   4. `wone:entrada` avisa o `Hero`, que REMONTA o hero inteiro com uma `key`
+ *      nova (fila de países, globo, cena 3D): é o pedaço da coreografia que não
+ *      é CSS, e desde 20/10 ele recomeça do zero como num F5 — antes só a onda
+ *      de pontos se refazia e o tour seguia de onde estava (ver `Hero`).
  *
  * Com movimento reduzido, só o passo 1 e 2: quem pediu menos movimento não
  * ganha animação nenhuma por clicar na logo.

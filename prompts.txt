@@ -1416,3 +1416,26 @@ com o logo da wone bem estilizado. mostre uma imagem da torre e capriche, chat,
 nos detalhes do predio, crie um cenario o mais perto do real, possivel. vou sair
 para a academia, em caso de duvidas pode seguir com as suas recomendacoes. se
 tiver algo que eu nao aprove, te falo quando voltar. bom trabalho, bom domingo
+
+
+===============================================================================
+[159] 2026-10-20
+===============================================================================
+retome de onde paramos...
+
+sobe o localhost p gente ir acompanhando aq pelo vscode
+
+chat, commite tudo em https://pedrinho.wone.bot, suba os ultimos deploys
+
+o ultimo zoom, que destaca a torre, não está atualizado no site
+
+está apenas atualizado no localhost
+
+
+===============================================================================
+[160] 2026-10-20
+===============================================================================
+chat, no navegador, quando eu clico na imagem do logo, o globo não reinicia com
+o restante do site, corrija issp
+
+isso *

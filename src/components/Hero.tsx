@@ -83,8 +83,37 @@ const ATRASO_LINHA = ["[--ent-atraso:0ms]", "[--ent-atraso:55ms]"];
  * A seção é `flex flex-col` com 100svh de PISO (`min-h`, não `h`) por causa da
  * fileira de benefícios (`mt-auto`) e da faixa de integrações: é o que as cola
  * na base sem altura cravada.
+ *
+ * A LOGO REINICIA O HERO INTEIRO — pedido do dono de 20/10: "quando eu clico na
+ * imagem do logo, o globo não reinicia com o restante do site". Até então o
+ * `wone:entrada` disparado pelo `SiteHeader` chegava só ao `HeroGlobe`, que
+ * refazia a onda de pontos e deixava o relógio do tour onde estava: a página
+ * recomeçava a coreografia de CSS e o planeta seguia mergulhando em São Paulo.
+ *
+ * O estado do hero mora em três lugares — a fila de países aqui (`ativo`,
+ * `started`, `voando`), uma dúzia de refs dentro do `HeroGlobe` (relógio,
+ * câmera, rastro, onda) e a cena 3D por baixo —, e zerá-los um a um seria
+ * repetir à mão o que a montagem já faz. Então a casca `Hero` só conta rodadas
+ * e dá uma `key` nova ao miolo: React desmonta tudo e monta de novo, o que é
+ * exatamente um F5 sem recarregar o documento — a mesma espera de entrada, a
+ * mesma onda, o tour de São Paulo em diante. O contrato compartilhado
+ * (`cena()`) aguenta isso porque a cena 3D limpa `avanca`, `pronto`, `nasceu` e
+ * `espia3d` ao desmontar, e o globo escreve o resto por quadro.
+ *
+ * O custo é o de uma montagem: o canvas WebGL e a maquete de São Paulo nascem de
+ * novo. É o preço que o F5 já pagava, e o clique na logo é raro.
  */
 export function Hero() {
+  const [rodada, setRodada] = useState(0);
+  useEffect(() => {
+    const reinicia = () => setRodada((n) => n + 1);
+    document.addEventListener("wone:entrada", reinicia);
+    return () => document.removeEventListener("wone:entrada", reinicia);
+  }, []);
+  return <HeroMiolo key={rodada} />;
+}
+
+function HeroMiolo() {
   const { hero, integrations, payments, highlights, ui } = useContent();
 
   const paises = payments.table.countries;
