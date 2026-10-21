@@ -21,12 +21,88 @@
  * página enquanto a imagem aparece. Este componente não desenha texto; pôr a
  * linha no rodapé do hero é obrigação de quem monta.
  *
- * O CUSTO, MEDIDO: QUATRO draw calls (chão, prédios, torre, marca), quatro
- * materiais, zero luz, zero sombra, zero pós-processamento, 62.638 triângulos
- * no quadro mais cheio e 0,2 ms de CPU por quadro (0,5 no percentil 95; 5,7 no
- * primeiro quadro, que é a subida dos buffers para a GPU). Os 4.423 contornos
- * viram UMA geometria, construída uma vez no `useMemo` e devolvida ao driver
- * no `dispose`.
+ * O CUSTO: CINCO draw calls (chão, as PAREDES dos vizinhos, os TELHADOS
+ * deles, a torre, a marca) — SEIS só enquanto a troca do recorte de detalhe
+ * dura, porque fora dela o nó nem é criado —, seis materiais (o sexto é o do
+ * recorte, que só nasce no desktop, onde `querDetalhe` é verdade), QUATRO
+ * texturas (o mapa de 22 km, o recorte de 4 km, a marca e o ladrilho de
+ * janelas, que não é um arquivo: nasce num canvas aqui dentro), zero luz,
+ * zero sombra, zero pós-processamento, e 0,2 ms de CPU por quadro (0,5 no
+ * percentil 95; 5,7 no primeiro quadro, que é a subida dos buffers para a
+ * GPU). Os 4.423 contornos viram DUAS geometrias, construídas uma vez no
+ * `useMemo` e devolvidas ao driver no `dispose`.
+ *
+ * A QUARTA CHAMADA VIROU DUAS EM 18/10, e quem a partiu foi o LADRILHO DE
+ * JANELAS dos vizinhos (ver o bloco `TILE_*` e `constroiTexturaJanelas`): as
+ * paredes passaram a ter `uv` e um material com textura, e os telhados não
+ * podem ter nem um nem outro — um telhado amostrando o ladrilho ganharia
+ * janelas deitadas, e um `uv` no telhado seria um atributo pago por 15.633
+ * triângulos para não ser lido. Separar as duas famílias em duas geometrias
+ * custa exatamente UMA chamada: nem um triângulo a mais, nem um byte a mais
+ * de buffer, nem um milissegundo a mais de construção.
+ *
+ * OS TEMPOS SÃO MEDIDOS NO NAVEGADOR; OS TRIÂNGULOS SÃO CONTADOS DAQUI.
+ * A diferença importa: um tempo só existe depois de rodar, mas uma contagem
+ * de triângulos sai da própria geometria, emissor por emissor, e é a única
+ * forma de a conta não envelhecer sozinha no dia em que alguém acrescentar um
+ * andar — foi exatamente o que aconteceu com os "62.638" que esta linha dizia
+ * até 18/10, um número medido ANTES de as paredes dos vizinhos ganharem
+ * fatias (17/10) e nunca refeito depois. O quadro mais cheio, contado:
+ *
+ *     paredes     56.632   23.173 faces em 1 ou 2 fatias, COM `uv`
+ *     telhados    18.765   3.770 tampas (15.633) e o fio do parapeito (3.132)
+ *     torre       15.794   ver `constroiTorre`
+ *     chão           640   o disco de 22 km
+ *     recorte        640   o disco de 4 km, só enquanto a troca dura
+ *     marca            6   três quads
+ *     ─────────────────
+ *     TOTAL       92.477   (91.837 fora da faixa de troca do recorte)
+ *
+ * Os 75.397 dos vizinhos são os MESMOS de 17/10, repartidos: 56.632 de
+ * parede texturizada e 18.765 de superfície lisa. O fio do parapeito (os
+ * 1,2 m mais claros no alto dos 245 prédios acima de 60 m) atravessou para o
+ * lado liso junto com os telhados, e não por economia: ele é a aresta de
+ * concreto do topo, e uma fiada de janelas picotando-o o transformaria numa
+ * linha tracejada — que é o oposto do que ele existe para fazer.
+ *
+ * O QUE O RETRATO DE PERTO ACRESCENTOU (18/10, a fase `fachada`): ZERO draw
+ * calls, ZERO materiais, ZERO texturas e +14.642 triângulos — a torre vai de
+ * 1.152 para 15.794, e o quadro mais cheio de 77.835 para 92.477. Nada disto
+ * é um objeto novo: tudo entra na mesma geometria da torre, no mesmo
+ * `MeshBasicMaterial` com cor de vértice, e por isso o que o navegador tem de
+ * conferir é só que `gl.info.render.calls` não se mexeu.
+ *
+ * De onde vêm os 14.642, um por um:
+ *
+ *     14.432   as JANELAS POR VÃO dos três fustes — a face deixou de ser duas
+ *              tiras por andar (960 triângulos no total) e virou uma grade de
+ *              peitoril, montante e vão (15.392)
+ *        128   o aro de luz no piso (64 setores)
+ *         36   os dois mastros com as balizas
+ *         30   as três caixas técnicas dos terraços
+ *          8   a cinta de luz da coroa
+ *          4   a vitrine do saguão (um quad por fachada)
+ *          4   a caixa de luz do letreiro (idem)
+ *
+ * Ou seja: tudo o que se NOTA no retrato — a coroa acesa, as balizas no alto,
+ * a entrada iluminada, o letreiro com fundo — custa 82 triângulos, 0,57% da
+ * grade de janelas, que é a peça que ninguém aponta e sem a qual nenhuma das
+ * outras parece estar num prédio.
+ *
+ * E O QUE OS VIZINHOS GANHARAM (18/10, a mesma fase): ZERO triângulos. As
+ * janelas deles não são geometria — são um ladrilho de 512×512 desenhado num
+ * canvas no cliente e repetido a cada 25,6 m de fachada. A diferença de
+ * método contra a torre é a diferença de PAPEL: a torre é o assunto do
+ * retrato, tem 451 px de altura ali e precisa aguentar o olho parado em cima
+ * dela, então ela ganhou grade de verdade; os vizinhos são o contexto, a
+ * mediana deles tem 15 px, e a mesma grade neles custaria 2,6 milhões de
+ * triângulos para desenhar o que um texel de 5 cm desenha igual — por 1,4 MB
+ * de VRAM e uma única chamada a mais, que é a dos telhados.
+ *
+ * Por que 92 mil triângulos num hero não assusta: eles são opacos, não
+ * indexados, sem luz, com UMA textura entre todos e desenhados em cinco
+ * chamadas. O gargalo desta cena nunca foi o vértice — é o número de
+ * chamadas e o preenchimento de tela, e os dois continuam onde estavam.
  *
  * NENHUMA LUZ NOVA. A iluminação dos prédios está ASSADA nas cores de vértice
  * (`MeshBasicMaterial` + `vertexColors`), e não num `MeshStandardMaterial`.
@@ -41,11 +117,13 @@ import { useThree } from "@react-three/fiber";
 import {
   BufferAttribute,
   BufferGeometry,
+  CanvasTexture,
   ClampToEdgeWrapping,
   DoubleSide,
   Matrix4,
   MeshBasicMaterial,
   Quaternion,
+  RepeatWrapping,
   ShapeUtils,
   SRGBColorSpace,
   type Texture,
@@ -137,6 +215,23 @@ const RAIO_BORDA = 1200;
  * pixel vale 1,44 m, então um recuo de 2 m é um pixel e não existe; um de 20 m
  * deixaria a coroa com 18 m de lado, estreita demais para a placa do terraço,
  * que é a que carrega o reconhecimento da marca (ver constroiLogo).
+ *
+ * O QUE A FASE `fachada` ACRESCENTOU A ESTE CORTE (18/10). Nenhum metro do
+ * corte acima mudou — o que mudou foi a RESOLUÇÃO com que ele é desenhado,
+ * porque a 0,59 m/px cabem peças que a 2,19 m/px não existiam:
+ *
+ *     z   0,3 –   4,8   a vitrine do saguão, nas duas fachadas
+ *     z        0,2      o aro de luz no piso (raio 44 a 47 m)
+ *    em cada andar      peitoril de 1,0 m, vãos de ~3,2 m, montantes de 0,3
+ *     z 108 e 180       três caixas técnicas nos terraços dos recuos
+ *     z 276 – 277,2     a cinta de luz da coroa
+ *     z 284 – 301       dois mastros de 16 m com as balizas vermelhas
+ *
+ * Todas nascem na MESMA geometria e no mesmo draw call, e nenhuma é chaveada
+ * pela prop `fachada`: elas estão sempre no buffer, e o que a escala decide é
+ * só se o olho as alcança. O único metro novo é no alto: o remate continua em
+ * 284 m, e a PONTA do mastro com a baliza chega a 301 — 17 m de antena acima
+ * do parapeito, que é o que todo arranha-céu real tem e esta torre não tinha.
  */
 const PE_DIREITO = 3.7;
 const EMBASAMENTO = { z0: 0, z1: 15, lado: 76 } as const;
@@ -158,17 +253,40 @@ const TORRE_TOPO = REMATE.z1;
 const ARESTA = 1.8;
 
 /**
- * A marca: 32 m de largura na fachada (cabe no fuste C, que tem 42) e 28 m no
- * terraço (que tem 36). As duas na proporção 642×400 do logo-icon.png.
+ * A marca: 30 m de largura na fachada (o fuste C tem 42) e 28 m no terraço (o
+ * remate tem 36). As duas na proporção 642×400 do logo-icon.png.
+ *
+ * ELAS CRESCERAM EM 18/10 — 22 → 30 e 24 → 28 — e quem as empurrou foi a fase
+ * `fachada`. A 22 m a placa tinha 37 px no fim do mergulho antigo e lia como
+ * um ADESIVO numa parede grande; no retrato de perto um pixel vale 0,59 m e
+ * ela passa a ter 51 px de largura por 32 de altura, tamanho em que o olho
+ * cobra proporção. O pedido do dono fala em "logo da wone bem estilizado", e o
+ * que um letreiro de topo de prédio tem de verdade é LARGURA: num edifício
+ * real ele ocupa dois terços da fachada, não um terço. 30 m em 42 são 71%.
+ *
+ * O limite de cima é a MOLDURA, não a placa: ela vai a `lw + 1,5` = 16,5 m de
+ * meia-largura, e o fuste C tem 21 — sobram 4,5 m de cada lado antes da fita
+ * da aresta, que começa em 20,15. Um passo a mais (34 m de placa) e a moldura
+ * encostaria nela.
+ *
+ * No TERRAÇO o limite é outro: a placa deitada tem de caber nos 36 m do remate
+ * SEM encostar nos mastros das balizas, que ficam em y = +12. Com 28 m ela vai
+ * de −14 a +14 em x e de −8,7 a +8,7 em y; os mastros ficam 3,3 m ao norte
+ * dela, que é a folga que o pedido de "nada atravessando a placa" exige.
  */
-const LOGO_LARGURA = 22;
+const LOGO_LARGURA = 30;
 const LOGO_ALTURA = (LOGO_LARGURA * 400) / 642;
-const LOGO_TELHADO = 24;
+const LOGO_TELHADO = 28;
 const LOGO_TELHADO_H = (LOGO_TELHADO * 400) / 642;
 /**
  * A altura do centro da placa na fachada. A fachada vai de 15 a 240 m; o terço
- * de cima é 165–240 e o meio dele é 202. 206 põe a placa inteira dentro do
- * fuste C (180–240) com 14 m de folga em cima para a moldura.
+ * de cima é 165–240 e o meio dele é 202.
+ *
+ * 206 põe o conjunto inteiro dentro do fuste C (180–240): a placa de 18,7 m de
+ * altura ocupa 196,7–215,3, a moldura 195,2–216,8 e a faixa de luz desce a
+ * 192. Sobram 12 m de folga embaixo (até o recuo) e 23 m em cima (até a
+ * coroa) — e é essa folga de cima que impede o letreiro de brigar com a cinta
+ * de luz da coroa, que é a outra fonte de luz alta da torre.
  */
 const LOGO_FACHADA_Z = 206;
 
@@ -339,6 +457,27 @@ const VIDRO = tom("#0c0c14");
 const VIDRO_LUZ = tom("#2a2a3e");
 const CREME = tom("#ffffe3");
 const OCLUSAO = tom("#04040a");
+
+/**
+ * A BALIZA — a única cor deste arquivo que NÃO está no `globals.css`, e ela
+ * está aqui por norma, não por gosto.
+ *
+ * Todo arranha-céu acima de 150 m carrega luz de obstáculo vermelha no ponto
+ * mais alto (a OACI chama de "baixa intensidade tipo A"; no Brasil é a ICA
+ * 100-18). É um dos dois ou três sinais que o olho usa para ler "isto é um
+ * edifício alto de verdade" numa silhueta noturna — junto com a coroa
+ * iluminada e o letreiro —, e sem ela o remate laranja da torre fica sendo a
+ * coisa mais alta do quadro, o que lê como ornamento e não como prédio.
+ *
+ * #ff2a2a e não o `LARANJA` da marca: a baliza é o único ponto da cena que
+ * pode discordar da paleta, porque na vida real ela discorda do prédio. Em
+ * luminância ela dá 0,30 em sRGB e 0,21 em linear — ACIMA do `BLOOM_LIMIAR`
+ * de 0,12 do `HeroGlobePos`, de modo que o pós-processamento a transforma num
+ * ponto com halo, que é exatamente o que uma luz de obstáculo é vista de
+ * longe. É a peça mais barata da tarefa F (20 triângulos nas duas) e a que
+ * mais diz "noite" no alto do quadro.
+ */
+const BALIZA = tom("#ff2a2a");
 
 /**
  * A DIREÇÃO DA LUZ ASSADA, no referencial local (x leste, y norte, z para
@@ -517,8 +656,287 @@ function preparaAneis(): AnelPronto[] {
   return aneis;
 }
 
+/* --------------------------------------------------------------------------
+   O LADRILHO DE JANELAS DOS VIZINHOS
+   -------------------------------------------------------------------------- */
+
 /**
- * Os 4.423 contornos em UMA geometria.
+ * AS JANELAS DOS VIZINHOS SÃO UMA TEXTURA, E A DA TORRE É GEOMETRIA — e a
+ * diferença não é preguiça, é papel.
+ *
+ * A torre é o assunto do retrato: a 0,59 m/px ela enche 72% do disco, o olho
+ * para em cima dela e cada vão precisa aguentar ser olhado de frente. Por
+ * isso ela ganhou uma grade de verdade na tarefa F, 14,4 mil triângulos de
+ * peitoril, montante e vão. Os vizinhos são o CONTEXTO: no retrato a torre
+ * tem 451 px de altura e a MEDIANA deles tem 15 (o percentil 90 tem 75, e o
+ * mais alto do OSM, com 105,8 m, chega a 147). E o método da torre não é
+ * transportável para cá: ela gasta 0,334 triângulo por metro quadrado de
+ * fachada, os vizinhos têm 7,84 milhões de m² de parede, e a conta dá 2,6
+ * MILHÕES de triângulos — 35 vezes a cidade inteira de hoje — para desenhar
+ * o que um texel de 5 cm desenha igual.
+ *
+ * O LADRILHO: 512×512 px para 25,6 m de fachada (20 px por metro, 5 cm por
+ * texel), oito por oito células de 3,2 m — o mesmo módulo de fachada da
+ * torre, pela mesma razão: 3,2 m é o que faz uma janela ter tamanho de
+ * janela. Cada célula tem as três peças de sempre:
+ *
+ *     peitoril   1,0 m na base (20 px), a viga de borda, em CONCRETO
+ *     montante   0,3 m (6 px, meio em cada lado da célula, que o `Repeat`
+ *                emenda), a junta escura entre dois vãos
+ *     vidro      2,9 × 2,2 m, aceso em 22% das células e escuro no resto
+ *
+ * Em área isso dá 31,25% de peitoril, 6,45% de montante e 62,30% de vidro —
+ * e 14 das 64 células saem acesas (21,9%), que é o sorteio caindo onde o
+ * número nominal manda.
+ *
+ * ──────────────────────────────────────────────────────────────────────────
+ * O CONTRATO DE COR, QUE É A PARTE DELICADA.
+ *
+ * A textura MULTIPLICA a cor de vértice (`diffuseColor = color · vColor ·
+ * texel`, em linear), e uma multiplicação por um número ≤ 1 só sabe
+ * ESCURECER. Se o concreto do ladrilho fosse branco, a parede ficaria
+ * idêntica à de hoje e as janelas acesas sairiam mais ESCURAS que ela — o
+ * âmbar `JANELA` (#ffb070) tem 0,53 de luminância linear, e 0,53 × a parede
+ * é menos que a parede. Uma janela acesa que escurece a fachada é o oposto
+ * de uma janela acesa.
+ *
+ * A saída é dar ao ladrilho a FAIXA INTEIRA de 0 a 1 e devolver o brilho na
+ * outra ponta: o concreto fica em #5a5a5a, o vidro aceso chega a 1,0 no
+ * vermelho, e o material inteiro é multiplicado por `1 / TILE_MEDIA` — o
+ * inverso da luminância média do próprio ladrilho, que é 0,0965, ou seja um
+ * ganho de 10,37×. A conta fecha por construção: média do ladrilho × ganho =
+ * 1, e a parede volta a valer, em média, exatamente o que valia.
+ *
+ * Esse ganho mora na COR DO MATERIAL (`material-color-*` da malha das
+ * paredes) e não nas cores de vértice, e isso é deliberado: o buffer de cor
+ * continua guardando a mesma coisa que guardava em 17/10 — a luz da face, a
+ * oclusão do pé, a aresta de cima, a densidade de janelas que cai com a
+ * distância da torre —, legível e comparável vértice a vértice com o que
+ * havia antes. E se o canvas 2D faltar (`getContext` devolvendo nulo), o
+ * material fica sem mapa, o ganho fica em 1 e a cidade sai exatamente como
+ * saía antes desta tarefa, sem janelas e sem um pixel estourado.
+ *
+ * O QUE O LADRILHO FAZ COM CADA PEÇA, depois do ganho (× a parede de hoje):
+ *
+ *     peitoril / montante   1,06× e 0,24×  — a viga lê como a parede lia; a
+ *                           junta é a sombra que corta a fita de luz
+ *     vidro apagado         0,22 / 0,31 / 0,83 em R/G/B — vidro de noite é
+ *                           AZUL, porque o que ele reflete é o céu
+ *     janela cheia          5,54× em luminância, e 0,23 em linear sobre a
+ *                           face iluminada: acima do `BLOOM_LIMIAR` de 0,12
+ *                           do `HeroGlobePos`, ou seja ela sangra
+ *
+ * A CONTA DE V3 — "a cidade não pode clarear em média". Medida sobre as
+ * 7,84 milhões de m² de parede que a cidade tem, somando triângulo a
+ * triângulo a cor de vértice que este arquivo escreve:
+ *
+ *     hoje              0,02328 de luminância linear   (sRGB 0,179/0,157/0,196)
+ *     com o ladrilho    0,02360                        (sRGB 0,205/0,150/0,194)
+ *     razão             1,0139  →  +1,4%
+ *
+ * +1,4% contra os 10% de tolerância: não há o que compensar. O que mudou de
+ * verdade não foi o brilho, foi o MATIZ — o vermelho médio sobe 15% e o
+ * azul cai 1% —, e isso é o que 22% de janelas âmbar fazem com uma parede.
+ * O azul da cidade sobreviveu porque o vidro apagado do ladrilho é azul: com
+ * um vidro cinza neutro no lugar dele a conta dava 0,210/0,151/0,161, ou
+ * seja 18% de azul a menos, e a maquete perdia o tom de chumbo que a reforma
+ * de 17/10 escolheu a dedo.
+ *
+ * E A MISTURA DE ÂMBAR NA COR DE VÉRTICE CONTINUA ONDE ESTAVA (os 38% em
+ * `corTopo`, logo abaixo). Tirá-la seria o reflexo natural — "as janelas
+ * agora vêm da textura" —, e a conta diz que seria um erro: sem ela a mesma
+ * medição dá 0,01697, ou seja a cidade escureceria 27%. As duas coisas não
+ * são a mesma: o ladrilho desenha QUAIS janelas estão acesas, e o âmbar do
+ * vértice diz QUANTAS — é ele que carrega o gradiente que acende a Paulista
+ * e apaga a franja, e no retrato ele passa a tingir também as janelas do
+ * prédio, que é o que um edifício com muitos andares acesos faz mesmo.
+ * ──────────────────────────────────────────────────────────────────────────
+ */
+const TILE_CELULAS = 8;
+/** O módulo de fachada, em metros — o mesmo `VAO_ALVO` da torre. */
+const TILE_VAO = 3.2;
+/** O lado do ladrilho em metros: é o que entra em `texture.repeat`. */
+const TILE_METROS = TILE_CELULAS * TILE_VAO;
+/** 512 px para 25,6 m = 20 px por metro, ou 5 cm por texel. */
+const TILE_PX = 512;
+const TILE_PEITORIL = 1.0;
+const TILE_MONTANTE = 0.3;
+/** A fração de células acesas. 22% nominais, 14 de 64 na prática. */
+const TILE_ACESAS = 0.22;
+
+/* As três cores do ladrilho. Elas NÃO são cores da cidade: são os fatores
+   pelos quais a cor da parede é multiplicada, escritos como sRGB porque é
+   assim que um canvas 2D fala e porque o resto do arquivo mistura em sRGB.
+   O `#5a5a5a` do concreto é o que, depois do ganho de 10,37×, devolve o
+   peitoril ao tom que a parede inteira tinha em 17/10 (1,06×). */
+const TILE_CONCRETO = tom("#5a5a5a");
+const TILE_JUNTA = tom("#2a2a2a");
+const TILE_VIDRO = tom("#283050");
+
+/** O vidro de uma célula: azul-noite, ou aceso em âmbar. */
+function vidroDaCelula(ix: number, iy: number, saida: Tom) {
+  /* Os primos (211, 5003) espalham as chaves de células vizinhas pelo hash,
+     como os 1021 e 61 dos vãos da torre. Não é superstição: com o índice
+     corrido (`ix + 8·iy`) o MESMO `sorteio` devolve 13 acesas e duas delas
+     coladas de três em três na mesma fiada, e um trio aceso num ladrilho que
+     se repete a cada 25,6 m não é um trio — é uma fita de luz carimbada na
+     cidade inteira. Com os primos saem 14 espalhadas, 21,9% contra os 22%
+     nominais. */
+  const chave = ix * 211 + iy * 5003 + 1;
+  if (sorteio(chave) >= TILE_ACESAS) {
+    saida[0] = TILE_VIDRO[0];
+    saida[1] = TILE_VIDRO[1];
+    saida[2] = TILE_VIDRO[2];
+    return saida;
+  }
+  /* 0,40 a 1,0 de intensidade, e uma em cada cinco puxando 35% para o CREME:
+     é a mesma receita dos vãos da torre, pela mesma razão — sem variação a
+     cidade inteira acende na mesma cor e lê como filtro, não como luzes. */
+  const intens = 0.4 + 0.6 * sorteio(chave * 13 + 5);
+  const frio = sorteio(chave * 29 + 11) < 0.2 ? 0.35 : 0;
+  mistura(saida, JANELA, CREME, frio);
+  return mistura(saida, TILE_VIDRO, saida, intens);
+}
+
+/**
+ * A LUMINÂNCIA MÉDIA DO LADRILHO, calculada e não medida.
+ *
+ * Ela sai das FRAÇÕES DE ÁREA das três peças (31,25% de peitoril, 6,45% de
+ * montante, 62,30% de vidro) e das 64 células, e não de uma varredura dos
+ * 262 mil pixels do canvas: as medidas do ladrilho caem em pixels inteiros
+ * (64 px por célula, 20 de peitoril, 6 de montante), de modo que as frações
+ * são exatas e a varredura devolveria o mesmo número mais devagar.
+ *
+ * O canvas arredonda cada cor para 8 bits, e a cadeia de mipmaps quem gera é
+ * o driver — muito provavelmente no espaço CODIFICADO e não em linear, que é
+ * o que a especificação permite para uma textura sRGB. As duas coisas puxam
+ * a média REAL para baixo da calculada, por décimos de por cento o
+ * arredondamento e por algo mais o mipmap. É o lado seguro da tolerância de
+ * V3: esta conta pode errar para escuro, nunca para claro.
+ *
+ * Ela é CONSTANTE DE MÓDULO porque é o par do ganho que o material aplica: o
+ * dia em que alguém mexer numa cor do ladrilho ou na fração de acesas, o
+ * ganho se corrige sozinho e a cidade não muda de brilho por acidente. Era
+ * exatamente assim que o número tinha de nascer — a mesma lição dos "62.638"
+ * triângulos que envelheceram sozinhos lá no alto deste arquivo.
+ */
+function mediaDoTile() {
+  const fPeitoril = TILE_PEITORIL / TILE_VAO;
+  const fBanda = 1 - fPeitoril;
+  const fMontante = fBanda * (TILE_MONTANTE / TILE_VAO);
+  const fVidro = fBanda - fMontante;
+
+  const concreto = paraLinear([0, 0, 0], TILE_CONCRETO);
+  const junta = paraLinear([0, 0, 0], TILE_JUNTA);
+  const vidro: Tom = [0, 0, 0];
+  const vidroL: Tom = [0, 0, 0];
+  const soma: Tom = [0, 0, 0];
+
+  for (let ix = 0; ix < TILE_CELULAS; ix++) {
+    for (let iy = 0; iy < TILE_CELULAS; iy++) {
+      paraLinear(vidroL, vidroDaCelula(ix, iy, vidro));
+      soma[0] += vidroL[0];
+      soma[1] += vidroL[1];
+      soma[2] += vidroL[2];
+    }
+  }
+
+  const celulas = TILE_CELULAS * TILE_CELULAS;
+  const media: Tom = [0, 0, 0];
+  for (let k = 0; k < 3; k++) {
+    media[k] =
+      fPeitoril * concreto[k] + fMontante * junta[k] + (fVidro * soma[k]) / celulas;
+  }
+  /* Luminância ITU-R BT.709, que é a que o `BLOOM_LIMIAR` do `HeroGlobePos`
+     usa — comparar com outra régua seria comparar com outra cena. */
+  return 0.2126 * media[0] + 0.7152 * media[1] + 0.0722 * media[2];
+}
+
+/** 0,0965 — o ganho do material das paredes é o inverso disto (10,37×). */
+const TILE_MEDIA = mediaDoTile();
+
+/** Um `Tom` em sRGB como o canvas 2D o entende. */
+function css(t: Tom) {
+  const b = (v: number) => Math.round(Math.max(0, Math.min(1, v)) * 255);
+  return `rgb(${b(t[0])},${b(t[1])},${b(t[2])})`;
+}
+
+/**
+ * O ladrilho pintado num canvas — nenhum arquivo novo em `public/`.
+ *
+ * São 262 mil pixels em 128 `fillRect`, menos de um milissegundo, pagos no
+ * mesmo `useMemo` das outras texturas. Um PNG de 512×512 na pasta pública
+ * custaria uma requisição, uma decodificação e um arquivo binário no
+ * repositório para guardar um desenho que cabe em vinte linhas de código —
+ * e, pior, tiraria as cores dele deste arquivo, que é onde a conta de
+ * `TILE_MEDIA` precisa poder lê-las.
+ *
+ * O `y` do canvas cresce para BAIXO e o `v` da textura cresce para CIMA
+ * (`flipY` é o padrão do three), então a célula `iy = 0` — a de baixo da
+ * fachada — é pintada na última faixa do canvas. Inverter isso poria o
+ * peitoril no teto de cada andar.
+ */
+function constroiTexturaJanelas(aniso: number) {
+  const canvas = document.createElement("canvas");
+  canvas.width = TILE_PX;
+  canvas.height = TILE_PX;
+  const ctx = canvas.getContext("2d");
+  /* Sem contexto 2D não há ladrilho — e o material sabe disso: ele fica sem
+     mapa e sem ganho, e a cidade volta a ser a de 17/10. Nenhum caminho
+     deste arquivo depende da textura existir. */
+  if (!ctx) return null;
+
+  const px = TILE_PX / TILE_METROS; // 20 px por metro
+  const lado = TILE_PX / TILE_CELULAS; // 64 px por célula
+  const hPeitoril = TILE_PEITORIL * px; // 20 px
+  const meioMontante = (TILE_MONTANTE * px) / 2; // 3 px de cada lado
+
+  /* O fundo é a JUNTA: assim os 3 px de montante que sobram em cada lado do
+     vidro já estão pintados, e as metades de duas células vizinhas se juntam
+     num fio de 6 px inteiro quando o `RepeatWrapping` emenda o ladrilho. */
+  ctx.fillStyle = css(TILE_JUNTA);
+  ctx.fillRect(0, 0, TILE_PX, TILE_PX);
+
+  const vidro: Tom = [0, 0, 0];
+  for (let ix = 0; ix < TILE_CELULAS; ix++) {
+    for (let iy = 0; iy < TILE_CELULAS; iy++) {
+      const x = ix * lado;
+      const y = (TILE_CELULAS - 1 - iy) * lado;
+      // o vidro, entre os dois meios montantes e acima do peitoril
+      ctx.fillStyle = css(vidroDaCelula(ix, iy, vidro));
+      ctx.fillRect(
+        x + meioMontante,
+        y,
+        lado - meioMontante * 2,
+        lado - hPeitoril,
+      );
+      // o peitoril atravessa a célula inteira: ele é a laje, não o caixilho
+      ctx.fillStyle = css(TILE_CONCRETO);
+      ctx.fillRect(x, y + lado - hPeitoril, lado, hPeitoril);
+    }
+  }
+
+  const textura = new CanvasTexture(canvas);
+  textura.colorSpace = SRGBColorSpace;
+  /* O `uv` das paredes está em METROS (u ao longo da aresta, v = z), e é o
+     `repeat` que o traduz em ladrilhos. Guardar metros no buffer e dividir
+     aqui deixa o atributo legível e põe o tamanho do ladrilho num lugar só. */
+  textura.wrapS = RepeatWrapping;
+  textura.wrapT = RepeatWrapping;
+  textura.repeat.set(1 / TILE_METROS, 1 / TILE_METROS);
+  /* Mipmaps e anisotropia são o que faz a conta de V3 valer LONGE: na
+     contemplação (2,19 m/px) um texel de 5 cm é 1/44 de pixel, e sem a
+     cadeia de mipmaps o que apareceria ali não seria a média do ladrilho e
+     sim um texel sorteado por pixel — cintilação pura a cada quadro da
+     órbita. Com ela, a parede longe lê exatamente a média calculada. */
+  textura.anisotropy = aniso;
+  return textura;
+}
+
+/**
+ * Os 4.423 contornos em DUAS geometrias: as PAREDES, que têm `uv` e recebem
+ * o ladrilho de janelas, e o LISO (telhados e o fio do parapeito), que não
+ * tem nem pode ter.
  *
  * Sem `mergeGeometries`: juntar 4.423 `ExtrudeGeometry` custa 4.423 alocações
  * intermediárias e uma cópia a mais de tudo, para chegar no mesmo buffer que
@@ -540,9 +958,14 @@ function constroiPredios(aneis: AnelPronto[]) {
    *
    * Então a parede ganha cortes horizontais, e só onde eles pagam:
    *
-   *   até 40 m    1 fatia  — o degradê simples, como era (2.896 prédios)
+   *   até 40 m    1 fatia  — o degradê simples, como era (2.898 prédios)
    *   40 a 60 m   2 fatias — a oclusão presa nos 9 m de baixo (627 prédios)
    *   acima de 60 2 fatias + o FIO: os 1,2 m de cima mais claros (245 prédios)
+   *
+   * São estas três linhas que levam os prédios de 61.979 triângulos (uma
+   * fatia para todos) aos 75.397 de hoje: as 23.173 paredes rendem 46.346
+   * com uma fatia, 56.632 com a segunda e 59.764 com o fio, e os 15.633
+   * triângulos de telhado entram por cima disso. Contado da geometria.
    *
    * O fio é o pedido "telhados com um fio de aresta mais claro nos prédios
    * acima de 60 m". Ele é uma fatia da PAREDE e não uma fita no plano do
@@ -551,18 +974,40 @@ function constroiPredios(aneis: AnelPronto[]) {
    * 24 bits) um desnível de 15 cm não chega a um degrau do z-buffer. A fita
    * brigaria com o telhado em z-fighting. Na parede, vista a 32° de
    * obliquidade, ela lê exatamente como a aresta acesa do parapeito.
+   *
+   * ELE É A TERCEIRA FATIA DA PAREDE E MORA NA GEOMETRIA LISA (18/10). As
+   * duas frases não se contradizem: ele continua sendo uma tira vertical na
+   * parede, com a geometria que sempre teve, e só não entra no buffer que
+   * recebe o ladrilho de janelas. O motivo é que ele é CONCRETO — a aresta
+   * do parapeito — e 1,2 m de fachada amostrando um ladrilho de 3,2 m
+   * pegariam meia janela: o fio acabaria tracejado, que é exatamente o
+   * contrário da linha contínua que ele existe para desenhar.
    */
   const fatias = (altura: number) => (altura > 40 ? (altura > 60 ? 3 : 2) : 1);
 
-  let triangulos = 0;
+  /* Dois orçamentos, porque são dois buffers. As fatias TEXTURIZADAS são no
+     máximo duas (a terceira, o fio, é lisa), e o lado liso leva o fio mais a
+     tampa do telhado. Contado: 56.632 de parede e 18.765 de liso — os mesmos
+     75.397 de 17/10, repartidos. */
+  let triParede = 0;
+  let triLiso = 0;
   for (const a of aneis) {
-    triangulos += a.n * 2 * fatias(a.altura); // as paredes
-    triangulos += a.n - 2; // o telhado
+    const nf = fatias(a.altura);
+    triParede += a.n * 2 * (nf === 3 ? 2 : nf);
+    if (nf === 3) triLiso += a.n * 2; // o fio do parapeito
+    triLiso += a.n - 2; // o telhado
   }
-  const posicoes = new Float32Array(triangulos * 9);
-  const cores = new Float32Array(triangulos * 9);
+  const posicoes = new Float32Array(triParede * 9);
+  const cores = new Float32Array(triParede * 9);
+  /* O `uv` em METROS: u anda ao longo do perímetro do anel e v é o próprio
+     z. Quem divide pelos 25,6 m do ladrilho é o `repeat` da textura. */
+  const uvs = new Float32Array(triParede * 6);
+  const posLiso = new Float32Array(triLiso * 9);
+  const corLiso = new Float32Array(triLiso * 9);
 
   let p = 0;
+  let pu = 0;
+  let q = 0;
   const cor: Tom = [0, 0, 0];
   const corTopo: Tom = [0, 0, 0];
   const corPe: Tom = [0, 0, 0];
@@ -574,18 +1019,61 @@ function constroiPredios(aneis: AnelPronto[]) {
   const v2: Vector2[] = [];
   const poco: Vector2[] = [];
 
-  const poe = (x: number, y: number, z: number, c: Tom) => {
+  const poe = (x: number, y: number, z: number, u: number, c: Tom) => {
     posicoes[p] = x;
     posicoes[p + 1] = y;
     posicoes[p + 2] = z;
     cores[p] = c[0];
     cores[p + 1] = c[1];
     cores[p + 2] = c[2];
+    uvs[pu] = u;
+    uvs[pu + 1] = z;
     p += 3;
+    pu += 2;
   };
 
-  /** Uma fatia de parede entre dois z, com a cor de baixo e a de cima. */
+  const poeLiso = (x: number, y: number, z: number, c: Tom) => {
+    posLiso[q] = x;
+    posLiso[q + 1] = y;
+    posLiso[q + 2] = z;
+    corLiso[q] = c[0];
+    corLiso[q + 1] = c[1];
+    corLiso[q + 2] = c[2];
+    q += 3;
+  };
+
+  /**
+   * Uma fatia de parede entre dois z, com a cor de baixo e a de cima.
+   *
+   * `u0` e `u1` são a distância percorrida ao longo do PERÍMETRO do anel, e
+   * não o começo de cada face: as janelas atravessam o canto do prédio sem
+   * quebrar a cadência, que é o que uma fachada modulada faz. O preço é uma
+   * emenda por prédio, no canto em que o anel fecha — contra uma emenda por
+   * FACE, que é o que zerar o `u` em cada aresta daria, e que alinharia a
+   * mesma janela no canto esquerdo de todos os 3.770 vizinhos.
+   */
   const tira = (
+    ax: number,
+    ay: number,
+    bx: number,
+    by: number,
+    u0: number,
+    u1: number,
+    z0: number,
+    z1: number,
+    cb: Tom,
+    ct: Tom,
+  ) => {
+    poe(ax, ay, z0, u0, cb);
+    poe(bx, by, z0, u1, cb);
+    poe(bx, by, z1, u1, ct);
+    poe(ax, ay, z0, u0, cb);
+    poe(bx, by, z1, u1, ct);
+    poe(ax, ay, z1, u0, ct);
+  };
+
+  /** A mesma tira, do lado liso: sem `uv`, porque não há o que amostrar. */
+  const tiraLisa = (
     ax: number,
     ay: number,
     bx: number,
@@ -595,12 +1083,12 @@ function constroiPredios(aneis: AnelPronto[]) {
     cb: Tom,
     ct: Tom,
   ) => {
-    poe(ax, ay, z0, cb);
-    poe(bx, by, z0, cb);
-    poe(bx, by, z1, ct);
-    poe(ax, ay, z0, cb);
-    poe(bx, by, z1, ct);
-    poe(ax, ay, z1, ct);
+    poeLiso(ax, ay, z0, cb);
+    poeLiso(bx, by, z0, cb);
+    poeLiso(bx, by, z1, ct);
+    poeLiso(ax, ay, z0, cb);
+    poeLiso(bx, by, z1, ct);
+    poeLiso(ax, ay, z1, ct);
   };
 
   for (const anel of aneis) {
@@ -642,6 +1130,11 @@ function constroiPredios(aneis: AnelPronto[]) {
     /* AS PAREDES. Para um anel anti-horário, a normal para fora da aresta
        a→b é (dy, −dx) normalizada: na aresta de baixo de um quadrado
        (0,0)→(1,0) ela dá (0,−1), que aponta para fora. */
+    /* A régua do `u`, em metros rodados ao longo do perímetro. Ela começa em
+       zero no primeiro vértice de cada anel, e por isso a fase do ladrilho
+       muda de prédio para prédio junto com a forma dele — 3.770 fachadas que
+       nasceram do mesmo desenho e nenhuma começando igual à vizinha. */
+    let u = 0;
     for (let k = 0, j = n - 1; k < n; j = k++) {
       const ax = pts[j * 2];
       const ay = pts[j * 2 + 1];
@@ -684,15 +1177,19 @@ function constroiPredios(aneis: AnelPronto[]) {
       paraLinear(luzLinear, cor);
       paraLinear(topoLinear, corTopo);
 
+      const u0 = u;
+      const u1 = u + comp;
+      u = u1;
+
       if (nFatias >= 2) {
-        tira(ax, ay, bx, by, 0, zOclusao, peLinear, luzLinear);
-        tira(ax, ay, bx, by, zOclusao, zFio, luzLinear, topoLinear);
+        tira(ax, ay, bx, by, u0, u1, 0, zOclusao, peLinear, luzLinear);
+        tira(ax, ay, bx, by, u0, u1, zOclusao, zFio, luzLinear, topoLinear);
       } else {
-        tira(ax, ay, bx, by, 0, zFio, peLinear, topoLinear);
+        tira(ax, ay, bx, by, u0, u1, 0, zFio, peLinear, topoLinear);
       }
       if (temFio) {
         paraLinear(fioLinear, corFio);
-        tira(ax, ay, bx, by, zFio, altura, fioLinear, fioLinear);
+        tiraLisa(ax, ay, bx, by, zFio, altura, fioLinear, fioLinear);
       }
     }
 
@@ -701,9 +1198,10 @@ function constroiPredios(aneis: AnelPronto[]) {
        triângulo é conferido pela área: earcut não promete orientação, e um
        telhado virado para baixo sumiria no `FrontSide`.
 
-       Os `Vector2` saem de um POÇO que cresce e é reusado: são 27 mil vértices,
-       e um objeto por vértice é lixo garantido logo depois do pior quadro do
-       hero. O poço tira as 27 mil alocações do caminho. */
+       Os `Vector2` saem de um POÇO que cresce e é reusado: são 23.173
+       vértices de contorno (contados: a soma dos `n` dos 3.770 anéis), e um
+       objeto por vértice é lixo garantido logo depois do pior quadro do hero.
+       O poço tira as 23 mil alocações do caminho. */
     while (poco.length < n) poco.push(new Vector2());
     v2.length = 0;
     for (let k = 0; k < n; k++) {
@@ -721,25 +1219,32 @@ function constroiPredios(aneis: AnelPronto[]) {
       const b = v2[f[1]];
       const c = v2[f[2]];
       const giro = (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);
-      poe(a.x, a.y, altura, topoLinear);
+      poeLiso(a.x, a.y, altura, topoLinear);
       if (giro >= 0) {
-        poe(b.x, b.y, altura, topoLinear);
-        poe(c.x, c.y, altura, topoLinear);
+        poeLiso(b.x, b.y, altura, topoLinear);
+        poeLiso(c.x, c.y, altura, topoLinear);
       } else {
-        poe(c.x, c.y, altura, topoLinear);
-        poe(b.x, b.y, altura, topoLinear);
+        poeLiso(c.x, c.y, altura, topoLinear);
+        poeLiso(b.x, b.y, altura, topoLinear);
       }
     }
   }
 
+  /* Os dois buffers são dimensionados pelo pior caso (todas as arestas
+     aproveitadas) e as paredes degeneradas descartadas no caminho deixam
+     sobra no fim: cada geometria usa só o que foi escrito. */
   const geo = new BufferGeometry();
-  /* O buffer é dimensionado pelo pior caso (todas as arestas aproveitadas) e
-     as paredes degeneradas descartadas no caminho deixam sobra no fim: a
-     geometria usa só o que foi escrito. */
   geo.setAttribute("position", new BufferAttribute(posicoes.subarray(0, p), 3));
   geo.setAttribute("color", new BufferAttribute(cores.subarray(0, p), 3));
+  geo.setAttribute("uv", new BufferAttribute(uvs.subarray(0, pu), 2));
   geo.computeBoundingSphere();
-  return { geo, triangulos: p / 9 };
+
+  const geoLiso = new BufferGeometry();
+  geoLiso.setAttribute("position", new BufferAttribute(posLiso.subarray(0, q), 3));
+  geoLiso.setAttribute("color", new BufferAttribute(corLiso.subarray(0, q), 3));
+  geoLiso.computeBoundingSphere();
+
+  return { geo, geoLiso, triangulos: p / 9, triangulosLisos: q / 9 };
 }
 
 /* --------------------------------------------------------------------------
@@ -831,10 +1336,39 @@ function constroiChao(
  * DRAW CALL, que é a moeda que importa dentro do mergulho.
  *
  * As listas são number[] comuns e não um Float32Array dimensionado no começo,
- * ao contrário dos prédios: a torre tem ~1.600 triângulos (contra 62 mil), e
- * contar triângulos à mão para poupar uma realocação que acontece UMA vez na
- * vida da página é o tipo de precisão que só serve para quebrar quando alguém
- * acrescentar um andar.
+ * ao contrário dos prédios: a torre tem 15.794 triângulos contra os 75.397
+ * dos vizinhos, e contar triângulos à mão para poupar uma realocação que
+ * acontece UMA vez na vida da página é o tipo de precisão que só serve para
+ * quebrar quando alguém acrescentar um andar.
+ *
+ * ──────────────────────────────────────────────────────────────────────────
+ * A REGRA DE OURO DESTE ARQUIVO: AQUI QUEM DECIDE QUEM FICA POR CIMA É A
+ * ORDEM DE ESCRITA, NÃO A DISTÂNCIA.
+ *
+ * A câmera do palco é ORTOGRÁFICA com `near = 0,1` e `far = 10` (ver o
+ * `<Canvas>` do `HeroGlobe3D`), e uma unidade de mundo é o raio da Terra. O
+ * buffer de profundidade, que numa ortográfica é LINEAR, espalha os seus 24
+ * bits por 9,9 unidades, ou seja por 63.073 km:
+ *
+ *     63.072.900 m / 2^24 = 3,76 m por degrau
+ *
+ * Nada abaixo de quatro metros existe para o z-buffer desta cena. A moldura
+ * do letreiro, que está a 0,35 m da parede, não ganha dela por profundidade —
+ * ganha porque é escrita DEPOIS no mesmo buffer, e com `LessEqualDepth` o
+ * empate é do último. É por isso que as peças de perto desta função estão na
+ * ordem em que estão, e por que mexer nessa ordem é mexer no desenho:
+ *
+ *     embasamento → marquise → VITRINE e ARO (que cobrem os dois)
+ *     fustes e vãos → CAIXAS TÉCNICAS (que pousam nos terraços)
+ *     coroa → remate → arestas → CINTA DA COROA (que passa por fora delas)
+ *     mastros e balizas (que não encostam em nada)
+ *     CAIXA DE LUZ → moldura → faixa (o letreiro, de trás para a frente)
+ *
+ * Os centímetros que cada peça avança sobre a parede continuam escritos
+ * porque são a VERDADE GEOMÉTRICA da coisa (uma vitrine avança mesmo 0,2 m) e
+ * porque o dia em que esta cena ganhar uma perspectiva com near/far apertados
+ * eles passam a valer sozinhos. Hoje, quem trabalha é a ordem.
+ * ──────────────────────────────────────────────────────────────────────────
  */
 function constroiTorre() {
   const pos: number[] = [];
@@ -847,15 +1381,20 @@ function constroiTorre() {
      é o contrato do bloco de cores lá em cima. */
   const L = (t: Tom) => paraLinear([0, 0, 0], t);
 
-  const cantos = (lado: number, cx = 0, cy = 0) => {
-    const m = lado / 2;
+  /* Os quatro cantos de um retângulo, em sentido ANTI-HORÁRIO — o contrato de
+     normal para fora do arquivo inteiro. O caso quadrado, que é quase tudo
+     aqui, continua tendo o nome curto. */
+  const cantosRet = (lx: number, ly: number, cx = 0, cy = 0) => {
+    const mx = lx / 2;
+    const my = ly / 2;
     return [
-      [cx - m, cy - m],
-      [cx + m, cy - m],
-      [cx + m, cy + m],
-      [cx - m, cy + m],
+      [cx - mx, cy - my],
+      [cx + mx, cy - my],
+      [cx + mx, cy + my],
+      [cx - mx, cy + my],
     ] as [number, number][];
   };
+  const cantos = (lado: number, cx = 0, cy = 0) => cantosRet(lado, lado, cx, cy);
 
   /** A luz da aresta a→b de um contorno anti-horário (normal para fora). */
   const luzDa = (ax: number, ay: number, bx: number, by: number) => {
@@ -883,8 +1422,15 @@ function constroiTorre() {
     poe(ax, ay, z1, ct);
   };
 
-  const tampa = (lado: number, z: number, t: Tom, cx = 0, cy = 0) => {
-    const q = cantos(lado, cx, cy);
+  const tampaRet = (
+    lx: number,
+    ly: number,
+    z: number,
+    t: Tom,
+    cx = 0,
+    cy = 0,
+  ) => {
+    const q = cantosRet(lx, ly, cx, cy);
     const c = L(t);
     poe(q[0][0], q[0][1], z, c);
     poe(q[1][0], q[1][1], z, c);
@@ -893,10 +1439,20 @@ function constroiTorre() {
     poe(q[2][0], q[2][1], z, c);
     poe(q[3][0], q[3][1], z, c);
   };
+  const tampa = (lado: number, z: number, t: Tom, cx = 0, cy = 0) =>
+    tampaRet(lado, lado, z, t, cx, cy);
 
-  /** Um bloco reto: quatro paredes com luz por face e, se pedida, a tampa. */
-  const bloco = (
-    lado: number,
+  /**
+   * Uma caixa reta: quatro paredes com luz por face e, se pedida, a tampa.
+   *
+   * Ela nasceu RETANGULAR em 18/10 por causa das caixas técnicas dos terraços,
+   * que são 6×3 e não quadradas — um anel de recuo tem 4 m de largura e um
+   * equipamento quadrado de 6 m não caberia nele. `bloco` continua sendo o
+   * nome do caso quadrado, que é o resto da torre inteira.
+   */
+  const caixa = (
+    lx: number,
+    ly: number,
     z0: number,
     z1: number,
     base: Tom,
@@ -905,7 +1461,7 @@ function constroiTorre() {
     cx = 0,
     cy = 0,
   ) => {
-    const q = cantos(lado, cx, cy);
+    const q = cantosRet(lx, ly, cx, cy);
     const a: Tom = [0, 0, 0];
     const b: Tom = [0, 0, 0];
     for (let k = 0; k < 4; k++) {
@@ -916,7 +1472,46 @@ function constroiTorre() {
       mistura(b, a, PAREDE_TOPO, 0.3);
       parede(ax, ay, bx, by, z0, z1, L(a), L(b));
     }
-    if (tam) tampa(lado, z1, tam, cx, cy);
+    if (tam) tampaRet(lx, ly, z1, tam, cx, cy);
+  };
+
+  const bloco = (
+    lado: number,
+    z0: number,
+    z1: number,
+    base: Tom,
+    topo: Tom,
+    tam: Tom | null,
+    cx = 0,
+    cy = 0,
+  ) => caixa(lado, lado, z0, z1, base, topo, tam, cx, cy);
+
+  /**
+   * Uma caixa de cor CHAPADA — sem luz por face, sem aresta clara no alto.
+   *
+   * O que é lâmpada não tem lado escuro: uma baliza de obstáculo emite, ela
+   * não reflete a luz de noroeste como as paredes fazem. Passá-la pelo `bloco`
+   * daria uma face norte apagada e a leitura de "cubinho vermelho pintado" em
+   * vez de "luz acesa". É a mesma razão por que a cinta da coroa e a vitrine
+   * do saguão também são escritas chapadas, cada uma no seu lugar.
+   */
+  const lampada = (
+    lx: number,
+    ly: number,
+    z0: number,
+    z1: number,
+    c: Tom,
+    cx = 0,
+    cy = 0,
+  ) => {
+    const q = cantosRet(lx, ly, cx, cy);
+    const cl = L(c);
+    for (let k = 0; k < 4; k++) {
+      const [ax, ay] = q[k];
+      const [bx, by] = q[(k + 1) % 4];
+      parede(ax, ay, bx, by, z0, z1, cl, cl);
+    }
+    tampaRet(lx, ly, z1, c, cx, cy);
   };
 
   /**
@@ -973,6 +1568,98 @@ function constroiTorre() {
     tampa(MARQUISE.lado, MARQUISE.z1, TELHADO);
   }
 
+  /* ------------------------------------------------------------- a entrada */
+
+  /**
+   * O SAGUÃO ACESO E A POÇA DE LUZ NO PISO (18/10, a fase `fachada`).
+   *
+   * No retrato de perto a base da torre ocupa um terço de baixo do quadro, e
+   * até aqui ela era parede escura e mais nada: um prédio sem ONDE SE ENTRA.
+   * É o detalhe que o olho procura primeiro para dar escala humana a uma
+   * massa — é pelo tamanho da porta que se sabe o tamanho do edifício.
+   *
+   * A VITRINE: 14 m de largura por 4,5 de altura (z 0,3 a 4,8), 0,2 m à frente
+   * da parede do embasamento. Os 4,5 m são um pé-direito duplo de saguão, e os
+   * 14 m são o vão de três portas e as duas vidraças ao lado. Ela fica SOB a
+   * marquise e ainda assim visível: a laje avança 6 m e começa em z = 11,6,
+   * então com a câmera a 35° acima do horizonte (os 55° de obliquidade da fase
+   * `fachada`) ela esconde a parede só até z = 7,5 — a vitrine inteira está
+   * abaixo disso.
+   *
+   * NAS DUAS FACHADAS, e não só na sul que o plano pedia. É a mesma razão das
+   * placas da marca e do letreiro, escrita lá embaixo: o SINAL da obliquidade
+   * é de quem integra o mergulho, e tombar a esfera para o outro lado não pode
+   * custar a entrada do prédio. São dois triângulos a mais, e um edifício
+   * deste porte tem acesso pelos dois lados da quadra de qualquer jeito.
+   *
+   * `JANELA` misturado 40% com `CREME`: é o único lugar da torre com luz
+   * branca de verdade além da faixa do letreiro. Dá 0,83 de luminância em
+   * sRGB, muito acima do `BLOOM_LIMIAR` de 0,12 — a vitrine SANGRA no
+   * pós-processamento, e é esse halo baixo que faz a torre parecer apoiada na
+   * rua em vez de encaixada nela.
+   */
+  {
+    const saguao = mistura([0, 0, 0], JANELA, CREME, 0.4);
+    const sl = L(saguao);
+    for (const sul of [true, false]) {
+      const y = (sul ? -1 : 1) * (EMBASAMENTO.lado / 2 + 0.2);
+      chapa(sul, y, -7, 7, 0.3, 4.8, sl);
+    }
+  }
+
+  /**
+   * O ARO DE LUZ NO CHÃO — a marquise devolvida ao piso.
+   *
+   * Um anel plano de raio 44 a 47 m a 0,2 m do chão. Os 44 são exatamente a
+   * meia-largura da marquise: a luz embutida na borda dela cai no piso logo
+   * depois da projeção da laje, que é onde uma calçada iluminada começa.
+   *
+   * O NÚMERO DA COR SAI DE UMA CONTA DE MISTURA, não de gosto. O aro é
+   * geometria OPACA e é desenhada antes dos dois chãos, que são transparentes
+   * (`renderOrder` 2 e 2,2) e não escrevem profundidade — ou seja, no retrato
+   * os dois passam por cima dele com 0,484 de opacidade cada (ver
+   * `CHAO_NA_FACHADA`). O que sobra do aro, em linear:
+   *
+   *     final = c_chão·0,484 + 0,516·(c_chão·0,484 + 0,516·c_aro)
+   *
+   * Com o piso da praça em 0,0062 linear (0,08 sRGB) e o aro em 0,100
+   * (`OCLUSAO` puxado 35% para `JANELA`, 0,36 sRGB), o anel chega na tela a
+   * 0,0312 linear contra 0,0062 do chão em volta — 0,194 contra 0,082 em sRGB,
+   * ou 2,4× mais claro. É a MESMA razão de legibilidade do `VIA_TETO` aqui ao
+   * lado, e por isso o mesmo número: 2,3× é o que basta para uma forma
+   * aparecer sob o mapa sem virar lâmpada.
+   *
+   * 35% e não mais: a 0,36 de sRGB o aro fica em 0,065 de luminância linear,
+   * ABAIXO do limiar de bloom de 0,12. Ele é uma poça de luz, não uma fonte —
+   * quem sangra na base do quadro é a vitrine, que é onde a luz nasce.
+   *
+   * Só a metade SUL dele se vê: do norte a própria torre o tapa. Custa 128
+   * triângulos inteiros, o que é barato demais para valer a conta de cortar.
+   */
+  {
+    const SETORES_ARO = 64;
+    const r0 = 44;
+    const r1 = 47;
+    const zAro = 0.2;
+    const aro = L(mistura([0, 0, 0], OCLUSAO, JANELA, 0.35));
+    const passoAro = (Math.PI * 2) / SETORES_ARO;
+    for (let k = 0; k < SETORES_ARO; k++) {
+      const a0 = k * passoAro;
+      const a1 = (k + 1) * passoAro;
+      const c0 = Math.cos(a0);
+      const s0 = Math.sin(a0);
+      const c1 = Math.cos(a1);
+      const s1 = Math.sin(a1);
+      /* Anti-horário visto de +z, que é para onde a face olha. */
+      poe(r0 * c0, r0 * s0, zAro, aro);
+      poe(r1 * c0, r1 * s0, zAro, aro);
+      poe(r1 * c1, r1 * s1, zAro, aro);
+      poe(r0 * c0, r0 * s0, zAro, aro);
+      poe(r1 * c1, r1 * s1, zAro, aro);
+      poe(r0 * c1, r0 * s1, zAro, aro);
+    }
+  }
+
   /* ------------------------------------------------- os fustes e as fiadas */
 
   /**
@@ -990,31 +1677,194 @@ function constroiTorre() {
     return 0.42 + 0.58 * sorteio(andar * 17 + 3);
   };
 
+  /**
+   * AS JANELAS NASCEM POR VÃO, E NÃO POR FIADA (18/10, a fase `fachada`).
+   *
+   * Até aqui um andar eram DUAS tiras atravessando a face inteira: 70% de
+   * vidro escuro embaixo e 30% de vidro aceso em cima. A 2,19 m/px da
+   * contemplação isso basta — o andar tem 1,7 px e o que se lê é a cadência
+   * claro/escuro. A 0,59 m/px do retrato, não: o andar passa a ter 6,3 px e
+   * uma face acesa de uma vez vira uma FITA de luz de 26 px de largura, que é
+   * a coisa que nenhum edifício de verdade tem. Um prédio aceso visto de perto
+   * é uma GRADE, e a grade é feita de três coisas:
+   *
+   *   vão        `lado / round(lado/3,2)`: 3,22 m no fuste A (18 vãos em 58),
+   *              3,13 no B (16 em 50), 3,23 no C (13 em 42). 3,2 m é o módulo
+   *              de fachada de um edifício de escritórios — é dele que saem a
+   *              malha de forro, o piso elevado e o lugar onde uma divisória
+   *              pode encostar no vidro. Não é um número de desenho: é o
+   *              número que faz a janela ter o tamanho de uma janela.
+   *   montante   0,3 m entre dois vãos, em `TORRE_CORPO` escurecido 40%. Tem
+   *              meio pixel no retrato e ainda assim aparece — é ele que corta
+   *              a fita de luz em janelas. Na maquete de 9.200 some sozinho,
+   *              que é exatamente o que se quer lá.
+   *   peitoril   1,0 m na base de cada andar, da cor do CORPO e não do vidro:
+   *              é a viga de borda, a faixa OPACA entre a laje e a janela de
+   *              cima. Sem ela a torre é uma caixa de vidro do chão ao teto e
+   *              perde a cadência horizontal, que é a única coisa capaz de
+   *              dizer quantos andares o prédio tem.
+   *
+   * A CONTA DA CLARIDADE, que é o risco desta mudança. Sobram 2,7 m de vidro
+   * por andar (73% da altura) contra os 30% de antes, e a largura acesa cai de
+   * 100% para 78% dos 91% que não são montante:
+   *
+   *   antes   0,66 (andares acesos) × 0,30 (altura) × 1,00 (largura) = 0,198
+   *   agora   0,73 × 0,91 × (0,66·0,78 + 0,34·0,06)                  = 0,356
+   *
+   * ou seja 1,8× mais ÁREA acesa. A compensação está na MISTURA: o pico de
+   * âmbar vai a 0,37 (era 0,31) mas a média cai de 0,235 para 0,223, e o
+   * produto área×mistura sai 1,7× o de antes (0,079 contra 0,0465). É um
+   * aumento de propósito — a torre é o assunto do retrato, e um marco que não
+   * é mais claro que os vizinhos não é marco —, e é pequeno o bastante para a
+   * maquete de 9.200 não trocar de leitura. Quem confere isso no navegador é
+   * a verificação final; o que esta conta garante é que ninguém vai descobrir
+   * a mudança de brilho por acidente.
+   *
+   * NADA DISTO É CHAVEADO PELA PROP `fachada`. A torre é UMA geometria e UM
+   * draw call, construída uma vez no `useMemo`; um nível de detalhe por
+   * escala pediria uma segunda geometria, um segundo material e um segundo
+   * draw call para economizar triângulos que a GPU desenha em microssegundos.
+   * Os 14,6 mil triângulos que a tarefa F acrescenta estão SEMPRE no buffer, e
+   * o que a escala decide é só se eles se enxergam.
+   */
+
+  /** O módulo de fachada: a largura de MIRA de um vão (o real sai da divisão). */
+  const VAO_ALVO = 3.2;
+  /** O fio vertical entre dois vãos. */
+  const MONTANTE = 0.3;
+  /** A viga de borda na base de cada andar. */
+  const PEITORIL = 1.0;
+
+  /* O montante não depende da face: ele é sombra, não material iluminado. O
+     preto que escurece o `TORRE_CORPO` é o `OCLUSAO` da paleta — nenhuma cor
+     nova entra neste arquivo por causa de um fio de 0,3 m. */
+  const montanteL = L(mistura([0, 0, 0], TORRE_CORPO, OCLUSAO, 0.4));
+
   let andar = 0;
   for (const seg of FUSTES) {
     const q = cantos(seg.lado);
     const n = Math.max(1, Math.round((seg.z1 - seg.z0) / PE_DIREITO));
     const pe = (seg.z1 - seg.z0) / n;
+    const nv = Math.max(1, Math.round(seg.lado / VAO_ALVO));
+    const passoVao = seg.lado / nv;
     const vidro: Tom = [0, 0, 0];
+    const reflexo: Tom = [0, 0, 0];
+    const reflexoL: Tom = [0, 0, 0];
     const acesa: Tom = [0, 0, 0];
+    const acesaL: Tom = [0, 0, 0];
+    const alvo: Tom = [0, 0, 0];
+    const peitoril: Tom = [0, 0, 0];
+    const peitorilTopo: Tom = [0, 0, 0];
+
     for (let k = 0; k < 4; k++) {
       const [ax, ay] = q[k];
       const [bx, by] = q[(k + 1) % 4];
-      mistura(vidro, VIDRO, VIDRO_LUZ, luzDa(ax, ay, bx, by));
-      const vl = L(vidro);
+      /* O versor que anda ao longo da face: é ele que traduz "metro da
+         esquerda para a direita da fachada" em x,y do referencial da cena, e
+         é o que deixa as quatro faces usarem o mesmo laço de vãos. */
+      const ux = (bx - ax) / seg.lado;
+      const uy = (by - ay) / seg.lado;
+      const luz = luzDa(ax, ay, bx, by);
+
+      mistura(vidro, VIDRO, VIDRO_LUZ, luz);
+      /* O peitoril é CONCRETO, não vidro: ele anda de `TORRE_CORPO` a
+         `TORRE_LUZ` com a luz da face, e a aresta de cima leva mais 20% de
+         `PAREDE_TOPO` — é o fio claro do canto da viga, o mesmo recurso que
+         desenha a silhueta dos vizinhos contra o céu. */
+      mistura(peitoril, TORRE_CORPO, TORRE_LUZ, luz);
+      mistura(peitorilTopo, peitoril, PAREDE_TOPO, 0.2);
+      const peitorilL = L(peitoril);
+      const peitorilTopoL = L(peitorilTopo);
+
       for (let a = 0; a < n; a++) {
         const z0 = seg.z0 + a * pe;
-        /* 62% de vidro escuro embaixo e 38% de fiada em cima: a janela de um
-           andar fica na parte de CIMA do pé-direito, acima do peitoril. */
-        const zf = z0 + pe * 0.7;
-        parede(ax, ay, bx, by, z0, zf, vl, vl);
+        const zv = z0 + PEITORIL; // onde a viga acaba e o vidro começa
+        const z1 = z0 + pe;
+
+        /* A viga de borda, atravessando a face inteira — ela é a única peça
+           contínua de um andar, e é por isso que ela lê como "laje". */
+        parede(ax, ay, bx, by, z0, zv, peitorilL, peitorilTopoL);
+
+        /* O REFLEXO VERTICAL: o vidro clareia até 12% da base ao alto do
+           fuste. É o céu que ele devolve — num prédio real o vidro de baixo
+           reflete a rua escura e o prédio da frente, e o de cima reflete o
+           horizonte, que mesmo à noite é a parte mais clara do céu. 12% é
+           pouco de propósito: o que esta rampa faz é impedir que uma parede
+           de 93 m tenha o mesmo tom do primeiro ao último andar, e qualquer
+           coisa além disso vira um degradê de cartaz. */
+        const alt = n > 1 ? a / (n - 1) : 0;
+        mistura(reflexo, vidro, VIDRO_LUZ, 0.12 * alt);
+        paraLinear(reflexoL, reflexo);
+
         const nivel = fiada(andar + a);
-        if (nivel > 0) {
-          mistura(acesa, vidro, JANELA, 0.05 + 0.26 * nivel);
-          const al = L(acesa);
-          parede(ax, ay, bx, by, zf, z0 + pe, al, al);
-        } else {
-          parede(ax, ay, bx, by, zf, z0 + pe, vl, vl);
+
+        for (let v = 0; v < nv; v++) {
+          /* Meio montante de cada lado, MENOS nas pontas da face: lá o canto
+             já é a fita da aresta, que passa 0,05 m por fora e cobre os
+             últimos 0,9 m — um montante ali seria um fio escuro escondido
+             atrás de um fio laranja. */
+          const s0 = v * passoVao + (v === 0 ? 0 : MONTANTE / 2);
+          const s1 = (v + 1) * passoVao - (v === nv - 1 ? 0 : MONTANTE / 2);
+          const x0 = ax + ux * s0;
+          const y0 = ay + uy * s0;
+          const x1 = ax + ux * s1;
+          const y1 = ay + uy * s1;
+
+          /* UMA chave por andar, por FACE e por vão. Sem o `k` as quatro
+             fachadas acenderiam o mesmo desenho e a torre viraria um carimbo
+             girado quatro vezes — o tipo de simetria que o olho pega na hora
+             quando a órbita da fase `fachada` mostra duas faces ao mesmo
+             tempo. Os multiplicadores primos (1021, 61) espalham as chaves de
+             andares vizinhos para longe uma da outra no `sorteio`. */
+          const chave = (andar + a) * 1021 + k * 61 + v;
+
+          /* 78% dentro de um andar aceso, 6% num andar apagado. Os 6% são o
+             detalhe que faz a fachada parecer habitada: um andar escuro com
+             UMA sala acesa é alguém que ficou até tarde, e é a única coisa
+             que diferencia um prédio à noite de uma grade desenhada. */
+          if (sorteio(chave * 7 + 1) < (nivel > 0 ? 0.78 : 0.06)) {
+            /* O brilho do vão: o andar dá a base (`fiada`, 0,42 a 1,0) e o vão
+               varia de 0,45 a 1,0 em cima dela. A sala acesa num andar apagado
+               não tem andar de quem herdar e entra com 0,55 — uma luz só,
+               nem a mais forte nem a mais fraca da fachada. */
+            const intens = 0.45 + 0.55 * sorteio(chave * 13 + 5);
+            /* Uma em cada cinco puxa 35% para o CREME: é a luz fria de uma
+               sala de reunião no meio das salas de luz quente. Sem essa
+               variação a fachada inteira tem uma cor só e lê como filtro
+               aplicado por cima, não como luzes diferentes acesas. */
+            const frio = sorteio(chave * 29 + 11) < 0.2 ? 0.35 : 0;
+            mistura(alvo, JANELA, CREME, frio);
+            mistura(
+              acesa,
+              reflexo,
+              alvo,
+              0.07 + 0.3 * (nivel > 0 ? nivel : 0.55) * intens,
+            );
+            paraLinear(acesaL, acesa);
+            parede(x0, y0, x1, y1, zv, z1, acesaL, acesaL);
+          } else {
+            parede(x0, y0, x1, y1, zv, z1, reflexoL, reflexoL);
+          }
+
+          /* O montante vai DEPOIS do vão e só ENTRE dois deles: os vãos e os
+             montantes são tiras vizinhas no mesmo plano, encostadas e sem se
+             sobrepor — nenhuma depende da profundidade para aparecer, o que
+             nesta cena de degraus de 3,76 m é a única forma segura de desenhar
+             duas cores lado a lado numa parede. */
+          if (v < nv - 1) {
+            const m0 = (v + 1) * passoVao - MONTANTE / 2;
+            const m1 = (v + 1) * passoVao + MONTANTE / 2;
+            parede(
+              ax + ux * m0,
+              ay + uy * m0,
+              ax + ux * m1,
+              ay + uy * m1,
+              zv,
+              z1,
+              montanteL,
+              montanteL,
+            );
+          }
         }
       }
     }
@@ -1024,6 +1874,33 @@ function constroiTorre() {
     tampa(seg.lado, seg.z1, TELHADO);
     andar += n;
   }
+
+  /* --------------------------------------- as caixas técnicas dos terraços */
+
+  /**
+   * O QUE PÕE UM TERRAÇO NO LUGAR DE UM DEGRAU.
+   *
+   * Um recuo vazio lê como um corte no bloco; o que faz dele um TERRAÇO é o
+   * equipamento em cima — casa de máquinas, torre de resfriamento, a caixa do
+   * elevador. Três caixas bastam: no retrato elas têm 4 px de altura e o que
+   * elas entregam não é o objeto, é a QUEBRA da linha reta do parapeito.
+   *
+   * 6×3 e não os 6×4 que o plano pedia, e a razão é aritmética: o anel do
+   * recuo de 108 m vai de 25 a 29 m de meia-largura (o fuste A tem 58 de lado,
+   * o B tem 50) e o de 180 vai de 21 a 25 — quatro metros, os dois. Uma caixa
+   * de 4 m de profundidade encostaria nas duas bordas do anel ao mesmo tempo,
+   * e "sem tocar as arestas" é a condição do plano. Com 3 m ela fica centrada
+   * no anel com 0,5 m de folga de cada lado.
+   *
+   * As posições fogem dos cantos (onde correm as fitas das arestas) e da
+   * placa do terraço lá em cima. 2,5 m de altura: dois terços de um
+   * pé-direito, que é o tamanho de uma casa de máquinas de verdade.
+   */
+  /* no terraço de 108 m (anel de 25 a 29): uma ao sul e uma ao norte */
+  caixa(6, 3, 108, 110.5, TELHADO, PAREDE_TOPO, TELHADO, 15, -27);
+  caixa(6, 3, 108, 110.5, TELHADO, PAREDE_TOPO, TELHADO, -15, 27);
+  /* no terraço de 180 m (anel de 21 a 25): uma a leste, virada 90° */
+  caixa(3, 6, 180, 182.5, TELHADO, PAREDE_TOPO, TELHADO, 23, -9);
 
   /* ---------------------------------------------------- a coroa e o remate */
 
@@ -1072,6 +1949,72 @@ function constroiTorre() {
     }
   }
 
+  /* ----------------------------------------------- a cinta de luz da coroa */
+
+  /**
+   * A COROA ILUMINADA — a "crown lighting" dos arranha-céus de verdade.
+   *
+   * Uma cinta de 1,2 m de altura dando a volta no alto da coroa (z 276 a
+   * 277,2), 0,3 m para fora da parede, em `CREME` com 15% de `LARANJA`. É a
+   * peça que mais trabalha no retrato por triângulo gasto: oito triângulos
+   * para a coisa que o olho usa, numa silhueta noturna, para separar o remate
+   * do céu.
+   *
+   * POR QUE NO ALTO DA COROA E NÃO NO ALTO DO REMATE: o remate já é laranja
+   * chapado e já é a peça mais clara da torre; uma cinta ali seria luz sobre
+   * luz. A 276 ela fica logo abaixo do remate, e o que se lê de longe são
+   * DUAS faixas acesas com um vão escuro entre elas — a assinatura de um
+   * coroamento iluminado.
+   *
+   * Em luminância ela dá 0,93 em sRGB e 0,85 em linear, sete vezes o
+   * `BLOOM_LIMIAR` de 0,12: é a peça da torre que mais sangra no
+   * pós-processamento, e sangrar é o trabalho dela.
+   *
+   * CHAPADA (`parede` com a mesma cor em cima e embaixo, sem `bloco`): ela
+   * emite, não reflete, e uma face norte escura entregaria o truque. E ela
+   * passa POR FORA das fitas das arestas, que estão a 0,05 m da parede — os
+   * 0,25 m de diferença não existem para um z-buffer de degraus de 3,76 m, e
+   * o que faz a cinta ficar na frente é ser escrita DEPOIS delas. Por isso
+   * este bloco está aqui e não antes.
+   */
+  {
+    const cinta = L(mistura([0, 0, 0], CREME, LARANJA, 0.15));
+    const q = cantos(COROA.lado + 0.6);
+    for (let k = 0; k < 4; k++) {
+      const [ax, ay] = q[k];
+      const [bx, by] = q[(k + 1) % 4];
+      parede(ax, ay, bx, by, 276, 277.2, cinta, cinta);
+    }
+  }
+
+  /* ------------------------------------------ os mastros e as balizas */
+
+  /**
+   * OS DOIS MASTROS DO TERRAÇO, com a luz de obstáculo no topo.
+   *
+   * 16 m de altura e 0,7 m de lado, nos cantos NORTE do remate (±12 m, +12 m),
+   * subindo de 284 a 300; a baliza é um cubo de 1,0 m em cima, de 300 a 301.
+   *
+   * ELES SÃO A COISA MAIS ALTA DA CENA, e é esse o ponto. O remate parava em
+   * 284 m com uma aresta horizontal limpa, e uma silhueta que termina numa
+   * reta lê como objeto cortado. Os mastros quebram a reta com duas verticais
+   * finas, e as balizas põem duas luzes vermelhas acima de tudo — dois pontos
+   * que o bloom transforma em estrelas e que, de longe, são o que diz a
+   * altura do prédio sem precisar comparar com nada.
+   *
+   * ±12 e não ±16: a placa da marca no terraço vai de −14 a +14 em x e até
+   * 8,7 em y (ver `LOGO_TELHADO`), e os mastros têm de ficar fora dela SEM
+   * ficar pendurados na borda do remate, que acaba em 18. Em (±12, +12) eles
+   * passam 3,3 m ao norte da placa e 6 m dentro do parapeito.
+   *
+   * O mastro é `bloco` normal (ele reflete: é aço) e a baliza é `lampada`
+   * (ela emite). Os dois juntos custam 36 triângulos.
+   */
+  for (const mx of [-12, 12]) {
+    bloco(0.7, REMATE.z1, REMATE.z1 + 16, TORRE_CORPO, TORRE_LUZ, null, mx, 12);
+    lampada(1, 1, REMATE.z1 + 16, REMATE.z1 + 17, BALIZA, mx, 12);
+  }
+
   /* ------------------------------------ a moldura e a faixa de luz da marca */
 
   /* O LETREIRO. A placa da marca sozinha, colada num vidro escuro, lê como um
@@ -1093,6 +2036,40 @@ function constroiTorre() {
     const molduraL = L(mistura([0, 0, 0], LARANJA, TORRE_CORPO, 0.12));
     const faixaL = L(mistura([0, 0, 0], CREME, LARANJA, 0.18));
     const Z = LOGO_FACHADA_Z;
+
+    /**
+     * A CAIXA DE LUZ (18/10) — o que estava faltando para o letreiro ler como
+     * letreiro no retrato de perto.
+     *
+     * Com a placa a 30 m de largura, o que se via era arte laranja flutuando
+     * sobre a GRADE DE JANELAS do fuste: os vãos passavam por trás das letras
+     * e picotavam a marca. Um letreiro de topo de prédio nunca é montado
+     * direto no vidro — ele vem sobre um PAINEL fechado, que tapa a fachada
+     * atrás dele e dá à marca um fundo liso.
+     *
+     * É um quad só, 1,0 m maior que a arte em cada lado (16,0 × 10,3 m de
+     * meia-medida), em `LARANJA` misturado 70% com `TORRE_CORPO`. Esse laranja
+     * escuro dá 0,22 de luminância em sRGB e 0,040 em linear — ABAIXO do
+     * `BLOOM_LIMIAR` de 0,12, e isso é deliberado: a caixa é FUNDO, não luz.
+     * Quem sangra no bloom aqui é a faixa creme embaixo e a placa da marca,
+     * que são as duas peças acesas do conjunto.
+     *
+     * A 0,22 m DA PAREDE, e não aos 0,45 que o plano escreveu: a moldura está
+     * a 0,35, e 0,45 poria a caixa NA FRENTE dela — o oposto do "entre a
+     * parede e a moldura" que o próprio plano pede. Na prática o que decide
+     * não é nem um número nem o outro (o z-buffer desta cena tem degraus de
+     * 3,76 m, ver o cabeçalho da função): decide a ORDEM, e por isso a caixa é
+     * escrita ANTES da moldura e da faixa, logo abaixo. Os 0,22 ficam porque
+     * são a verdade geométrica da peça.
+     */
+    const caixaX = LOGO_LARGURA / 2 + 1;
+    const caixaZ = LOGO_ALTURA / 2 + 1;
+    const caixaL = L(mistura([0, 0, 0], LARANJA, TORRE_CORPO, 0.7));
+    for (const sul of [true, false]) {
+      const y = (sul ? -1 : 1) * (fuste.lado / 2 + 0.22);
+      chapa(sul, y, -caixaX, caixaX, Z - caixaZ, Z + caixaZ, caixaL);
+    }
+
     for (const sul of [true, false]) {
       const y = (sul ? -1 : 1) * (fuste.lado / 2 + 0.35);
       chapa(sul, y, -mx, mx, Z + mz - fio, Z + mz, molduraL);
@@ -1118,6 +2095,14 @@ function constroiTorre() {
  *    NORTE — é a que carrega o reconhecimento, porque numa vista a 32° um
  *    telhado encolhe só 15% (cos 32°) enquanto uma fachada encolhe 47%
  *    (sen 32°);
+ *
+ *    NA FASE `fachada` OS PAPÉIS SE INVERTEM, e é por isso que as duas placas
+ *    cresceram em 18/10. A obliquidade sobe de 32° para 55°: o terraço passa a
+ *    encolher 43% (cos 55°) e a fachada só 18% (sen 55°). A placa que carrega
+ *    o reconhecimento no retrato é a DA FACHADA — e é ela que ganhou o
+ *    letreiro inteiro em volta (caixa de luz, moldura e faixa, em
+ *    `constroiTorre`). A do terraço continua porque é ela que trabalha na
+ *    contemplação, que é por onde o mergulho passa antes e depois.
  * 2. na fachada SUL, no terço de cima, dentro da moldura que a torre desenha;
  * 3. na fachada NORTE, espelhada, porque o SINAL da inclinação é de quem
  *    integra (veja EstadoSP.inclinacao): tombar a esfera para o outro lado não
@@ -1378,17 +2363,36 @@ export default function SaoPauloCena({
   }, []);
 
   /* A CIDADE INTEIRA É CONSTRUÍDA UMA VEZ, no primeiro quadro em que o mergulho
-     o componente monta — 4.423 contornos, 3.769 prédios depois dos filtros,
-     61.945 triângulos, 4,3 MB. Medido: 40 ms na primeira vez e 17 com o motor
-     quente, pagos no mesmo instante em que o canvas do hero nasce (atrás dos
-     600 ms de travessia do 2D para o 3D), e nunca mais. O `useMemo` sem
+     o componente monta — 4.423 contornos, 3.770 prédios depois dos filtros,
+     75.397 triângulos, 6,8 MB. A contagem sai da geometria, não do
+     navegador; o par 3.769/61.945 que esta linha trazia é de antes de as
+     paredes ganharem fatias, em 17/10.
+
+     Os 6,8 MB são duas contas desde 18/10: as 56.632 paredes custam 96 bytes
+     por triângulo (posição, cor e agora o `uv`, três vértices de float32) e
+     dão 5,4 MB; os 18.765 triângulos lisos continuam a 72 bytes e dão 1,35.
+     O `uv` acrescentou 1,36 MB de RAM e nenhum milissegundo: ele é escrito
+     no mesmo laço, no mesmo passe, por duas atribuições a mais por vértice.
+
+     O TEMPO, esse é medido, e é de 17/10: 40 ms na primeira construção e 17
+     com o motor quente, pagos no mesmo instante em que o canvas do hero nasce
+     (atrás dos 600 ms de travessia do 2D para o 3D), e nunca mais. Ele não
+     foi refeito depois da grade de vãos da torre, que acrescenta 14,6 mil
+     triângulos a uma conta de 92 mil — a ordem de grandeza não muda, mas quem
+     for cobrar o número exato tem de medir de novo. O `useMemo` sem
      dependência nenhuma é o que garante o "uma vez": as props mudam a cada
      quadro do mergulho e nada aqui pode ser refeito por causa delas. */
   const pecas = useMemo(() => {
     const aneis = preparaAneis();
-    const { geo: predioGeo, triangulos } = constroiPredios(aneis);
+    const {
+      geo: predioGeo,
+      geoLiso: telhadoGeo,
+      triangulos,
+      triangulosLisos,
+    } = constroiPredios(aneis);
     return {
       predioGeo,
+      telhadoGeo,
       torreGeo: constroiTorre(),
       logoGeo: constroiLogo(),
       chaoGeo: constroiChao(),
@@ -1399,6 +2403,7 @@ export default function SaoPauloCena({
         [1, 1, 0.45, 0],
       ),
       triangulos,
+      triangulosLisos,
       aneis: aneis.length,
     };
   }, []);
@@ -1417,6 +2422,16 @@ export default function SaoPauloCena({
       centro: querDetalhe
         ? carrega(SP_CENTRO.arquivo, aniso, invalidate, aquece)
         : null,
+      /* O LADRILHO DE JANELAS NÃO É CONDICIONAL, e isto é o contrário do
+         recorte de detalhe aqui em cima. Não é por ele ser barato (512×512
+         pintados no cliente, menos de um milissegundo e 1,4 MB de VRAM com
+         a cadeia de mipmaps):
+         é porque a cor das paredes já foi escrita contando com ele. O
+         material multiplica por 10,37× para desfazer a média do ladrilho, e
+         sem o ladrilho esse ganho não teria o que desfazer — a cidade sairia
+         dez vezes mais clara. Quem dá conta do caso em que ele não nasce
+         (canvas sem contexto 2D) é o próprio `materiais`, logo abaixo. */
+      janelas: constroiTexturaJanelas(aniso),
     };
   }, [gl, invalidate, querDetalhe]);
 
@@ -1494,7 +2509,25 @@ export default function SaoPauloCena({
           toneMapped: false,
         })
       : null;
-    const predio = new MeshBasicMaterial({ vertexColors: true, toneMapped: false });
+    /**
+     * AS PAREDES DOS VIZINHOS — o único material desta cena com textura E
+     * cor de vértice ao mesmo tempo.
+     *
+     * `diffuseColor = color · vColor · texel`, tudo em linear. `vColor` é a
+     * luz assada de 17/10 (face, oclusão, aresta, densidade de janelas) e
+     * `texel` é o ladrilho; quem fecha a conta é `color`, que leva o ganho
+     * de `1 / TILE_MEDIA` — ver o bloco `TILE_*`. O ganho entra pelo
+     * `material-color-*` da malha, junto com o `brilho` da subida dos
+     * prédios, e é por isso que ele não aparece aqui: este material nasce
+     * branco e a malha escreve a cor em todo quadro do mergulho.
+     */
+    const predio = new MeshBasicMaterial({
+      vertexColors: true,
+      toneMapped: false,
+      map: texturas.janelas,
+    });
+    /* Os TELHADOS e o fio do parapeito: o material de sempre, sem mapa. */
+    const telhado = new MeshBasicMaterial({ vertexColors: true, toneMapped: false });
     const torre = new MeshBasicMaterial({ vertexColors: true, toneMapped: false });
     const marca = new MeshBasicMaterial({
       map: texturas.logo,
@@ -1532,7 +2565,23 @@ export default function SaoPauloCena({
       uAvenidas.value = v;
     };
 
-    return { chao, chaoCentro, predio, torre, marca, poeAvenidas };
+    /* O GANHO DAS PAREDES. 10,37× quando o ladrilho existe (o inverso da
+       luminância média dele), 1 quando o canvas 2D faltou — e aí a cidade
+       sai sem janelas, exatamente como saía em 17/10. É o único lugar do
+       arquivo onde a ausência de uma textura muda uma conta, e por isso ele
+       mora ao lado do material e não na malha. */
+    const ganhoParede = texturas.janelas ? 1 / TILE_MEDIA : 1;
+
+    return {
+      chao,
+      chaoCentro,
+      predio,
+      telhado,
+      torre,
+      marca,
+      ganhoParede,
+      poeAvenidas,
+    };
   }, [texturas]);
 
   /* Devolver tudo ao driver no desmonte: o canvas do hero morre quando o
@@ -1541,6 +2590,7 @@ export default function SaoPauloCena({
   useEffect(
     () => () => {
       pecas.predioGeo.dispose();
+      pecas.telhadoGeo.dispose();
       pecas.torreGeo.dispose();
       pecas.logoGeo.dispose();
       pecas.chaoGeo.dispose();
@@ -1548,11 +2598,15 @@ export default function SaoPauloCena({
       materiais.chao.dispose();
       materiais.chaoCentro?.dispose();
       materiais.predio.dispose();
+      materiais.telhado.dispose();
       materiais.torre.dispose();
       materiais.marca.dispose();
       texturas.chao.dispose();
       texturas.centro?.dispose();
       texturas.logo.dispose();
+      /* O ladrilho é um `CanvasTexture`: o `dispose` devolve a cópia da GPU,
+         e o canvas de 512×512 que ficou no JS morre com a textura. */
+      texturas.janelas?.dispose();
     },
     [pecas, materiais, texturas],
   );
@@ -1586,7 +2640,7 @@ export default function SaoPauloCena({
    * uma MANCHA cinza-azulada de 254 px no meio de um mapa de 633 px — os
    * telhados têm a área inteira desde o primeiro quadro, só a altura é que
    * cresce, e uma cidade deitada é uma lona cobrindo as ruas. Multiplicar a cor
-   * do material pela altura resolve sem transparência (que, com 62 mil
+   * do material pela altura resolve sem transparência (que, com 75 mil
    * triângulos que se cruzam, traria ordenação e não uma cidade): a mancha
    * nasce preta sobre o preto do mapa e ganha cor junto com o volume.
    *
@@ -1652,8 +2706,20 @@ export default function SaoPauloCena({
       {mostraPredios ? (
         <group position={deslocamento}>
           {/* Os prédios SOBEM do chão: a visibilidade é escala no eixo Z local
-              (que aqui é o "para cima"), não opacidade. */}
+              (que aqui é o "para cima"), não opacidade.
+
+              A ESCALA NÃO MEXE NO `uv`, que está em metros de geometria: no
+              meio da subida o ladrilho de janelas aparece espremido, com
+              andares de meio metro. É assim de propósito — a alternativa
+              seria reescrever o atributo de 1,36 MB a cada quadro —, e não se
+              vê: `brilho` vale `predios^1,35`, de modo que enquanto a cidade
+              está esmagada ela também está quase preta. */}
           <group scale={[1, 1, alturaPredios]}>
+            {/* AS PAREDES, com o ladrilho de janelas. O `brilho` da subida
+                vem multiplicado pelo ganho que desfaz a média do ladrilho
+                (ver `TILE_MEDIA`): os dois números moram no mesmo lugar
+                porque são a mesma multiplicação, e separá-los em dois
+                passos só daria a chance de um deles ser esquecido. */}
             <mesh
               geometry={pecas.predioGeo}
               material={materiais.predio}
@@ -1661,6 +2727,18 @@ export default function SaoPauloCena({
                 /* Os prédios também: o que brilha neles são as JANELAS, que
                    são do mesmo âmbar das vias. As paredes, bem abaixo do
                    limiar, não sangram nada. */
+                if (no && camadaBrilho !== undefined) no.layers.enable(camadaBrilho);
+              }}
+              material-color-r={brilho * materiais.ganhoParede}
+              material-color-g={brilho * materiais.ganhoParede}
+              material-color-b={brilho * materiais.ganhoParede}
+            />
+            {/* OS TELHADOS e o fio do parapeito: a mesma cor de vértice de
+                sempre, sem ladrilho e sem ganho. */}
+            <mesh
+              geometry={pecas.telhadoGeo}
+              material={materiais.telhado}
+              ref={(no) => {
                 if (no && camadaBrilho !== undefined) no.layers.enable(camadaBrilho);
               }}
               material-color-r={brilho}
