@@ -36,7 +36,7 @@
  * JANELAS dos vizinhos (ver o bloco `TILE_*` e `constroiTexturaJanelas`): as
  * paredes passaram a ter `uv` e um material com textura, e os telhados não
  * podem ter nem um nem outro — um telhado amostrando o ladrilho ganharia
- * janelas deitadas, e um `uv` no telhado seria um atributo pago por 15.633
+ * janelas deitadas, e um `uv` no telhado seria um atributo pago por 23.437
  * triângulos para não ser lido. Separar as duas famílias em duas geometrias
  * custa exatamente UMA chamada: nem um triângulo a mais, nem um byte a mais
  * de buffer, nem um milissegundo a mais de construção.
@@ -50,16 +50,40 @@
  * fatias (17/10) e nunca refeito depois. O quadro mais cheio, contado:
  *
  *     paredes     56.632   23.173 faces em 1 ou 2 fatias, COM `uv`
- *     telhados    18.765   3.770 tampas (15.633) e o fio do parapeito (3.132)
+ *     telhados    23.437   as tampas, o fio e as peças de 21/10 (ver abaixo)
  *     torre       15.794   ver `constroiTorre`
  *     chão           640   o disco de 22 km
  *     recorte        640   o disco de 4 km, só enquanto a troca dura
  *     marca            6   três quads
  *     ─────────────────
- *     TOTAL       92.477   (91.837 fora da faixa de troca do recorte)
+ *     TOTAL       97.149   (96.509 fora da faixa de troca do recorte)
  *
- * Os 75.397 dos vizinhos são os MESMOS de 17/10, repartidos: 56.632 de
- * parede texturizada e 18.765 de superfície lisa. O fio do parapeito (os
+ * O LADO LISO, PEÇA POR PEÇA (21/10, o requinte da cidade — e a ÚNICA
+ * família que cresceu desde 18/10; as paredes não ganharam um triângulo):
+ *
+ *     telhados           15.633   3.770 tampas, uma por prédio
+ *     fio do parapeito    3.132   os 245 prédios acima de 60 m
+ *     vitrines              732   366 lojas de térreo em 180 prédios
+ *     muretas             2.064   79 terraços, 6 triângulos por aresta
+ *     casas de máquinas     690   69 caixas de 4,5 × 3,5 × 2,8 m
+ *     caixas d'água         858   39 octógonos sobre elas
+ *     helipontos            184   4 discos com o "H" e as luzes
+ *     balizas               144   8 mastros com a luz de obstáculo
+ *     ──────────────────────────
+ *     LISO               23.437
+ *
+ * COMO ESTES NÚMEROS FORAM CONTADOS, que é o que impede o acidente dos
+ * "62.638": não no navegador e não à mão. Um script leu o `spPredios.json`,
+ * reimplementou `preparaAneis` inteira (os mesmos cortes de área, de borda e
+ * de altura, o mesmo `sorteio`) e os porteiros das oito peças, e somou os
+ * triângulos de cada emissor. A PROVA de que a réplica é fiel são dois
+ * números que já estavam neste cabeçalho e que ele reproduz exatamente:
+ * 56.632 de parede e 15.633 + 3.132 = 18.765 do liso de 18/10. Um terceiro
+ * confere o porteiro novo: dos 346 prédios do raio de detalhe, 142 são
+ * convexos — o mesmo número que o planejamento mediu por fora.
+ *
+ * Os 75.397 dos vizinhos de 17/10 eram os MESMOS de 18/10, repartidos:
+ * 56.632 de parede texturizada e 18.765 de superfície lisa. O fio do parapeito (os
  * 1,2 m mais claros no alto dos 245 prédios acima de 60 m) atravessou para o
  * lado liso junto com os telhados, e não por economia: ele é a aresta de
  * concreto do topo, e uma fiada de janelas picotando-o o transformaria numa
@@ -99,7 +123,22 @@
  * triângulos para desenhar o que um texel de 5 cm desenha igual — por 1,4 MB
  * de VRAM e uma única chamada a mais, que é a dos telhados.
  *
- * Por que 92 mil triângulos num hero não assusta: eles são opacos, não
+ * E O QUE ELES GANHARAM EM 21/10 ("melhore os detalhes da cidade, no último
+ * zoom — capriche, dê toques de requinte"): ZERO draw calls, ZERO materiais,
+ * ZERO texturas, ZERO luzes e +4.672 triângulos, TODOS na geometria lisa que
+ * já existia. É o mesmo método da tarefa da torre, uma escala depois: nada é
+ * um objeto novo, nada é chaveado por prop, nada é um nível de detalhe por
+ * escala — as peças estão sempre no buffer e o que o zoom decide é só se o
+ * olho as alcança.
+ *
+ * O CORTE DE CUSTO NÃO FOI NO DETALHE, FOI NO ALCANCE. Seis das oito peças só
+ * nascem dentro do `RAIO_DETALHE` de 420 m, que é o que a fase `fachada`
+ * enquadra: são 346 prédios dos 3.770, ou 9% da cidade levando 94% dos
+ * triângulos novos. As duas que valem para o disco inteiro — o tom de
+ * material por prédio e o acabamento do telhado — custam exatamente nada:
+ * elas são misturas de cor em vértices que já estavam lá.
+ *
+ * Por que 97 mil triângulos num hero não assusta: eles são opacos, não
  * indexados, sem luz, com UMA textura entre todos e desenhados em cinco
  * chamadas. O gargalo desta cena nunca foi o vértice — é o número de
  * chamadas e o preenchimento de tela, e os dois continuam onde estavam.
@@ -186,6 +225,29 @@ const CHEIO_CENTRO = 0.7;
  */
 const RAIO_CHEIO = 950;
 const RAIO_BORDA = 1200;
+
+/**
+ * O RAIO DO REQUINTE — até onde as peças de telhado nascem (21/10).
+ *
+ * Pedido do dono: "melhore os detalhes da cidade, no último zoom, no globo —
+ * capriche, dê toques de requinte". O último zoom é a fase `fachada`, e ela
+ * tem um quadro muito mais apertado que o resto do mergulho: a 0,59 m/px, com
+ * a câmera a 55° olhando do sul e o alvo a 130 m de altura, o disco de 375 m
+ * cobre ±250 m em x e ±320 m em y no chão. Fora disso não há quadro.
+ *
+ * 420 m de centroide à torre é essa caixa com folga para a diagonal e para o
+ * prédio alto que entra no quadro pelo topo. Dentro dela há 346 prédios dos
+ * 3.770 — 9% da cidade levando 100% do custo das peças novas, que é a mesma
+ * economia do recorte de detalhe do chão: resolução onde o olho está.
+ *
+ * E ele é um CORTE DURO, sem rampa de desvanecimento, porque as peças não
+ * desaparecem — elas ficam pequenas. Um prédio a 500 m da torre tem o
+ * parapeito abaixo de meio pixel em TODA fase do mergulho (na contemplação de
+ * 9.200 um pixel vale 2,19 m), de modo que o que está fora do raio não é
+ * "menos detalhado": é invisível por aritmética. Uma rampa aqui só pagaria
+ * triângulos para esconder uma emenda que não existe.
+ */
+const RAIO_DETALHE = 420;
 
 /**
  * A TORRE (ficção) — agora com ARQUITETURA, não um prisma.
@@ -394,6 +456,14 @@ function tom(hex: string): Tom {
   return [((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255];
 }
 
+/** Copia um terno, para quando uma cor pronta tem de seguir dois caminhos. */
+function copia(saida: Tom, a: Tom) {
+  saida[0] = a[0];
+  saida[1] = a[1];
+  saida[2] = a[2];
+  return saida;
+}
+
 /** Interpola em sRGB, escrevendo em `saida` (que pode ser `a`). */
 function mistura(saida: Tom, a: Tom, b: Tom, t: number) {
   saida[0] = a[0] + (b[0] - a[0]) * t;
@@ -410,6 +480,65 @@ function paraLinear(saida: Tom, a: Tom) {
   saida[0] = canalLinear(a[0]);
   saida[1] = canalLinear(a[1]);
   saida[2] = canalLinear(a[2]);
+  return saida;
+}
+
+/** O caminho de volta: linear para sRGB. Só o `tinge` daqui precisa dele. */
+function canalSRGB(c: number) {
+  return c <= 0.0031308 ? c * 12.92 : 1.055 * Math.pow(c, 1 / 2.4) - 0.055;
+}
+
+/** A luminância ITU-R BT.709 de um terno em LINEAR — a régua do bloom. */
+function luminancia(linear: Tom) {
+  return 0.2126 * linear[0] + 0.7152 * linear[1] + 0.0722 * linear[2];
+}
+
+/**
+ * TINGE UMA COR SEM CLAREÁ-LA — mistura de matiz com a luminância TRAVADA.
+ *
+ * Ela existe por uma medição, e a medição é esta: misturar 12% de pastilha
+ * bege (`#6a5a48`) na parede com o `mistura` comum levanta a luminância média
+ * da cidade de 0,02328 para 0,02609, ou +12,1% — acima da tolerância de 10%
+ * que o bloco `TILE_*` fixou para a conta de V3, e o suficiente para a
+ * CONTEMPLAÇÃO (que é uma escala inteira antes de o tom se enxergar) mudar de
+ * brilho por causa de um detalhe que só existe no retrato de perto.
+ *
+ * A razão é aritmética e vale a pena entender, porque ela reaparece em toda
+ * mistura deste arquivo: a face de sombra da cidade é `#07070b`, que tem 0,0022
+ * de luminância linear, e a pastilha tem 0,108 — quarenta e nove vezes mais.
+ * Doze por cento de uma cor quarenta e nove vezes mais clara não é um ajuste
+ * de matiz: é mais que DOBRAR a face escura. O olho não percebe isso como
+ * "bege", percebe como "a sombra levantou".
+ *
+ * O que esta função faz, então, é separar as duas coisas que uma mistura de
+ * cores junta: ela interpola o MATIZ em sRGB como sempre e devolve a
+ * LUMINÂNCIA ao valor que a cor tinha antes, reescalando os três canais em
+ * LINEAR (que é o único espaço onde um fator de escala é um fator de brilho).
+ * A conversão de ida e volta é o preço, e ela é paga duas vezes por PRÉDIO —
+ * nos dois extremos da paleta dele —, não por face: 7.540 chamadas na
+ * construção inteira, contra as 23.173 faces que as consomem.
+ *
+ * O reescalonamento é sempre para BAIXO (o alvo é mais claro que a base nos
+ * dois tons que entram aqui), de modo que nenhum canal estoura; o `min` está
+ * lá pelo dia em que alguém tingir uma parede com uma cor mais escura.
+ *
+ * O RESULTADO, medido do mesmo jeito que o problema: com esta função a
+ * luminância média das paredes vai de 0,02328 para 0,02327 — razão 0,9999,
+ * ou seja a cidade mudou de MATIZ em 2.262 dos 3.770 prédios e não mudou de
+ * brilho em um milésimo. Era isso que o plano queria dizer com "as misturas
+ * são de luminância quase neutra"; o que ele não tinha era a conta.
+ */
+function tinge(saida: Tom, base: Tom, alvo: Tom, t: number) {
+  const antes: Tom = [0, 0, 0];
+  const depois: Tom = [0, 0, 0];
+  const lumBase = luminancia(paraLinear(antes, base));
+  mistura(saida, base, alvo, t);
+  const lumMix = luminancia(paraLinear(depois, saida));
+  if (lumMix <= 1e-9) return saida;
+  const k = lumBase / lumMix;
+  saida[0] = canalSRGB(Math.min(1, depois[0] * k));
+  saida[1] = canalSRGB(Math.min(1, depois[1] * k));
+  saida[2] = canalSRGB(Math.min(1, depois[2] * k));
   return saida;
 }
 
@@ -440,6 +569,27 @@ const JANELA = tom("#ffb070"); // o mesmo âmbar das vias da textura
 const TORRE_CORPO = tom("#101018");
 const TORRE_LUZ = tom("#45455f");
 const LARANJA = tom("#ff7700");
+
+/* OS DOIS TONS DE MATERIAL DA CIDADE (21/10) — o que faz 3.770 prédios
+   pararem de ser o mesmo prédio repetido.
+
+   Até aqui toda parede saía da MESMA interpolação entre `PAREDE_SOMBRA` e
+   `PAREDE_LUZ`: dois prédios vizinhos com a mesma altura e a mesma orientação
+   tinham, vértice a vértice, exatamente a mesma cor. Numa maquete de 15 px por
+   prédio isso não aparece; no retrato de perto, onde se veem dez fachadas
+   lado a lado, aparece — e lê como material plástico, porque é o único lugar
+   de uma cidade real em que não há variação nenhuma.
+
+   São os dois materiais que São Paulo tem fora do concreto cinza: a PASTILHA
+   e o tijolo dos anos 70 (`#6a5a48`, bege-terra) e o VIDRO azulado das torres
+   de escritório (`#3a4a6a`). Nenhum dos dois entra cheio: eles são misturados
+   a 12% na cor da parede (20% nas cortinas de vidro), e essa dose é escolhida
+   pela conta de luminância, não pelo gosto — os dois foram puxados para perto
+   da luminância do `PAREDE_LUZ` justamente para que a cidade mude de MATIZ sem
+   mudar de brilho médio, que é a conta que o bloco `TILE_*` tem de manter
+   dentro de 10%. */
+const PAREDE_QUENTE = tom("#6a5a48");
+const PAREDE_FRIO = tom("#3a4a6a");
 
 /* AS QUATRO CORES QUE A REFORMA DE 17/10 TROUXE — nenhuma nova: as três da
    página e o âmbar que já estava aqui.
@@ -552,6 +702,25 @@ function referencialTangente(lat: number, lon: number) {
    OS PRÉDIOS
    -------------------------------------------------------------------------- */
 
+/**
+ * O que se sabe de um contorno antes de ele virar triângulo.
+ *
+ * OS CINCO CAMPOS DE BAIXO (`cx`…`angMaior`) NASCERAM EM 21/10, com as peças
+ * de telhado do retrato de perto, e todos respondem à mesma pergunta: "cabe
+ * alguma coisa em cima deste prédio?". Eles moram AQUI, e não na função que
+ * constrói a geometria, por uma razão de custo: `preparaAneis` já percorre os
+ * 23.173 vértices da cidade uma vez para achar a área e o sentido do anel, e
+ * pendurar mais quatro contas nesse mesmo passeio é de graça — refazê-las lá
+ * na frente seria um segundo passeio pelos mesmos vértices, por prédio.
+ *
+ * `convexo` e `rInscrito` são o PORTEIRO das peças. Uma caixa d'água posta no
+ * centroide de um prédio em L sai pendurada no vazio do L, e a 0,59 m/px do
+ * retrato isso não é um detalhe: é um erro visível. Com `convexo` o telhado
+ * vira uma garantia de que o miolo é mesmo telhado, e com `rInscrito` a peça
+ * pergunta "há X metros de laje em volta do centro?" antes de aparecer. É o
+ * mesmo contrato para a mureta, a casa de máquinas, o heliponto e a baliza —
+ * e é por isso que nenhum deles precisa conhecer a forma do anel.
+ */
 type AnelPronto = {
   /** x0,y0,x1,y1… em metros (x leste, y norte), sentido anti-horário. */
   readonly pts: Float64Array;
@@ -560,6 +729,15 @@ type AnelPronto = {
   readonly semente: number;
   /** A distância do centroide à torre, em metros — a régua das janelas. */
   readonly dist: number;
+  /** O centroide (a média dos vértices), no mesmo referencial dos `pts`. */
+  readonly cx: number;
+  readonly cy: number;
+  /** Todos os cantos giram para o mesmo lado? */
+  readonly convexo: boolean;
+  /** A menor distância do centroide às arestas — 0 se ele cai FORA do anel. */
+  readonly rInscrito: number;
+  /** O ângulo da aresta mais longa, em radianos: a "frente" do prédio. */
+  readonly angMaior: number;
 };
 
 function degrau(x: number) {
@@ -650,7 +828,78 @@ function preparaAneis(): AnelPronto[] {
       }
     }
 
-    aneis.push({ pts, n, altura, semente: i, dist: Math.hypot(cx, cy) });
+    /**
+     * A FORMA DO ANEL, num passeio só: o canto mais fechado, a maior aresta e
+     * o raio inscrito no centroide.
+     *
+     * `convexo` sai do produto vetorial em cada canto. Num anel anti-horário
+     * todos eles são positivos quando a forma é convexa, e o primeiro negativo
+     * denuncia um L, um U ou um pátio. A tolerância de −0,05 m² é para os
+     * cantos QUASE retos do cadastro: um vértice que desvia meio centímetro de
+     * uma reta de dez metros dá −0,02 m² de produto, e reprovar o prédio por
+     * isso tiraria a mureta de metade das quadras da Paulista por causa de
+     * ruído de digitalização.
+     *
+     * `rInscrito` é a menor distância COM SINAL do centroide às retas das
+     * arestas. O sinal resolve duas coisas de uma vez: num anel anti-horário
+     * ele é positivo quando o centroide está do lado de dentro da aresta, de
+     * modo que uma distância negativa (ou zero) significa "o centroide caiu
+     * fora do polígono" e o campo vira 0 — que é o valor que reprova toda
+     * peça. Num convexo com o centroide dentro, a distância à RETA é a mesma
+     * que à aresta, e é exatamente o raio do disco que cabe em volta do
+     * centro: a régua que a casa de máquinas e o heliponto pedem.
+     *
+     * `angMaior` é a direção da fachada mais comprida. Toda peça retangular
+     * de telhado se alinha a ela, e não ao norte: num prédio torto na quadra,
+     * uma casa de máquinas alinhada ao eixo do mundo fica visivelmente de
+     * esguelha com o parapeito, e é o tipo de erro que o olho pega antes de
+     * saber o que está vendo.
+     */
+    let convexo = true;
+    let maiorAresta = 0;
+    let angMaior = 0;
+    let rInscrito = Infinity;
+    for (let k = 0; k < n; k++) {
+      const j = (k + n - 1) % n;
+      const m = (k + 1) % n;
+      const ax = pts[j * 2];
+      const ay = pts[j * 2 + 1];
+      const bx = pts[k * 2];
+      const by = pts[k * 2 + 1];
+      const nx = pts[m * 2];
+      const ny = pts[m * 2 + 1];
+
+      // o giro do canto em b, entre a aresta que chega e a que sai
+      const giro = (bx - ax) * (ny - by) - (by - ay) * (nx - bx);
+      if (giro < -0.05) convexo = false;
+
+      // a aresta que SAI de b, que é a que esta volta mede
+      const dx = nx - bx;
+      const dy = ny - by;
+      const comp = Math.hypot(dx, dy);
+      if (comp > maiorAresta) {
+        maiorAresta = comp;
+        angMaior = Math.atan2(dy, dx);
+      }
+      if (comp < 0.05) continue; // vértice repetido: não diz nada da forma
+      const lado = (dx * (cy - by) - dy * (cx - bx)) / comp;
+      if (lado <= 0) rInscrito = 0;
+      else if (lado < rInscrito) rInscrito = lado;
+    }
+    if (!Number.isFinite(rInscrito)) rInscrito = 0;
+
+    aneis.push({
+      pts,
+      n,
+      altura,
+      semente: i,
+      dist: Math.hypot(cx, cy),
+      cx,
+      cy,
+      convexo,
+      rInscrito,
+      angMaior,
+    });
   }
 
   return aneis;
@@ -962,10 +1211,12 @@ function constroiPredios(aneis: AnelPronto[]) {
    *   40 a 60 m   2 fatias — a oclusão presa nos 9 m de baixo (627 prédios)
    *   acima de 60 2 fatias + o FIO: os 1,2 m de cima mais claros (245 prédios)
    *
-   * São estas três linhas que levam os prédios de 61.979 triângulos (uma
-   * fatia para todos) aos 75.397 de hoje: as 23.173 paredes rendem 46.346
+   * São estas três linhas que levaram os prédios de 61.979 triângulos (uma
+   * fatia para todos) aos 75.397 de 18/10: as 23.173 paredes rendem 46.346
    * com uma fatia, 56.632 com a segunda e 59.764 com o fio, e os 15.633
-   * triângulos de telhado entram por cima disso. Contado da geometria.
+   * triângulos de telhado entram por cima disso. Contado da geometria. (Os
+   * 80.069 de hoje são estes mesmos mais as peças de telhado de 21/10, que
+   * não mexeram em fatia nenhuma — ver o cabeçalho do arquivo.)
    *
    * O fio é o pedido "telhados com um fio de aresta mais claro nos prédios
    * acima de 60 m". Ele é uma fatia da PAREDE e não uma fita no plano do
@@ -985,39 +1236,86 @@ function constroiPredios(aneis: AnelPronto[]) {
    */
   const fatias = (altura: number) => (altura > 40 ? (altura > 60 ? 3 : 2) : 1);
 
-  /* Dois orçamentos, porque são dois buffers. As fatias TEXTURIZADAS são no
-     máximo duas (a terceira, o fio, é lisa), e o lado liso leva o fio mais a
-     tampa do telhado. Contado: 56.632 de parede e 18.765 de liso — os mesmos
-     75.397 de 17/10, repartidos. */
+  /* UM orçamento, não dois: o do lado TEXTURIZADO, que continua sendo uma
+     conta fechada (as fatias são no máximo duas por aresta, a terceira — o fio
+     do parapeito — é lisa). Contado: 56.632 triângulos de parede. */
   let triParede = 0;
-  let triLiso = 0;
   for (const a of aneis) {
     const nf = fatias(a.altura);
     triParede += a.n * 2 * (nf === 3 ? 2 : nf);
-    if (nf === 3) triLiso += a.n * 2; // o fio do parapeito
-    triLiso += a.n - 2; // o telhado
   }
   const posicoes = new Float32Array(triParede * 9);
   const cores = new Float32Array(triParede * 9);
   /* O `uv` em METROS: u anda ao longo do perímetro do anel e v é o próprio
      z. Quem divide pelos 25,6 m do ladrilho é o `repeat` da textura. */
   const uvs = new Float32Array(triParede * 6);
-  const posLiso = new Float32Array(triLiso * 9);
-  const corLiso = new Float32Array(triLiso * 9);
+
+  /**
+   * O LADO LISO PASSOU A SER `number[]` COM `push` EM 21/10, e isto é uma
+   * TROCA DE CONTRATO, não um detalhe de implementação.
+   *
+   * Ele era um `Float32Array` dimensionado antes do laço por uma fórmula
+   * fechada (`n·2` do fio mais `n−2` da tampa, por anel). Essa fórmula só
+   * existia porque o lado liso tinha duas peças, as duas proporcionais ao
+   * número de vértices. Com as peças de telhado do requinte ele passa a ter
+   * oito, e cada uma com o seu próprio porteiro: a mureta depende de o miter
+   * do anel não estourar, a caixa d'água de um sorteio, o heliponto de estar
+   * entre os cinco mais altos do raio, a vitrine de um sorteio POR ARESTA. Um
+   * orçamento à frente disso teria de repetir, exatamente, as oito condições
+   * — e o dia em que uma delas mudasse num lugar e não no outro, o buffer
+   * estouraria silenciosamente ou sobraria sem que ninguém visse.
+   *
+   * É a MESMA razão escrita em `constroiTorre`, palavra por palavra: esta
+   * geometria é construída UMA vez na vida da página, e trocar uma realocação
+   * de array (dezenas de microssegundos, amortizadas) por uma conta frágil é
+   * o tipo de precisão que só serve para quebrar. Quem conta triângulos agora
+   * é o comprimento do próprio array, que não pode divergir de nada.
+   */
+  const posLiso: number[] = [];
+  const corLiso: number[] = [];
 
   let p = 0;
   let pu = 0;
-  let q = 0;
   const cor: Tom = [0, 0, 0];
   const corTopo: Tom = [0, 0, 0];
   const corPe: Tom = [0, 0, 0];
   const corFio: Tom = [0, 0, 0];
+  const corTelhado: Tom = [0, 0, 0];
+  const corPeca: Tom = [0, 0, 0];
+  /* Os dois extremos da paleta DESTE prédio: `PAREDE_LUZ` e `PAREDE_SOMBRA`
+     tingidos pelo material sorteado, com a luminância travada (ver `tinge`). */
+  const luzPredio: Tom = [0, 0, 0];
+  const sombraPredio: Tom = [0, 0, 0];
+  const corVitrine: Tom = [0, 0, 0];
   const luzLinear: Tom = [0, 0, 0];
   const topoLinear: Tom = [0, 0, 0];
   const peLinear: Tom = [0, 0, 0];
   const fioLinear: Tom = [0, 0, 0];
+  const vitrineLinear: Tom = [0, 0, 0];
   const v2: Vector2[] = [];
   const poco: Vector2[] = [];
+  /* Os pontos do inset da mureta, reusados de prédio em prédio pela mesma
+     razão do `poco` de `Vector2` lá embaixo: são 346 prédios e até 200
+     vértices em cada, e um array novo por prédio é lixo garantido logo depois
+     do pior quadro do hero. */
+  const inset: number[] = [];
+
+  /**
+   * O FATOR DE PÉ-DIREITO DO PRÉDIO CORRENTE — ele multiplica `u` E `v`.
+   *
+   * O `uv` das paredes está em metros e o `repeat` da textura divide pelos
+   * 25,6 m do ladrilho, de modo que um fator aqui é, literalmente, a escala
+   * do ladrilho naquela fachada: 0,88 estica o módulo de 3,2 para 3,64 m e
+   * 1,12 o comprime para 2,86. São os dois extremos reais de um pé-direito de
+   * escritório, e multiplicar os DOIS eixos (e não só o v) é o que mantém a
+   * janela PROPORCIONAL — esticar apenas a altura daria janelas deitadas num
+   * prédio e em pé no vizinho, que é pior que não variar nada.
+   *
+   * Ele é uma variável de módulo da função, lida dentro de `poe`, em vez de um
+   * décimo parâmetro atravessando `tira`: são duas multiplicações no lugar
+   * onde o `uv` já é escrito, e nenhuma assinatura mudou.
+   */
+  let fatorUV = 1;
 
   const poe = (x: number, y: number, z: number, u: number, c: Tom) => {
     posicoes[p] = x;
@@ -1026,20 +1324,15 @@ function constroiPredios(aneis: AnelPronto[]) {
     cores[p] = c[0];
     cores[p + 1] = c[1];
     cores[p + 2] = c[2];
-    uvs[pu] = u;
-    uvs[pu + 1] = z;
+    uvs[pu] = u * fatorUV;
+    uvs[pu + 1] = z * fatorUV;
     p += 3;
     pu += 2;
   };
 
   const poeLiso = (x: number, y: number, z: number, c: Tom) => {
-    posLiso[q] = x;
-    posLiso[q + 1] = y;
-    posLiso[q + 2] = z;
-    corLiso[q] = c[0];
-    corLiso[q + 1] = c[1];
-    corLiso[q + 2] = c[2];
-    q += 3;
+    posLiso.push(x, y, z);
+    corLiso.push(c[0], c[1], c[2]);
   };
 
   /**
@@ -1091,8 +1384,164 @@ function constroiPredios(aneis: AnelPronto[]) {
     poeLiso(ax, ay, z1, ct);
   };
 
+  /* ------------------------------------------- as ferramentas das peças
+
+     ELAS SÃO CÓPIAS DAS DA TORRE, E ISSO É DE PROPÓSITO.
+
+     `constroiTorre` tem `caixa`, `lampada`, `cantosRet` e `tampaRet`, e as
+     quatro fazem exatamente o que as quatro daqui fazem. Mover aquelas para o
+     módulo pareceria a limpeza óbvia e seria um erro: elas escrevem no buffer
+     DA TORRE, por um `poe` que mora naquele fecho, e um helper compartilhado
+     precisaria receber o emissor como parâmetro — ou seja, trocar quatro
+     funções de dez linhas por quatro funções de dez linhas mais um nível de
+     indireção em todas as 15.794 chamadas de lá. Pior: ele acoplaria duas
+     geometrias que não têm nada a ver uma com a outra (a torre é ficção
+     desenhada, a cidade é cadastro extrudado) e que mudam por motivos
+     diferentes.
+
+     O que há de novo nas daqui é a GIRADA: toda peça de telhado se alinha ao
+     `angMaior` do anel, e a torre, que é um quadrado alinhado ao mundo, nunca
+     precisou disso. ------------------------------------------------------- */
+
+  /** Em linear na saída, como o `L` da torre: a mistura toda é em sRGB. */
+  const L = (t: Tom) => paraLinear([0, 0, 0], t);
+
+  /** A luz da aresta a→b de um contorno anti-horário — a fórmula das paredes. */
+  const luzDa = (ax: number, ay: number, bx: number, by: number) => {
+    const dx = bx - ax;
+    const dy = by - ay;
+    const c = Math.hypot(dx, dy);
+    return c < 1e-6 ? 0 : Math.max(0, (dy * LUZ.x - dx * LUZ.y) / c) / LUZ_MAX;
+  };
+
+  /**
+   * Os quatro cantos de um retângulo GIRADO, em sentido anti-horário.
+   *
+   * Uma rotação não muda o sentido de um contorno, então basta montar os
+   * cantos anti-horários no referencial da peça (−−, +−, ++, −+) e girar os
+   * quatro: o contrato de "normal para fora" do arquivo inteiro continua
+   * valendo sem uma única conferência de sinal.
+   */
+  const cantosGirados = (
+    cx: number,
+    cy: number,
+    lx: number,
+    ly: number,
+    ang: number,
+  ) => {
+    const ca = Math.cos(ang);
+    const sa = Math.sin(ang);
+    const mx = lx / 2;
+    const my = ly / 2;
+    const saida: [number, number][] = [];
+    for (const [sx, sy] of [
+      [-1, -1],
+      [1, -1],
+      [1, 1],
+      [-1, 1],
+    ] as const) {
+      saida.push([
+        cx + sx * mx * ca - sy * my * sa,
+        cy + sx * mx * sa + sy * my * ca,
+      ]);
+    }
+    return saida;
+  };
+
+  /** Um polígono CONVEXO anti-horário tampado num leque: a face olha para +z. */
+  const leque = (q: [number, number][], z: number, t: Tom) => {
+    const c = L(t);
+    for (let k = 1; k + 1 < q.length; k++) {
+      poeLiso(q[0][0], q[0][1], z, c);
+      poeLiso(q[k][0], q[k][1], z, c);
+      poeLiso(q[k + 1][0], q[k + 1][1], z, c);
+    }
+  };
+
+  /** A `caixa` da torre no lado liso: paredes com luz por face e tampa. */
+  const caixaLisa = (
+    q: [number, number][],
+    z0: number,
+    z1: number,
+    base: Tom,
+    topo: Tom,
+    tam: Tom | null,
+  ) => {
+    const a: Tom = [0, 0, 0];
+    const b: Tom = [0, 0, 0];
+    for (let k = 0; k < q.length; k++) {
+      const [ax, ay] = q[k];
+      const [bx, by] = q[(k + 1) % q.length];
+      const luz = luzDa(ax, ay, bx, by);
+      mistura(a, base, topo, 0.15 + 0.85 * luz);
+      mistura(b, a, PAREDE_TOPO, 0.3);
+      tiraLisa(ax, ay, bx, by, z0, z1, L(a), L(b));
+    }
+    if (tam) leque(q, z1, tam);
+  };
+
+  /** A `lampada` da torre no liso: CHAPADA, porque o que emite não tem sombra. */
+  const lampadaLisa = (
+    q: [number, number][],
+    z0: number,
+    z1: number,
+    t: Tom,
+  ) => {
+    const c = L(t);
+    for (let k = 0; k < q.length; k++) {
+      const [ax, ay] = q[k];
+      const [bx, by] = q[(k + 1) % q.length];
+      tiraLisa(ax, ay, bx, by, z0, z1, c, c);
+    }
+    leque(q, z1, t);
+  };
+
+  /**
+   * OS CINCO HELIPONTOS, ESCOLHIDOS ANTES DO LAÇO.
+   *
+   * Eles não saem de um sorteio e sim de um RANKING: os cinco prédios mais
+   * altos do raio de detalhe que sejam convexos e tenham 9 m de laje em volta
+   * do centro. É a única peça deste arquivo que precisa saber dos OUTROS
+   * prédios para decidir sobre um, e por isso é a única que não cabe dentro do
+   * laço — daí este bloco, que roda uma vez sobre 346 anéis.
+   *
+   * CINCO e não "todos os que cabem": um heliponto é a peça mais caprichada do
+   * telhado (46 triângulos, o H em creme, oito luzes de perímetro acima do
+   * limiar de bloom), e o que ele diz no retrato é "este é um dos prédios
+   * importantes daqui". Em todos os 23 que cabem ele diria o contrário — uma
+   * cidade onde cada laje tem um heliponto é uma cidade sem hierarquia. Cinco
+   * é o que a vista de 55° mostra sem que dois caiam no mesmo canto do quadro.
+   *
+   * E O DADO DE HOJE DEVOLVE QUATRO, não cinco: dos 346 prédios do raio, 19
+   * passam dos 60 m sendo convexos e só QUATRO desses têm 9 m de laje em
+   * volta do centroide — os outros quinze são lâminas estreitas, onde um
+   * disco de 14 m de diâmetro ficaria pendurado para fora do prédio. O corte
+   * é `slice(0, 5)` e não `slice(0, 4)` de propósito: o número que esta
+   * decisão fixa é o TETO da hierarquia, e o dia em que o `spPredios.json`
+   * for regerado com mais um prédio largo e alto, o quinto entra sozinho.
+   *
+   * A ORDENAÇÃO É POR ALTURA E DESEMPATA PELA SEMENTE: `altura` tem casas
+   * decimais vindas do afunilamento da borda, então empate exato é raríssimo,
+   * mas um `sort` instável num empate mudaria o conjunto de helipontos entre
+   * dois motores de JavaScript — e esta cidade tem de nascer idêntica em todo
+   * deploy, que é a mesma promessa do `sorteio`.
+   */
+  const comHeliponto = new Set<AnelPronto>();
+  {
+    const candidatos = aneis.filter(
+      (a) =>
+        a.dist < RAIO_DETALHE &&
+        a.altura > 60 &&
+        a.convexo &&
+        a.rInscrito >= 9,
+    );
+    candidatos.sort((x, y) => y.altura - x.altura || x.semente - y.semente);
+    for (const a of candidatos.slice(0, 5)) comHeliponto.add(a);
+  }
+
   for (const anel of aneis) {
     const { pts, n, altura, semente, dist } = anel;
+    const { cx, cy, convexo, rInscrito, angMaior } = anel;
 
     /**
      * O TOM ANDA COM A ALTURA.
@@ -1122,6 +1571,121 @@ function constroiPredios(aneis: AnelPronto[]) {
      */
     const densidade = 0.3 - 0.21 * degrau(dist / RAIO_BORDA);
 
+    /**
+     * O PÉ-DIREITO DESTE PRÉDIO (21/10) — 2,86 a 3,64 m por andar.
+     *
+     * O ladrilho de janelas tem um módulo fixo de 3,2 m, e por isso a cidade
+     * inteira tinha o MESMO pé-direito: 3.770 prédios com a fiada na mesma
+     * altura, o que no retrato de perto se lê como um carimbo. Um prédio
+     * residencial dos anos 60 tem 2,8 m de piso a piso, uma torre corporativa
+     * tem 3,6, e é essa diferença que diz quantos andares cada um tem.
+     *
+     * O multiplicador primo 7 e o deslocamento 3 na chave do `sorteio`: cada
+     * uso do ruído neste arquivo tem o seu par (97 nas janelas, 31 no telhado,
+     * 11 no tom, 41 na manta, 53 na vitrine, 59 na caixa d'água), porque duas
+     * decisões que lessem a MESMA chave andariam juntas pela cidade inteira —
+     * todo prédio de pé-direito alto teria também a manta escura, e o olho
+     * acharia a correlação antes de saber que estava procurando.
+     */
+    fatorUV = 0.88 + 0.24 * sorteio(semente * 7 + 3);
+
+    /**
+     * O MATERIAL DESTE PRÉDIO (21/10): neutro, quente ou frio.
+     *
+     * 45% da cidade fica como era (o concreto azul-chumbo da reforma de
+     * 17/10), 30% ganha 12% de pastilha bege e 25% ganha 12% de vidro
+     * azulado — e os prédios acima de 55 m cuja chave cai abaixo de 0,5
+     * viram CORTINA DE VIDRO, com o frio a 20%. A faixa dos altos pega de
+     * propósito os dois primeiros terços do sorteio (o neutro inteiro e um
+     * sexto do quente): quem tem mais de dezesseis andares em São Paulo é,
+     * quase sempre, uma torre de vidro — e são justamente esses prédios que
+     * têm pixels suficientes no retrato para o material deles importar.
+     *
+     * UMA chave para as duas decisões, e não duas: a cortina de vidro não é
+     * um sorteio independente, é uma RELEITURA do mesmo número à luz da
+     * altura. Com duas chaves um prédio alto poderia sortear "quente" numa e
+     * "cortina" na outra, e aí a ordem das linhas decidiria o material — o
+     * tipo de dependência de escrita que este arquivo evita de propósito.
+     *
+     * O TINGIMENTO ACONTECE NOS DOIS EXTREMOS DA PALETA, uma vez por prédio, e
+     * não na cor pronta de cada face. São duas razões, e as duas importam:
+     *
+     *   o BRILHO    `tinge` trava a luminância (ver a função), e travá-la nos
+     *               dois extremos trava a de TODA face, porque a cor de uma
+     *               face é uma interpolação entre eles. Tingir a cor pronta
+     *               faria a conta de V3 subir 12% — medido.
+     *   o CUSTO     são duas conversões sRGB↔linear por prédio em vez de uma
+     *               por face: 7.540 contra 23.173, e a face volta a ser o que
+     *               sempre foi, um `mistura` de dois ternos.
+     */
+    const sTom = sorteio(semente * 11 + 9);
+    let alvoTom: Tom = PAREDE_FRIO;
+    let pesoTom = 0;
+    if (altura > 55 && sTom < 0.5) {
+      pesoTom = 0.2;
+    } else if (sTom < 0.45) {
+      pesoTom = 0; // o neutro: a parede de 17/10, intacta
+    } else if (sTom < 0.75) {
+      alvoTom = PAREDE_QUENTE;
+      pesoTom = 0.12;
+    } else {
+      pesoTom = 0.12;
+    }
+    if (pesoTom > 0) {
+      tinge(luzPredio, PAREDE_LUZ, alvoTom, pesoTom);
+      tinge(sombraPredio, PAREDE_SOMBRA, alvoTom, pesoTom);
+    } else {
+      copia(luzPredio, PAREDE_LUZ);
+      copia(sombraPredio, PAREDE_SOMBRA);
+    }
+
+    /**
+     * O TELHADO EM TRÊS ACABAMENTOS (21/10) — e é ele que manda nas peças.
+     *
+     * 35% fica como era, 35% ganha 18% de `OCLUSAO` (a manta asfáltica preta,
+     * que é o que cobre a maior parte das lajes de São Paulo) e 30% ganha 15%
+     * de `PAREDE_TOPO` (a laje de concreto exposto, lavada pela chuva). Os
+     * dois desvios são de sinal contrário e de peso parecido, e a conta
+     * fecha: medida sobre a área real das 3.770 lajes, a luminância média
+     * delas vai de 0,01676 para 0,01700 — +1,4%, a mesma ordem do que o
+     * ladrilho de janelas custou às paredes, e bem dentro dos 10% de
+     * tolerância do bloco `TILE_*`.
+     *
+     * ELE É CALCULADO AQUI, ANTES DAS PAREDES, e não lá embaixo junto da
+     * tampa, porque virou a cor BASE de quatro outras peças: a face interna da
+     * mureta, as paredes da casa de máquinas, a caixa d'água e o disco do
+     * heliponto. Todas elas são, na vida real, construídas sobre a laje e com
+     * o mesmo cimento dela — e deixá-las sair de `TELHADO` puro poria uma
+     * casa de máquinas cinza-neutra em cima de uma laje com manta preta.
+     *
+     * O âmbar da laje iluminada (um telhado em dezesseis) NÃO entra aqui: ele
+     * é luz de rua refletida na laje, não o material dela, e tingir a caixa
+     * d'água de âmbar por causa disso seria o mesmo erro ao contrário.
+     */
+    mistura(corTelhado, TELHADO, PAREDE_TOPO, grauAlt);
+    const sTelha = sorteio(semente * 41 + 13);
+    if (sTelha >= 0.35 && sTelha < 0.7) {
+      mistura(corTelhado, corTelhado, OCLUSAO, 0.18);
+    } else if (sTelha >= 0.7) {
+      mistura(corTelhado, corTelhado, PAREDE_TOPO, 0.15);
+    }
+
+    /* Quem está dentro do raio do requinte — a condição de TODAS as peças
+       novas menos o tom da parede e o acabamento do telhado, que são de graça
+       e valem para a cidade inteira. */
+    const perto = dist < RAIO_DETALHE;
+    const heliponto = comHeliponto.has(anel);
+    /* A casa de máquinas pede 4,5 m de laje em volta do centro (a caixa tem
+       4,5 × 3,5 e ainda se desloca 30% do raio para o norte), e nunca divide
+       o telhado com um heliponto: num prédio real o heliponto É a laje livre. */
+    const temCasa =
+      perto && altura >= 12 && convexo && rInscrito >= 4.5 && !heliponto;
+    /* A VITRINE pede 60 m de distância da torre. Não é sobre tamanho: é que a
+       torre tem a própria vitrine de saguão (ver `constroiTorre`), com 14 m de
+       largura e o bloom dela, e acender as lojas do vizinho colado nela seria
+       pôr duas luzes brancas no mesmo pixel da base do quadro. */
+    const temVitrine = perto && dist > 60 && altura >= 9;
+
     const nFatias = fatias(altura);
     const temFio = nFatias === 3;
     const zFio = temFio ? altura - 1.2 : altura;
@@ -1145,9 +1709,16 @@ function constroiPredios(aneis: AnelPronto[]) {
       const comp = Math.hypot(dx, dy);
       if (comp < 0.05) continue; // vértice repetido no cadastro
 
+      /* A face interpola entre os dois extremos TINGIDOS do prédio, e não
+         entre as duas constantes da paleta: o material entra por aqui, de
+         graça, sem uma mistura a mais por face e sem mexer na luminância (ver
+         `tinge` e o bloco do `sTom`). As cores que vêm DEPOIS continuam sendo
+         as da paleta — `PAREDE_TOPO` no fio, `OCLUSAO` no pé —, porque o fio
+         do parapeito é concreto em todo prédio e a oclusão é a ausência de
+         cor, não uma cor que se possa tingir. */
       const luz = Math.max(0, (dy * LUZ.x - dx * LUZ.y) / comp) / LUZ_MAX;
-      mistura(cor, PAREDE_SOMBRA, PAREDE_LUZ, luz);
-      if (grauAlt < 1) mistura(cor, cor, PAREDE_SOMBRA, (1 - grauAlt) * 0.22);
+      mistura(cor, sombraPredio, luzPredio, luz);
+      if (grauAlt < 1) mistura(cor, cor, sombraPredio, (1 - grauAlt) * 0.22);
 
       /* O TOPO É MAIS CLARO. Não é um truque de estilo: é o que desenha a
          silhueta de cada prédio contra o telhado do vizinho num quadro em que
@@ -1191,6 +1762,60 @@ function constroiPredios(aneis: AnelPronto[]) {
         paraLinear(fioLinear, corFio);
         tiraLisa(ax, ay, bx, by, zFio, altura, fioLinear, fioLinear);
       }
+
+      /**
+       * A VITRINE DO TÉRREO (21/10) — o que põe a cidade no chão.
+       *
+       * No retrato de perto a base dos vizinhos é a parte MAIS PERTO da
+       * câmera e era onde menos havia o que ver: parede escura com a oclusão
+       * de contato e nada mais. Numa rua de São Paulo à noite o térreo é a
+       * fiada mais clara do prédio — é onde estão a portaria acesa, a loja de
+       * esquina, a farmácia —, e é por isso que uma cidade sem térreo aceso
+       * parece abandonada mesmo com todas as janelas de cima ligadas.
+       *
+       * UMA CHAPA de 0,15 m à frente da parede, de z 0,4 a 3,4, recuada 1,0 m
+       * de cada canto da fachada: dois triângulos por loja. Os 0,15 m são a
+       * verdade geométrica (uma vitrine avança mesmo sobre a calçada), mas
+       * quem faz a chapa ganhar da parede é a ORDEM — o z-buffer desta cena
+       * tem degraus de 3,76 m (ver a regra de ouro em `constroiTorre`), e o
+       * que decide é o lado liso ser desenhado DEPOIS do texturizado, porque
+       * o material dele nasce depois no `useMemo` e o three ordena opacos por
+       * id de material. O recuo de 1,0 m dos cantos é o que impede duas
+       * vitrines de fachadas vizinhas de se cruzarem no canto do prédio.
+       *
+       * Só em 30% das arestas de 7 m ou mais: uma fachada inteira de vitrine
+       * em todo prédio devolveria a mesma fita de luz contínua que o item das
+       * janelas por vão existe para evitar, uma escala acima. E CHAPADA, sem
+       * luz por face, pelo mesmo motivo das balizas da torre: o que emite não
+       * tem lado escuro.
+       */
+      if (temVitrine && comp >= 7 && sorteio(semente * 53 + k) < 0.3) {
+        /* 0,55 a 1,0 de intensidade, por uma chave DERIVADA da que abriu a
+           loja: lojas vizinhas no mesmo prédio acendem com brilhos
+           diferentes, que é o que um térreo com três inquilinos faz. */
+        const intens = 0.55 + 0.45 * sorteio((semente * 53 + k) * 19 + 3);
+        mistura(corVitrine, JANELA, CREME, 0.4);
+        mistura(corVitrine, cor, corVitrine, intens);
+        paraLinear(vitrineLinear, corVitrine);
+        /* O versor da aresta recua o 1,0 m de cada canto; o normal para fora,
+           (dy, −dx)/comp, empurra os 0,15 m. O sentido a→b é preservado, de
+           modo que a chapa herda o enrolamento (e a normal para fora) da
+           parede que ela cobre. */
+        const tx = dx / comp;
+        const ty = dy / comp;
+        const nx = dy / comp;
+        const ny = -dx / comp;
+        tiraLisa(
+          ax + tx + nx * 0.15,
+          ay + ty + ny * 0.15,
+          bx - tx + nx * 0.15,
+          by - ty + ny * 0.15,
+          0.4,
+          3.4,
+          vitrineLinear,
+          vitrineLinear,
+        );
+      }
     }
 
     /* O TELHADO. `ShapeUtils.triangulateShape` é o earcut que o próprio three
@@ -1210,8 +1835,11 @@ function constroiPredios(aneis: AnelPronto[]) {
     const faces = ShapeUtils.triangulateShape(v2, []);
     /* O telhado clareia com a altura — é o que separa a torre de escritórios
        do galpão ao lado quando os dois medem poucos pixels — e um em cada
-       dezesseis puxa para o âmbar, que é a laje iluminada. */
-    mistura(cor, TELHADO, PAREDE_TOPO, grauAlt);
+       dezesseis puxa para o âmbar, que é a laje iluminada. A base é o
+       `corTelhado` do prédio, que já leva o acabamento (manta ou laje) sorteado
+       lá em cima; o âmbar entra numa CÓPIA, para não tingir as peças que
+       nascem desta mesma laje logo abaixo. */
+    copia(cor, corTelhado);
     if (sorteio(semente * 31 + 7) < 0.06) mistura(cor, cor, JANELA, 0.1);
     paraLinear(topoLinear, cor);
     for (const f of faces) {
@@ -1228,11 +1856,338 @@ function constroiPredios(aneis: AnelPronto[]) {
         poeLiso(b.x, b.y, altura, topoLinear);
       }
     }
+
+    /* ==================================================================
+       AS PEÇAS DE TELHADO (21/10) — e elas vêm DEPOIS da tampa de
+       propósito.
+
+       A regra de ouro de `constroiTorre` vale aqui inteira: o z-buffer
+       desta cena tem degraus de 3,76 m, de modo que uma mureta 1 m acima
+       da laje, um disco de heliponto 10 cm acima dela e o "H" 5 cm acima
+       do disco estão todos no MESMO degrau. Quem fica por cima é quem é
+       escrito depois, e é por isso que a ordem destes blocos — tampa →
+       mureta → casa de máquinas → caixa d'água → heliponto → baliza — é
+       desenho, não arrumação.
+
+       E todas elas são escritas DENTRO da iteração do prédio, não num
+       segundo laço sobre os anéis: as peças de um prédio têm de ficar
+       por cima da laje DELE, e um segundo laço poria o heliponto do
+       prédio A depois da laje do prédio B — que é um empate entre peças
+       de prédios diferentes, decidido por nada.
+       ================================================================== */
+
+    /**
+     * 1. A MURETA DO PARAPEITO — o que faz um telhado ler como TERRAÇO.
+     *
+     * Vista a 55° do sul, uma laje nua é uma tampa: o olho não tem como
+     * saber se aquilo é o topo de um prédio ou a face de cima de uma caixa.
+     * O que desfaz a dúvida é a FACE INTERNA da mureta do fundo — a
+     * platibanda do lado norte, que a esta obliquidade aparece inteira e
+     * sombreada. É a única peça do requinte que muda a LEITURA da forma, e
+     * não só a quantidade de detalhe.
+     *
+     * Três quadriláteros por aresta, seis triângulos:
+     *
+     *   face EXTERNA   de h a h+1,0, na cor do fio do parapeito (o topo da
+     *                  parede com 30% de CREME) — ela continua a fachada
+     *                  para cima, e é por isso que herda a cor da fachada.
+     *   TAMPA          os 0,3 m entre a aresta e o inset, a h+1,0, com mais
+     *                  20% de `PAREDE_TOPO`: é a face que recebe luz de cima
+     *                  e desenha o contorno aceso do terraço.
+     *   face INTERNA   do inset para dentro, de h a h+1,0, no tom da laje com
+     *                  50% de OCLUSAO — ela está de costas para a luz de
+     *                  noroeste E sombreada pela própria mureta.
+     *
+     * OS DOIS PORTEIROS, além do convexo e dos 12 m de altura:
+     *
+     *   menor aresta ≥ 2 m   uma aresta de 1 m com 0,3 m de inset de cada
+     *                        ponta não tem miolo: a tampa sai invertida e a
+     *                        face interna atravessa a externa.
+     *   1 + n1·n2 ≥ 0,3      é o DENOMINADOR do miter. Num canto de 150° ele
+     *                        vale 1,87 e o inset anda 0,32 m; num canto de
+     *                        20° vale 0,06 e o inset voa 5 m para dentro do
+     *                        prédio, levando a mureta com ele. 0,3 corta em
+     *                        cantos de ~145° de reflexo, que é o ponto em que
+     *                        o inset passa de 1 m — três vezes o nominal.
+     */
+    if (perto && altura >= 12 && convexo) {
+      let menorAresta = Infinity;
+      for (let k = 0; k < n; k++) {
+        const m = (k + 1) % n;
+        const comp = Math.hypot(pts[m * 2] - pts[k * 2], pts[m * 2 + 1] - pts[k * 2 + 1]);
+        if (comp < menorAresta) menorAresta = comp;
+      }
+
+      let miterOk = menorAresta >= 2;
+      if (miterOk) {
+        inset.length = 0;
+        for (let k = 0; k < n; k++) {
+          const j = (k + n - 1) % n;
+          const m = (k + 1) % n;
+          /* Os normais INTERNOS das duas arestas do canto: num anel
+             anti-horário o normal para fora é (dy, −dx), então o de dentro
+             é (−dy, dx). */
+          const d1x = pts[k * 2] - pts[j * 2];
+          const d1y = pts[k * 2 + 1] - pts[j * 2 + 1];
+          const c1 = Math.hypot(d1x, d1y);
+          const d2x = pts[m * 2] - pts[k * 2];
+          const d2y = pts[m * 2 + 1] - pts[k * 2 + 1];
+          const c2 = Math.hypot(d2x, d2y);
+          const n1x = -d1y / c1;
+          const n1y = d1x / c1;
+          const n2x = -d2y / c2;
+          const n2y = d2x / c2;
+          const den = 1 + (n1x * n2x + n1y * n2y);
+          if (den < 0.3) {
+            miterOk = false;
+            break;
+          }
+          /* O miter: o ponto que fica a 0,3 m das DUAS arestas é
+             p + 0,3·(n1 + n2)/(1 + n1·n2). É a fórmula que mantém a mureta
+             com espessura constante ao virar o canto — somar os normais sem
+             dividir pelo denominador afinaria a mureta em todo canto agudo. */
+          const mx = (n1x + n2x) / den;
+          const my = (n1y + n2y) / den;
+          inset.push(pts[k * 2] + 0.3 * mx, pts[k * 2 + 1] + 0.3 * my);
+        }
+      }
+
+      if (miterOk) {
+        const zAlto = altura + 1;
+        /* A face interna é a mesma em todo o anel: ela não vê a luz de
+           lado nenhum, então não há por que recalcular por aresta. */
+        mistura(corPeca, corTelhado, OCLUSAO, 0.5);
+        const internaL = L(corPeca);
+        for (let k = 0, j = n - 1; k < n; j = k++) {
+          const ax = pts[j * 2];
+          const ay = pts[j * 2 + 1];
+          const bx = pts[k * 2];
+          const by = pts[k * 2 + 1];
+          const aix = inset[j * 2];
+          const aiy = inset[j * 2 + 1];
+          const bix = inset[k * 2];
+          const biy = inset[k * 2 + 1];
+
+          /* A cor do fio, recalculada do zero: é o topo da parede DESTA
+             face (luz, altura e material do prédio) com 30% de creme, e
+             sem o âmbar das janelas — pela mesma razão escrita no fio do
+             parapeito lá em cima, creme sobre âmbar daria um rosa que não
+             está na página. */
+          const luz = luzDa(ax, ay, bx, by);
+          mistura(corFio, sombraPredio, luzPredio, luz);
+          if (grauAlt < 1) mistura(corFio, corFio, sombraPredio, (1 - grauAlt) * 0.22);
+          mistura(corFio, corFio, PAREDE_TOPO, 0.26 + 0.34 * grauAlt);
+          mistura(corFio, corFio, CREME, 0.3);
+          paraLinear(fioLinear, corFio);
+          tiraLisa(ax, ay, bx, by, altura, zAlto, fioLinear, fioLinear);
+
+          /* A TAMPA, entre a aresta e o inset. O quadrilátero (a, b, b', a')
+             é anti-horário visto de cima — a → b corre no sentido do anel e
+             os linha estão para dentro —, que é o giro que faz a face olhar
+             para +z, como o telhado. */
+          mistura(corPeca, corFio, PAREDE_TOPO, 0.2);
+          const tampaL = L(corPeca);
+          poeLiso(ax, ay, zAlto, tampaL);
+          poeLiso(bx, by, zAlto, tampaL);
+          poeLiso(bix, biy, zAlto, tampaL);
+          poeLiso(ax, ay, zAlto, tampaL);
+          poeLiso(bix, biy, zAlto, tampaL);
+          poeLiso(aix, aiy, zAlto, tampaL);
+
+          /* A FACE INTERNA, com o enrolamento INVERTIDO (b' → a'): só assim a
+             normal (dy, −dx) de `tiraLisa` aponta para DENTRO do prédio, que
+             é de onde esta face é vista. Com o enrolamento do anel ela sairia
+             de costas e sumiria no `FrontSide`. */
+          tiraLisa(bix, biy, aix, aiy, altura, zAlto, internaL, internaL);
+        }
+      }
+    }
+
+    /**
+     * 2. A CASA DE MÁQUINAS E A CAIXA D'ÁGUA — a silhueta de telhado desta
+     * cidade.
+     *
+     * Um telhado paulistano nunca termina na laje: termina na casa de
+     * máquinas do elevador, com a caixa d'água de concreto em cima dela. É
+     * tão característico que a linha do horizonte de São Paulo vista de
+     * qualquer mirante é uma serrilha dessas duas peças — e é por isso que
+     * elas são o que o plano chamou de "o que fica ACIMA do telhado de
+     * verdade", em vez de inventar recuos na silhueta que a altura do OSM (que
+     * é a do parapeito) não autoriza.
+     *
+     * 4,5 × 3,5 × 2,8 m, alinhada à aresta mais longa e deslocada 30% do raio
+     * inscrito para o +y LOCAL (o norte do prédio, perpendicular à fachada
+     * mais comprida): tira a peça do centro exato da laje, que é onde ela
+     * ficaria se o deslocamento fosse zero e onde nenhuma casa de máquinas
+     * real está — ela segue a caixa de escada, que é encostada num dos lados.
+     * A folga é conferida: 0,3·4,5 + 1,75 = 3,1 m contra os 4,5 do raio
+     * mínimo, e a diagonal do canto chega a 4,2 m, ainda dentro da laje.
+     *
+     * A CAIXA D'ÁGUA é octogonal porque as de verdade são: um cilindro de
+     * concreto armado com oito faces é a forma pré-moldada mais comum do
+     * país. Raio 1,4 m e 2,2 m de altura, de h+2,8 a h+5,0 — ou seja, ela só
+     * existe sobre a casa de máquinas, nunca solta na laje. Em 70% dos
+     * prédios de 20 m ou mais: acima disso há bomba e reservatório superior
+     * obrigatórios, abaixo a caixa é de fibra e não se vê de 300 m.
+     */
+    if (temCasa) {
+      /* O +y local: o perpendicular à aresta mais longa. `angMaior` é a
+         direção dela, então (−sen, cos) é o normal, e é nele que a casa anda. */
+      const recuo = 0.3 * rInscrito;
+      const px = cx - Math.sin(angMaior) * recuo;
+      const py = cy + Math.cos(angMaior) * recuo;
+      mistura(corPeca, corTelhado, PAREDE_TOPO, 0.25);
+      caixaLisa(
+        cantosGirados(px, py, 4.5, 3.5, angMaior),
+        altura,
+        altura + 2.8,
+        corTelhado,
+        PAREDE_LUZ,
+        corPeca,
+      );
+
+      if (altura >= 20 && sorteio(semente * 59 + 17) < 0.7) {
+        /* O octógono anti-horário: oito ângulos crescentes, com o meio passo
+           de defasagem que põe uma FACE (e não um vértice) virada para a
+           fachada principal — é assim que uma peça pré-moldada se assenta. */
+        const q: [number, number][] = [];
+        for (let k = 0; k < 8; k++) {
+          const a = angMaior + ((k + 0.5) * Math.PI) / 4;
+          q.push([px + Math.cos(a) * 1.4, py + Math.sin(a) * 1.4]);
+        }
+        /* Um degrau mais claro que a casa de máquinas: o concreto da caixa
+           d'água é aparente e lavado pela chuva, enquanto a casa de máquinas
+           é pintada e encardida. São 20% de `PAREDE_TOPO` na base, e a tampa
+           leva os mesmos 25% de todas as tampas desta laje. */
+        const concreto = mistura([0, 0, 0], corTelhado, PAREDE_TOPO, 0.2);
+        caixaLisa(
+          q,
+          altura + 2.8,
+          altura + 5,
+          concreto,
+          PAREDE_LUZ,
+          mistura([0, 0, 0], concreto, PAREDE_TOPO, 0.25),
+        );
+      }
+    }
+
+    /**
+     * 3. O HELIPONTO — 46 triângulos pela coisa mais paulistana que existe
+     * num telhado.
+     *
+     * São Paulo tem a maior frota de helicópteros urbanos do mundo, e a marca
+     * disso na cidade são os discos com o "H" nas lajes das torres. No
+     * retrato, a 0,59 m/px, um disco de 7 m de raio tem 24 px de diâmetro: é
+     * grande o bastante para o H ser lido e pequeno o bastante para não virar
+     * o assunto do telhado.
+     *
+     * Três camadas, e todas chapadas (o disco é pintura sobre a laje, não
+     * volume):
+     *
+     *   o DISCO     24 setores a h+0,1, no tom da laje com 25% de
+     *               `PAREDE_TOPO` — a tinta cinza-clara regulamentar.
+     *   o H         três chapas a h+0,15 (duas barras de 1 × 6 m e a travessa
+     *               de 3 × 1), no tom do disco com 70% de CREME. Ele não é
+     *               branco puro: tinta sobre laje nunca é.
+     *   as LUZES    oito quadrados de 0,5 m no raio de 6,5 m, em CREME CHEIO.
+     *               São as únicas peças do telhado dos vizinhos acima do
+     *               `BLOOM_LIMIAR` de 0,12 do `HeroGlobePos`: elas sangram no
+     *               pós-processamento e viram oito pontinhos de luz em volta
+     *               do disco, que é exatamente o que uma luz de perímetro é
+     *               vista de longe.
+     *
+     * Tudo alinhado ao `angMaior`, como as outras peças: um H a 30° do
+     * parapeito lê como adesivo torto.
+     */
+    if (heliponto) {
+      const zDisco = altura + 0.1;
+      const zMarca = altura + 0.15;
+      mistura(corPeca, corTelhado, PAREDE_TOPO, 0.25);
+      const discoL = L(corPeca);
+      const SETORES_H = 24;
+      const passoH = (Math.PI * 2) / SETORES_H;
+      for (let k = 0; k < SETORES_H; k++) {
+        const a0 = angMaior + k * passoH;
+        const a1 = angMaior + (k + 1) * passoH;
+        /* Anti-horário visto de +z, que é para onde a face olha. */
+        poeLiso(cx, cy, zDisco, discoL);
+        poeLiso(cx + Math.cos(a0) * 7, cy + Math.sin(a0) * 7, zDisco, discoL);
+        poeLiso(cx + Math.cos(a1) * 7, cy + Math.sin(a1) * 7, zDisco, discoL);
+      }
+
+      /* O H: as duas barras a ±1,5 m no eixo LONGO do prédio e a travessa
+         ligando-as no meio. O versor desse eixo é (cos, sen) de `angMaior`. */
+      const ex = Math.cos(angMaior);
+      const ey = Math.sin(angMaior);
+      const marca = mistura([0, 0, 0], corPeca, CREME, 0.7);
+      leque(cantosGirados(cx - ex * 1.5, cy - ey * 1.5, 1, 6, angMaior), zMarca, marca);
+      leque(cantosGirados(cx + ex * 1.5, cy + ey * 1.5, 1, 6, angMaior), zMarca, marca);
+      leque(cantosGirados(cx, cy, 3, 1, angMaior), zMarca, marca);
+
+      for (let k = 0; k < 8; k++) {
+        const a = angMaior + (k * Math.PI) / 4;
+        leque(
+          cantosGirados(cx + Math.cos(a) * 6.5, cy + Math.sin(a) * 6.5, 0.5, 0.5, angMaior),
+          zMarca,
+          CREME,
+        );
+      }
+    }
+
+    /**
+     * 4. AS BALIZAS VERMELHAS — os pontos que faltavam no horizonte.
+     *
+     * A torre tem duas desde 18/10 (ver o bloco dos mastros em
+     * `constroiTorre`) e a cidade em volta não tinha nenhuma, o que é o
+     * contrário da vida real: a luz de obstáculo é obrigatória em todo
+     * edifício alto (OACI "baixa intensidade tipo A"; no Brasil a ICA 100-18),
+     * e numa silhueta noturna de São Paulo há dezenas delas. Com só a torre
+     * acesa, o vermelho dela lia como ornamento da marca; com os vizinhos
+     * acesos também, ele passa a ler como NORMA — e é a norma que faz o
+     * conjunto parecer uma cidade de verdade.
+     *
+     * O CORTE É DUPLO, e é o único do requinte que sai do raio de detalhe:
+     * acima de 75 m dentro do raio e acima de 90 m em QUALQUER lugar do disco
+     * de 1.200 m. A razão é que uma baliza não precisa de resolução — ela é um
+     * ponto de luz, e um ponto de luz de meio pixel ainda é um ponto de luz
+     * depois que o bloom passa por ele. É a peça mais barata do arquivo (18
+     * triângulos) e a que trabalha mais longe.
+     *
+     * Mastro de 0,5 m de lado e 6 m de altura em aço (`caixaLisa`, que
+     * reflete) com a lâmpada de 0,8 m chapada em cima (`lampadaLisa`, que
+     * emite) — a mesma divisão de trabalho dos mastros da torre, pela mesma
+     * razão escrita lá.
+     *
+     * ELE FOGE DA CASA DE MÁQUINAS quando ela existe: o mastro vai para o −y
+     * local, o lado oposto ao que a casa ocupa. Nos prédios sem casa (os que
+     * têm menos de 4,5 m de raio inscrito) ele fica no centroide mesmo, que é
+     * o ponto mais alto e mais seguro de uma laje estreita.
+     */
+    if (convexo && !heliponto && ((perto && altura > 75) || altura > 90)) {
+      const recuo = temCasa ? 0.3 * rInscrito : 0;
+      const px = cx + Math.sin(angMaior) * recuo;
+      const py = cy - Math.cos(angMaior) * recuo;
+      caixaLisa(
+        cantosGirados(px, py, 0.5, 0.5, angMaior),
+        altura,
+        altura + 6,
+        TORRE_CORPO,
+        TORRE_LUZ,
+        null,
+      );
+      lampadaLisa(
+        cantosGirados(px, py, 0.8, 0.8, angMaior),
+        altura + 6,
+        altura + 6.8,
+        BALIZA,
+      );
+    }
   }
 
-  /* Os dois buffers são dimensionados pelo pior caso (todas as arestas
+  /* O buffer TEXTURIZADO é dimensionado pelo pior caso (todas as arestas
      aproveitadas) e as paredes degeneradas descartadas no caminho deixam
-     sobra no fim: cada geometria usa só o que foi escrito. */
+     sobra no fim: a geometria usa só o que foi escrito. O LISO não tem sobra
+     nenhuma — ele é do tamanho exato do que foi empurrado. */
   const geo = new BufferGeometry();
   geo.setAttribute("position", new BufferAttribute(posicoes.subarray(0, p), 3));
   geo.setAttribute("color", new BufferAttribute(cores.subarray(0, p), 3));
@@ -1240,11 +2195,16 @@ function constroiPredios(aneis: AnelPronto[]) {
   geo.computeBoundingSphere();
 
   const geoLiso = new BufferGeometry();
-  geoLiso.setAttribute("position", new BufferAttribute(posLiso.subarray(0, q), 3));
-  geoLiso.setAttribute("color", new BufferAttribute(corLiso.subarray(0, q), 3));
+  geoLiso.setAttribute("position", new BufferAttribute(new Float32Array(posLiso), 3));
+  geoLiso.setAttribute("color", new BufferAttribute(new Float32Array(corLiso), 3));
   geoLiso.computeBoundingSphere();
 
-  return { geo, geoLiso, triangulos: p / 9, triangulosLisos: q / 9 };
+  return {
+    geo,
+    geoLiso,
+    triangulos: p / 9,
+    triangulosLisos: posLiso.length / 9,
+  };
 }
 
 /* --------------------------------------------------------------------------
@@ -1336,10 +2296,12 @@ function constroiChao(
  * DRAW CALL, que é a moeda que importa dentro do mergulho.
  *
  * As listas são number[] comuns e não um Float32Array dimensionado no começo,
- * ao contrário dos prédios: a torre tem 15.794 triângulos contra os 75.397
- * dos vizinhos, e contar triângulos à mão para poupar uma realocação que
+ * ao contrário das PAREDES dos vizinhos: a torre tem 15.794 triângulos contra
+ * os 80.069 deles, e contar triângulos à mão para poupar uma realocação que
  * acontece UMA vez na vida da página é o tipo de precisão que só serve para
- * quebrar quando alguém acrescentar um andar.
+ * quebrar quando alguém acrescentar um andar. Em 21/10 o lado LISO dos
+ * vizinhos foi pelo mesmo caminho, por esta mesma razão — ver o bloco do
+ * `posLiso` em `constroiPredios`.
  *
  * ──────────────────────────────────────────────────────────────────────────
  * A REGRA DE OURO DESTE ARQUIVO: AQUI QUEM DECIDE QUEM FICA POR CIMA É A
@@ -2364,21 +3326,26 @@ export default function SaoPauloCena({
 
   /* A CIDADE INTEIRA É CONSTRUÍDA UMA VEZ, no primeiro quadro em que o mergulho
      o componente monta — 4.423 contornos, 3.770 prédios depois dos filtros,
-     75.397 triângulos, 6,8 MB. A contagem sai da geometria, não do
+     80.069 triângulos, 7,1 MB. A contagem sai da geometria, não do
      navegador; o par 3.769/61.945 que esta linha trazia é de antes de as
      paredes ganharem fatias, em 17/10.
 
-     Os 6,8 MB são duas contas desde 18/10: as 56.632 paredes custam 96 bytes
+     Os 7,1 MB são duas contas desde 18/10: as 56.632 paredes custam 96 bytes
      por triângulo (posição, cor e agora o `uv`, três vértices de float32) e
-     dão 5,4 MB; os 18.765 triângulos lisos continuam a 72 bytes e dão 1,35.
+     dão 5,4 MB; os 23.437 triângulos lisos continuam a 72 bytes e dão 1,69.
      O `uv` acrescentou 1,36 MB de RAM e nenhum milissegundo: ele é escrito
      no mesmo laço, no mesmo passe, por duas atribuições a mais por vértice.
+     As peças de telhado de 21/10 acrescentaram 0,34 MB — e o lado liso
+     passou a ser um `number[]` que vira `Float32Array` no fim, de modo que
+     durante a construção existe um pico de mais 3,4 MB (as 421.866 posições
+     e cores como doubles de array) que o coletor leva embora logo depois. É o preço de não ter um orçamento
+     frágil, e ele é pago uma vez, atrás da travessia do 2D para o 3D.
 
      O TEMPO, esse é medido, e é de 17/10: 40 ms na primeira construção e 17
      com o motor quente, pagos no mesmo instante em que o canvas do hero nasce
      (atrás dos 600 ms de travessia do 2D para o 3D), e nunca mais. Ele não
      foi refeito depois da grade de vãos da torre, que acrescenta 14,6 mil
-     triângulos a uma conta de 92 mil — a ordem de grandeza não muda, mas quem
+     triângulos a uma conta de 97 mil — a ordem de grandeza não muda, mas quem
      for cobrar o número exato tem de medir de novo. O `useMemo` sem
      dependência nenhuma é o que garante o "uma vez": as props mudam a cada
      quadro do mergulho e nada aqui pode ser refeito por causa delas. */
